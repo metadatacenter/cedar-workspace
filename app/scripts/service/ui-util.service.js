@@ -14,14 +14,8 @@ define([
 
     var service = {
       serviceId             : "UIUtilService",
-      showOutput            : false,
-      showOutputTab         : 0,
-      metaToRDF             : null,
-      metaToRDFError        : null,
-      instance              : null,
       modalType             : null,
       selectedFieldOrElement: null,
-      instanceToSave        : null,
       documentState         : {
         form           : null,
         valid          : true,
@@ -36,7 +30,6 @@ define([
       }
     };
 
-    var jsonld = require('jsonld');
     var dms = DataManipulationService;
 
     //
@@ -138,39 +131,6 @@ define([
     };
 
 
-    //
-    //  json and rdf output
-    //
-
-    // create the RDF from the current metadata instance
-    service.toRDF = function () {
-      var instance = service.instanceToSave;
-      var copiedForm = jQuery.extend(true, {}, instance);
-      if (copiedForm) {
-        jsonld.toRDF(copiedForm, {format: 'application/nquads'}, function (err, nquads) {
-          service.metaToRDFError = err;
-          service.metaToRDF = nquads;
-          service.instance = instance;
-          return service.metaToRDF;
-        });
-      }
-    };
-
-    // get the RDF
-    service.getRDF = function () {
-      return service.metaToRDF;
-    };
-
-    // get any RDF conversion errors
-    service.getRDFError = function () {
-      var result = $translate.instant('SERVER.RDF.SaveFirst');
-      if (service.metaToRDFError) {
-        result = service.metaToRDFError.details.cause.message;
-      }
-      return result;
-    };
-
-
     // is this an element that can be expanded?
     service.isExpandable = function (node) {
       var result = false;
@@ -237,17 +197,6 @@ define([
         result = target[0].value;
       }
       return result;
-    };
-
-    service.scrollToAnchor = function (hash) {
-      $timeout(function () {
-        var target = angular.element('#' + hash);
-        if (target && target.offset()) {
-          var y = target.offset().top;
-          $window.scrollTo(0, y - 95);
-        }
-
-      }, 250);
     };
 
     // Scroll to a dom id. Delay ensures that a new field or element has been created and drawn.

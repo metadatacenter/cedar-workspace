@@ -34,8 +34,6 @@ require.config({
     'app'                  : 'scripts/app',
     'cedar/template-editor': 'scripts',
 
-    'jsonld'  : 'bower_components/jsonld/js/jsonld',
-    'CedarModelTypescriptLibrary': 'third_party_components/cedar-model-typescript-library/index.umd',
   },
   shim    : {
     'angular'     : {
@@ -47,7 +45,6 @@ require.config({
       exports: 'angular.mock'
     },
 
-    'lib/angucomplete-alt/angulcomplete-alt'                                             : ['angular'],
     'lib/angular-animate/angular-animate.min'                                            : ['angular'],
     'lib/angular-bootstrap/ui-bootstrap.min'                                             : ['angular'],
     'lib/angular-bootstrap/ui-bootstrap-tpls.min'                                        : ['angular'],
@@ -57,18 +54,12 @@ require.config({
     'lib/angular-translate-loader-static-files/angular-translate-loader-static-files.min': ['lib/angular-translate/angular-translate.min'],
     'lib/angular-toasty/dist/angular-toasty.min'                                         : ['angular'],
     'lib/angular-ui-select/dist/select.min'                                              : ['angular'],
-    'lib/angular-ui-sortable/sortable.min'                                               : ['angular'],
     'lib/angulartics/dist/angulartics.min'                                               : ['angular'],
     'lib/angular-ui-switch/angular-ui-switch.min'                                        : ['angular'],
     'lib/ng-tags-input/ng-tags-input.min'                                                : ['angular'],
     'lib/angular-ui-keypress/keypress.min'                                               : ['angular'],
     'lib/angulartics-google-analytics/dist/angulartics-google-analytics.min'             : ['angular'],
     'lib/angular-ui-tree/dist/angular-ui-tree'                                           : ['angular'],
-
-    '3rdparty/angular-fitvids/angular-fitvids': {
-      deps   : ['angular', 'jquery'],
-      exports: 'fitVids'
-    },
 
     'lib/bootstrap/dist/js/bootstrap.min'                                        : ['jquery'],
     'lib/bootstrap-select/dist/js/bootstrap-select.min'                          : ['lib/bootstrap/dist/js/bootstrap.min'],

@@ -5,14 +5,12 @@
 define([
   // angular modules
   'angular',
-  'lib/angucomplete-alt/angucomplete-alt',
   'lib/angular-animate/angular-animate.min',
   'lib/angular-bootstrap/ui-bootstrap-tpls.min',
   'lib/ng-tags-input/ng-tags-input.min',
   'lib/angular-route/angular-route.min',
   'lib/angular-sanitize/angular-sanitize.min',
   'lib/angular-ui-select/dist/select.min',
-  'lib/angular-ui-sortable/sortable.min',
   'lib/angular-ui-switch/angular-ui-switch.min',
   'lib/angular-ui-keypress/keypress.min',
   'lib/angular-translate/angular-translate.min',
@@ -24,13 +22,10 @@ define([
   'lib/bootstrap-select/dist/js/bootstrap-select.min',
   'jquery',
   'lib/jquery-ui/jquery-ui.min',
-  'lib/perfnow-polyfill/perfnow-polyfill',
   'lib/sweetalert/dist/sweetalert.min',
-  '3rdparty/angular-fitvids/angular-fitvids',
   'lib/angulartics/dist/angulartics.min',
   'lib/angulartics-google-analytics/dist/angulartics-google-analytics.min',
   'lib/ngprogress/build/ngprogress.min',
-  'jsonld',
   'flow',
 
   // CEDAR Workspace modules
@@ -41,7 +36,7 @@ define([
   'cedar/template-editor/service/service.module',
   'cedar/template-editor/profile/profile.module',
   'cedar/template-editor/messaging/messaging.module'
-], function (angular, jsonld, flow) {
+], function (angular) {
   return angular.module('cedar.workspace', [
     'ui.bootstrap',
     'ui.keypress',
@@ -49,10 +44,8 @@ define([
     'ngAnimate',
     'ngSanitize',
     'ui.select',
-    'ui.sortable',
     'pascalprecht.translate',
     'angular-toasty',
-    'fitVids',
     'angulartics',
     'angulartics.google.analytics',
     'ngProgress',

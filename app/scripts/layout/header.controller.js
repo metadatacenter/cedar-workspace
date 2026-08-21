@@ -279,18 +279,6 @@ define([
       return UIUtilService.isRuntime();
     };
 
-    vm.isShowOutput = function() {
-      return UIUtilService.isShowOutput();
-    };
-
-    vm.toggleShowOutput = function() {
-      return UIUtilService.toggleShowOutput();
-    };
-
-    vm.scrollToAnchor = function(hash) {
-      UIUtilService.scrollToAnchor(hash);
-    };
-
     vm.isPrivacy = function () {
       return ($location.path() === "/privacy");
     };

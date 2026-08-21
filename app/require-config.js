@@ -19,11 +19,9 @@ require.config({
     'app'                  : 'scripts/app',
     'cedar/template-editor': 'scripts',
 
-    'jsonld'  : 'bower_components/jsonld/js/jsonld',
     'ngFlow'  : 'bower_components/ng-flow/dist/ng-flow-standalone',
     'flow'    : 'bower_components/flow.js/dist/flow',
 
-    'CedarModelTypescriptLibrary': 'third_party_components/cedar-model-typescript-library/index.umd',
     'artifact-selector': 'third_party_components/artifact-selector/artifact-selector',
     'cedar-embeddable-editor': 'third_party_components/cedar-embeddable-editor/cedar-embeddable-editor'
 
@@ -37,7 +35,6 @@ require.config({
       deps     : ['angular'],
       'exports': 'angular.mock'
     },
-    'lib/angucomplete-alt/angulcomplete-alt'                                             : ['angular'],
     'lib/angular-animate/angular-animate.min'                                            : ['angular'],
     'lib/angular-bootstrap/ui-bootstrap.min'                                             : ['angular'],
     'lib/angular-bootstrap/ui-bootstrap-tpls.min'                                        : ['angular'],
@@ -47,7 +44,6 @@ require.config({
     'lib/angular-translate-loader-static-files/angular-translate-loader-static-files.min': ['lib/angular-translate/angular-translate.min'],
     'lib/angular-toasty/dist/angular-toasty.min'                                         : ['angular'],
     'lib/angular-ui-select/dist/select.min'                                              : ['angular'],
-    'lib/angular-ui-sortable/sortable.min'                                               : ['angular'],
     'lib/angulartics/dist/angulartics.min'                                               : ['angular'],
     'ngFlow'                                                                             : ['angular'],
     'flow'                                                                               : ['angular'],
@@ -55,11 +51,6 @@ require.config({
       'exports': 'moment'
     },
 
-
-    '3rdparty/angular-fitvids/angular-fitvids': {
-      deps   : ['angular', 'jquery'],
-      exports: 'fitVids'
-    },
 
     'lib/bootstrap/dist/js/bootstrap.min'                   : ['jquery'],
     'lib/bootstrap-select/dist/js/bootstrap-select.min'     : ['lib/bootstrap/dist/js/bootstrap.min'],
