@@ -37,6 +37,15 @@ define([
               '&returnTo=' + encodeURIComponent('http://localhost:4201/dashboard'));
     });
 
+    it('decodes the AngularJS CEE route parameter exactly once', function () {
+      expect(FrontendUrlService.decodeRouteIdentifier(
+          'https:%2F%2Frepo.example%2Ftemplates%2Ftemplate-1'))
+          .toBe('https://repo.example/templates/template-1');
+      expect(FrontendUrlService.decodeRouteIdentifier(
+          'https:/repo.example/templates/template-1'))
+          .toBe('https://repo.example/templates/template-1');
+    });
+
     it('accepts only the configured Workspace origin for CEE return URLs', function () {
       var workspaceBase = config.workspaceFrontend.replace(/\/$/, '');
       var returnTo = workspaceBase + '/dashboard?folderId=folder-1#details';

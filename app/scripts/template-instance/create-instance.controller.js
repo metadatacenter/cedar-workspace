@@ -10,14 +10,14 @@ define([
     '$rootScope', '$routeParams', '$timeout', '$translate', '$window',
     'AuthorizedBackendService', 'CedarUser', 'CeeConfigService', 'CeeDirtyTrackerService',
     'CONST', 'FrontendUrlService', 'HeaderService', 'QueryParamUtilsService', 'resourceService',
-    'TemplateInstanceService', 'TemplateService', 'UIMessageService', 'UIUtilService', 'UrlService'
+    'TemplateInstanceService', 'TemplateService', 'UIMessageService', 'UIUtilService'
   ];
 
   function CreateInstanceController($rootScope, $routeParams, $timeout, $translate, $window,
                                     AuthorizedBackendService, CedarUser, CeeConfigService,
                                     CeeDirtyTrackerService, CONST, FrontendUrlService, HeaderService,
                                     QueryParamUtilsService, resourceService, TemplateInstanceService,
-                                    TemplateService, UIMessageService, UIUtilService, UrlService) {
+                                    TemplateService, UIMessageService, UIUtilService) {
     var vm = this;
     var form = null;
     var instance = null;
@@ -82,7 +82,7 @@ define([
 
     function loadTemplate(templateId) {
       AuthorizedBackendService.doCall(
-          TemplateService.getTemplate(UrlService.fixSingleSlashHttps(templateId)),
+          TemplateService.getTemplate(FrontendUrlService.decodeRouteIdentifier(templateId)),
           function (response) {
             form = response.data;
             $rootScope.documentTitle = form['schema:name'];
@@ -136,7 +136,7 @@ define([
     }
 
     function createInstance(metadata) {
-      metadata['schema:isBasedOn'] = UrlService.fixSingleSlashHttps($routeParams.templateId);
+      metadata['schema:isBasedOn'] = FrontendUrlService.decodeRouteIdentifier($routeParams.templateId);
       metadata['schema:name'] = metadata['schema:name'] ||
           form['schema:name'] + $translate.instant('GENERATEDVALUE.instanceTitle');
       metadata['schema:description'] = metadata['schema:description'] ||
@@ -205,7 +205,7 @@ define([
       if ($routeParams.templateId !== undefined) {
         loadTemplate($routeParams.templateId);
       } else if ($routeParams.id !== undefined) {
-        loadInstance($routeParams.id);
+        loadInstance(FrontendUrlService.decodeRouteIdentifier($routeParams.id));
       }
     }, 0);
   }

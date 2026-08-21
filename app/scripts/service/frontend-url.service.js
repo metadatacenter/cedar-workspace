@@ -52,6 +52,21 @@ define([
       return url.protocol === 'https:' || (url.protocol === 'http:' && isLoopback(url.hostname));
     }
 
+    service.decodeRouteIdentifier = function (value) {
+      if (value === null || value === undefined) {
+        return value;
+      }
+      var decoded = value;
+      try {
+        decoded = decodeURIComponent(value);
+      } catch (error) {
+        // Let the backend reject a malformed identifier instead of crashing the route shell.
+      }
+      // AngularJS may decode an encoded slash in a path parameter before exposing it,
+      // leaving an otherwise valid URL with one slash after the scheme.
+      return decoded.replace(/^(https?):\/([^/])/, '$1://$2');
+    };
+
     service.getWorkspaceReturn = function (returnTo, folderId) {
       var configuredWorkspace;
       try {
