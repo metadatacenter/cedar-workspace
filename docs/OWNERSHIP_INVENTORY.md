@@ -31,9 +31,8 @@ return navigation. CEE source code does not live here.
 - The legacy AngularJS metadata form renderer; instance editing uses CEE only
 - Spreadsheet mode, Handsontable, ngHandsontable, and their adapters and styles
 - Controlled-term authoring UI and rich-text authoring machinery
-- `cedar-artifacts` as a CEE host
-- The retired `cedar-artifact-viewer` repository. The separate `cedar-openview`
-  application is not the same project and remains a valid Workspace destination.
+- Archived legacy artifact frontends. The separate `cedar-openview` application is
+  active and remains a valid Workspace destination.
 - The inherited Protractor/Selenium harness and broad legacy unit suite
 
 ## Cross-application boundary
