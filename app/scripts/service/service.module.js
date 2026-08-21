@@ -4,6 +4,8 @@ define([
   'angular',
   'cedar/template-editor/service/authorized-backend.service',
   'cedar/template-editor/service/client-side-validation.service',
+  'cedar/template-editor/service/cee-config.service',
+  'cedar/template-editor/service/cee-dirty-tracker.service',
   'cedar/template-editor/service/data-manipulation.service',
   'cedar/template-editor/service/data-template.service',
   'cedar/template-editor/service/data-util.service',
@@ -35,6 +37,8 @@ define([
   angular.module('cedar.templateEditor.service', [
     'cedar.templateEditor.service.authorizedBackendService',
     'cedar.templateEditor.service.clientSideValidationService',
+    'cedar.templateEditor.service.ceeConfigService',
+    'cedar.templateEditor.service.ceeDirtyTrackerService',
     'cedar.templateEditor.service.dataManipulationService',
     'cedar.templateEditor.service.dataTemplateService',
     'cedar.templateEditor.service.dataUtilService',

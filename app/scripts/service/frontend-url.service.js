@@ -7,12 +7,11 @@ define([
   angular.module('cedar.templateEditor.service.frontendUrlService', [])
       .service('FrontendUrlService', FrontendUrlService);
 
-  FrontendUrlService.$inject = [];
+  FrontendUrlService.$inject = ['$window'];
 
-  function FrontendUrlService() {
+  function FrontendUrlService($window) {
 
     let openViewBase = null;
-    let embeddableEditorBase = null;
     let workspaceBase = null;
     let templateDesignerBase = null;
     let dataciteDOIBase = null
@@ -25,7 +24,6 @@ define([
 
     service.init = function () {
       openViewBase = config.openViewBase;
-      embeddableEditorBase = withoutTrailingSlash(config.artifactsFrontend);
       workspaceBase = withoutTrailingSlash(config.workspaceFrontend);
       templateDesignerBase = withoutTrailingSlash(config.templateDesignerFrontend);
       dataciteDOIBase = config.dataciteDOIBase;
@@ -45,6 +43,39 @@ define([
       }).join('&');
       return query ? url + '?' + query : url;
     }
+
+    function isLoopback(hostname) {
+      return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
+    }
+
+    function isSecureOrLocal(url) {
+      return url.protocol === 'https:' || (url.protocol === 'http:' && isLoopback(url.hostname));
+    }
+
+    service.getWorkspaceReturn = function (returnTo, folderId) {
+      var configuredWorkspace;
+      try {
+        configuredWorkspace = new $window.URL(workspaceBase);
+      } catch (error) {
+        throw new Error('Invalid workspaceFrontend configuration');
+      }
+      if (!isSecureOrLocal(configuredWorkspace)) {
+        throw new Error('workspaceFrontend must use HTTPS except on loopback hosts');
+      }
+
+      if (returnTo) {
+        try {
+          var candidate = new $window.URL(returnTo, configuredWorkspace.href);
+          if (candidate.origin === configuredWorkspace.origin && isSecureOrLocal(candidate) &&
+              !candidate.username && !candidate.password) {
+            return candidate.href;
+          }
+        } catch (error) {
+          // Invalid and cross-origin return URLs deliberately fall through to the safe fallback.
+        }
+      }
+      return withQuery(workspaceBase + '/dashboard', {folderId: folderId});
+    };
 
     service.getTemplateEdit = function (id) {
       return "/templates/edit/" + id;
@@ -86,8 +117,11 @@ define([
       return '/instances/create/' + id + '?folderId=' + encodeURIComponent(folderId);
     };
 
-    service.getInstanceEdit = function (id) {
-      return "/instances/edit/" + id;
+    service.getInstanceEdit = function (id, folderId, returnTo) {
+      return withQuery(workspaceBase + '/instances/edit/' + encodeURIComponent(id), {
+        folderId: folderId,
+        returnTo: returnTo
+      });
     };
 
     service.getFolderContents = function (folderId) {
@@ -139,14 +173,14 @@ define([
     };
 
     service.ceeCreateInstance = function (id, folderId, returnTo) {
-      return withQuery(embeddableEditorBase + '/instances/create/' + encodeURIComponent(id), {
+      return withQuery(workspaceBase + '/instances/create/' + encodeURIComponent(id), {
         folderId: folderId,
         returnTo: returnTo
       });
     };
 
     service.ceeEditInstance = function (id, returnTo) {
-      return withQuery(embeddableEditorBase + '/instances/edit/' + encodeURIComponent(id), {returnTo: returnTo});
+      return withQuery(workspaceBase + '/instances/edit/' + encodeURIComponent(id), {returnTo: returnTo});
     };
 
     service.getWorkspaceBase = function () {

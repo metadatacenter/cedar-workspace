@@ -26,15 +26,24 @@ define([
               encodeURIComponent(returnTo));
     });
 
-    it('builds a CEE create URL without double-encoding identifiers', function () {
+    it('builds a Workspace-hosted CEE create URL without double-encoding identifiers', function () {
       var templateId = 'https://repo.example/templates/1';
       var folderId = 'https://repo.example/folders/2';
 
       expect(FrontendUrlService.ceeCreateInstance(templateId, folderId, 'http://localhost:4201/dashboard'))
-          .toBe(config.artifactsFrontend.replace(/\/$/, '') +
+          .toBe(config.workspaceFrontend.replace(/\/$/, '') +
               '/instances/create/' + encodeURIComponent(templateId) +
               '?folderId=' + encodeURIComponent(folderId) +
               '&returnTo=' + encodeURIComponent('http://localhost:4201/dashboard'));
+    });
+
+    it('accepts only the configured Workspace origin for CEE return URLs', function () {
+      var workspaceBase = config.workspaceFrontend.replace(/\/$/, '');
+      var returnTo = workspaceBase + '/dashboard?folderId=folder-1#details';
+
+      expect(FrontendUrlService.getWorkspaceReturn(returnTo, 'fallback-folder')).toBe(returnTo);
+      expect(FrontendUrlService.getWorkspaceReturn(workspaceBase + '.example.org/dashboard', 'fallback-folder'))
+          .toBe(workspaceBase + '/dashboard?folderId=fallback-folder');
     });
   });
 });

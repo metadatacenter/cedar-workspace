@@ -36,6 +36,7 @@ define([
   // CEDAR Workspace modules
   'cedar/template-editor/core/core.module',
   'cedar/template-editor/dashboard/dashboard.module',
+  'cedar/template-editor/template-instance/template-instance.module',
   'cedar/template-editor/layout/layout.module',
   'cedar/template-editor/service/service.module',
   'cedar/template-editor/profile/profile.module',
@@ -59,6 +60,7 @@ define([
 
     'cedar.templateEditor.core',
     'cedar.templateEditor.dashboard',
+    'cedar.templateEditor.templateInstance',
     'cedar.templateEditor.layout',
     'cedar.templateEditor.service',
     'cedar.templateEditor.profile',

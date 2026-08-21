@@ -57,6 +57,11 @@ gulp.task('copy:resources', function () {
   return gulp.src(glyphiconsGlob).pipe(gulp.dest('app/fonts/'));
 });
 
+gulp.task('copy:cee', function () {
+  return gulp.src('node_modules/cedar-embeddable-editor/cedar-embeddable-editor.js')
+      .pipe(gulp.dest('app/third_party_components/cedar-embeddable-editor/'));
+});
+
 gulp.task('server-development', function (done) {
   var frontendPort = parseInt(process.env.CEDAR_FRONTEND_PORT || '4201', 10);
   var liveReloadPort = parseInt(process.env.CEDAR_LIVERELOAD_PORT || '35730', 10);
@@ -96,7 +101,6 @@ gulp.task('replace-url', function (done) {
       .pipe(replace('messagingServerUrl', 'https://messaging.' + cedarRestHost))
       .pipe(replace('openViewBaseUrl', 'https://openview.' + cedarRestHost))
       .pipe(replace('impexServerUrl', 'https://impex.' + cedarRestHost))
-      .pipe(replace('artifactsFrontendUrl', 'https://artifacts.' + cedarRestHost))
       .pipe(replace('workspaceFrontendUrl', workspaceFrontendUrl))
       .pipe(replace('templateDesignerFrontendUrl', templateDesignerFrontendUrl))
       // The monitoring dashboard is a sibling frontend (not a REST service), so it hangs off the UI host.
@@ -256,7 +260,7 @@ if (cedarFrontendBehavior === 'develop') {
   exitWithError("Invalid CEDAR_FRONTEND_BEHAVIOR value. Please set to 'develop' or 'server'!");
 }
 
-taskNameList.push('lint', 'less', 'copy:resources', 'replace-url', 'replace-tracking', 'replace-version');
+taskNameList.push('lint', 'less', 'copy:resources', 'copy:cee', 'replace-url', 'replace-tracking', 'replace-version');
 // Launch tasks
 gulp.task('default', gulp.series(taskNameList, function (done) {
   done();
