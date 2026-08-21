@@ -18,7 +18,7 @@ define([
 
     // configure routes
     $routeProvider.otherwise({
-      redirectTo: '/'
+      redirectTo: '/dashboard'
     });
 
     // configure translations

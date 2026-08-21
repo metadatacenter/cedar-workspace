@@ -10,16 +10,16 @@ define([
 
   cedarTemplateEditorCoreRun.$inject = ['$rootScope', '$window', 'DataTemplateService',
                                         'DataManipulationService', 'FieldTypeService', 'UrlService',
-                                        'UserService', 'RichTextConfigService',
-                                        'provisionalClassService', 'CedarUser', 'UISettingsService', 'FrontendUrlService',
+                                        'UserService',
+                                        'CedarUser', 'UISettingsService', 'FrontendUrlService',
                                         'TrackingService', 'MessagingService',
                                         '$httpParamSerializer', '$location', 'UIMessageService'];
 
 
   function cedarTemplateEditorCoreRun($rootScope, $window, DataTemplateService,
                                       DataManipulationService, FieldTypeService, UrlService,
-                                      UserService, RichTextConfigService,
-                                      provisionalClassService, CedarUser, UISettingsService, FrontendUrlService,
+                                      UserService,
+                                      CedarUser, UISettingsService, FrontendUrlService,
                                       TrackingService, MessagingService,
                                       $httpParamSerializer, $location, UIMessageService) {
 
@@ -58,16 +58,10 @@ define([
     FieldTypeService.init();
     UrlService.init();
     FrontendUrlService.init();
-    provisionalClassService.init();
     DataManipulationService.init();
     UISettingsService.init();
     TrackingService.init();
     MessagingService.init();
-
-    // Make objects available through rootScope
-    //$rootScope.cts = ControlledTermService;
-    //$rootScope.vrs = ValueRecommenderService;
-    $rootScope.editorOptions = RichTextConfigService.getConfig("default");
 
     // Monitoring dashboard link in the user menu. The menu markup lives outside any controller
     // (bottom of index.html), so the environment-specific URL is published on the root scope.

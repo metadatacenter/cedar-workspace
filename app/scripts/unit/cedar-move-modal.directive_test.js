@@ -1,6 +1,6 @@
 'use strict';
 
-define(['app', 'angular'], function (app) {
+define(['app', 'angularMocks'], function (app) {
 
   describe('cedar-move-modal.directive_test.js:', function () {
 
