@@ -34,7 +34,6 @@ require.config({
     'app'                  : 'scripts/app',
     'cedar/template-editor': 'scripts',
 
-    'ckeditor': 'bower_components/ng-ckeditor/libs/ckeditor/ckeditor',
     'jsonld'  : 'bower_components/jsonld/js/jsonld',
     'CedarModelTypescriptLibrary': 'third_party_components/cedar-model-typescript-library/index.umd',
   },
@@ -71,18 +70,8 @@ require.config({
       exports: 'fitVids'
     },
 
-    'lib/ng-ckeditor/ng-ckeditor.min': ['angular', 'ckeditor'],
-    'ckeditor'                       : {
-      exports: 'CKEDITOR'
-    },
-
-    'lib/ngHandsontable/dist/ngHandsontable.min'                                 : ['angular',
-                                                                                    'lib/handsontable/dist/handsontable.full.min'],
-    'lib/handsontable/dist/handsontable.full.min'                                : {'exports': 'Handsontable'},
     'lib/bootstrap/dist/js/bootstrap.min'                                        : ['jquery'],
     'lib/bootstrap-select/dist/js/bootstrap-select.min'                          : ['lib/bootstrap/dist/js/bootstrap.min'],
-    'cedar/template-editor/handsontable/SpreadsheetContext'                      : ['lib/handsontable/dist/handsontable.full.min'],
-    'cedar/template-editor/handsontable/MultiCheckboxEditor'                     : ['lib/handsontable/dist/handsontable.full.min'],
     'lib/ngprogress/build/ngprogress.min'                                        : ['angular'],
   },
   priority: [

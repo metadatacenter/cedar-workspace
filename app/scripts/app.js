@@ -8,7 +8,6 @@ define([
   'lib/angucomplete-alt/angucomplete-alt',
   'lib/angular-animate/angular-animate.min',
   'lib/angular-bootstrap/ui-bootstrap-tpls.min',
-  // 'lib/ngHandsontable/dist/ngHandsontable.min',
   'lib/ng-tags-input/ng-tags-input.min',
   'lib/angular-route/angular-route.min',
   'lib/angular-sanitize/angular-sanitize.min',
@@ -23,9 +22,6 @@ define([
   // non-angular 3rd party libraries
   'lib/bootstrap/dist/js/bootstrap.min',
   'lib/bootstrap-select/dist/js/bootstrap-select.min',
-  'lib/ng-ckeditor/ng-ckeditor.min',
-  'ckeditor',
-  'lib/handsontable/dist/handsontable.full',
   'jquery',
   'lib/jquery-ui/jquery-ui.min',
   'lib/perfnow-polyfill/perfnow-polyfill',
@@ -43,10 +39,7 @@ define([
   'cedar/template-editor/layout/layout.module',
   'cedar/template-editor/service/service.module',
   'cedar/template-editor/profile/profile.module',
-  'cedar/template-editor/messaging/messaging.module',
-
-  // classic javascript, app data
-  'cedar/template-editor/classic/app-data'
+  'cedar/template-editor/messaging/messaging.module'
 ], function (angular, jsonld, flow) {
   return angular.module('cedar.workspace', [
     'ui.bootstrap',
@@ -58,7 +51,6 @@ define([
     'ui.sortable',
     'pascalprecht.translate',
     'angular-toasty',
-    'ngCkeditor',
     'fitVids',
     'angulartics',
     'angulartics.google.analytics',

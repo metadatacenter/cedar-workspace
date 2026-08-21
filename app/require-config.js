@@ -19,14 +19,12 @@ require.config({
     'app'                  : 'scripts/app',
     'cedar/template-editor': 'scripts',
 
-    'ckeditor': 'bower_components/ng-ckeditor/libs/ckeditor/ckeditor',
     'jsonld'  : 'bower_components/jsonld/js/jsonld',
     'ngFlow'  : 'bower_components/ng-flow/dist/ng-flow-standalone',
     'flow'    : 'bower_components/flow.js/dist/flow',
 
     'CedarModelTypescriptLibrary': 'third_party_components/cedar-model-typescript-library/index.umd',
-    'artifact-selector': 'third_party_components/artifact-selector/artifact-selector',
-    'cedar-embeddable-editor': 'third_party_components/cedar-embeddable-editor/cedar-embeddable-editor'
+    'artifact-selector': 'third_party_components/artifact-selector/artifact-selector'
 
   },
   shim    : {
@@ -62,23 +60,9 @@ require.config({
       exports: 'fitVids'
     },
 
-    'lib/ng-ckeditor/ng-ckeditor.min': ['angular', 'ckeditor'],
-    'ckeditor'                       : {
-      'exports': 'CKEDITOR'
-    },
-
-    // 'lib/ngHandsontable/dist/ngHandsontable.min'                                 : ['angular',
-    //                                                                                 'lib/handsontable/dist/handsontable.full'],
-    'lib/handsontable/dist/handsontable.full'               : {'exports': 'Handsontable'},
     'lib/bootstrap/dist/js/bootstrap.min'                   : ['jquery'],
     'lib/bootstrap-select/dist/js/bootstrap-select.min'     : ['lib/bootstrap/dist/js/bootstrap.min'],
-    'cedar/template-editor/handsontable/SpreadsheetContext' : ['lib/handsontable/dist/handsontable.full'],
-    'cedar/template-editor/handsontable/MultiCheckboxEditor': ['lib/handsontable/dist/handsontable.full'],
     'lib/ngprogress/build/ngprogress.min'                   : ['angular'],
-    'cedar-embeddable-editor': {
-      deps: ['angular'],
-      exports: 'cedar-embeddable-editor'
-    },
     'artifact-selector': {
       deps: ['angular'],
       exports: 'artifact-selector'
