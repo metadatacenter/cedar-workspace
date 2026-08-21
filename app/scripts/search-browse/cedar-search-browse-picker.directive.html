@@ -20,11 +20,11 @@
             <ul class="dropdown-menu " role="menu" aria-labelledby="button-create">
               <li><a id="button-create-folder" ng-click="dc.showNewFolderModal()">Folder</a></li>
               <li><a id="button-create-field"
-                     ng-href="/fields/create?folderId={{dc.currentFolderId | encodeURIComponent}}">Field</a></li>
+                     href="" ng-click="dc.createResource('field', $event)">Field</a></li>
               <li><a id="button-create-element"
-                     ng-href="/elements/create?folderId={{dc.currentFolderId | encodeURIComponent}}">Element</a></li>
+                     href="" ng-click="dc.createResource('element', $event)">Element</a></li>
               <li><a id="button-create-template"
-                     ng-href="/templates/create?folderId={{dc.currentFolderId | encodeURIComponent}}">Template</a></li>
+                     href="" ng-click="dc.createResource('template', $event)">Template</a></li>
               <li class="divider"></li>
               <li><a id="button-import" ng-click="dc.showImportModal()">Import</a></li>
             </ul>

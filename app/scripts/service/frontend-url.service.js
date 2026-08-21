@@ -13,6 +13,8 @@ define([
 
     let openViewBase = null;
     let embeddableEditorBase = null;
+    let workspaceBase = null;
+    let templateDesignerBase = null;
     let dataciteDOIBase = null
     let downloadBase = null
     let monitoringBase = null
@@ -23,11 +25,26 @@ define([
 
     service.init = function () {
       openViewBase = config.openViewBase;
-      embeddableEditorBase = config.artifactsFrontend;
+      embeddableEditorBase = withoutTrailingSlash(config.artifactsFrontend);
+      workspaceBase = withoutTrailingSlash(config.workspaceFrontend);
+      templateDesignerBase = withoutTrailingSlash(config.templateDesignerFrontend);
       dataciteDOIBase = config.dataciteDOIBase;
       downloadBase = config.downloadBase;
       monitoringBase = config.monitoringFrontend;
     };
+
+    function withoutTrailingSlash(url) {
+      return (url || '').replace(/\/$/, '');
+    }
+
+    function withQuery(url, params) {
+      var query = Object.keys(params || {}).filter(function (key) {
+        return params[key] !== null && params[key] !== undefined && params[key] !== '';
+      }).map(function (key) {
+        return encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);
+      }).join('&');
+      return query ? url + '?' + query : url;
+    }
 
     service.getTemplateEdit = function (id) {
       return "/templates/edit/" + id;
@@ -39,6 +56,30 @@ define([
 
     service.getFieldEdit = function (id) {
       return "/fields/edit/" + id;
+    };
+
+    service.getDesignerTemplateCreate = function (folderId, returnTo) {
+      return withQuery(templateDesignerBase + '/templates/create', {folderId: folderId, returnTo: returnTo});
+    };
+
+    service.getDesignerElementCreate = function (folderId, returnTo) {
+      return withQuery(templateDesignerBase + '/elements/create', {folderId: folderId, returnTo: returnTo});
+    };
+
+    service.getDesignerFieldCreate = function (folderId, returnTo) {
+      return withQuery(templateDesignerBase + '/fields/create', {folderId: folderId, returnTo: returnTo});
+    };
+
+    service.getDesignerTemplateEdit = function (id, returnTo) {
+      return withQuery(templateDesignerBase + '/templates/edit/' + encodeURIComponent(id), {returnTo: returnTo});
+    };
+
+    service.getDesignerElementEdit = function (id, returnTo) {
+      return withQuery(templateDesignerBase + '/elements/edit/' + encodeURIComponent(id), {returnTo: returnTo});
+    };
+
+    service.getDesignerFieldEdit = function (id, returnTo) {
+      return withQuery(templateDesignerBase + '/fields/edit/' + encodeURIComponent(id), {returnTo: returnTo});
     };
 
     service.getInstanceCreate = function (id, folderId) {
@@ -97,12 +138,19 @@ define([
       return openViewBase + '/folders/' + encodeURIComponent(id);
     };
 
-    service.ceeCreateInstance = function (id, folderId) {
-      return embeddableEditorBase + '/instances/create/' + encodeURIComponent(id) + '?folderId=' + encodeURIComponent(folderId);
+    service.ceeCreateInstance = function (id, folderId, returnTo) {
+      return withQuery(embeddableEditorBase + '/instances/create/' + encodeURIComponent(id), {
+        folderId: folderId,
+        returnTo: returnTo
+      });
     };
 
-    service.eeEditInstance = function (id) {
-      return embeddableEditorBase + '/instances/edit/' + encodeURIComponent(id);
+    service.ceeEditInstance = function (id, returnTo) {
+      return withQuery(embeddableEditorBase + '/instances/edit/' + encodeURIComponent(id), {returnTo: returnTo});
+    };
+
+    service.getWorkspaceBase = function () {
+      return workspaceBase;
     };
 
     service.dataciteTemplate = function (id) {

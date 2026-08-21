@@ -52,6 +52,7 @@ define([
           vm.deleteResource = deleteResource;
           vm.doSearch = doSearch;
           vm.editResource = editResource;
+          vm.createResource = createResource;
           vm.facets = {};
           vm.forms = [];
           vm.activeTab = 'resource-info';
@@ -1609,27 +1610,28 @@ define([
           function launchInstance(value) {
             const resource = value || getSelected();
             if (resource) {
-              let url = null;
-              // if (CedarUser.useMetadataEditorV2()) {
-              //   url = FrontendUrlService.ceeCreateInstance(resource['@id'], vm.getFolderId());
-              //   let win = $window.open(url, '_blank');
-              // } else {
-                url = FrontendUrlService.getInstanceCreate(resource['@id'], vm.getFolderId());
-                // TODO exceptionally painful for users if we turn this on
-                // if (vm.getResourcePublicationStatus(resource)  == CONST.publication.DRAFT) {
-                //   UIMessageService.confirmedExecution(
-                //       function () {
-                //         $location.url(url);
-                //       },
-                //       'GENERIC.AreYouSure',
-                //       'This template is a draft.',
-                //       'YES'
-                //   );
-                // } else {
-                //   $location.url(url);
-                // }
-                $location.url(url);
-              // }
+              const url = FrontendUrlService.ceeCreateInstance(
+                  resource['@id'], vm.getFolderId(), $window.location.href);
+              $window.location.assign(url);
+            }
+          }
+
+          function createResource(resourceType, event) {
+            if (event) {
+              event.preventDefault();
+            }
+            const folderId = vm.getFolderId();
+            const returnTo = $window.location.href;
+            let url = null;
+            if (resourceType === CONST.resourceType.TEMPLATE) {
+              url = FrontendUrlService.getDesignerTemplateCreate(folderId, returnTo);
+            } else if (resourceType === CONST.resourceType.ELEMENT) {
+              url = FrontendUrlService.getDesignerElementCreate(folderId, returnTo);
+            } else if (resourceType === CONST.resourceType.FIELD) {
+              url = FrontendUrlService.getDesignerFieldCreate(folderId, returnTo);
+            }
+            if (url) {
+              $window.location.assign(url);
             }
           }
 
@@ -1661,23 +1663,18 @@ define([
               }
               switch (resource.resourceType) {
                 case CONST.resourceType.TEMPLATE:
-                  $location.path(FrontendUrlService.getTemplateEdit(id));
+                  $window.location.assign(FrontendUrlService.getDesignerTemplateEdit(id, $window.location.href));
                   break;
                 case CONST.resourceType.ELEMENT:
                   if (vm.onDashboard()) {
-                    $location.path(FrontendUrlService.getElementEdit(id));
+                    $window.location.assign(FrontendUrlService.getDesignerElementEdit(id, $window.location.href));
                   }
                   break;
                 case CONST.resourceType.INSTANCE:
-                  // if (CedarUser.useMetadataEditorV2()) {
-                  //   const url = FrontendUrlService.eeEditInstance(resource['@id']);
-                  //   let win = $window.open(url, '_blank');
-                  // } else {
-                  $location.path(FrontendUrlService.getInstanceEdit(id));
-                  // }
+                  $window.location.assign(FrontendUrlService.ceeEditInstance(id, $window.location.href));
                   break;
                 case CONST.resourceType.FIELD:
-                  $location.path(FrontendUrlService.getFieldEdit(id));
+                  $window.location.assign(FrontendUrlService.getDesignerFieldEdit(id, $window.location.href));
                   break;
                 case CONST.resourceType.LINK:
                   $location.path(scope.href);
