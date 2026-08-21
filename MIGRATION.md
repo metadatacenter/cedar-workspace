@@ -51,6 +51,9 @@ them as baseline debt, and require every newly introduced or migrated test to pa
   create/save/edit, JSON/YAML serialization, OpenView, teardown, and folder-clear verification
 - Workspace owns its minimal user application state and decodes CEE route identifiers exactly once;
   these runtime fixes are recorded by `f0d59519` and `95d16928`
+- Workspace is part of the checked seven-manifest CEE propagation inventory; every CEE release must
+  update its exact manifest and lockfile pin, rebuild the Workspace payload, and verify the served
+  bundle hash before environment acceptance
 
 ## Product boundary
 
@@ -103,11 +106,12 @@ The current inter-application boundary is documented in
 - [x] Prove and record clean source identity plus the exact environment-generated served bundle
 - [x] Add a split-aware authenticated browser journey without changing the production-monolith smoke
 - [x] Pass local preview routing, auth, deep-link, and route-only rollback tests
+- [x] Add Workspace to the checked CEE release-consumer inventory
 - [ ] Pass staging parity before any production routing changes
 
 ## Change discipline
 
-- Make coherent local commits as migration checkpoints; do not push until remote ownership is agreed.
+- Make coherent commits as migration checkpoints and push them to the approved independent remote.
 - Keep the legacy production repository unchanged.
 - Record every ambiguous shared file here before deleting it.
 - Prefer copy-and-subtract to a framework rewrite; modernization is a later project.

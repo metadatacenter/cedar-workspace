@@ -42,6 +42,21 @@ Every running image exposes `/config/build-info.json` with its baked source comm
 checkout was dirty, and a SHA-256 over the exact environment-specific tree nginx serves. The file is
 served with `Cache-Control: no-store`; staging acceptance must record it and reject dirty images.
 
+## CEE release consumption
+
+Workspace is a required consumer of every CEE release. `package.json` and `package-lock.json` pin one
+exact `cedar-embeddable-editor` version, and the Gulp build copies its bundle into
+`app/third_party_components/cedar-embeddable-editor/`. CEE propagation is managed with the shared
+seven-consumer gate, which also covers the production monolith and the existing auxiliary/demo hosts:
+
+```sh
+node "$CEDAR_HOME/cedar-development/ops/propagate-cee-release.mjs" --check <CEE_VERSION>
+```
+
+A manifest or lockfile update alone does not update a running preview image. Rebuild and recreate the
+Workspace image, then verify the served CEE sha256 and rerun the split deployment and authenticated
+smokes before accepting the release in an environment.
+
 ## Migration constraints
 
 - Do not route production traffic here until preview and staging gates pass.
