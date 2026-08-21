@@ -33,6 +33,18 @@ them as baseline debt, and require every newly introduced or migrated test to pa
 | Source commit | Disposition |
 | --- | --- |
 | `fc083f78` - take CEE `2.0.0-dev.20260820.a8cc4cc` | Ported into the extraction worktree on 2026-08-20 |
+| `a6b29576` - remove legacy artifact frontend routing | Equivalent dead routing and references are absent from Workspace |
+
+## Current extraction checkpoint
+
+- Independent AngularJS bootstrap and package identity on port 4201
+- Workspace-owned dashboard, account, messaging, and CEE instance-shell routes
+- Full-document Template Designer navigation with exact-origin `returnTo` validation
+- Focused URL/auth contract suite: 4 passing tests
+- Spreadsheet mode, Designer authoring, legacy renderer, obsolete broad tests, and unreachable vendors removed
+- Local-source nginx image and opt-in Compose preview verified by the split frontend smoke
+- CLI repository/process registration is preview-only and excluded from release operations
+- Authentication base configuration is complete; Keycloak redirect/web-origin authorization remains a reviewed security gate
 
 ## Product boundary
 
@@ -73,20 +85,21 @@ The current inter-application boundary is documented in
 - [x] Give the package a distinct repository identity
 - [x] Draft versioned cross-app URL, authentication, and `returnTo` contracts
 - [ ] Ratify contract decisions and production origins
-- [ ] Replace internal Designer and CEE route changes with full-document navigation
-- [ ] Validate `returnTo` against configured CEDAR origins
-- [ ] Split the eager service module so only Workspace dependencies load
-- [ ] Remove Designer and instance routes and source
-- [ ] Namespace or separately host root-relative static assets
+- [x] Replace internal Designer route changes with full-document navigation
+- [x] Validate `returnTo` against the configured Workspace origin
+- [x] Split the eager service module so only Workspace dependencies load
+- [x] Remove Designer authoring and legacy instance-renderer source; retain only the CEE route shell
+- [x] Separately host root-relative static assets on the Workspace origin
 - [x] Serve the unpruned baseline independently on port 4201 (LiveReload 35730)
-- [ ] Produce a Workspace-only build after pruning
-- [ ] Add Workspace-focused unit and browser smoke tests
+- [x] Produce a Workspace-only build after pruning
+- [x] Add Workspace-focused unit and credential-free cross-application smoke tests
+- [x] Build and run a local-source preview image without a published frontend tarball
 - [ ] Pass preview routing, auth, deep-link, and rollback tests
 - [ ] Pass staging parity before any production routing changes
 
 ## Change discipline
 
-- Do not commit or push migration changes unless explicitly requested.
+- Make coherent local commits as migration checkpoints; do not push until remote ownership is agreed.
 - Keep the legacy production repository unchanged.
 - Record every ambiguous shared file here before deleting it.
 - Prefer copy-and-subtract to a framework rewrite; modernization is a later project.
