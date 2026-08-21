@@ -129,6 +129,7 @@ gulp.task('replace-version', function (done) {
   gulp.src(['app/config/src/version.js'])
       .pipe(replace('cedarVersionValue', cedarVersion))
       .pipe(replace('cedarVersionModifierValue', cedarVersionModifier))
+      .pipe(replace('cedarAuthUrlValue', cedarAuthUrl))
       .pipe(replace('dataciteEnabledValue', dataciteEnabled))
       .pipe(replace('cedarGA4TrackingIdValue', cedarGA4TrackingId))
       .pipe(gulp.dest('app/config/'));
@@ -236,6 +237,7 @@ readAllEnvVarsOrFail();
 
 var cedarUIHost = envConfig[cedarUIHostVarName];
 var cedarRestHost = envConfig[cedarRestHostVarName];
+var cedarAuthUrl = process.env.CEDAR_AUTH_URL || 'https://auth.' + cedarUIHost;
 
 var cedarTestUser1Login = envConfig[cedarUser1LoginVarName];
 var cedarTestUser1Password = envConfig[cedarUser1PasswordVarName];
