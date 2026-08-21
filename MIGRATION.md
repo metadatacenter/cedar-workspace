@@ -78,7 +78,8 @@ The current inter-application boundary is documented in
 - [ ] Split the eager service module so only Workspace dependencies load
 - [ ] Remove Designer and instance routes and source
 - [ ] Namespace or separately host root-relative static assets
-- [ ] Build and serve independently
+- [x] Serve the unpruned baseline independently on port 4201 (LiveReload 35730)
+- [ ] Produce a Workspace-only build after pruning
 - [ ] Add Workspace-focused unit and browser smoke tests
 - [ ] Pass preview routing, auth, deep-link, and rollback tests
 - [ ] Pass staging parity before any production routing changes
