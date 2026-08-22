@@ -42,7 +42,7 @@ them as baseline debt, and require every newly introduced or migrated test to pa
 - Full-document Template Designer navigation with exact-origin `returnTo` validation
 - Focused URL/auth/runtime contract suite: 7 passing tests
 - Spreadsheet mode, Designer authoring, legacy renderer, obsolete broad tests, and unreachable vendors removed
-- Local-source nginx image and opt-in Compose preview verified by the split frontend smoke
+- Docker construction moved to `cedar-docker-build`; the image consumes an immutable npm artifact
 - Runtime build identity exposes the clean source commit and exact served-tree SHA-256 with no-store caching
 - CLI repository/process registration is preview-only and excluded from release operations
 - The full authenticated smoke is split-origin aware and includes exact Workspace-to-Designer return navigation
