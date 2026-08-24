@@ -8,6 +8,18 @@
           </section>
 
           <div class="edit-actions cee-edit-actions" ng-hide="vm.loading">
+            <div class="alert alert-warning cee-validation-report" role="alert" aria-live="polite"
+                ng-if="vm.showValidationReport()">
+              <strong>Metadata quality issues</strong>
+              <p>This metadata can still be saved.</p>
+              <p ng-if="vm.missingRequiredFieldCount > 0">{{vm.missingRequiredFieldMessage}}</p>
+              <ul ng-if="vm.validationProblems.length > 0">
+                <li ng-repeat="problem in vm.validationProblems track by $index">
+                  <span class="cee-validation-path">{{vm.problemPath(problem)}}</span>
+                  <span>{{problem.message || problem.code}}</span>
+                </li>
+              </ul>
+            </div>
             <div ng-if="vm.canWrite" class="flex-right" style="width:95%;">
               <button type="button" id="button-cancel-metadata" class="btn btn-clear metadata"
                   ng-click="vm.cancel()" style="outline:none;" translate>GENERIC.Cancel

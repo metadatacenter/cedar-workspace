@@ -26,6 +26,38 @@ define([
     vm.loading = true;
     vm.canWrite = true;
     vm.saveButtonDisabled = false;
+    vm.validationReport = null;
+    vm.validationProblems = [];
+    vm.missingRequiredFieldCount = 0;
+    vm.missingRequiredFieldMessage = '';
+
+    function updateValidationReport(report) {
+      var requiredCount;
+      var completedRequiredCount;
+
+      vm.validationReport = report && typeof report === 'object' ? report : null;
+      vm.validationProblems = vm.validationReport && angular.isArray(vm.validationReport.problems) ?
+          vm.validationReport.problems : [];
+      requiredCount = vm.validationReport && angular.isNumber(vm.validationReport.requiredFieldValueCount) ?
+          vm.validationReport.requiredFieldValueCount : 0;
+      completedRequiredCount = vm.validationReport &&
+          angular.isNumber(vm.validationReport.nonNullRequiredFieldValueCount) ?
+          vm.validationReport.nonNullRequiredFieldValueCount : 0;
+      vm.missingRequiredFieldCount = Math.max(0, requiredCount - completedRequiredCount);
+      vm.missingRequiredFieldMessage = vm.missingRequiredFieldCount === 1 ?
+          '1 required field is missing.' : vm.missingRequiredFieldCount + ' required fields are missing.';
+    }
+
+    vm.showValidationReport = function () {
+      return vm.validationReport !== null && vm.validationReport.isValid === false;
+    };
+
+    vm.problemPath = function (problem) {
+      if (problem && angular.isArray(problem.path) && problem.path.length > 0) {
+        return problem.path.join(' / ');
+      }
+      return problem && problem.field ? problem.field : 'Metadata';
+    };
 
     function showLoadError(messageKey, error) {
       UIMessageService.showBackendError(messageKey, error);
@@ -52,7 +84,9 @@ define([
     }
 
     function watchForChanges() {
-      cee.addEventListener('change', function () {
+      cee.addEventListener('change', function (event) {
+        var report = event && event.detail ? event.detail.dataQualityReport : null;
+        updateValidationReport(report || cee.dataQualityReport);
         var dirty = CeeDirtyTrackerService.hasBaseline() ?
             CeeDirtyTrackerService.isDirty(cee.currentMetadata) : true;
         UIUtilService.setDirty(dirty);
@@ -62,6 +96,7 @@ define([
 
     function finishLoad() {
       vm.loading = false;
+      updateValidationReport(cee.dataQualityReport);
       $timeout(markClean, 0);
     }
 
