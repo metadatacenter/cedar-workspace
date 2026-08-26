@@ -189,6 +189,7 @@ define([
     }
 
     function updateInstance(metadata) {
+      metadata.$$cedarEtag = instance.$$cedarEtag;
       AuthorizedBackendService.doCall(
           TemplateInstanceService.updateTemplateInstance(metadata['@id'], metadata),
           function () {
