@@ -43,6 +43,7 @@ define([
         getGroup: function () { return '/group/one'; },
         getGroupMembers: function () { return '/group/one/users'; },
         renameNode: function () { return '/command/rename-resource'; },
+        moveNodeToFolder: function () { return '/command/move-resource-to-folder'; },
         makeArtifactOpen: function () { return '/command/make-artifact-open'; },
         makeArtifactNotOpen: function () { return '/command/make-artifact-not-open'; },
         makeFolderOpen: function () { return '/command/make-folder-open'; },
@@ -108,6 +109,14 @@ define([
       service.makeFolderNotOpen(folder, angular.noop, angular.noop);
       expect(requests[requests.length - 2].url).toBe('/folder/folder-one');
       expect(requests[requests.length - 1].headers['If-Match']).toBe('"21"');
+    });
+
+    it('reads the graph details validator before moving a resource', function () {
+      service.moveResource({'@id': 'one', resourceType: 'template'}, 'destination',
+          angular.noop, angular.noop);
+      expect(requests[requests.length - 2].url).toBe('/template/one/details');
+      expect(requests[requests.length - 1].url).toBe('/command/move-resource-to-folder');
+      expect(requests[requests.length - 1].headers['If-Match']).toBe('"13"');
     });
   });
 });
