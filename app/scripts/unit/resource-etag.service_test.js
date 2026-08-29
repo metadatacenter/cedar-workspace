@@ -20,6 +20,10 @@ define([
           requests.push(request);
           if (request.method === 'GET' && request.url === '/template/one') {
             success({data: {'@id': 'one', $$cedarEtag: '"4"'}});
+          } else if (request.method === 'GET' && request.url === '/template/one/details') {
+            success({data: {'@id': 'one', $$cedarEtag: '"13"'}});
+          } else if (request.method === 'GET' && request.url === '/folder/folder-one') {
+            success({data: {'@id': 'folder-one', $$cedarEtag: '"21"'}});
           } else if (request.method === 'GET' && request.url === '/group/one/users') {
             success({data: {users: [], $$cedarEtag: '"8"'}});
           } else {
@@ -34,10 +38,15 @@ define([
       $provide.value('CedarUser', {});
       $provide.value('UrlService', {
         getTemplate: function () { return '/template/one'; },
+        folders: function () { return '/folder'; },
         templatePermission: function () { return '/template/one/permissions'; },
         getGroup: function () { return '/group/one'; },
         getGroupMembers: function () { return '/group/one/users'; },
-        renameNode: function () { return '/command/rename-resource'; }
+        renameNode: function () { return '/command/rename-resource'; },
+        makeArtifactOpen: function () { return '/command/make-artifact-open'; },
+        makeArtifactNotOpen: function () { return '/command/make-artifact-not-open'; },
+        makeFolderOpen: function () { return '/command/make-folder-open'; },
+        makeFolderNotOpen: function () { return '/command/make-folder-not-open'; }
       });
       $provide.value('CONST', {
         resourceType: {TEMPLATE: 'template', FOLDER: 'folder', FIELD: 'field', ELEMENT: 'element', INSTANCE: 'instance'}
@@ -79,6 +88,26 @@ define([
       }, 'Renamed', null);
       expect(request.method).toBe('POST');
       expect(request.headers['If-Match']).toBe('"12"');
+    });
+
+    it('reads the graph details validator before each OpenView visibility command', function () {
+      var artifact = {'@id': 'one', resourceType: 'template'};
+      service.makeArtifactOpen(artifact, angular.noop, angular.noop);
+      expect(requests[requests.length - 2].url).toBe('/template/one/details');
+      expect(requests[requests.length - 1].headers['If-Match']).toBe('"13"');
+
+      service.makeArtifactNotOpen(artifact, angular.noop, angular.noop);
+      expect(requests[requests.length - 2].url).toBe('/template/one/details');
+      expect(requests[requests.length - 1].headers['If-Match']).toBe('"13"');
+
+      var folder = {'@id': 'folder-one', resourceType: 'folder'};
+      service.makeFolderOpen(folder, angular.noop, angular.noop);
+      expect(requests[requests.length - 2].url).toBe('/folder/folder-one');
+      expect(requests[requests.length - 1].headers['If-Match']).toBe('"21"');
+
+      service.makeFolderNotOpen(folder, angular.noop, angular.noop);
+      expect(requests[requests.length - 2].url).toBe('/folder/folder-one');
+      expect(requests[requests.length - 1].headers['If-Match']).toBe('"21"');
     });
   });
 });
