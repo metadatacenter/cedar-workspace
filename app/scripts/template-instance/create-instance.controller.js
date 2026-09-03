@@ -80,7 +80,7 @@ define([
       var config = angular.copy(CeeConfigService.getConfig());
       config.readOnlyMode = !vm.canWrite;
       cee.config = config;
-      UIUtilService.setLocked(!vm.canWrite);
+      UIUtilService.setLocked(!vm.canWrite, 'TEMPLATEEDITOR.lock.noWritePermission');
     }
 
     function watchForChanges() {
