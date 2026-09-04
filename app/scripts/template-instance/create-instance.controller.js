@@ -22,6 +22,8 @@ define([
     var form = null;
     var instance = null;
     var cee = null;
+    var ceeConfigured = false;
+    var pendingArtifact = null;
 
     vm.loading = true;
     vm.canWrite = true;
@@ -73,14 +75,40 @@ define([
       UIUtilService.setDirty(false);
     }
 
-    function applyReadOnlyState() {
-      if (!cee) {
+    // The embeddable editor takes one configuration and reports every later assignment as
+    // ignored, so read-only mode has to be settled before the first one. Editing reads the write
+    // permission to settle it, which answers after this controller has run and can answer after
+    // the artifact itself has loaded — so the artifact waits in presentArtifact until the editor
+    // is configured, rather than the configuration chasing it.
+    function configureEditor() {
+      var config;
+      var artifact;
+      if (ceeConfigured || !cee) {
         return;
       }
-      var config = angular.copy(CeeConfigService.getConfig());
+      config = angular.copy(CeeConfigService.getConfig());
       config.readOnlyMode = !vm.canWrite;
       cee.config = config;
-      UIUtilService.setLocked(!vm.canWrite);
+      ceeConfigured = true;
+      UIUtilService.setLocked(!vm.canWrite, 'TEMPLATEEDITOR.lock.noWritePermission');
+      if (pendingArtifact) {
+        artifact = pendingArtifact;
+        pendingArtifact = null;
+        presentArtifact(artifact);
+      }
+    }
+
+    function presentArtifact(artifact) {
+      if (!ceeConfigured) {
+        pendingArtifact = artifact;
+        return;
+      }
+      if (artifact.instanceObject) {
+        cee.templateAndInstanceObject = artifact;
+      } else {
+        cee.templateObject = artifact.templateObject;
+      }
+      finishLoad();
     }
 
     function watchForChanges() {
@@ -106,11 +134,11 @@ define([
           CONST.resourceType.INSTANCE,
           function (details) {
             vm.canWrite = resourceService.canWrite(details);
-            applyReadOnlyState();
+            configureEditor();
           },
           function () {
             vm.canWrite = false;
-            applyReadOnlyState();
+            configureEditor();
           }
       );
     }
@@ -121,8 +149,7 @@ define([
           function (response) {
             form = response.data;
             $rootScope.documentTitle = form['schema:name'];
-            cee.templateObject = form;
-            finishLoad();
+            presentArtifact({templateObject: form});
           },
           function (error) {
             showLoadError('SERVER.TEMPLATE.load.error', error);
@@ -142,11 +169,10 @@ define([
                 TemplateService.getTemplate(instance['schema:isBasedOn']),
                 function (templateResponse) {
                   form = templateResponse.data;
-                  cee.templateAndInstanceObject = {
+                  presentArtifact({
                     templateObject: form,
                     instanceObject: instance
-                  };
-                  finishLoad();
+                  });
                 },
                 function (error) {
                   showLoadError('SERVER.TEMPLATE.load-for-instance.error', error);
@@ -235,10 +261,11 @@ define([
         showLoadError('SERVER.INSTANCE.load.error', new Error('CEDAR Embeddable Editor did not initialize'));
         return;
       }
-      applyReadOnlyState();
       watchForChanges();
 
       if ($routeParams.templateId !== undefined) {
+        // Creating an instance reads no resource details, so nothing is left to settle.
+        configureEditor();
         loadTemplate($routeParams.templateId);
       } else if ($routeParams.id !== undefined) {
         loadInstance(FrontendUrlService.decodeRouteIdentifier($routeParams.id));

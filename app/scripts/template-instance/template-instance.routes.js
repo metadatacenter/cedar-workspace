@@ -12,11 +12,13 @@ define([
     $routeProvider
         .when('/instances/create/:templateId*?', {
           templateUrl: 'scripts/template-instance/create-instance.html',
-          controller: 'CreateInstanceController'
+          controller: 'CreateInstanceController',
+          controllerAs: 'vm'
         })
         .when('/instances/edit/:id*', {
           templateUrl: 'scripts/template-instance/create-instance.html',
-          controller: 'CreateInstanceController'
+          controller: 'CreateInstanceController',
+          controllerAs: 'vm'
         });
   }
 });
