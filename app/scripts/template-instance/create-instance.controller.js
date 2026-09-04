@@ -33,6 +33,33 @@ define([
     vm.missingRequiredFieldCount = 0;
     vm.missingRequiredFieldMessage = '';
 
+    // The metadata's own name, edited here rather than only through the Workbench's Rename. New
+    // metadata starts from the name this page has always generated, the template's name followed
+    // by "metadata", and keeps it unless the user types another. `savedInstanceName` is the name
+    // the stored artifact carries, so a change to the field can count towards the dirty state.
+    vm.instanceName = null;
+    var savedInstanceName = null;
+
+    function generatedInstanceName() {
+      return form['schema:name'] + $translate.instant('GENERATEDVALUE.instanceTitle');
+    }
+
+    // The name that is saved: the field's text, or the generated one when the field is blank.
+    function chosenInstanceName() {
+      var typed = (vm.instanceName || '').trim();
+      return typed.length > 0 ? typed : generatedInstanceName();
+    }
+
+    function instanceNameDirty() {
+      return savedInstanceName !== null && chosenInstanceName() !== savedInstanceName;
+    }
+
+    vm.instanceNameChanged = function () {
+      if (instanceNameDirty()) {
+        UIUtilService.setDirty(true);
+      }
+    };
+
     function updateValidationReport(report) {
       var requiredCount;
       var completedRequiredCount;
@@ -117,7 +144,7 @@ define([
         updateValidationReport(report || cee.dataQualityReport);
         var dirty = CeeDirtyTrackerService.hasBaseline() ?
             CeeDirtyTrackerService.isDirty(cee.currentMetadata) : true;
-        UIUtilService.setDirty(dirty);
+        UIUtilService.setDirty(dirty || instanceNameDirty());
         $rootScope.$evalAsync();
       });
     }
@@ -149,6 +176,8 @@ define([
           function (response) {
             form = response.data;
             $rootScope.documentTitle = form['schema:name'];
+            vm.instanceName = generatedInstanceName();
+            savedInstanceName = vm.instanceName;
             presentArtifact({templateObject: form});
           },
           function (error) {
@@ -163,6 +192,8 @@ define([
           function (instanceResponse) {
             instance = instanceResponse.data;
             $rootScope.documentTitle = instance['schema:name'];
+            vm.instanceName = instance['schema:name'];
+            savedInstanceName = vm.instanceName;
             loadWritePermission(instance['@id']);
 
             AuthorizedBackendService.doCall(
@@ -198,8 +229,7 @@ define([
 
     function createInstance(metadata) {
       metadata['schema:isBasedOn'] = FrontendUrlService.decodeRouteIdentifier($routeParams.templateId);
-      metadata['schema:name'] = metadata['schema:name'] ||
-          form['schema:name'] + $translate.instant('GENERATEDVALUE.instanceTitle');
+      metadata['schema:name'] = chosenInstanceName();
       metadata['schema:description'] = metadata['schema:description'] ||
           form['schema:description'] + $translate.instant('GENERATEDVALUE.instanceDescription');
 
@@ -216,10 +246,14 @@ define([
 
     function updateInstance(metadata) {
       metadata.$$cedarEtag = instance.$$cedarEtag;
+      metadata['schema:name'] = chosenInstanceName();
       AuthorizedBackendService.doCall(
           TemplateInstanceService.updateTemplateInstance(metadata['@id'], metadata),
           function () {
             instance = metadata;
+            savedInstanceName = metadata['schema:name'];
+            vm.instanceName = savedInstanceName;
+            $rootScope.documentTitle = savedInstanceName;
             markClean();
             UIMessageService.flashSuccess('SERVER.INSTANCE.update.success', null, 'GENERIC.Updated');
             enableSave();
