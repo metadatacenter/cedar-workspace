@@ -3,6 +3,17 @@
     <div class="container">
       <div class="row">
         <div class="right-body col-sm-16 c">
+          <!-- The metadata's own name. It is stored beside the field values, and this is the only
+               place on the page that shows it. The editor below holds the template's fields. -->
+          <div class="instance-name-container" ng-hide="vm.loading">
+            <!-- The label follows the input so the stylesheet can colour it from the input's state. -->
+            <input type="text" class="form-control" id="instance-name"
+                   ng-readonly="!vm.canWrite"
+                   ng-model="vm.instanceName"
+                   ng-change="vm.instanceNameChanged()">
+            <label for="instance-name" translate>METADATAEDITOR.instanceName</label>
+          </div>
+
           <section class="template-container">
             <cedar-embeddable-editor></cedar-embeddable-editor>
           </section>

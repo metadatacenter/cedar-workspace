@@ -13,6 +13,8 @@ define([
     var cee;
     var changeListener;
     var templateInstanceService;
+    var uiUtilService;
+    var ceeDirty;
     var vm;
 
     beforeEach(module('cedar.templateEditor.templateInstance.createInstanceController'));
@@ -40,12 +42,14 @@ define([
         saveTemplateInstance: jasmine.createSpy('saveTemplateInstance').and.returnValue({kind: 'save'}),
         updateTemplateInstance: jasmine.createSpy('updateTemplateInstance')
       };
+      uiUtilService = {setDirty: jasmine.createSpy('setDirty'), setLocked: angular.noop};
+      ceeDirty = true;
 
       vm = $controller('CreateInstanceController', {
         $rootScope: $rootScope,
         $routeParams: {templateId: 'template-1'},
         $timeout: $timeout,
-        $translate: {instant: function () { return ''; }},
+        $translate: {instant: function (key) { return key === 'GENERATEDVALUE.instanceTitle' ? ' metadata' : ''; }},
         $window: {
           document: {querySelector: function () { return cee; }},
           location: {assign: jasmine.createSpy('assign')}
@@ -63,7 +67,7 @@ define([
           reset: angular.noop,
           markClean: angular.noop,
           hasBaseline: function () { return true; },
-          isDirty: function () { return true; }
+          isDirty: function () { return ceeDirty; }
         },
         CONST: {pageId: {RUNTIME: 'runtime'}, resourceType: {INSTANCE: 'instance'}},
         FrontendUrlService: {
@@ -80,49 +84,14 @@ define([
         TemplateInstanceService: templateInstanceService,
         TemplateService: {getTemplate: function () { return {kind: 'template'}; }},
         UIMessageService: {},
-        UIUtilService: {setDirty: angular.noop, setLocked: angular.noop}
+        UIUtilService: uiUtilService
       });
 
       $timeout.flush();
     }));
 
-    it('shows the initial invalid report, including the counter fallback when no problem paths are available', function () {
-      expect(vm.showValidationReport()).toBe(true);
-      expect(vm.missingRequiredFieldCount).toBe(1);
-      expect(vm.missingRequiredFieldMessage).toBe('1 required field is missing.');
-      expect(vm.validationProblems).toEqual([]);
-      expect(vm.saveButtonDisabled).toBe(false);
-    });
-
-    it('updates paths and messages from the report carried by a CEE change event', function () {
-      var problem = {
-        path: ['_author', '_email'],
-        field: '_email',
-        code: 'required',
-        message: 'A required value is missing.',
-        value: null
-      };
-
-      changeListener({detail: {dataQualityReport: {
-        requiredFieldValueCount: 1,
-        nonNullRequiredFieldValueCount: 0,
-        problems: [problem],
-        isValid: false
-      }}});
-      $rootScope.$digest();
-
-      expect(vm.validationProblems).toEqual([problem]);
-      expect(vm.problemPath(problem)).toBe('_author / _email');
-      expect(vm.saveButtonDisabled).toBe(false);
-    });
-
-    it('does not use validation errors to prohibit save', function () {
-      vm.save();
-
-      expect(templateInstanceService.saveTemplateInstance).toHaveBeenCalled();
-    });
-
-    it('preserves the loaded ETag when CEE returns a serialized copy for update', function () {
+    // An edit view over a saved instance, with the CEE returning a serialized copy on save.
+    function editSetup() {
       var loadedInstance = {
         '@id': 'instance-1',
         'schema:isBasedOn': 'template-1',
@@ -193,13 +162,100 @@ define([
         UIMessageService: {flashSuccess: angular.noop},
         UIUtilService: {setDirty: angular.noop, setLocked: angular.noop}
       });
-
       $timeout.flush();
-      editVm.save();
+      return {cee: editCee, service: editService, vm: editVm};
+    }
 
-      expect(editCee.currentMetadata.$$cedarEtag).toBeUndefined();
-      expect(editService.updateTemplateInstance).toHaveBeenCalledWith(
+    it('shows the initial invalid report, including the counter fallback when no problem paths are available', function () {
+      expect(vm.showValidationReport()).toBe(true);
+      expect(vm.missingRequiredFieldCount).toBe(1);
+      expect(vm.missingRequiredFieldMessage).toBe('1 required field is missing.');
+      expect(vm.validationProblems).toEqual([]);
+      expect(vm.saveButtonDisabled).toBe(false);
+    });
+
+    it('updates paths and messages from the report carried by a CEE change event', function () {
+      var problem = {
+        path: ['_author', '_email'],
+        field: '_email',
+        code: 'required',
+        message: 'A required value is missing.',
+        value: null
+      };
+
+      changeListener({detail: {dataQualityReport: {
+        requiredFieldValueCount: 1,
+        nonNullRequiredFieldValueCount: 0,
+        problems: [problem],
+        isValid: false
+      }}});
+      $rootScope.$digest();
+
+      expect(vm.validationProblems).toEqual([problem]);
+      expect(vm.problemPath(problem)).toBe('_author / _email');
+      expect(vm.saveButtonDisabled).toBe(false);
+    });
+
+    it('does not use validation errors to prohibit save', function () {
+      vm.save();
+
+      expect(templateInstanceService.saveTemplateInstance).toHaveBeenCalled();
+    });
+
+    it('preserves the loaded ETag when CEE returns a serialized copy for update', function () {
+      var edit = editSetup();
+
+      edit.vm.save();
+
+      expect(edit.cee.currentMetadata.$$cedarEtag).toBeUndefined();
+      expect(edit.service.updateTemplateInstance).toHaveBeenCalledWith(
           'instance-1', jasmine.objectContaining({$$cedarEtag: '"7"'}));
+    });
+
+    it('starts new metadata from the generated name and saves it under the typed one', function () {
+      expect(vm.instanceName).toBe('Template metadata');
+
+      vm.instanceName = 'Asthma cohort, run 7';
+      vm.save();
+
+      expect(templateInstanceService.saveTemplateInstance).toHaveBeenCalledWith(
+          'folder', jasmine.objectContaining({'schema:name': 'Asthma cohort, run 7'}));
+    });
+
+    it('falls back to the generated name when the field is blank', function () {
+      vm.instanceName = '   ';
+      vm.save();
+
+      expect(templateInstanceService.saveTemplateInstance).toHaveBeenCalledWith(
+          'folder', jasmine.objectContaining({'schema:name': 'Template metadata'}));
+    });
+
+    it('counts a changed name as unsaved work, on its own and alongside a clean editor', function () {
+      uiUtilService.setDirty.calls.reset();
+      vm.instanceName = 'Template metadata';
+      vm.instanceNameChanged();
+      expect(uiUtilService.setDirty).not.toHaveBeenCalled();
+
+      vm.instanceName = 'Something else';
+      vm.instanceNameChanged();
+      expect(uiUtilService.setDirty).toHaveBeenCalledWith(true);
+
+      uiUtilService.setDirty.calls.reset();
+      ceeDirty = false;
+      changeListener({detail: {}});
+      expect(uiUtilService.setDirty).toHaveBeenCalledWith(true);
+    });
+
+    it('loads the saved name for editing and updates under the edited one', function () {
+      var edit = editSetup();
+      expect(edit.vm.instanceName).toBe('Saved instance');
+
+      edit.vm.instanceName = 'Renamed instance';
+      edit.vm.save();
+
+      expect(edit.service.updateTemplateInstance).toHaveBeenCalledWith(
+          'instance-1', jasmine.objectContaining({'schema:name': 'Renamed instance'}));
+      expect($rootScope.documentTitle).toBe('Renamed instance');
     });
   });
 });
