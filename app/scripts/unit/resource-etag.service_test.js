@@ -74,12 +74,19 @@ define([
       expect(requests.pop().cedarArtifact).toBe(permissions);
 
       var group = {'@id': 'one', 'schema:name': 'Group', $$cedarEtag: '"7"'};
+      service.getGroupMembers(group, angular.noop, angular.noop);
+      expect(group.$$cedarEtag).toBe('"7"');
+      expect(group.$$cedarMembershipEtag).toBe('"8"');
+
       service.updateGroup(group, angular.noop, angular.noop);
       expect(requests.pop().cedarArtifact).toBe(group);
-      service.getGroupMembers(group, angular.noop, angular.noop);
       expect(group.$$cedarMembershipEtag).toBe('"8"');
+
+      // AuthorizedBackendService replaces the detail validator after a successful detail update.
+      group.$$cedarEtag = '"9"';
       service.updateGroupMembers(group, angular.noop, angular.noop);
       expect(requests.pop().cedarArtifact.$$cedarEtag).toBe('"8"');
+      expect(group.$$cedarEtag).toBe('"9"');
       service.deleteGroup(group, angular.noop, angular.noop);
       expect(requests.pop().cedarArtifact).toBe(group);
     });

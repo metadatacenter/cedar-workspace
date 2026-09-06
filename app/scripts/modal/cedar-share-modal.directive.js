@@ -20,7 +20,6 @@ define([
         cedarShareModalController.$inject = [
           '$timeout',
           '$scope',
-          '$location',
           '$translate',
           '$uibModal',
           'CedarUser',
@@ -31,7 +30,7 @@ define([
           'CONST'
         ];
 
-        function cedarShareModalController($timeout, $scope, $location, $translate, $uibModal, CedarUser,
+        function cedarShareModalController($timeout, $scope, $translate, $uibModal, CedarUser,
                                            resourceService,
                                            UIMessageService, UISettingsService,
                                            AuthorizedBackendService, CONST) {
@@ -77,7 +76,6 @@ define([
           vm.beginOwnershipTransfer = beginOwnershipTransfer;
           vm.cancelOwnershipTransfer = cancelOwnershipTransfer;
           vm.confirmOwnershipTransfer = confirmOwnershipTransfer;
-          vm.openGroups = openGroups;
           vm.incomplete = incomplete;
 
           // groups
@@ -393,16 +391,6 @@ define([
             return vm.selectedResource || vm.shareResource;
           }
 
-          function openGroups() {
-            var modal = jQuery('#share-modal');
-            modal.one('hidden.bs.modal', function () {
-              $scope.$evalAsync(function () {
-                $location.path('/groups');
-              });
-            });
-            modal.modal('hide');
-          }
-
           function getResourceName() {
             var resource = getResource();
             if (!resource) {
@@ -616,7 +604,7 @@ define([
 
           function canAdministerGroup() {
             var group = vm.model.groups.group;
-            var currentUserId = CedarUser.getUserId();
+            var currentUserId = CedarUser.getUserFullId();
             if (!group || group.specialGroup || !Array.isArray(group.users)) {
               return false;
             }

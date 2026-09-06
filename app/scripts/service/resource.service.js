@@ -895,7 +895,6 @@ define([
           authorizedBackendService.doCall(
               httpBuilderService.put(url, angular.toJson(group), group),
               function (response) {
-                group.$$cedarMembershipEtag = group.$$cedarEtag;
                 successCallback(response.data);
               },
               errorCallback
@@ -920,7 +919,6 @@ define([
           authorizedBackendService.doCall(
               httpBuilderService.get(url),
               function (response) {
-                group.$$cedarEtag = response.data.$$cedarEtag;
                 group.$$cedarMembershipEtag = response.data.$$cedarEtag;
                 successCallback(response.data);
               },
@@ -938,7 +936,6 @@ define([
           authorizedBackendService.doCall(
               httpBuilderService.put(url, angular.toJson(payload), payload),
               function (response) {
-                group.$$cedarEtag = payload.$$cedarEtag;
                 group.$$cedarMembershipEtag = payload.$$cedarEtag;
                 successCallback(response.data);
               },
