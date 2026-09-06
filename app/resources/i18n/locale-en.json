@@ -572,8 +572,8 @@
       "Permissions": "Permissions",
       "Version": "Version",
       "Categories": "Categories",
-      "ReadPermission": "read",
-      "WritePermission": "write",
+      "ReadPermission": "Viewer",
+      "WritePermission": "Manager",
       "OwnerPermission": "owner",
       "TrustedBy": "Trusted by"
     },
