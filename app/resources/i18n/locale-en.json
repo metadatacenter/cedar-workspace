@@ -340,8 +340,8 @@
         "error": "Although the the metadata were loaded, there was an error while loading the corresponding template!<br /><br />VIEW TECHNICAL DETAILS!"
       },
       "delete": {
-        "success": "The template has been deleted.",
-        "error": "There was an error while deleting the template!<br /><br />VIEW TECHNICAL DETAILS!"
+        "success": "The group has been deleted.",
+        "error": "There was an error while deleting the group!<br /><br />VIEW TECHNICAL DETAILS!"
       }
     },
     "INSTANCE": {
@@ -539,7 +539,8 @@
       "newGroup": "New group",
       "people": "People",
       "admin": "admin",
-      "addPeople": "Add people"
+      "addPeople": "Add people",
+      "confirmDeleteGroup": "Delete this group? Existing access granted to the group will no longer apply to its members."
     },
     "filter": {
       "filterBy": "Filter",
@@ -563,7 +564,7 @@
     "sidebar": {
       "myWorkspace": "Workspace",
       "sharedWithMe": "Shared with Me",
-      "sharedWithEverybody": "Shared with Everybody",
+      "sharedWithEverybody": "Shared with Everyone",
       "specialFolders": "Community Folders",
       "all": "All"
     },
@@ -750,7 +751,7 @@
   },
   "BreadcrumbTitle": {
     "sharedWithMe": "Shared with Me",
-    "sharedWithEverybody": "Shared with Everybody",
+    "sharedWithEverybody": "Shared with Everyone",
     "viewAll": "View all",
     "searchResult": "Search results for: '{{searchTerm}}'",
     "categorySearchResult": "Category search results for: '{{searchTerm}}'",
