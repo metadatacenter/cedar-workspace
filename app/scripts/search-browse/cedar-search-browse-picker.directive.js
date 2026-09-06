@@ -116,8 +116,10 @@ define([
           vm.hash = $location.hash();
           vm.resources = [];
           vm.canNotSubmit = true;
-          vm.canNotWrite = false;
-          vm.canNotShare = false;
+          vm.cannotEdit = false;
+          vm.cannotManageGrants = false;
+          vm.cannotMove = false;
+          vm.cannotCopy = false;
           vm.canNotPopulate = false;
           vm.canNotPublish = false;
           vm.canNotCreateDraft = false;
@@ -599,9 +601,11 @@ define([
           };
 
           vm.setPermissions = function () {
-            vm.canNotWrite = !vm.canWrite();
+            vm.cannotEdit = !vm.canEdit();
             vm.canNotSubmit = !vm.canSubmit();
-            vm.canNotShare = !vm.canShare();
+            vm.cannotManageGrants = !vm.canManageGrants();
+            vm.cannotMove = !vm.canMove();
+            vm.cannotCopy = !vm.canCopy();
             vm.canNotPublish = !vm.canPublish();
             vm.canNotDelete = !vm.canDelete();
             vm.canNotRename = !vm.canRename();
@@ -672,56 +676,68 @@ define([
             );
           };
 
-          vm.canRead = function () {
-            return resourceService.canRead(vm.getSelectedNode());
+          function permissionTarget(resource) {
+            return resource || vm.getSelectedNode();
+          }
+
+          vm.canView = function (resource) {
+            return resourceService.canView(permissionTarget(resource));
           };
 
-          vm.canWrite = function () {
-            return resourceService.canWrite(vm.getSelectedNode());
+          vm.canEdit = function (resource) {
+            return resourceService.canEdit(permissionTarget(resource));
           };
 
-          vm.canRename = function () {
-            return resourceService.canWrite(vm.getSelectedNode());
+          vm.canRename = function (resource) {
+            return resourceService.canEdit(permissionTarget(resource));
           };
 
-          vm.canDelete = function () {
-            return resourceService.canDelete(vm.getSelectedNode());
+          vm.canDelete = function (resource) {
+            return resourceService.canDelete(permissionTarget(resource));
           };
 
-          vm.canChangeOwner = function () {
-            return resourceService.canChangeOwner(vm.getSelectedNode());
+          vm.canTransferOwnership = function (resource) {
+            return resourceService.canTransferOwnership(permissionTarget(resource));
           };
 
-          vm.canShare = function () {
-            return resourceService.canShare(vm.getSelectedNode());
+          vm.canManageGrants = function (resource) {
+            return resourceService.canManageGrants(permissionTarget(resource));
           };
 
-          vm.canPopulate = function () {
-            return resourceService.canPopulate(vm.getSelectedNode());
+          vm.canMove = function (resource) {
+            return resourceService.canMove(permissionTarget(resource));
           };
 
-          vm.canPublish = function () {
-            return resourceService.canPublish(vm.getSelectedNode());
+          vm.canCopy = function (resource) {
+            return resourceService.canCopy(permissionTarget(resource));
           };
 
-          vm.canCreateDraft = function () {
-            return resourceService.canCreateDraft(vm.getSelectedNode());
+          vm.canPopulate = function (resource) {
+            return resourceService.canPopulate(permissionTarget(resource));
           };
 
-          vm.canMakeOpen = function () {
-            return window.makeOpenEnabled && resourceService.canMakeOpen(vm.getSelectedNode());
+          vm.canPublish = function (resource) {
+            return resourceService.canPublish(permissionTarget(resource));
           };
 
-          vm.canMakeNotOpen = function () {
-            return window.makeOpenEnabled && resourceService.canMakeNotOpen(vm.getSelectedNode());
+          vm.canCreateDraft = function (resource) {
+            return resourceService.canCreateDraft(permissionTarget(resource));
           };
 
-          vm.canOpenOpen = function () {
-            return window.makeOpenEnabled && resourceService.canOpenOpen(vm.getSelectedNode());
+          vm.canMakeOpen = function (resource) {
+            return window.makeOpenEnabled && resourceService.canMakeOpen(permissionTarget(resource));
           };
 
-          vm.canOpenDatacite = function () {
-            return window.dataciteEnabled && resourceService.canOpenDatacite(vm.getSelectedNode());
+          vm.canMakeNotOpen = function (resource) {
+            return window.makeOpenEnabled && resourceService.canMakeNotOpen(permissionTarget(resource));
+          };
+
+          vm.canOpenOpen = function (resource) {
+            return window.makeOpenEnabled && resourceService.canOpenOpen(permissionTarget(resource));
+          };
+
+          vm.canOpenDatacite = function (resource) {
+            return window.dataciteEnabled && resourceService.canOpenDatacite(permissionTarget(resource));
           };
 
           vm.canOpenDownload = function () {
@@ -732,8 +748,8 @@ define([
             return window.categoryTreeEnabled;
           };
 
-          vm.canWriteToCurrentFolder = function () {
-            return resourceService.canWrite(vm.currentFolder);
+          vm.canCreateInCurrentFolder = function () {
+            return resourceService.canCreate(vm.currentFolder);
           };
 
           vm.getResourceVersion = function (resource) {
@@ -2457,7 +2473,7 @@ define([
           // open the 'copy' modal
           function showCopyModal(resource) {
             let r = resource || getSelected();
-            if (r && !vm.isFolder(r)) {
+            if (r && !vm.isFolder(r) && resourceService.canCopy(r)) {
               const homeFolderId = CedarUser.getHomeFolderId();
               const folderId = vm.currentFolderId || homeFolderId;
               vm.copyModalVisible = true;
@@ -2469,7 +2485,7 @@ define([
           // open the 'move' modal
           function showMoveModal() {
             let r = getSelected();
-            if (r && resourceService.canWrite(r)) {
+            if (r && resourceService.canMove(r)) {
               vm.moveModalVisible = true;
               const homeFolderId = CedarUser.getHomeFolderId();
               $scope.$broadcast('moveModalVisible',
@@ -2482,7 +2498,7 @@ define([
           // open the 'publish' modal
           function showPublishModal(callback, action) {
             let r = getSelected();
-            if (r && resourceService.canWrite(r)) {
+            if (r && resourceService.canEdit(r)) {
               vm.publishModalVisible = true;
               const homeFolderId = CedarUser.getHomeFolderId();
               $scope.$broadcast('publishModalVisible', [vm.publishModalVisible, r, callback, action]);
@@ -2502,7 +2518,7 @@ define([
           // open the 'share' modal
           function showShareModal() {
             let r = getSelected();
-            if (r && resourceService.canShare(r)) {
+            if (r && resourceService.canManageGrants(r)) {
               vm.shareModalVisible = true;
               $scope.$broadcast('shareModalVisible', [vm.shareModalVisible, r]);
             }
@@ -2511,7 +2527,7 @@ define([
           // open the 'rename' modal
           function showRenameModal() {
             let r = getSelected();
-            if (r && resourceService.canWrite(r)) {
+            if (r && resourceService.canEdit(r)) {
               vm.renameModalVisible = true;
               $scope.$broadcast('renameModalVisible', [vm.renameModalVisible, r]);
             }

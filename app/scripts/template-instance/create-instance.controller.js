@@ -26,7 +26,7 @@ define([
     var pendingArtifact = null;
 
     vm.loading = true;
-    vm.canWrite = true;
+    vm.canEdit = true;
     vm.saveButtonDisabled = false;
     vm.validationReport = null;
     vm.validationProblems = [];
@@ -104,7 +104,7 @@ define([
 
     // The embeddable editor takes one configuration and reports every later assignment as
     // ignored, so read-only mode has to be settled before the first one. Editing reads the write
-    // permission to settle it, which answers after this controller has run and can answer after
+    // Editor capability to settle it, which answers after this controller has run and can answer after
     // the artifact itself has loaded — so the artifact waits in presentArtifact until the editor
     // is configured, rather than the configuration chasing it.
     function configureEditor() {
@@ -114,10 +114,10 @@ define([
         return;
       }
       config = angular.copy(CeeConfigService.getConfig());
-      config.readOnlyMode = !vm.canWrite;
+      config.readOnlyMode = !vm.canEdit;
       cee.config = config;
       ceeConfigured = true;
-      UIUtilService.setLocked(!vm.canWrite, 'TEMPLATEEDITOR.lock.noWritePermission');
+      UIUtilService.setLocked(!vm.canEdit, 'TEMPLATEEDITOR.lock.noEditPermission');
       if (pendingArtifact) {
         artifact = pendingArtifact;
         pendingArtifact = null;
@@ -155,16 +155,16 @@ define([
       $timeout(markClean, 0);
     }
 
-    function loadWritePermission(id) {
+    function loadEditCapability(id) {
       resourceService.getResourceDetailFromId(
           id,
           CONST.resourceType.INSTANCE,
           function (details) {
-            vm.canWrite = resourceService.canWrite(details);
+            vm.canEdit = resourceService.canEdit(details);
             configureEditor();
           },
           function () {
-            vm.canWrite = false;
+            vm.canEdit = false;
             configureEditor();
           }
       );
@@ -194,7 +194,7 @@ define([
             $rootScope.documentTitle = instance['schema:name'];
             vm.instanceName = instance['schema:name'];
             savedInstanceName = vm.instanceName;
-            loadWritePermission(instance['@id']);
+            loadEditCapability(instance['@id']);
 
             AuthorizedBackendService.doCall(
                 TemplateService.getTemplate(instance['schema:isBasedOn']),
@@ -266,7 +266,7 @@ define([
     }
 
     vm.save = function () {
-      if (!vm.canWrite || !cee || !cee.currentMetadata) {
+      if (!vm.canEdit || !cee || !cee.currentMetadata) {
         return;
       }
       vm.saveButtonDisabled = true;

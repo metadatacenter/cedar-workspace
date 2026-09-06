@@ -155,7 +155,7 @@ define([
         },
         resourceService: {
           getResourceDetailFromId: function (id, type, success) { success({}); },
-          canWrite: function () { return true; }
+          canEdit: function () { return true; }
         },
         TemplateInstanceService: editService,
         TemplateService: {getTemplate: function () { return {kind: 'template'}; }},

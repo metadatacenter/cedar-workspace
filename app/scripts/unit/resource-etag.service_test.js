@@ -47,7 +47,8 @@ define([
         makeArtifactOpen: function () { return '/command/make-artifact-open'; },
         makeArtifactNotOpen: function () { return '/command/make-artifact-not-open'; },
         makeFolderOpen: function () { return '/command/make-folder-open'; },
-        makeFolderNotOpen: function () { return '/command/make-folder-not-open'; }
+        makeFolderNotOpen: function () { return '/command/make-folder-not-open'; },
+        transferResourceOwnership: function () { return '/command/transfer-resource-ownership'; }
       });
       $provide.value('CONST', {
         resourceType: {TEMPLATE: 'template', FOLDER: 'folder', FIELD: 'field', ELEMENT: 'element', INSTANCE: 'instance'}
@@ -117,6 +118,45 @@ define([
       expect(requests[requests.length - 2].url).toBe('/template/one/details');
       expect(requests[requests.length - 1].url).toBe('/command/move-resource-to-folder');
       expect(requests[requests.length - 1].headers['If-Match']).toBe('"13"');
+    });
+
+    it('uses the new capability vocabulary without treating edit as grant management', function () {
+      var editor = {currentUserPermissions: {
+        role: 'editor',
+        capabilities: ['readResource', 'updateResource', 'deleteResource'],
+        availableActions: ['copyFromResource'],
+        canEdit: false
+      }};
+      var destination = {currentUserPermissions: {
+        role: 'editor',
+        capabilities: ['readResource', 'listFolderContents', 'createInFolder', 'copyIntoFolder', 'moveIntoFolder'],
+        availableActions: []
+      }};
+      expect(service.canView(editor)).toBe(true);
+      expect(service.canEdit(editor)).toBe(true);
+      expect(service.canCreate(editor)).toBe(false);
+      expect(service.canCopy(editor)).toBe(true);
+      expect(service.canDelete(editor)).toBe(true);
+      expect(service.canMove(editor)).toBe(false);
+      expect(service.canManageGrants(editor)).toBe(false);
+      expect(service.canTransferOwnership(editor)).toBe(false);
+      expect(service.canCreate(destination)).toBe(true);
+      expect(service.canCopyInto(destination)).toBe(true);
+      expect(service.canCopy(destination)).toBe(false);
+    });
+
+    it('sends ownership transfer as a separate conditional command', function () {
+      service.transferResourceOwnership(
+          {'@id': 'one', resourceType: 'template'},
+          'user-two',
+          {$$cedarEtag: '"5"'},
+          angular.noop,
+          angular.noop);
+      var request = requests.pop();
+      expect(request.method).toBe('POST');
+      expect(request.url).toBe('/command/transfer-resource-ownership');
+      expect(request.data).toEqual({'@id': 'one', newOwnerId: 'user-two'});
+      expect(request.headers['If-Match']).toBe('"5"');
     });
   });
 });
