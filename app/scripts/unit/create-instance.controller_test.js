@@ -155,7 +155,7 @@ define([
         },
         resourceService: {
           getResourceDetailFromId: function (id, type, success) { success({}); },
-          canWrite: function () { return true; }
+          canEdit: function () { return true; }
         },
         TemplateInstanceService: editService,
         TemplateService: {getTemplate: function () { return {kind: 'template'}; }},
@@ -244,6 +244,20 @@ define([
       ceeDirty = false;
       changeListener({detail: {}});
       expect(uiUtilService.setDirty).toHaveBeenCalledWith(true);
+    });
+
+    it('names the metadata in the bar above as the field is typed, not only once saved', function () {
+      vm.instanceName = 'Asthma cohort, run 7';
+      vm.instanceNameChanged();
+
+      expect($rootScope.documentTitle).toBe('Asthma cohort, run 7');
+    });
+
+    it('shows the name an empty field would save rather than an empty bar', function () {
+      vm.instanceName = '   ';
+      vm.instanceNameChanged();
+
+      expect($rootScope.documentTitle).toBe('Template metadata');
     });
 
     it('loads the saved name for editing and updates under the edited one', function () {
