@@ -15,6 +15,7 @@ define([
     var templateInstanceService;
     var uiUtilService;
     var ceeDirty;
+    var previousRouteService;
     var createdInstance;
     var $window;
     var vm;
@@ -48,6 +49,7 @@ define([
             })
       };
       uiUtilService = {setDirty: jasmine.createSpy('setDirty'), setLocked: angular.noop};
+      previousRouteService = {supersedeCurrent: jasmine.createSpy('supersedeCurrent')};
       ceeDirty = true;
 
       // What the server returns from the create: the same metadata as an artifact, with the
@@ -96,6 +98,7 @@ define([
           getInstanceEdit: function (id) { return '/instances/edit/' + id; }
         },
         HeaderService: {configure: angular.noop},
+        PreviousRouteService: previousRouteService,
         QueryParamUtilsService: {
           getFolderId: function () { return 'folder'; },
           getReturnTo: function () { return null; }
@@ -169,6 +172,7 @@ define([
           getInstanceEdit: function () { return '/instances/edit/1'; }
         },
         HeaderService: {configure: angular.noop},
+        PreviousRouteService: previousRouteService,
         QueryParamUtilsService: {
           getFolderId: function () { return 'folder'; },
           getReturnTo: function () { return null; }
@@ -287,6 +291,23 @@ define([
       // The address a reload or a bookmark would use, so the page it lands on is the saved
       // metadata rather than a create form for metadata that now exists.
       expect($window.history.replaceState).toHaveBeenCalledWith(null, '', '/instances/edit/instance-9');
+    });
+
+    // The rewrite is invisible to AngularJS, so the back stack has to be told: without this the
+    // create address stays on it and the back arrow offers a create form for metadata that exists.
+    it('tells the back stack the create address it replaced is gone', function () {
+      vm.save();
+
+      expect(previousRouteService.supersedeCurrent).toHaveBeenCalled();
+    });
+
+    it('leaves the back stack alone when the browser refuses the rewrite', function () {
+      $window.history.replaceState.and.throwError('refused');
+
+      vm.save();
+
+      expect(previousRouteService.supersedeCurrent).not.toHaveBeenCalled();
+      expect($window.location.assign).toHaveBeenCalled();
     });
 
     it('updates what it created on the next save, under the identifier the server assigned', function () {

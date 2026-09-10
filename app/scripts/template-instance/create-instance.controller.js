@@ -9,15 +9,16 @@ define([
   CreateInstanceController.$inject = [
     '$rootScope', '$routeParams', '$timeout', '$translate', '$window',
     'AuthorizedBackendService', 'CedarUser', 'CeeConfigService', 'CeeDirtyTrackerService',
-    'CONST', 'FrontendUrlService', 'HeaderService', 'QueryParamUtilsService', 'resourceService',
-    'TemplateInstanceService', 'TemplateService', 'UIMessageService', 'UIUtilService'
+    'CONST', 'FrontendUrlService', 'HeaderService', 'PreviousRouteService', 'QueryParamUtilsService',
+    'resourceService', 'TemplateInstanceService', 'TemplateService', 'UIMessageService', 'UIUtilService'
   ];
 
   function CreateInstanceController($rootScope, $routeParams, $timeout, $translate, $window,
                                     AuthorizedBackendService, CedarUser, CeeConfigService,
                                     CeeDirtyTrackerService, CONST, FrontendUrlService, HeaderService,
-                                    QueryParamUtilsService, resourceService, TemplateInstanceService,
-                                    TemplateService, UIMessageService, UIUtilService) {
+                                    PreviousRouteService, QueryParamUtilsService, resourceService,
+                                    TemplateInstanceService, TemplateService, UIMessageService,
+                                    UIUtilService) {
     var vm = this;
     var form = null;
     // The stored artifact this page is editing: what the server returned from the load, from the
@@ -272,6 +273,10 @@ define([
       $rootScope.documentTitle = savedInstanceName;
       markClean();
       if (showEditAddress(editUrl)) {
+        // The create address the page arrived on is gone, and the metadata it would create now
+        // exists. Tell the back stack, which tracks AngularJS location changes and would otherwise
+        // record that address as somewhere to return to.
+        PreviousRouteService.supersedeCurrent();
         UIMessageService.flashSuccess('SERVER.INSTANCE.create.success', null, 'GENERIC.Created');
         enableSave();
       } else {
