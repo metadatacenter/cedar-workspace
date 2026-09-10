@@ -15,6 +15,8 @@ define([
     var templateInstanceService;
     var uiUtilService;
     var ceeDirty;
+    var createdInstance;
+    var $window;
     var vm;
 
     beforeEach(module('cedar.templateEditor.templateInstance.createInstanceController'));
@@ -40,24 +42,42 @@ define([
       };
       templateInstanceService = {
         saveTemplateInstance: jasmine.createSpy('saveTemplateInstance').and.returnValue({kind: 'save'}),
-        updateTemplateInstance: jasmine.createSpy('updateTemplateInstance')
+        updateTemplateInstance: jasmine.createSpy('updateTemplateInstance').and.callFake(
+            function (id, metadata) {
+              return {kind: 'update', id: id, metadata: metadata};
+            })
       };
       uiUtilService = {setDirty: jasmine.createSpy('setDirty'), setLocked: angular.noop};
       ceeDirty = true;
+
+      // What the server returns from the create: the same metadata as an artifact, with the
+      // identifier and the validator every later save is made under.
+      createdInstance = {
+        '@id': 'instance-9',
+        'schema:isBasedOn': 'template-1',
+        'schema:name': 'Template metadata',
+        $$cedarEtag: '"1"'
+      };
+      $window = {
+        document: {querySelector: function () { return cee; }},
+        history: {replaceState: jasmine.createSpy('replaceState')},
+        location: {assign: jasmine.createSpy('assign')}
+      };
 
       vm = $controller('CreateInstanceController', {
         $rootScope: $rootScope,
         $routeParams: {templateId: 'template-1'},
         $timeout: $timeout,
         $translate: {instant: function (key) { return key === 'GENERATEDVALUE.instanceTitle' ? ' metadata' : ''; }},
-        $window: {
-          document: {querySelector: function () { return cee; }},
-          location: {assign: jasmine.createSpy('assign')}
-        },
+        $window: $window,
         AuthorizedBackendService: {
           doCall: function (request, success) {
             if (request.kind === 'template') {
               success({data: {'schema:name': 'Template'}});
+            } else if (request.kind === 'save') {
+              success({data: createdInstance});
+            } else if (request.kind === 'update') {
+              success({data: request.metadata});
             }
           }
         },
@@ -73,7 +93,7 @@ define([
         FrontendUrlService: {
           decodeRouteIdentifier: function (value) { return value; },
           getWorkspaceReturn: function () { return '/dashboard'; },
-          getInstanceEdit: function () { return '/instances/edit/1'; }
+          getInstanceEdit: function (id) { return '/instances/edit/' + id; }
         },
         HeaderService: {configure: angular.noop},
         QueryParamUtilsService: {
@@ -83,7 +103,7 @@ define([
         resourceService: {},
         TemplateInstanceService: templateInstanceService,
         TemplateService: {getTemplate: function () { return {kind: 'template'}; }},
-        UIMessageService: {},
+        UIMessageService: {flashSuccess: angular.noop, flashAfterReload: angular.noop},
         UIUtilService: uiUtilService
       });
 
@@ -258,6 +278,34 @@ define([
       vm.instanceNameChanged();
 
       expect($rootScope.documentTitle).toBe('Template metadata');
+    });
+
+    it('stays on the page when the first save stores the metadata', function () {
+      vm.save();
+
+      expect($window.location.assign).not.toHaveBeenCalled();
+      // The address a reload or a bookmark would use, so the page it lands on is the saved
+      // metadata rather than a create form for metadata that now exists.
+      expect($window.history.replaceState).toHaveBeenCalledWith(null, '', '/instances/edit/instance-9');
+    });
+
+    it('updates what it created on the next save, under the identifier the server assigned', function () {
+      vm.save();
+      vm.save();
+
+      // The editor is never handed the stored artifact, so its copy still carries no identifier.
+      expect(cee.currentMetadata['@id']).toBeUndefined();
+      expect(templateInstanceService.saveTemplateInstance.calls.count()).toBe(1);
+      expect(templateInstanceService.updateTemplateInstance).toHaveBeenCalledWith(
+          'instance-9', jasmine.objectContaining({'@id': 'instance-9', $$cedarEtag: '"1"'}));
+    });
+
+    it('loads the edit address when the browser refuses to rewrite it', function () {
+      $window.history.replaceState.and.throwError('cross-origin');
+
+      vm.save();
+
+      expect($window.location.assign).toHaveBeenCalledWith('/instances/edit/instance-9');
     });
 
     it('loads the saved name for editing and updates under the edited one', function () {

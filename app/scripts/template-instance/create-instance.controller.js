@@ -20,7 +20,10 @@ define([
                                     TemplateService, UIMessageService, UIUtilService) {
     var vm = this;
     var form = null;
-    var instance = null;
+    // The stored artifact this page is editing: what the server returned from the load, from the
+    // create, or from the last update. Null while the metadata has never been saved, which is what
+    // makes the next save a create rather than an update.
+    var savedInstance = null;
     var cee = null;
     var ceeConfigured = false;
     var pendingArtifact = null;
@@ -196,19 +199,19 @@ define([
       AuthorizedBackendService.doCall(
           TemplateInstanceService.getTemplateInstance(instanceId),
           function (instanceResponse) {
-            instance = instanceResponse.data;
-            $rootScope.documentTitle = instance['schema:name'];
-            vm.instanceName = instance['schema:name'];
+            savedInstance = instanceResponse.data;
+            $rootScope.documentTitle = savedInstance['schema:name'];
+            vm.instanceName = savedInstance['schema:name'];
             savedInstanceName = vm.instanceName;
-            loadEditCapability(instance['@id']);
+            loadEditCapability(savedInstance['@id']);
 
             AuthorizedBackendService.doCall(
-                TemplateService.getTemplate(instance['schema:isBasedOn']),
+                TemplateService.getTemplate(savedInstance['schema:isBasedOn']),
                 function (templateResponse) {
                   form = templateResponse.data;
                   presentArtifact({
                     templateObject: form,
-                    instanceObject: instance
+                    instanceObject: savedInstance
                   });
                 },
                 function (error) {
@@ -226,11 +229,55 @@ define([
       vm.saveButtonDisabled = false;
     }
 
+    /**
+     * Point the address bar at the saved metadata, without loading the page again.
+     *
+     * `history.replaceState` rather than `$location`: create and edit are two route definitions,
+     * and ngRoute rebuilds the controller whenever a URL resolves to a different one. That is what
+     * discarded the editor, and the reason a first save used to cost a full page load. AngularJS
+     * does not see this write, since its location watcher runs only for changes `$location` itself
+     * made, so `$location` keeps the create URL it parsed. Nothing on this page writes `$location`,
+     * and the two parameters it is read for, `folderId` and `returnTo`, are the same on both
+     * addresses.
+     *
+     * Replacing rather than pushing, so Back returns where the user came from rather than to a
+     * create form for metadata that now exists.
+     *
+     * False when the browser refuses the rewrite, which an edit address on another origin would be.
+     * The caller then loads that address, which is what this save did before.
+     */
+    function showEditAddress(editUrl) {
+      try {
+        $window.history.replaceState(null, '', editUrl);
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    /**
+     * Record what the server stored, and go on editing it.
+     *
+     * The editor is told nothing. It already shows the metadata that was just saved, and the one
+     * thing it lacks is an identifier, which `updateInstance` supplies from here. Handing it the
+     * stored artifact instead would rebuild every widget to no visible effect and lose the reader's
+     * place in a long form.
+     */
     function saveCreated(response) {
+      var editUrl = FrontendUrlService.getInstanceEdit(
+          response.data['@id'], QueryParamUtilsService.getFolderId(), QueryParamUtilsService.getReturnTo());
+      savedInstance = response.data;
+      savedInstanceName = savedInstance['schema:name'];
+      vm.instanceName = savedInstanceName;
+      $rootScope.documentTitle = savedInstanceName;
       markClean();
-      UIMessageService.flashAfterReload('success', 'SERVER.INSTANCE.create.success', 'GENERIC.Created');
-      $window.location.assign(FrontendUrlService.getInstanceEdit(
-          response.data['@id'], QueryParamUtilsService.getFolderId(), QueryParamUtilsService.getReturnTo()));
+      if (showEditAddress(editUrl)) {
+        UIMessageService.flashSuccess('SERVER.INSTANCE.create.success', null, 'GENERIC.Created');
+        enableSave();
+      } else {
+        UIMessageService.flashAfterReload('success', 'SERVER.INSTANCE.create.success', 'GENERIC.Created');
+        $window.location.assign(editUrl);
+      }
     }
 
     function createInstance(metadata) {
@@ -251,12 +298,17 @@ define([
     }
 
     function updateInstance(metadata) {
-      metadata.$$cedarEtag = instance.$$cedarEtag;
+      // The editor's copy has no identifier until it is given one: it holds the metadata, not the
+      // artifact the server stored it as. Provenance is not sent with it either, because a
+      // non-verbatim PUT restores creation provenance and reconciles child identifiers from the
+      // stored artifact.
+      metadata['@id'] = savedInstance['@id'];
+      metadata.$$cedarEtag = savedInstance.$$cedarEtag;
       metadata['schema:name'] = chosenInstanceName();
       AuthorizedBackendService.doCall(
           TemplateInstanceService.updateTemplateInstance(metadata['@id'], metadata),
           function () {
-            instance = metadata;
+            savedInstance = metadata;
             savedInstanceName = metadata['schema:name'];
             vm.instanceName = savedInstanceName;
             $rootScope.documentTitle = savedInstanceName;
@@ -277,7 +329,10 @@ define([
       }
       vm.saveButtonDisabled = true;
       var metadata = angular.copy(cee.currentMetadata);
-      if (metadata['@id'] == null) {
+      // Whether this page has stored the metadata yet, rather than whether the editor's copy
+      // carries an identifier: after a first save it still does not, and the artifact that copy
+      // belongs to is held here.
+      if (savedInstance === null) {
         createInstance(metadata);
       } else {
         updateInstance(metadata);
