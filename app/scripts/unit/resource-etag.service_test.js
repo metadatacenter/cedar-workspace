@@ -127,6 +127,14 @@ define([
       expect(requests[requests.length - 1].headers['If-Match']).toBe('"13"');
     });
 
+    // The move command accepts the resource and the target folder. The resource type used to be
+    // sent alongside them and was never read, and the endpoint refuses what it does not accept.
+    it('sends a move command as the resource and the target folder alone', function () {
+      service.moveResource({'@id': 'one', resourceType: 'template'}, 'destination',
+          angular.noop, angular.noop);
+      expect(requests[requests.length - 1].data).toEqual({'@id': 'one', targetFolderId: 'destination'});
+    });
+
     it('uses the new capability vocabulary without treating edit as grant management', function () {
       var editor = {currentUserPermissions: {
         role: 'editor',
