@@ -44,7 +44,6 @@ require.config({
     'lib/angular-translate-loader-static-files/angular-translate-loader-static-files.min': ['lib/angular-translate/angular-translate.min'],
     'lib/angular-toasty/dist/angular-toasty.min'                                         : ['angular'],
     'lib/angular-ui-select/dist/select.min'                                              : ['angular'],
-    'lib/angulartics/dist/angulartics.min'                                               : ['angular'],
     'ngFlow'                                                                             : ['angular'],
     'flow'                                                                               : ['angular'],
     'moment'                                                                             : {

@@ -49,7 +49,6 @@ jobs:
           CEDAR_VERSION_MODIFIER: ''
           CEDAR_DATACITE_ENABLED: 'false'
           CEDAR_GA4_TRACKING_ID: ''
-          CEDAR_ANALYTICS_KEY: ''
         # The suite loads config/url-service.conf.json, which these tasks write from
         # their templates. The hosts above only have to parse; nothing here calls them.
-        run: npx gulp replace-url replace-version replace-tracking && npm test
+        run: npx gulp replace-url replace-version && npm test

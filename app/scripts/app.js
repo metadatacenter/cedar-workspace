@@ -23,8 +23,6 @@ define([
   'jquery',
   'lib/jquery-ui/jquery-ui.min',
   'lib/sweetalert/dist/sweetalert.min',
-  'lib/angulartics/dist/angulartics.min',
-  'lib/angulartics-google-analytics/dist/angulartics-google-analytics.min',
   'lib/ngprogress/build/ngprogress.min',
   'flow',
 
@@ -47,8 +45,6 @@ define([
     'ui.select',
     'pascalprecht.translate',
     'angular-toasty',
-    'angulartics',
-    'angulartics.google.analytics',
     'ngProgress',
     'flow',
 

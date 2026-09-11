@@ -12,7 +12,7 @@ define([
                                         'DataManipulationService', 'FieldTypeService', 'UrlService',
                                         'UserService',
                                         'CedarUser', 'UISettingsService', 'FrontendUrlService',
-                                        'TrackingService', 'MessagingService',
+                                        'MessagingService',
                                         '$httpParamSerializer', '$location', 'UIMessageService'];
 
 
@@ -20,7 +20,7 @@ define([
                                       DataManipulationService, FieldTypeService, UrlService,
                                       UserService,
                                       CedarUser, UISettingsService, FrontendUrlService,
-                                      TrackingService, MessagingService,
+                                      MessagingService,
                                       $httpParamSerializer, $location, UIMessageService) {
 
     // A confirmation the previous page could not show, because it navigated away from itself.
@@ -60,7 +60,6 @@ define([
     FrontendUrlService.init();
     DataManipulationService.init();
     UISettingsService.init();
-    TrackingService.init();
     MessagingService.init();
 
     // Monitoring dashboard link in the user menu. The menu markup lives outside any controller
