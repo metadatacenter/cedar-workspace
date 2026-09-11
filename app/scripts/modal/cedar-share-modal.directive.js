@@ -44,6 +44,10 @@ define([
           vm.canTransferOwnership = canTransferOwnership;
           vm.canManageGrants = canManageGrants;
           vm.saveShare = saveShare;
+          vm.permissionsBusy = permissionsBusy;
+          vm.permissionsPending = false;
+          vm.permissionsSaving = false;
+          var permissionsRead = 0;
           vm.getNode = getNode;
           vm.addShare = addShare;
           vm.removeShare = removeShare;
@@ -199,6 +203,10 @@ define([
             return node && (!node.hasOwnProperty('resourceType') || node.resourceType === 'user');
           }
 
+          function permissionsBusy() {
+            return vm.permissionsPending || vm.ownershipTransferPending;
+          }
+
           // save the modified permissions to the server
           function saveShare(resource) {
             setPermissions(resource, function () {
@@ -217,6 +225,8 @@ define([
 
           // read the permissions from the server
           function getPermissions(resource) {
+            var read = ++permissionsRead;
+            vm.permissionsPending = true;
             // get the sharing for this resource
             if (!resource && vm.hasSelection()) {
               resource = vm.getSelection();
@@ -225,6 +235,10 @@ define([
             resourceService.getResourceShare(
                 resource,
                 function (response) {
+                  if (read !== permissionsRead) {
+                    return;
+                  }
+                  vm.permissionsPending = false;
                   vm.resourcePermissions = response;
                   vm.resourcePermissions.owner.name = getName(vm.resourcePermissions.owner);
                   getShares();
@@ -260,6 +274,12 @@ define([
 
           // write the permissions to the server
           function setPermissions(resource, successCallback) {
+            if (permissionsBusy() || !vm.resourcePermissions) {
+              return;
+            }
+            // The next edit must use the ETag returned by this replacement.
+            vm.permissionsPending = true;
+            vm.permissionsSaving = true;
             // rebuild permissions from shares
             vm.resourcePermissions.groupPermissions = [];
             vm.resourcePermissions.userPermissions = [];
@@ -282,11 +302,14 @@ define([
                 resource,
                 vm.resourcePermissions,
                 function () {
+                  vm.permissionsPending = false;
+                  vm.permissionsSaving = false;
                   if (successCallback) {
                     successCallback();
                   }
                 },
                 function (error) {
+                  vm.permissionsSaving = false;
                   getPermissions(resource);
                   UIMessageService.showBackendError('SERVER.' + resource.resourceType.toUpperCase() + '.load.error', error);
                 }
@@ -344,6 +367,9 @@ define([
 
           // remove the share permission on this node
           function removeShare(node, resource) {
+            if (permissionsBusy()) {
+              return;
+            }
             for (var i = 0; i < vm.shares.length; i++) {
               if (node['@id'] === vm.shares[i].node['@id']) {
                 vm.shares.splice(i, 1);
@@ -435,7 +461,7 @@ define([
 
           function addSelectedShare(resource) {
             var node = vm.model.users.node;
-            if (!node) {
+            if (!node || permissionsBusy()) {
               return;
             }
             addShare(node['@id'], vm.model.users.role, 'shared-users', resource);
@@ -449,10 +475,15 @@ define([
               event.stopPropagation();
             }
             if (!user || user.resourceType === 'group' || isOwner(user) ||
-                !vm.canTransferOwnership() || vm.ownershipTransferPending) {
+                !vm.canTransferOwnership() || permissionsBusy()) {
               return;
             }
+            var permissions = vm.resourcePermissions;
             UIMessageService.confirmedExecution(function () {
+              if (permissionsBusy() || vm.resourcePermissions !== permissions ||
+                  vm.shareResource !== resource || !vm.canTransferOwnership()) {
+                return;
+              }
               vm.ownershipTransferPending = true;
               resourceService.transferResourceOwnership(resource, user['@id'], vm.resourcePermissions,
                   function (response) {
@@ -542,6 +573,9 @@ define([
 
           // add this share to the server
           function addShare(id, role, domId, resource) {
+            if (permissionsBusy()) {
+              return;
+            }
 
             var node = getNode(id);
             var share = {};
