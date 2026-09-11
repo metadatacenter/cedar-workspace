@@ -122,23 +122,38 @@ define(['angular'], function (angular) {
       });
     }
 
+    // Only a group's administrators may read its membership, so a refusal here is an ordinary
+    // outcome for a group this user merely belongs to or can see, not a failure worth a message.
+    // users is left unset rather than emptied: an empty array would render as "this group has no
+    // members", which is a different and untrue statement, and canAdministerSelectedGroup already
+    // treats a missing roster as conferring nothing.
     function loadMembers(group) {
+      group.$$membersPending = true;
       resourceService.getGroupMembers(group, function (response) {
+        group.$$membersPending = false;
+        group.$$membersRestricted = false;
         group.users = response.users || [];
         sortByName(group.users, function (entry) {
           return getUserName(entry.user);
         });
       }, function (error) {
+        if (error && error.status === 403) {
+          group.users = undefined;
+          group.$$membersRestricted = true;
+          return;
+        }
         UIMessageService.showBackendError('SERVER.GROUPS.load.error', error);
       });
     }
 
     function createGroup() {
       var name = (vm.newGroupName || '').trim();
-      if (!name) {
+      if (!name || vm.createPending) {
         return;
       }
+      vm.createPending = true;
       resourceService.createGroup(name, '', function (created) {
+        vm.createPending = false;
         created.name = groupName(created);
         vm.createdGroup = created;
         vm.groups.push(created);
@@ -147,6 +162,7 @@ define(['angular'], function (angular) {
         selectGroup(created);
         UIMessageService.flashSuccess('SERVER.GROUPS.create.success', {title: name}, 'GENERIC.Created');
       }, function (error) {
+        vm.createPending = false;
         UIMessageService.showBackendError('SERVER.GROUPS.create.error', error);
       });
     }
@@ -172,42 +188,55 @@ define(['angular'], function (angular) {
     }
 
     function saveGroupDetails() {
-      if (!canAdministerSelectedGroup()) {
+      if (vm.detailsPending || !canAdministerSelectedGroup()) {
         return;
       }
       var name = (vm.editName || '').trim();
       if (!name) {
         return;
       }
-      vm.selectedGroup['schema:name'] = name;
-      vm.selectedGroup['schema:description'] = (vm.editDescription || '').trim();
-      resourceService.updateGroup(vm.selectedGroup, function () {
-        vm.selectedGroup.name = name;
+      var group = vm.selectedGroup;
+      vm.detailsPending = true;
+      group['schema:name'] = name;
+      group['schema:description'] = (vm.editDescription || '').trim();
+      resourceService.updateGroup(group, function () {
+        vm.detailsPending = false;
+        group.name = name;
         sortByName(vm.groups, groupName);
         UIMessageService.flashSuccess('SERVER.GROUPS.update.success', {title: name}, 'GENERIC.Updated');
       }, function (error) {
+        vm.detailsPending = false;
         UIMessageService.showBackendError('SERVER.GROUPS.update.error', error);
       });
     }
 
     function deleteSelectedGroup() {
-      if (!canAdministerSelectedGroup()) {
+      if (vm.detailsPending || !canAdministerSelectedGroup()) {
         return;
       }
+      var group = vm.selectedGroup;
+      if (group.$$membersPending) { return; }
       UIMessageService.confirmedExecution(function () {
-        var group = vm.selectedGroup;
+        if (vm.detailsPending || group.$$membersPending || vm.selectedGroup !== group || !canAdministerSelectedGroup()) {
+          return;
+        }
         var name = groupName(group);
+        vm.detailsPending = true;
         resourceService.deleteGroup(group, function () {
-          var index = vm.groups.indexOf(group);
-          if (index !== -1) {
-            vm.groups.splice(index, 1);
-          }
+          vm.detailsPending = false;
+          // The detail response is a different object from the autocomplete summary.
+          vm.groups = vm.groups.filter(function (listedGroup) {
+            return listedGroup['@id'] !== group['@id'];
+          });
           if (vm.createdGroup && vm.createdGroup['@id'] === group['@id']) {
             vm.createdGroup = null;
           }
-          vm.selectedGroup = null;
+          if (vm.selectedGroup === group) {
+            vm.selectedGroup = null;
+          }
           UIMessageService.flashSuccess('SERVER.GROUPS.delete.success', {title: name}, 'GENERIC.Deleted');
         }, function (error) {
+          vm.detailsPending = false;
           UIMessageService.showBackendError('SERVER.GROUPS.delete.error', error);
         });
       }, 'GENERIC.AreYouSure', 'DASHBOARD.share.confirmDeleteGroup', 'GENERIC.Remove');
@@ -225,7 +254,7 @@ define(['angular'], function (angular) {
     }
 
     function addMember() {
-      if (!vm.newMember || !canAdministerSelectedGroup()) {
+      if (!vm.newMember || !canAdministerSelectedGroup() || vm.detailsPending || vm.selectedGroup.$$membersPending) {
         return;
       }
       vm.selectedGroup.users.push({
@@ -238,7 +267,7 @@ define(['angular'], function (angular) {
     }
 
     function removeMember(member) {
-      if (!canAdministerSelectedGroup() || isOnlyGroupAdministrator(member)) {
+      if (!canAdministerSelectedGroup() || vm.detailsPending || vm.selectedGroup.$$membersPending || isOnlyGroupAdministrator(member)) {
         return;
       }
       var index = vm.selectedGroup.users.indexOf(member);
@@ -257,11 +286,18 @@ define(['angular'], function (angular) {
       // confirmation is open, then apply the requested state only when the user confirms it.
       var makeAdministrator = !!member.administrator;
       member.administrator = !makeAdministrator;
-      if (!canAdministerSelectedGroup() || (!makeAdministrator && isOnlyGroupAdministrator(member))) {
+      if (!canAdministerSelectedGroup() || vm.detailsPending || vm.selectedGroup.$$membersPending ||
+          (!makeAdministrator && isOnlyGroupAdministrator(member))) {
         return;
       }
 
+      var group = vm.selectedGroup;
       UIMessageService.confirmedExecution(function () {
+        if (vm.selectedGroup !== group || vm.detailsPending || group.$$membersPending ||
+            !canAdministerSelectedGroup() || group.users.indexOf(member) === -1 ||
+            (!makeAdministrator && isOnlyGroupAdministrator(member))) {
+          return;
+        }
         member.administrator = makeAdministrator;
         saveMembers();
       }, makeAdministrator ?
@@ -276,7 +312,10 @@ define(['angular'], function (angular) {
 
     function saveMembers() {
       var group = vm.selectedGroup;
+      // Each replacement must wait for the preceding response to advance the membership ETag.
+      group.$$membersPending = true;
       resourceService.updateGroupMembers(group, function () {
+        group.$$membersPending = false;
         UIMessageService.flashSuccess('SERVER.GROUPS.update.success', {title: groupName(group)}, 'GENERIC.Updated');
       }, function (error) {
         // Membership changes are optimistic in the UI. Reload the server representation on failure

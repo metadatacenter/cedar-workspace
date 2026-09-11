@@ -54,11 +54,9 @@ require.config({
     'lib/angular-translate-loader-static-files/angular-translate-loader-static-files.min': ['lib/angular-translate/angular-translate.min'],
     'lib/angular-toasty/dist/angular-toasty.min'                                         : ['angular'],
     'lib/angular-ui-select/dist/select.min'                                              : ['angular'],
-    'lib/angulartics/dist/angulartics.min'                                               : ['angular'],
     'lib/angular-ui-switch/angular-ui-switch.min'                                        : ['angular'],
     'lib/ng-tags-input/ng-tags-input.min'                                                : ['angular'],
     'lib/angular-ui-keypress/keypress.min'                                               : ['angular'],
-    'lib/angulartics-google-analytics/dist/angulartics-google-analytics.min'             : ['angular'],
     'lib/angular-ui-tree/dist/angular-ui-tree'                                           : ['angular'],
 
     'lib/bootstrap/dist/js/bootstrap.min'                                        : ['jquery'],

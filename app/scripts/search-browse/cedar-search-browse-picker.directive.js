@@ -435,6 +435,7 @@ define([
           };
 
           vm.toggleDescriptionEditing = function () {
+            if (vm.descriptionPending) { return; }
             // Use getSelectedNode() (the current folder when nothing is selected, or the
             // selected child otherwise) so the description is editable for the folder you
             // are currently inside, not only for a selected child resource.
@@ -445,6 +446,7 @@ define([
                 var selected = vm.getSelectedNode();
                 resourceService.getCurrentResource(selected,
                     function (current) {
+                      if (!vm.editingDescription || vm.getSelectedNode() !== selected) { return; }
                       selected.$$cedarEtag = current.$$cedarEtag;
                       selected[CONST.model.DESCRIPTION] = current[CONST.model.DESCRIPTION];
                       vm.editingDescriptionSelection = selected;
@@ -777,10 +779,11 @@ define([
 
           vm.updateDescription = function () {
 
+            if (vm.descriptionPending) { return; }
             let resource = vm.editingDescriptionSelection;
             if (resource != null) {
 
-              const postData = {};
+              vm.descriptionPending = true;
               const nodeType = resource.resourceType;
               const description = resource[CONST.model.DESCRIPTION];
 
@@ -788,9 +791,11 @@ define([
                 AuthorizedBackendService.doCall(
                     resourceService.renameNode(resource, null, description),
                     function (response) {
+                      vm.descriptionPending = false;
                       UIMessageService.flashSuccess('SERVER.INSTANCE.update.success', null, 'GENERIC.Updated');
                     },
                     function (err) {
+                      vm.descriptionPending = false;
                       UIMessageService.showBackendError('SERVER.INSTANCE.update.error', err);
                     }
                 );
@@ -798,12 +803,14 @@ define([
                 AuthorizedBackendService.doCall(
                     resourceService.renameNode(resource, null, description),
                     function (response) {
+                      vm.descriptionPending = false;
 
                       var title = vm.getTitle(response.data);
                       UIMessageService.flashSuccess('SERVER.FIELD.update.success', {"title": title},
                           'GENERIC.Updated');
                     },
                     function (err) {
+                      vm.descriptionPending = false;
                       UIMessageService.showBackendError('SERVER.field.update.error', err);
                     }
                 );
@@ -811,12 +818,14 @@ define([
                 AuthorizedBackendService.doCall(
                     resourceService.renameNode(resource, null, description),
                     function (response) {
+                      vm.descriptionPending = false;
 
                       var title = vm.getTitle(response.data);
                       UIMessageService.flashSuccess('SERVER.ELEMENT.update.success', {"title": title},
                           'GENERIC.Updated');
                     },
                     function (err) {
+                      vm.descriptionPending = false;
                       UIMessageService.showBackendError('SERVER.ELEMENT.update.error', err);
                     }
                 );
@@ -824,6 +833,7 @@ define([
                 AuthorizedBackendService.doCall(
                     resourceService.renameNode(resource, null, description),
                     function (response) {
+                      vm.descriptionPending = false;
 
                       $scope.form = response.data;
                       var title = vm.getTitle(response.data);
@@ -831,6 +841,7 @@ define([
                           {"title": title}, 'GENERIC.Updated');
                     },
                     function (err) {
+                      vm.descriptionPending = false;
                       UIMessageService.showBackendError('SERVER.TEMPLATE.update.error', err);
                     }
                 );
@@ -838,10 +849,12 @@ define([
                 AuthorizedBackendService.doCall(
                     resourceService.renameNode(resource, null, description),
                     function (response) {
+                      vm.descriptionPending = false;
                       UIMessageService.flashSuccess('SERVER.FOLDER.update.success', {"title": resource.name},
                           'GENERIC.Updated');
                     },
                     function (response) {
+                      vm.descriptionPending = false;
                       UIMessageService.showBackendError('SERVER.FOLDER.update.error', response);
 
                       // UIMessageService.acknowledgedExecution(
@@ -1330,15 +1343,21 @@ define([
 
           }
 
+          var pendingActions = Object.create(null);
+
           function copyToWorkspace(resource) {
             if (!resource) {
               resource = getSelected();
             }
+            var key = 'copyToWorkspace:' + resource['@id'];
+            if (pendingActions[key]) { return; }
+            pendingActions[key] = true;
             const newTitle = $translate.instant('GENERIC.CopyOfTitle', {"title": resource.name});
 
             resourceService.copyResourceToWorkspace(
                 resource, newTitle,
                 function (response) {
+                  delete pendingActions[key];
 
                   UIMessageService.flashSuccess('SERVER.RESOURCE.copyToWorkspace.success', {"title": resource.name},
                       'GENERIC.Copied');
@@ -1346,6 +1365,7 @@ define([
                   vm.refreshWorkspace(resource);
                 },
                 function (response) {
+                  delete pendingActions[key];
                   UIMessageService.showBackendError('SERVER.RESOURCE.copyToWorkspace.error', response);
                 }
             );
@@ -1355,6 +1375,9 @@ define([
             if (!resource) {
               resource = getSelected();
             }
+            var key = 'copyResource:' + resource['@id'];
+            if (pendingActions[key]) { return; }
+            pendingActions[key] = true;
             const newTitle = $translate.instant('GENERIC.CopyOfTitle', {"title": resource.name});
             let folderId = vm.currentFolderId;
             if (!folderId) {
@@ -1363,6 +1386,7 @@ define([
             resourceService.copyResource(
                 resource, folderId, newTitle,
                 function (response) {
+                  delete pendingActions[key];
 
                   UIMessageService.flashSuccess('SERVER.RESOURCE.copyResource.success', {"title": resource.name},
                       'GENERIC.Copied');
@@ -1371,6 +1395,7 @@ define([
 
                 },
                 function (response) {
+                  delete pendingActions[key];
                   UIMessageService.showBackendError('SERVER.RESOURCE.copyResource.error', response);
                 }
             );
@@ -1381,17 +1406,22 @@ define([
             if (!resource) {
               resource = getSelected();
             }
+            var key = 'publishResource:' + resource['@id'];
+            if (pendingActions[key]) { return; }
+            pendingActions[key] = true;
             const newVersion = version || vm.getResourceVersion(resource);
             resourceService.publishResource(
                 resource,
                 newVersion,
                 function (response) {
+                  delete pendingActions[key];
                   const title = vm.getTitle(resource);
                   UIMessageService.flashSuccess('SERVER.RESOURCE.publishResource.success', {"title": title},
                       'GENERIC.Published');
                   vm.refreshWorkspace(resource);
                 },
                 function (response) {
+                  delete pendingActions[key];
                   UIMessageService.showBackendError('SERVER.RESOURCE.publishResource.error', response);
                 }
             );
@@ -1402,6 +1432,9 @@ define([
             if (!resource) {
               resource = getSelected();
             }
+            var key = 'createDraftResource:' + resource['@id'];
+            if (pendingActions[key]) { return; }
+            pendingActions[key] = true;
             let folderId = vm.currentFolderId;
             if (!folderId) {
               folderId = CedarUser.getHomeFolderId();
@@ -1415,6 +1448,7 @@ define([
                 propagateSharing,
                 newFolderName,
                 function (response) {
+                  delete pendingActions[key];
                   const title = vm.getTitle(resource);
                   UIMessageService.flashSuccess('SERVER.RESOURCE.createDraftResource.success', {"title": title},
                       'GENERIC.CreatedDraft');
@@ -1425,6 +1459,7 @@ define([
                   }, 1000);
                 },
                 function (response) {
+                  delete pendingActions[key];
                   UIMessageService.showBackendError('SERVER.RESOURCE.createDraftResource.error', response);
                 }
             );
@@ -1450,15 +1485,20 @@ define([
             if (!resource) {
               resource = getSelected();
             }
+            var key = 'visibility:' + resource['@id'];
+            if (pendingActions[key]) { return; }
+            pendingActions[key] = true;
             resourceService.makeArtifactOpen(
                 resource,
                 function (response) {
+                  delete pendingActions[key];
                   const title = vm.getTitle(resource);
                   UIMessageService.flashSuccess('SERVER.RESOURCE.makeOpenArtifact.success', {"title": title},
                       'GENERIC.MadeOpen');
                   vm.refreshWorkspace(resource);
                 },
                 function (response) {
+                  delete pendingActions[key];
                   UIMessageService.showBackendError('SERVER.RESOURCE.makeOpenArtifact.error', response);
                 }
             );
@@ -1468,15 +1508,20 @@ define([
             if (!resource) {
               resource = getSelected();
             }
+            var key = 'visibility:' + resource['@id'];
+            if (pendingActions[key]) { return; }
+            pendingActions[key] = true;
             resourceService.makeArtifactNotOpen(
                 resource,
                 function (response) {
+                  delete pendingActions[key];
                   const title = vm.getTitle(resource);
                   UIMessageService.flashSuccess('SERVER.RESOURCE.makeNotOpenArtifact.success', {"title": title},
                       'GENERIC.MadeNotOpen');
                   vm.refreshWorkspace(resource);
                 },
                 function (response) {
+                  delete pendingActions[key];
                   UIMessageService.showBackendError('SERVER.RESOURCE.makeNotOpenArtifact.error', response);
                 }
             );
@@ -1486,15 +1531,20 @@ define([
             if (!resource) {
               resource = getSelected();
             }
+            var key = 'visibility:' + resource['@id'];
+            if (pendingActions[key]) { return; }
+            pendingActions[key] = true;
             resourceService.makeFolderOpen(
                 resource,
                 function (response) {
+                  delete pendingActions[key];
                   const title = vm.getTitle(resource);
                   UIMessageService.flashSuccess('SERVER.RESOURCE.makeOpenFolder.success', {"title": title},
                       'GENERIC.MadeOpen');
                   vm.refreshWorkspace(resource);
                 },
                 function (response) {
+                  delete pendingActions[key];
                   UIMessageService.showBackendError('SERVER.RESOURCE.makeOpenFolder.error', response);
                 }
             );
@@ -1504,15 +1554,20 @@ define([
             if (!resource) {
               resource = getSelected();
             }
+            var key = 'visibility:' + resource['@id'];
+            if (pendingActions[key]) { return; }
+            pendingActions[key] = true;
             resourceService.makeFolderNotOpen(
                 resource,
                 function (response) {
+                  delete pendingActions[key];
                   const title = vm.getTitle(resource);
                   UIMessageService.flashSuccess('SERVER.RESOURCE.makeNotOpenFolder.success', {"title": title},
                       'GENERIC.MadeNotOpen');
                   vm.refreshWorkspace(resource);
                 },
                 function (response) {
+                  delete pendingActions[key];
                   UIMessageService.showBackendError('SERVER.RESOURCE.makeNotOpenFolder.error', response);
                 }
             );
@@ -1722,23 +1777,27 @@ define([
             }
             if (index > -1) {
               vm.resources.splice(index, 1);
+              if (getSelectedNode() && getSelectedNode()['@id'] === resource['@id']) {
+                resetSelected();
+              }
+              vm.totalCount--;
             }
-            // remove current selection
-            resetSelected();
-
-            //reset total count
-            vm.totalCount--;
           }
 
 
+          var pendingDeletes = Object.create(null);
+
           function deleteResource(resource) {
             const r = resource || getSelectedNode();
-            if (resourceService.canDelete(r)) {
+            if (r && !pendingDeletes[r['@id']] && resourceService.canDelete(r)) {
               UIMessageService.confirmedExecution(
                   function () {
+                    if (pendingDeletes[r['@id']]) { return; }
+                    pendingDeletes[r['@id']] = true;
                     resourceService.deleteResource(
                         r,
                         function (response) {
+                          delete pendingDeletes[r['@id']];
 
                           UIMessageService.flashSuccess('SERVER.' + r.resourceType.toUpperCase() + '.delete.success',
                               {"title": r.resourceType},
@@ -1746,6 +1805,7 @@ define([
                           removeResource(r);
                         },
                         function (error) {
+                          delete pendingDeletes[r['@id']];
                           UIMessageService.showBackendError('SERVER.' + r.resourceType.toUpperCase() + '.delete.error',
                               error);
                         }

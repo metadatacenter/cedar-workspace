@@ -15,7 +15,12 @@ define([
     var templateInstanceService;
     var uiUtilService;
     var ceeDirty;
+    var previousRouteService;
+    var createdInstance;
+    var $window;
     var vm;
+    var saveResponse;
+    var deferSave;
 
     beforeEach(module('cedar.templateEditor.templateInstance.createInstanceController'));
 
@@ -24,6 +29,8 @@ define([
       $rootScope = _$rootScope_;
       $timeout = _$timeout_;
 
+      deferSave = false;
+      saveResponse = null;
       cee = {
         currentMetadata: {'schema:name': 'Example'},
         dataQualityReport: {
@@ -40,24 +47,44 @@ define([
       };
       templateInstanceService = {
         saveTemplateInstance: jasmine.createSpy('saveTemplateInstance').and.returnValue({kind: 'save'}),
-        updateTemplateInstance: jasmine.createSpy('updateTemplateInstance')
+        updateTemplateInstance: jasmine.createSpy('updateTemplateInstance').and.callFake(
+            function (id, metadata) {
+              return {kind: 'update', id: id, metadata: metadata};
+            })
       };
       uiUtilService = {setDirty: jasmine.createSpy('setDirty'), setLocked: angular.noop};
+      previousRouteService = {supersedeCurrent: jasmine.createSpy('supersedeCurrent')};
       ceeDirty = true;
+
+      // What the server returns from the create: the same metadata as an artifact, with the
+      // identifier and the validator every later save is made under.
+      createdInstance = {
+        '@id': 'instance-9',
+        'schema:isBasedOn': 'template-1',
+        'schema:name': 'Template metadata',
+        $$cedarEtag: '"1"'
+      };
+      $window = {
+        document: {querySelector: function () { return cee; }},
+        history: {replaceState: jasmine.createSpy('replaceState')},
+        location: {assign: jasmine.createSpy('assign')}
+      };
 
       vm = $controller('CreateInstanceController', {
         $rootScope: $rootScope,
         $routeParams: {templateId: 'template-1'},
         $timeout: $timeout,
         $translate: {instant: function (key) { return key === 'GENERATEDVALUE.instanceTitle' ? ' metadata' : ''; }},
-        $window: {
-          document: {querySelector: function () { return cee; }},
-          location: {assign: jasmine.createSpy('assign')}
-        },
+        $window: $window,
         AuthorizedBackendService: {
           doCall: function (request, success) {
             if (request.kind === 'template') {
               success({data: {'schema:name': 'Template'}});
+            } else if (request.kind === 'save') {
+              if (deferSave) { saveResponse = success; }
+              else { success({data: createdInstance}); }
+            } else if (request.kind === 'update') {
+              success({data: request.metadata});
             }
           }
         },
@@ -73,9 +100,10 @@ define([
         FrontendUrlService: {
           decodeRouteIdentifier: function (value) { return value; },
           getWorkspaceReturn: function () { return '/dashboard'; },
-          getInstanceEdit: function () { return '/instances/edit/1'; }
+          getInstanceEdit: function (id) { return '/instances/edit/' + id; }
         },
         HeaderService: {configure: angular.noop},
+        PreviousRouteService: previousRouteService,
         QueryParamUtilsService: {
           getFolderId: function () { return 'folder'; },
           getReturnTo: function () { return null; }
@@ -83,7 +111,7 @@ define([
         resourceService: {},
         TemplateInstanceService: templateInstanceService,
         TemplateService: {getTemplate: function () { return {kind: 'template'}; }},
-        UIMessageService: {},
+        UIMessageService: {flashSuccess: angular.noop, flashAfterReload: angular.noop},
         UIUtilService: uiUtilService
       });
 
@@ -91,7 +119,7 @@ define([
     }));
 
     // An edit view over a saved instance, with the CEE returning a serialized copy on save.
-    function editSetup() {
+    function editSetup(pendingUpdate) {
       var loadedInstance = {
         '@id': 'instance-1',
         'schema:isBasedOn': 'template-1',
@@ -124,13 +152,14 @@ define([
           location: {assign: jasmine.createSpy('assign')}
         },
         AuthorizedBackendService: {
-          doCall: function (request, success) {
+          doCall: function (request, success, failure) {
             if (request.kind === 'instance') {
               success({data: loadedInstance});
             } else if (request.kind === 'template') {
               success({data: {'schema:name': 'Template'}});
             } else if (request.kind === 'update') {
-              success({data: request.metadata});
+              if (pendingUpdate) { pendingUpdate(request, success, failure); }
+              else { success({data: request.metadata}); }
             }
           }
         },
@@ -149,6 +178,7 @@ define([
           getInstanceEdit: function () { return '/instances/edit/1'; }
         },
         HeaderService: {configure: angular.noop},
+        PreviousRouteService: previousRouteService,
         QueryParamUtilsService: {
           getFolderId: function () { return 'folder'; },
           getReturnTo: function () { return null; }
@@ -159,7 +189,7 @@ define([
         },
         TemplateInstanceService: editService,
         TemplateService: {getTemplate: function () { return {kind: 'template'}; }},
-        UIMessageService: {flashSuccess: angular.noop},
+        UIMessageService: {flashSuccess: angular.noop, showBackendError: angular.noop},
         UIUtilService: {setDirty: angular.noop, setLocked: angular.noop}
       });
       $timeout.flush();
@@ -196,10 +226,35 @@ define([
       expect(vm.saveButtonDisabled).toBe(false);
     });
 
+    it('allows only one pending CEE create and uses its returned revision on the next save', function () {
+      deferSave = true;
+      vm.save();
+      vm.save();
+      vm.save();
+      expect(templateInstanceService.saveTemplateInstance.calls.count()).toBe(1);
+      expect(templateInstanceService.updateTemplateInstance).not.toHaveBeenCalled();
+      saveResponse({data: createdInstance});
+      vm.save();
+      expect(templateInstanceService.updateTemplateInstance.calls.count()).toBe(1);
+      expect(templateInstanceService.updateTemplateInstance).toHaveBeenCalledWith('instance-9',
+          jasmine.objectContaining({$$cedarEtag: '"1"'}));
+    });
+
     it('does not use validation errors to prohibit save', function () {
       vm.save();
 
       expect(templateInstanceService.saveTemplateInstance).toHaveBeenCalled();
+    });
+
+    it('ignores rapid update clicks and releases the save lock after a failed request', function () {
+      var fail;
+      var edit = editSetup(function (request, success, failure) { fail = failure; });
+      edit.vm.save(); edit.vm.save(); edit.vm.save();
+      expect(edit.service.updateTemplateInstance.calls.count()).toBe(1);
+      fail({status: 412});
+      expect(edit.vm.saveButtonDisabled).toBe(false);
+      edit.vm.save();
+      expect(edit.service.updateTemplateInstance.calls.count()).toBe(2);
     });
 
     it('preserves the loaded ETag when CEE returns a serialized copy for update', function () {
@@ -258,6 +313,51 @@ define([
       vm.instanceNameChanged();
 
       expect($rootScope.documentTitle).toBe('Template metadata');
+    });
+
+    it('stays on the page when the first save stores the metadata', function () {
+      vm.save();
+
+      expect($window.location.assign).not.toHaveBeenCalled();
+      // The address a reload or a bookmark would use, so the page it lands on is the saved
+      // metadata rather than a create form for metadata that now exists.
+      expect($window.history.replaceState).toHaveBeenCalledWith(null, '', '/instances/edit/instance-9');
+    });
+
+    // The rewrite is invisible to AngularJS, so the back stack has to be told: without this the
+    // create address stays on it and the back arrow offers a create form for metadata that exists.
+    it('tells the back stack the create address it replaced is gone', function () {
+      vm.save();
+
+      expect(previousRouteService.supersedeCurrent).toHaveBeenCalled();
+    });
+
+    it('leaves the back stack alone when the browser refuses the rewrite', function () {
+      $window.history.replaceState.and.throwError('refused');
+
+      vm.save();
+
+      expect(previousRouteService.supersedeCurrent).not.toHaveBeenCalled();
+      expect($window.location.assign).toHaveBeenCalled();
+    });
+
+    it('updates what it created on the next save, under the identifier the server assigned', function () {
+      vm.save();
+      vm.save();
+
+      // The editor is never handed the stored artifact, so its copy still carries no identifier.
+      expect(cee.currentMetadata['@id']).toBeUndefined();
+      expect(templateInstanceService.saveTemplateInstance.calls.count()).toBe(1);
+      expect(templateInstanceService.updateTemplateInstance).toHaveBeenCalledWith(
+          'instance-9', jasmine.objectContaining({'@id': 'instance-9', $$cedarEtag: '"1"'}));
+    });
+
+    it('loads the edit address when the browser refuses to rewrite it', function () {
+      $window.history.replaceState.and.throwError('cross-origin');
+
+      vm.save();
+
+      expect($window.location.assign).toHaveBeenCalledWith('/instances/edit/instance-9');
     });
 
     it('loads the saved name for editing and updates under the edited one', function () {
