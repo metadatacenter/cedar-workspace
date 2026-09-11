@@ -329,7 +329,7 @@ define([
     }
 
     vm.save = function () {
-      if (!vm.canEdit || !cee || !cee.currentMetadata) {
+      if (vm.saveButtonDisabled || !vm.canEdit || !cee || !cee.currentMetadata) {
         return;
       }
       vm.saveButtonDisabled = true;

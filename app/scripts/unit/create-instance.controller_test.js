@@ -19,6 +19,8 @@ define([
     var createdInstance;
     var $window;
     var vm;
+    var saveResponse;
+    var deferSave;
 
     beforeEach(module('cedar.templateEditor.templateInstance.createInstanceController'));
 
@@ -27,6 +29,8 @@ define([
       $rootScope = _$rootScope_;
       $timeout = _$timeout_;
 
+      deferSave = false;
+      saveResponse = null;
       cee = {
         currentMetadata: {'schema:name': 'Example'},
         dataQualityReport: {
@@ -77,7 +81,8 @@ define([
             if (request.kind === 'template') {
               success({data: {'schema:name': 'Template'}});
             } else if (request.kind === 'save') {
-              success({data: createdInstance});
+              if (deferSave) { saveResponse = success; }
+              else { success({data: createdInstance}); }
             } else if (request.kind === 'update') {
               success({data: request.metadata});
             }
@@ -114,7 +119,7 @@ define([
     }));
 
     // An edit view over a saved instance, with the CEE returning a serialized copy on save.
-    function editSetup() {
+    function editSetup(pendingUpdate) {
       var loadedInstance = {
         '@id': 'instance-1',
         'schema:isBasedOn': 'template-1',
@@ -147,13 +152,14 @@ define([
           location: {assign: jasmine.createSpy('assign')}
         },
         AuthorizedBackendService: {
-          doCall: function (request, success) {
+          doCall: function (request, success, failure) {
             if (request.kind === 'instance') {
               success({data: loadedInstance});
             } else if (request.kind === 'template') {
               success({data: {'schema:name': 'Template'}});
             } else if (request.kind === 'update') {
-              success({data: request.metadata});
+              if (pendingUpdate) { pendingUpdate(request, success, failure); }
+              else { success({data: request.metadata}); }
             }
           }
         },
@@ -183,7 +189,7 @@ define([
         },
         TemplateInstanceService: editService,
         TemplateService: {getTemplate: function () { return {kind: 'template'}; }},
-        UIMessageService: {flashSuccess: angular.noop},
+        UIMessageService: {flashSuccess: angular.noop, showBackendError: angular.noop},
         UIUtilService: {setDirty: angular.noop, setLocked: angular.noop}
       });
       $timeout.flush();
@@ -220,10 +226,35 @@ define([
       expect(vm.saveButtonDisabled).toBe(false);
     });
 
+    it('allows only one pending CEE create and uses its returned revision on the next save', function () {
+      deferSave = true;
+      vm.save();
+      vm.save();
+      vm.save();
+      expect(templateInstanceService.saveTemplateInstance.calls.count()).toBe(1);
+      expect(templateInstanceService.updateTemplateInstance).not.toHaveBeenCalled();
+      saveResponse({data: createdInstance});
+      vm.save();
+      expect(templateInstanceService.updateTemplateInstance.calls.count()).toBe(1);
+      expect(templateInstanceService.updateTemplateInstance).toHaveBeenCalledWith('instance-9',
+          jasmine.objectContaining({$$cedarEtag: '"1"'}));
+    });
+
     it('does not use validation errors to prohibit save', function () {
       vm.save();
 
       expect(templateInstanceService.saveTemplateInstance).toHaveBeenCalled();
+    });
+
+    it('ignores rapid update clicks and releases the save lock after a failed request', function () {
+      var fail;
+      var edit = editSetup(function (request, success, failure) { fail = failure; });
+      edit.vm.save(); edit.vm.save(); edit.vm.save();
+      expect(edit.service.updateTemplateInstance.calls.count()).toBe(1);
+      fail({status: 412});
+      expect(edit.vm.saveButtonDisabled).toBe(false);
+      edit.vm.save();
+      expect(edit.service.updateTemplateInstance.calls.count()).toBe(2);
     });
 
     it('preserves the loaded ETag when CEE returns a serialized copy for update', function () {
