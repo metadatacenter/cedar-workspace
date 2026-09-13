@@ -19,6 +19,7 @@ define([
     var createdInstance;
     var $window;
     var vm;
+    var locals;
     var saveResponse;
     var deferSave;
 
@@ -70,7 +71,7 @@ define([
         location: {assign: jasmine.createSpy('assign')}
       };
 
-      vm = $controller('CreateInstanceController', {
+      locals = {
         $rootScope: $rootScope,
         $routeParams: {templateId: 'template-1'},
         $timeout: $timeout,
@@ -113,7 +114,8 @@ define([
         TemplateService: {getTemplate: function () { return {kind: 'template'}; }},
         UIMessageService: {flashSuccess: angular.noop, flashAfterReload: angular.noop},
         UIUtilService: uiUtilService
-      });
+      };
+      vm = $controller('CreateInstanceController', locals);
 
       $timeout.flush();
     }));
@@ -195,6 +197,43 @@ define([
       $timeout.flush();
       return {cee: editCee, service: editService, vm: editVm};
     }
+
+    it('waits for an editor the routed view links a few digests late', function () {
+      var misses = 3;
+      var lateWindow = angular.extend({}, $window, {
+        document: {querySelector: function () { return misses-- > 0 ? null : cee; }}
+      });
+      changeListener = null;
+
+      $controller('CreateInstanceController', angular.extend({}, locals, {$window: lateWindow}));
+      // The first look misses. The page neither watches yet nor gives up.
+      expect(changeListener).toBeNull();
+
+      $timeout.flush();
+      expect(changeListener).not.toBeNull();
+
+      ceeDirty = true;
+      uiUtilService.setDirty.calls.reset();
+      changeListener({detail: null});
+      expect(uiUtilService.setDirty).toHaveBeenCalledWith(true);
+    });
+
+    it('gives up on an editor that never arrives, rather than waiting forever', function () {
+      var neverWindow = angular.extend({}, $window, {
+        document: {querySelector: function () { return null; }},
+        location: {assign: jasmine.createSpy('assign')}
+      });
+      changeListener = null;
+
+      $controller('CreateInstanceController', angular.extend({}, locals, {
+        $window: neverWindow,
+        UIMessageService: {showBackendError: jasmine.createSpy('showBackendError')}
+      }));
+      $timeout.flush();
+
+      expect(changeListener).toBeNull();
+      expect(neverWindow.location.assign).toHaveBeenCalled();
+    });
 
     it('shows the initial invalid report, including the counter fallback when no problem paths are available', function () {
       expect(vm.showValidationReport()).toBe(true);

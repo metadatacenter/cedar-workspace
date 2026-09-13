@@ -28,6 +28,9 @@ define([
     var cee = null;
     var ceeConfigured = false;
     var pendingArtifact = null;
+    // The routed view may not have linked the editor element when this controller first looks for
+    // it, so wait for it across digests rather than failing the page on the first miss.
+    var ceeWaitTicks = 20;
 
     vm.loading = true;
     vm.canEdit = true;
@@ -355,9 +358,15 @@ define([
     HeaderService.configure(CONST.pageId.RUNTIME);
     CeeDirtyTrackerService.reset();
 
-    $timeout(function () {
+    function startWhenEditorPresent() {
       cee = $window.document.querySelector('cedar-embeddable-editor');
       if (!cee) {
+        // A page whose editor is one digest late is still a working page. Only a wait that runs
+        // out means the editor is genuinely absent.
+        if (ceeWaitTicks-- > 0) {
+          $timeout(startWhenEditorPresent, 0);
+          return;
+        }
         showLoadError('SERVER.INSTANCE.load.error', new Error('CEDAR Embeddable Editor did not initialize'));
         return;
       }
@@ -370,6 +379,8 @@ define([
       } else if ($routeParams.id !== undefined) {
         loadInstance(FrontendUrlService.decodeRouteIdentifier($routeParams.id));
       }
-    }, 0);
+    }
+
+    $timeout(startWhenEditorPresent, 0);
   }
 });
