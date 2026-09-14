@@ -1,6 +1,6 @@
 {
   "name": "cedar-workspace",
-  "version": "2.9.14-SNAPSHOT",
+  "version": "2.9.15-SNAPSHOT",
   "publishConfig": {
     "registry": "https://nexus.bmir.stanford.edu/repository/npm-cedar/"
   },
@@ -46,6 +46,6 @@
     "requirejs": "2.1.22"
   },
   "dependencies": {
-    "cedar-embeddable-editor": "npm:@org.metadatacenter/cedar-embeddable-editor@2.0.12-dev.20260913.96b2097"
+    "cedar-embeddable-editor": "2.0.12"
   }
 }
