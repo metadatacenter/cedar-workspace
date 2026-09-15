@@ -46,6 +46,6 @@
     "requirejs": "2.1.22"
   },
   "dependencies": {
-    "cedar-embeddable-editor": "2.0.13"
+    "cedar-embeddable-editor": "2.0.14"
   }
 }
