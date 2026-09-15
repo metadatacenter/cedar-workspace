@@ -46,6 +46,6 @@
     "requirejs": "2.1.22"
   },
   "dependencies": {
-    "cedar-embeddable-editor": "2.0.14"
+    "cedar-embeddable-editor": "npm:@org.metadatacenter/cedar-embeddable-editor@2.0.15-dev.20260915.74d6193"
   }
 }
