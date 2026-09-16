@@ -7,13 +7,13 @@ define([
       .controller('CreateInstanceController', CreateInstanceController);
 
   CreateInstanceController.$inject = [
-    '$rootScope', '$routeParams', '$timeout', '$translate', '$window',
+    '$rootScope', '$scope', '$routeParams', '$timeout', '$translate', '$window',
     'AuthorizedBackendService', 'CedarUser', 'CeeConfigService', 'CeeDirtyTrackerService',
     'CONST', 'FrontendUrlService', 'HeaderService', 'PreviousRouteService', 'QueryParamUtilsService',
     'resourceService', 'TemplateInstanceService', 'TemplateService', 'UIMessageService', 'UIUtilService'
   ];
 
-  function CreateInstanceController($rootScope, $routeParams, $timeout, $translate, $window,
+  function CreateInstanceController($rootScope, $scope, $routeParams, $timeout, $translate, $window,
                                     AuthorizedBackendService, CedarUser, CeeConfigService,
                                     CeeDirtyTrackerService, CONST, FrontendUrlService, HeaderService,
                                     PreviousRouteService, QueryParamUtilsService, resourceService,
@@ -27,6 +27,7 @@ define([
     var savedInstance = null;
     var cee = null;
     var ceeConfigured = false;
+    var destroyed = false;
     var pendingArtifact = null;
     // The routed view may not have linked the editor element when this controller first looks for
     // it, so wait for it across digests rather than failing the page on the first miss.
@@ -123,7 +124,7 @@ define([
     function configureEditor() {
       var config;
       var artifact;
-      if (ceeConfigured || !cee) {
+      if (destroyed || ceeConfigured || !cee) {
         return;
       }
       config = angular.copy(CeeConfigService.getConfig());
@@ -151,16 +152,20 @@ define([
       finishLoad();
     }
 
-    function watchForChanges() {
-      cee.addEventListener('change', function (event) {
-        var report = event && event.detail ? event.detail.dataQualityReport : null;
-        updateValidationReport(report || cee.dataQualityReport);
-        var dirty = CeeDirtyTrackerService.hasBaseline() ?
-            CeeDirtyTrackerService.isDirty(cee.currentMetadata) : true;
-        UIUtilService.setDirty(dirty || instanceNameDirty());
-        $rootScope.$evalAsync();
-      });
+    function onCeeChange(event) {
+      if (destroyed) { return; }
+      var report = event && event.detail ? event.detail.dataQualityReport : null;
+      updateValidationReport(report || cee.dataQualityReport);
+      var dirty = CeeDirtyTrackerService.hasBaseline() ?
+          CeeDirtyTrackerService.isDirty(cee.currentMetadata) : true;
+      UIUtilService.setDirty(dirty || instanceNameDirty());
+      $scope.$evalAsync();
     }
+
+    $scope.$on('$destroy', function () {
+      destroyed = true;
+      if (cee) { cee.removeEventListener('change', onCeeChange); }
+    });
 
     function finishLoad() {
       vm.loading = false;
@@ -359,6 +364,7 @@ define([
     CeeDirtyTrackerService.reset();
 
     function startWhenEditorPresent() {
+      if (destroyed) { return; }
       cee = $window.document.querySelector('cedar-embeddable-editor');
       if (!cee) {
         // A page whose editor is one digest late is still a working page. Only a wait that runs
@@ -370,7 +376,7 @@ define([
         showLoadError('SERVER.INSTANCE.load.error', new Error('CEDAR Embeddable Editor did not initialize'));
         return;
       }
-      watchForChanges();
+      cee.addEventListener('change', onCeeChange);
 
       if ($routeParams.templateId !== undefined) {
         // Creating an instance reads no resource details, so nothing is left to settle.

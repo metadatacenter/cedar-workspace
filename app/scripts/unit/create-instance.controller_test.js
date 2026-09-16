@@ -33,6 +33,7 @@ define([
       deferSave = false;
       saveResponse = null;
       cee = {
+        removeEventListener: jasmine.createSpy('removeEventListener'),
         currentMetadata: {'schema:name': 'Example'},
         dataQualityReport: {
           requiredFieldValueCount: 2,
@@ -73,6 +74,7 @@ define([
 
       locals = {
         $rootScope: $rootScope,
+        $scope: $rootScope.$new(),
         $routeParams: {templateId: 'template-1'},
         $timeout: $timeout,
         $translate: {instant: function (key) { return key === 'GENERATEDVALUE.instanceTitle' ? ' metadata' : ''; }},
@@ -120,6 +122,14 @@ define([
       $timeout.flush();
     }));
 
+    it('detaches CEE and ignores late changes after leaving the page', function () {
+      locals.$scope.$destroy();
+      expect(cee.removeEventListener).toHaveBeenCalledWith('change', changeListener);
+      uiUtilService.setDirty.calls.reset();
+      changeListener({detail: {}});
+      expect(uiUtilService.setDirty).not.toHaveBeenCalled();
+    });
+
     // An edit view over a saved instance, with the CEE returning a serialized copy on save.
     function editSetup(pendingUpdate) {
       var loadedInstance = {
@@ -129,6 +139,7 @@ define([
         $$cedarEtag: '"7"'
       };
       var editCee = {
+        removeEventListener: jasmine.createSpy('removeEventListener'),
         currentMetadata: {
           '@id': 'instance-1',
           'schema:isBasedOn': 'template-1',
@@ -146,6 +157,7 @@ define([
       };
       var editVm = $controller('CreateInstanceController', {
         $rootScope: $rootScope,
+        $scope: $rootScope.$new(),
         $routeParams: {id: 'instance-1'},
         $timeout: $timeout,
         $translate: {instant: function () { return ''; }},

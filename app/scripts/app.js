@@ -19,7 +19,6 @@ define([
 
   // non-angular 3rd party libraries
   'lib/bootstrap/dist/js/bootstrap.min',
-  'lib/bootstrap-select/dist/js/bootstrap-select.min',
   'jquery',
   'lib/jquery-ui/jquery-ui.min',
   'lib/sweetalert/dist/sweetalert.min',
