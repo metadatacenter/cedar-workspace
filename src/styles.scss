@@ -191,7 +191,7 @@ textarea {
   padding-left: var(--cedar-space-3);
 }
 .destinations {
-  margin-top: 32px;
+  margin-top: calc(2 * var(--cedar-space-4));
   display: flex;
   flex-direction: column;
   gap: var(--cedar-space-2);
@@ -301,7 +301,7 @@ tr.selected {
 }
 .empty,
 .loading {
-  padding: 48px var(--cedar-space-6);
+  padding: calc(2 * var(--cedar-space-6)) var(--cedar-space-6);
   text-align: center;
   color: var(--cedar-text-muted);
 }
@@ -309,7 +309,8 @@ tr.selected {
   position: relative;
   background: var(--cedar-color-on-primary);
   border-left: 1px solid var(--cedar-border-rule);
-  padding: 48px var(--cedar-space-6) var(--cedar-space-6);
+  padding: calc(2 * var(--cedar-space-6)) var(--cedar-space-6)
+    var(--cedar-space-6);
   overflow-wrap: anywhere;
 }
 .information h1 {
@@ -575,8 +576,8 @@ td:first-child a {
   z-index: 10;
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 1rem;
+  gap: var(--cedar-space-4);
+  padding: var(--cedar-space-4);
   background: var(--cedar-surface-panel);
   border-bottom: 1px solid var(--cedar-border-rule);
   > div {
@@ -595,14 +596,14 @@ td:first-child a {
 .metadata-content {
   max-width: 90rem;
   margin: auto;
-  padding: 1.5rem;
+  padding: var(--cedar-space-6);
   > label {
     display: block;
-    margin-bottom: 0.5rem;
+    margin-bottom: var(--cedar-space-2);
   }
   > input {
     width: 100%;
-    margin-bottom: 1.5rem;
+    margin-bottom: var(--cedar-space-6);
   }
   cedar-embeddable-editor {
     display: block;
@@ -612,7 +613,7 @@ td:first-child a {
   }
 }
 .metadata-quality {
-  padding: 1rem;
+  padding: var(--cedar-space-4);
   border: 1px solid var(--cedar-border-rule);
 }
 @media (max-width: 600px) {
@@ -620,7 +621,7 @@ td:first-child a {
     flex-wrap: wrap;
   }
   .metadata-content {
-    padding: 0.75rem;
+    padding: var(--cedar-space-3);
   }
 }
 

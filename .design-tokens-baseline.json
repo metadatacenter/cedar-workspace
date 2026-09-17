@@ -36,32 +36,11 @@
       "value": "40px",
       "count": 1
     },
-    "474b8969659ee267e561": {
-      "file": "src/styles.scss",
-      "rule": "spacing",
-      "property": "padding",
-      "value": "48px var(--cedar-space-6)",
-      "count": 1
-    },
     "551c6308fa0d307c10e8": {
       "file": "src/styles.scss",
       "rule": "geometry",
       "property": "min-height",
       "value": "calc(100vh - 80px)",
-      "count": 1
-    },
-    "5d3800ea2af8259994be": {
-      "file": "src/styles.scss",
-      "rule": "spacing",
-      "property": "padding",
-      "value": "1.5rem",
-      "count": 1
-    },
-    "6f4e4c7f9afc1dae916a": {
-      "file": "src/styles.scss",
-      "rule": "spacing",
-      "property": "gap",
-      "value": "1rem",
       "count": 1
     },
     "7440779cbe03033accf7": {
@@ -70,13 +49,6 @@
       "property": "font-weight",
       "value": "700",
       "count": 4
-    },
-    "79546e19f8d9837df744": {
-      "file": "src/styles.scss",
-      "rule": "spacing",
-      "property": "margin-bottom",
-      "value": "0.5rem",
-      "count": 1
     },
     "86f1243a81a768d0a01a": {
       "file": "src/styles.scss",
@@ -113,27 +85,6 @@
       "value": "5rem",
       "count": 1
     },
-    "bf76f3f205b98b4477c3": {
-      "file": "src/styles.scss",
-      "rule": "spacing",
-      "property": "padding",
-      "value": "0.75rem",
-      "count": 1
-    },
-    "c11ed6b6e28289970f5c": {
-      "file": "src/styles.scss",
-      "rule": "spacing",
-      "property": "padding",
-      "value": "48px var(--cedar-space-6) var(--cedar-space-6)",
-      "count": 1
-    },
-    "cd89934290a9744c24c7": {
-      "file": "src/styles.scss",
-      "rule": "spacing",
-      "property": "padding",
-      "value": "1rem",
-      "count": 2
-    },
     "d48c98436a7ae8806369": {
       "file": "src/styles.scss",
       "rule": "geometry",
@@ -146,20 +97,6 @@
       "rule": "geometry",
       "property": "height",
       "value": "1px",
-      "count": 1
-    },
-    "e10a459813c77b58694e": {
-      "file": "src/styles.scss",
-      "rule": "spacing",
-      "property": "margin-bottom",
-      "value": "1.5rem",
-      "count": 1
-    },
-    "e276681e004bf2603126": {
-      "file": "src/styles.scss",
-      "rule": "spacing",
-      "property": "margin-top",
-      "value": "32px",
       "count": 1
     },
     "e6c206f7d36065ee011a": {
