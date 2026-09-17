@@ -18,6 +18,9 @@ env:
   NPM_CONFIG_STRICT_ALLOW_SCRIPTS: "true"
 
 jobs:
+  adoption:
+    uses: metadatacenter/cedar-design-tokens/.github/workflows/adoption.yml@develop
+
   package:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -53,7 +56,7 @@ jobs:
           CEDAR_VERSION_MODIFIER: ''
           CEDAR_DATACITE_ENABLED: 'false'
           CEDAR_GA4_TRACKING_ID: ''
-        run: npx gulp
+        run: npm run build:deployment
 
       - name: Run Angular, authentication and packaging suites
         run: npm test

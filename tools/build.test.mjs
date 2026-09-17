@@ -10,13 +10,16 @@ const root = fileURLToPath(new URL("../", import.meta.url));
 test("deployment configuration completes writes and preserves explicit split origins", async () => {
   const dir = await mkdtemp(join(tmpdir(), "cedar-workspace-config-"));
   try {
-    await cp(join(root, "gulpfile.js"), join(dir, "gulpfile.js"));
+    await mkdir(join(dir, "tools"));
+    await cp(
+      join(root, "tools/workspace.mjs"),
+      join(dir, "tools/workspace.mjs"),
+    );
     await cp(join(root, "app/config/src"), join(dir, "app/config/src"), {
       recursive: true,
     });
     const env = {
       ...process.env,
-      NODE_PATH: join(root, "node_modules"),
       CEDAR_FRONTEND_BEHAVIOR: "server",
       CEDAR_FRONTEND_TARGET: "fixture",
       CEDAR_FRONTEND_fixture_UI_HOST: "ui.example",
@@ -32,13 +35,7 @@ test("deployment configuration completes writes and preserves explicit split ori
     };
     execFileSync(
       process.execPath,
-      [
-        join(root, "node_modules/gulp/bin/gulp.js"),
-        "--cwd",
-        dir,
-        "replace-url",
-        "replace-version",
-      ],
+      [join(dir, "tools/workspace.mjs"), "configure"],
       { env, stdio: "pipe", timeout: 20000 },
     );
     const config = JSON.parse(
@@ -120,6 +117,10 @@ test("installed lock and packed source contain no retired runtime or vendor tree
     "jquery",
     "requirejs",
     "karma",
+    "gulp",
+    "gulp-connect",
+    "gulp-replace",
+    "websocket-driver",
   ])
     assert.equal(
       Object.keys(lock.packages).some(
@@ -161,7 +162,7 @@ test("installed lock and packed source contain no retired runtime or vendor tree
     "src/main.ts",
     "src/index.html",
     "angular.json",
-    "gulpfile.js",
+    "tools/workspace.mjs",
     "app/index.html",
     "app/scripts/handlers/KeycloakUserHandler.js",
     "app/scripts/keycloak/keycloak.min.js",
@@ -169,4 +170,77 @@ test("installed lock and packed source contain no retired runtime or vendor tree
     "app/img/cedar-logo-main.png",
   ])
     assert.ok(files.includes(required), required);
+});
+
+test("static server supports routes and HEAD without exposing missing assets or symlinks", async () => {
+  const { staticServer } = await import("./workspace.mjs");
+  const { symlink } = await import("node:fs/promises");
+  const dir = await mkdtemp(join(tmpdir(), "workspace-http-"));
+  await mkdir(join(dir, "app"));
+  await writeFile(
+    join(dir, "app/index.html"),
+    "<cedar-workspace></cedar-workspace>",
+  );
+  await writeFile(join(dir, "app/main.js"), 'console.log("ok")');
+  await writeFile(join(dir, "secret.txt"), "private");
+  await symlink(join(dir, "secret.txt"), join(dir, "app/leak.txt"));
+  const server = staticServer(join(dir, "app"));
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const origin = `http://127.0.0.1:${server.address().port}`;
+  try {
+    assert.match(
+      await (await fetch(origin + "/instances/edit/example")).text(),
+      /cedar-workspace/,
+    );
+    const asset = await fetch(origin + "/main.js", { method: "HEAD" });
+    assert.equal(asset.headers.get("content-type"), "text/javascript");
+    assert.equal(asset.headers.get("cache-control"), "no-store");
+    assert.equal(await asset.text(), "");
+    assert.equal((await fetch(origin + "/missing.js")).status, 404);
+    assert.equal((await fetch(origin + "/leak.txt")).status, 403);
+    assert.equal((await fetch(origin + "/.git/config")).status, 403);
+    assert.equal((await fetch(origin + "/", { method: "POST" })).status, 405);
+    assert.equal((await fetch(origin + "/%zz")).status, 400);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("configuration rejects missing deployment identity and safely quotes values", async () => {
+  const { configure } = await import("./workspace.mjs");
+  const dir = await mkdtemp(join(tmpdir(), "workspace-config-"));
+  try {
+    await cp(join(root, "app/config/src"), join(dir, "app/config/src"), {
+      recursive: true,
+    });
+    const env = {
+      CEDAR_FRONTEND_BEHAVIOR: "server",
+      CEDAR_FRONTEND_TARGET: "fixture",
+      CEDAR_FRONTEND_fixture_UI_HOST: "ui.example",
+      CEDAR_FRONTEND_fixture_REST_HOST: "api.example",
+    };
+    await assert.rejects(configure(dir, env), /source commit/);
+    Object.assign(env, {
+      CEDAR_SOURCE_COMMIT: "2".repeat(40),
+      CEDAR_VERSION: 'quoted"\\\nversion',
+      CEDAR_VERSION_MODIFIER: "",
+      CEDAR_DATACITE_ENABLED: "true",
+      CEDAR_GA4_TRACKING_ID: "",
+    });
+    await configure(dir, env);
+    const context = { window: {} };
+    vm.runInNewContext(
+      await readFile(join(dir, "app/config/version.js"), "utf8"),
+      context,
+    );
+    assert.equal(context.window.cedarVersion, env.CEDAR_VERSION);
+    assert.equal(context.window.dataciteEnabled, true);
+    await assert.rejects(
+      configure(dir, { ...env, CEDAR_FRONTEND_BEHAVIOR: "invalid" }),
+      /Invalid/,
+    );
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });
