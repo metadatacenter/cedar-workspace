@@ -16,7 +16,7 @@
     <summary aria-label="User menu"><cedar-icon name="user" /></summary>
     <nav>
       <a href="/profile">Profile</a><a href="/settings">Settings</a
-      ><button (click)="api.logout()" [disabled]="!ready()">Logout</button>
+      ><a routerLink="/logout">Logout</a>
     </nav>
   </details>
   <details class="header-menu">

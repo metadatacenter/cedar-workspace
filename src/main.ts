@@ -1,6 +1,7 @@
 import { Component } from "@angular/core";
 import { bootstrapApplication } from "@angular/platform-browser";
 import { provideRouter, RouterOutlet } from "@angular/router";
+import { Logout } from "./app/logout";
 import { Privacy } from "./app/privacy";
 import { Groups } from "./app/groups";
 import { Settings } from "./app/settings";
@@ -27,6 +28,7 @@ bootstrapApplication(App, {
       { path: "settings", component: Settings },
       { path: "groups", component: Groups },
       { path: "privacy", component: Privacy },
+      { path: "logout", component: Logout },
       {
         matcher: metadataRoute,
         component: MetadataEditor,

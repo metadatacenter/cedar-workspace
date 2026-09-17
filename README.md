@@ -15,7 +15,8 @@ API-key management; Settings saves the date format used by Workspace; Groups man
 details and membership with separate revision tokens; Privacy retains the existing
 policy wording. No AngularJS runtime or styles load on any of these routes.
 Messaging has been removed; its old URL returns to Workspace.
-Logout retains the temporary `app/legacy.html` compatibility entry.
+Logout also runs in Angular and does not depend on the profile service.
+The unused compatibility shell remains only until its removal.
 The combined `cedar-template-editor` application is unchanged.
 
 ## Local development

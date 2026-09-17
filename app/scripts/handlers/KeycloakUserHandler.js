@@ -19,7 +19,7 @@ function KeycloakUserHandler() {
   };
 
   this.doLogout = function (options) {
-    keycloak.logout(options);
+    return keycloak.logout(options);
   };
 
   this.getToken = function () {

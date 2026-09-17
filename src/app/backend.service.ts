@@ -11,7 +11,7 @@ interface Auth {
     realm_access?: { roles: string[] };
   };
   doLogin(): void;
-  doLogout(options?: object): void;
+  doLogout(options?: object): void | Promise<void>;
 }
 declare global {
   interface Window {
@@ -53,10 +53,14 @@ export class Backend {
   private refresh?: Promise<void>;
   private readonly session = crypto.randomUUID();
   private initialization?: Promise<boolean>;
+  private authentication?: Promise<boolean>;
+  private authenticate() {
+    return (this.authentication ||= this.initializeAuth());
+  }
   init(): Promise<boolean> {
     return (this.initialization ||= this.initialize());
   }
-  private async initialize() {
+  private async initializeAuth() {
     const response = await fetch("/config/url-service.conf.json", {
       cache: "no-store",
     });
@@ -69,7 +73,10 @@ export class Backend {
         reject(new Error("Sign-in failed. Please reload.")),
       ),
     );
-    if (!authenticated) {
+    return authenticated;
+  }
+  private async initialize() {
+    if (!(await this.authenticate())) {
       this.auth.doLogin();
       return false;
     }
@@ -80,8 +87,12 @@ export class Backend {
     ).data;
     return true;
   }
-  logout() {
-    this.auth.doLogout({ redirectUri: location.origin });
+  async logout() {
+    if (await this.authenticate()) {
+      await this.auth.doLogout({ redirectUri: location.origin + "/" });
+    } else {
+      location.assign(location.origin + "/");
+    }
   }
   get monitoringAllowed() {
     return this.profile?.permissions?.includes("permission_monitor_read");

@@ -9,8 +9,8 @@ define([
   function profileRoutes($routeProvider) {
     $routeProvider
         .when('/logout', {
-          templateUrl: 'scripts/profile/logout.html',
-          controller : 'LogoutController'
+          template: '<p>Signing out…</p>',
+          controller: ['$window', function ($window) { $window.location.reload(); }]
         })
         .when('/profile', {
           template: '<p>Opening Profile…</p>',
