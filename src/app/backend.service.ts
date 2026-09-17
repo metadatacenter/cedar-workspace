@@ -1,10 +1,15 @@
+import type { UserProfile } from "./account-types";
 import { Injectable } from "@angular/core";
 import { Config, Resource, collections } from "./resource";
 interface Auth {
   initUserHandler(ok: (authenticated: boolean) => void, fail: () => void): void;
   refreshToken(seconds: number, ok: () => void, fail: () => void): void;
   getToken(): string;
-  getParsedToken(): { sub: string; realm_access?: { roles: string[] } };
+  getParsedToken(): {
+    sub: string;
+    email?: string;
+    realm_access?: { roles: string[] };
+  };
   doLogin(): void;
   doLogout(options?: object): void;
 }
@@ -22,7 +27,20 @@ export interface Reply<T> {
 @Injectable({ providedIn: "root" })
 export class Backend {
   config!: Config;
-  profile!: { homeFolderId: string; permissions?: string[] };
+  profile!: UserProfile;
+  get userId() {
+    return this.auth.getParsedToken().sub;
+  }
+  get email() {
+    return this.auth.getParsedToken().email || "";
+  }
+  get userPath() {
+    return (
+      this.config.userRestAPI.replace(/\/$/, "") +
+      "/users/" +
+      encodeURIComponent(this.userId)
+    );
+  }
   private auth!: Auth;
   private refresh?: Promise<void>;
   private readonly session = crypto.randomUUID();

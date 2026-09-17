@@ -13,8 +13,8 @@ define([
           controller : 'LogoutController'
         })
         .when('/profile', {
-          templateUrl: 'scripts/profile/profile.html',
-          controller : 'ProfileController'
+          template: '<p>Opening Profile…</p>',
+          controller: ['$window', function ($window) { $window.location.reload(); }]
         })
         .when('/privacy', {
           templateUrl: 'scripts/profile/privacy.html',

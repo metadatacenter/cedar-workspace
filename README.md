@@ -8,9 +8,10 @@ categories, latest-version filter, type filters or tile view.
 
 Template, element and field authoring opens the configured CED/CEFD Designer host;
 metadata creation/editing opens the standalone Angular CEE host at
-`/instances/create/:templateId` and `/instances/edit/:id`. Profile, settings, groups,
+`/instances/create/:templateId` and `/instances/edit/:id`. Profile is also modern Angular,
+including account details and masked API-key management. Settings, groups,
 privacy and messaging still use `app/legacy.html` until their separate migration.
-No AngularJS runtime or styles load on the workspace or metadata routes.
+No AngularJS runtime or styles load on the workspace, metadata or Profile routes.
 The combined `cedar-template-editor` application is unchanged.
 
 ## Local development

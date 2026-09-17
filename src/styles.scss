@@ -623,3 +623,71 @@ td:first-child a {
     padding: 0.75rem;
   }
 }
+
+.account-header,
+.account-nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--cedar-space-4);
+  padding: var(--cedar-space-4) var(--cedar-space-6);
+  background: var(--cedar-surface-panel);
+  border-bottom: 1px solid var(--cedar-border-rule);
+}
+.account-header h1 {
+  margin: 0;
+  font-size: var(--cedar-font-size-heading);
+}
+.account-content {
+  max-width: 70rem;
+  margin: auto;
+}
+.account-card {
+  padding: var(--cedar-space-6);
+  margin-bottom: var(--cedar-space-4);
+  border: 1px solid var(--cedar-border-rule);
+  border-radius: var(--cedar-control-radius-default);
+  background: var(--cedar-surface-panel);
+}
+.account-card h2 {
+  font-size: var(--cedar-font-size-element-heading);
+}
+.account-card h3 {
+  font-size: var(--cedar-font-size-lead);
+}
+.account-card dt {
+  font-weight: 600;
+  margin-top: var(--cedar-space-3);
+}
+.account-card dd {
+  margin: var(--cedar-space-2) 0;
+  overflow-wrap: anywhere;
+}
+.account-card pre {
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.account-card label {
+  display: block;
+  margin-bottom: var(--cedar-space-2);
+}
+.account-card input,
+.account-card textarea,
+.account-card select {
+  max-width: 100%;
+}
+.account-key {
+  border-top: 1px solid var(--cedar-border-rule);
+  margin-top: var(--cedar-space-4);
+  padding-top: var(--cedar-space-3);
+}
+.account-key code {
+  overflow-wrap: anywhere;
+}
+.account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cedar-space-2);
+  margin-top: var(--cedar-space-3);
+}
