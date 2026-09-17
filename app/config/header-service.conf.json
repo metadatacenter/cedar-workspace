@@ -1,8 +1,7 @@
 {
-  "_comment": "Offset between the mini header appearing and making the left menu stick",
+  "_comment": "Settings for different pages",
   "stickyThreshold": 0,
   "scrollSelector": ".template-container.scrollable-content",
-  "_comment": "Settings for different pages",
   "DASHBOARD": {
     "enabled": false
   },
@@ -26,9 +25,6 @@
     "enabled": false
   },
   "PRIVACY": {
-    "enabled": false
-  },
-  "MESSAGING": {
     "enabled": false
   }
 }

@@ -21,7 +21,6 @@ define([
           "PROFILE"  : "PROFILE",
           "PRIVACY"  : "PRIVACY",
           "METADATA" : "METADATA",
-          "MESSAGING": "MESSAGING",
           "SETTINGS" : "SETTINGS"
         },
         "stagingObject": {

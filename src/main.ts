@@ -22,6 +22,7 @@ bootstrapApplication(App, {
     provideRouter([
       { path: "", pathMatch: "full", redirectTo: "dashboard" },
       { path: "dashboard", component: Workspace },
+      { path: "messaging", redirectTo: "dashboard", pathMatch: "full" },
       { path: "profile", component: Profile },
       { path: "settings", component: Settings },
       { path: "groups", component: Groups },

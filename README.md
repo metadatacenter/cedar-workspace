@@ -14,7 +14,8 @@ The four account routes are also Angular: Profile provides account details and m
 API-key management; Settings saves the date format used by Workspace; Groups manages
 details and membership with separate revision tokens; Privacy retains the existing
 policy wording. No AngularJS runtime or styles load on any of these routes.
-Messaging and logout retain the temporary `app/legacy.html` compatibility entry.
+Messaging has been removed; its old URL returns to Workspace.
+Logout retains the temporary `app/legacy.html` compatibility entry.
 The combined `cedar-template-editor` application is unchanged.
 
 ## Local development

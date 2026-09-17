@@ -33,7 +33,6 @@ define([
   'cedar/template-editor/service/service.module',
   'cedar/template-editor/profile/profile.module',
   'cedar/template-editor/groups/groups.module',
-  'cedar/template-editor/messaging/messaging.module'
 ], function (angular) {
   return angular.module('cedar.workspace', [
     'ui.bootstrap',
@@ -54,7 +53,6 @@ define([
     'cedar.templateEditor.service',
     'cedar.templateEditor.profile',
     'cedar.templateEditor.groups',
-    'cedar.templateEditor.messaging',
   ])
       .config(['flowFactoryProvider', function (flowFactoryProvider) {
         flowFactoryProvider.defaults = {

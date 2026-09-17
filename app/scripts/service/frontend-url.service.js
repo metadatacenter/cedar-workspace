@@ -163,10 +163,6 @@ define([
       return '/dashboard?sharing=shared-with-everybody&folderId=' + folderId;
     };
 
-    service.getMessaging = function (folderId) {
-      return '/messaging?folderId=' + encodeURIComponent(folderId);
-    };
-
     service.openField = function (id) {
       return openViewBase + '/template-fields/' + encodeURIComponent(id);
     };

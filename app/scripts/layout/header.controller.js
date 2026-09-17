@@ -19,12 +19,11 @@ define([
     'UIUtilService',
     'CedarUser',
     'FrontendUrlService',
-    'MessagingService',
     'PreviousRouteService'
   ];
 
   function HeaderController($rootScope, $location, $window, $timeout, $document, $translate,QueryParamUtilsService,
-                            UIMessageService, UIProgressService, UIUtilService,CedarUser, FrontendUrlService,MessagingService,
+                            UIMessageService, UIProgressService, UIUtilService,CedarUser, FrontendUrlService,
                             PreviousRouteService) {
 
     var vm = this;
@@ -153,18 +152,6 @@ define([
       }
     };
 
-    vm.openMessaging = function() {
-      $location.url(FrontendUrlService.getMessaging(QueryParamUtilsService.getFolderId()));
-    };
-
-    vm.hasUnreadMessages = function() {
-      return MessagingService.unreadCount > 0;
-    };
-
-    vm.getUnreadMessageCount = function() {
-      return Math.min(MessagingService.unreadCount, 9);
-    };
-
     function hideHeaderMenus() {
       ['user-menu-dropdown', 'more-menu-dropdown'].forEach(function(menuId) {
         var menu = document.getElementById(menuId);
@@ -218,10 +205,6 @@ define([
 
     vm.isDashboard = function () {
       return ((vm.path === "/dashboard") || (vm.path === '/'));
-    };
-
-    vm.isMessaging = function () {
-      return (vm.path === "/messaging");
     };
 
     vm.isGroups = function () {

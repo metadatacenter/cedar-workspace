@@ -18,7 +18,6 @@ define([
     let schemaService = null;
     let groupService = null;
     let submissionService = null;
-    let messagingService = null;
     let impexService = null;
     const paging = function (page, size, defaultPage, defaultSize, pageString, sizeString) {
       const p = page > 0 ? page : defaultPage;
@@ -38,7 +37,6 @@ define([
       schemaService = config.schemaRestAPI;
       groupService = config.groupRestAPI;
       submissionService = config.submissionRestAPI;
-      messagingService = config.messagingRestAPI;
       impexService = config.impexRestAPI;
     };
 
@@ -125,10 +123,6 @@ define([
 
     service.groupBase = function () {
       return groupService;
-    };
-
-    service.messagingBase = function () {
-      return messagingService;
     };
 
     service.getValueRecommendation = function () {
@@ -255,28 +249,8 @@ define([
       return this.getGroups() + '/' + this.encodeURIComponent(id) + "/users";
     };
 
-    service.messagingSummary = function () {
-      return this.messagingBase() + '/summary';
-    };
-
-    service.messagingMessages = function () {
-      return this.messagingBase() + '/messages';
-    };
-
     service.getCategoryTree = function () {
       return this.resourceBase() + '/categories/tree';
-    };
-
-    service.messagingNotNotifiedMessages = function () {
-      return this.messagingMessages() + "?notification_status=notnotified";
-    };
-
-    service.messagingPatchMessage = function (id) {
-      return this.messagingMessages() + "/" + this.encodeURIComponent(id);
-    };
-
-    service.messagingMarkAllMessagesAsRead = function () {
-      return this.messagingBase() + '/command/mark-all-as-read';
     };
 
     service.immportWorkspaces = function () {

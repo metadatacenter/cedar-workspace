@@ -30,7 +30,6 @@ define([
           'FrontendUrlService',
           'UIProgressService',
           'CONST',
-          'MessagingService'
         ];
 
         function cedarSearchBrowsePickerController($location, $timeout, $scope, $rootScope, $window, $translate, CedarUser,
@@ -38,7 +37,7 @@ define([
                                                    UIMessageService, UISettingsService, QueryParamUtilsService,
                                                    AuthorizedBackendService,
                                                    FrontendUrlService,
-                                                   UIProgressService, CONST, MessagingService) {
+                                                   UIProgressService, CONST) {
           const vm = this;
 
           vm.breadcrumbName = breadcrumbName;
@@ -131,9 +130,6 @@ define([
           vm.getSelected = getSelected;
           vm.getSelectedVersions = getSelectedVersions;
           vm.getSelectedCategories = getSelectedCategories;
-          vm.hasUnreadMessages = hasUnreadMessages;
-          vm.getUnreadMessageCount = getUnreadMessageCount;
-          vm.openMessaging = openMessaging;
           vm.isPublished = isPublished;
           vm.isOpen = isOpen;
           vm.isOpenJustImplicitly = isOpenJustImplicitly;
@@ -2175,18 +2171,6 @@ define([
 
           function onDashboard() {
             return vm.mode === 'dashboard';
-          }
-
-          function hasUnreadMessages() {
-            return MessagingService.unreadCount > 0;
-          }
-
-          function getUnreadMessageCount() {
-            return Math.min(MessagingService.unreadCount, 9);
-          }
-
-          function openMessaging() {
-            $location.url(FrontendUrlService.getMessaging(vm.getFolderId()));
           }
 
           function filterShowing() {

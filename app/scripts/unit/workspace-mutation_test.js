@@ -27,7 +27,7 @@ define(['angular', 'angularMocks', 'cedar/template-editor/search-browse/cedar-se
         $translate: {}, CedarUser: CedarUser, resourceService: service,
         UIMessageService: {confirmedExecution: function (f) { f(); }, flashSuccess: angular.noop, showBackendError: angular.noop},
         UISettingsService: settings, QueryParamUtilsService: {}, AuthorizedBackendService: {},
-        FrontendUrlService: {}, UIProgressService: {}, CONST: {publication: {ALL: 'all'}, resourceType: {FOLDER: 'folder'}}, MessagingService: {}
+        FrontendUrlService: {}, UIProgressService: {}, CONST: {publication: {ALL: 'all'}, resourceType: {FOLDER: 'folder'}}
       });
       settings.resetSelected.calls.reset();
     }));

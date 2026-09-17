@@ -105,7 +105,6 @@ gulp.task('replace-url', function (done) {
       .pipe(replace('groupServerUrl', 'https://group.' + cedarRestHost))
       .pipe(replace('schemaServerUrl', 'https://schema.' + cedarRestHost))
       .pipe(replace('submissionServerUrl', 'https://submission.' + cedarRestHost))
-      .pipe(replace('messagingServerUrl', 'https://messaging.' + cedarRestHost))
       .pipe(replace('openViewBaseUrl', 'https://openview.' + cedarRestHost))
       .pipe(replace('impexServerUrl', 'https://impex.' + cedarRestHost))
       .pipe(replace('workspaceFrontendUrl', workspaceFrontendUrl))

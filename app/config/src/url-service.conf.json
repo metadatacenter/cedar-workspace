@@ -7,7 +7,6 @@
   "groupRestAPI": "groupServerUrl",
   "bioontologyRestAPI": "https://data.bioontology.org/",
   "submissionRestAPI": "submissionServerUrl",
-  "messagingRestAPI": "messagingServerUrl",
   "openViewBase": "openViewBaseUrl",
   "impexRestAPI": "impexServerUrl",
   "workspaceFrontend": "workspaceFrontendUrl",
