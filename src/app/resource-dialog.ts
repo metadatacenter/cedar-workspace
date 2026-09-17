@@ -153,7 +153,10 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
             this.action,
           )
         ) {
-          const reply = await this.api.snapshot(r, this.action === "delete");
+          const reply = await this.api.snapshot(
+            r,
+            this.action === "delete" || this.action === "rename",
+          );
           this.etag = reply.etag;
           this.name = title({ ...r, ...reply.data });
           this.description = reply.data["schema:description"] || "";
@@ -248,7 +251,9 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
           await this.api.request("/folders", "POST", {
             folderId: this.folder,
             name: this.name.trim(),
-            description: this.description,
+            // The folder API requires a nonempty description even though it is
+            // optional in the dialog. Use the folder name as the initial value.
+            description: this.description.trim() || this.name.trim(),
           });
           break;
         case "rename":

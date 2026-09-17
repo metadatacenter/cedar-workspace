@@ -33,6 +33,19 @@ describe("Conditional action dialogs", () => {
     d.resource = resource;
     return d;
   }
+  it("creates folders without an optional description", async () => {
+    const d = dialog("new-folder");
+    await d.load();
+    d.folder = "parent";
+    d.name = " New folder ";
+    d.description = "   ";
+    await d.submit();
+    expect(api.request).toHaveBeenCalledWith("/folders", "POST", {
+      folderId: "parent",
+      name: "New folder",
+      description: "New folder",
+    });
+  });
   it("keeps edits and read-time revision after a conflict", async () => {
     const d = dialog();
     await d.load();
@@ -63,11 +76,22 @@ describe("Conditional action dialogs", () => {
     expect(api.request).not.toHaveBeenCalled();
     expect(d.error()).toContain("validator");
   });
-  it("uses content validators for delete rather than graph validators", async () => {
-    const d = dialog("delete");
-    await d.load();
-    expect(api.snapshot).toHaveBeenCalledWith(resource, true);
-  });
+  it.each(["delete", "rename"])(
+    "uses content validators for %s",
+    async (action) => {
+      const d = dialog(action);
+      await d.load();
+      expect(api.snapshot).toHaveBeenCalledWith(resource, true);
+    },
+  );
+  it.each(["move", "make-open", "make-not-open"])(
+    "uses graph validators for %s",
+    async (action) => {
+      const d = dialog(action);
+      await d.load();
+      expect(api.snapshot).toHaveBeenCalledWith(resource, false);
+    },
+  );
   it("blocks duplicate submissions while a write is pending", async () => {
     const d = dialog();
     await d.load();

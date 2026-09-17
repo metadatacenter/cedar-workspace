@@ -36,9 +36,10 @@ performs a full-document handoff to Angular.
 
 `npm test` covers the modern Angular components, navigation, permission decisions,
 REST authentication and conditional writes. `npm run test:legacy` covers retained
-compatibility services. The older split smoke in `cedar-development/ops/e2e` still
-contains AngularJS injector and dashboard-selector assumptions; migrate those probes
-to the modern UI before using it as the modern workspace acceptance gate.
+compatibility services. With the native stack running and profile sourced, run
+`npm run smoke:workspace:modern:full` in `cedar-development/ops/e2e` for the modern
+Workspace journey plus CED host conflict/versioning scenarios. The existing
+AngularJS `npm run smoke` remains unchanged for `cedar.metadatacenter.*`.
 
 Resource reports supply lifecycle actions missing from listing summaries. Template
 reports are fetched in bounded batches; other reports are fetched when their menus
