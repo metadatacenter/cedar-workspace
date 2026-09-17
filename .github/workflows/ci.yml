@@ -35,6 +35,9 @@ jobs:
       - name: Install the locked dependency graph
         run: npm ci
 
+      - name: Build the Angular workspace
+        run: npm run build
+
       - name: Prove the train package can be assembled
         run: npm pack --dry-run
 
@@ -51,4 +54,4 @@ jobs:
           CEDAR_GA4_TRACKING_ID: ''
         # The suite loads config/url-service.conf.json, which these tasks write from
         # their templates. The hosts above only have to parse; nothing here calls them.
-        run: npx gulp replace-url replace-version && npm test
+        run: npx gulp replace-url replace-version && npm test && npm run test:legacy

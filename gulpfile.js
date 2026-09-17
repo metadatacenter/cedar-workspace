@@ -41,7 +41,7 @@ gulp.task('less', function (done) {
       .pipe(plumber({
         errorHandler: onError
       }))
-      .pipe(less().on('error', console.error))
+      .pipe(less({math: 'always'}).on('error', console.error))
       .pipe(autoprefixer({
         browsers: ['> 1%', 'last 2 versions', 'Firefox ESR', 'Opera 12.1', 'IE 9'],
         cascade : true
@@ -54,6 +54,14 @@ gulp.task('less', function (done) {
 gulp.task('copy:resources', function () {
   var glyphiconsGlob = 'app/bower_components/bootstrap/fonts/*.*';
   return gulp.src(glyphiconsGlob).pipe(gulp.dest('app/fonts/'));
+});
+
+gulp.task('build:workspace', function (done) {
+  require('child_process').execFile(process.execPath, ['node_modules/@angular/cli/bin/ng.js', 'build'], {cwd: __dirname}, function (error, stdout, stderr) {
+    process.stdout.write(stdout); process.stderr.write(stderr);
+    if (error) { done(error); return; }
+    require('child_process').execFile(process.execPath, ['tools/stage-workspace.mjs'], {cwd: __dirname}, done);
+  });
 });
 
 gulp.task('copy:cee', function () {
@@ -241,7 +249,7 @@ console.log(
 console.log();
 
 // Prepare task list
-var taskNameList = [];
+var taskNameList = ['build:workspace'];
 if (cedarFrontendBehavior === 'develop') {
   taskNameList.push('server-development');
   taskNameList.push('watch');

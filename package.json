@@ -8,11 +8,18 @@
   "main": "app/scripts/app.js",
   "scripts": {
     "start": "gulp",
-    "test": "node_modules/karma/bin/karma start karma.conf.js --browsers ChromeHeadless --single-run"
+    "test": "ng test --watch=false",
+    "build": "ng build && node tools/stage-workspace.mjs",
+    "test:legacy": "node_modules/karma/bin/karma start karma.conf.js --browsers ChromeHeadless --single-run",
+    "format": "prettier --write \"src/**/*.{ts,html,scss}\" angular.json tsconfig*.json"
   },
   "allowScripts": {
     "es5-ext@0.10.62": false,
-    "fsevents@1.2.13 || 2.3.2": true
+    "@parcel/watcher@2.6.0": true,
+    "esbuild@0.28.2": true,
+    "lmdb@3.5.6": true,
+    "msgpackr-extract@3.0.4": true,
+    "fsevents@1.2.13 || 2.3.2 || 2.3.3": true
   },
   "author": "Metadatacenter.org",
   "license": "BSD-2-Clause",
@@ -24,7 +31,7 @@
     "gulp-connect": "5.7.0",
     "gulp-html-replace": "1.6.2",
     "gulp-jshint": "1.12.0",
-    "gulp-less": "3.3.2",
+    "gulp-less": "5.0.0",
     "gulp-ng-annotate": "0.5.3",
     "gulp-plumber": "1.1.0",
     "gulp-rename": "1.2.2",
@@ -43,9 +50,29 @@
     "karma-notify-send-reporter": "0.0.3",
     "karma-requirejs": "0.2.6",
     "karma-spec-reporter": "0.0.31",
-    "requirejs": "2.1.22"
+    "requirejs": "2.1.22",
+    "@angular/build": "22.1.8",
+    "@angular/cli": "22.1.8",
+    "@angular/compiler-cli": "22.1.7",
+    "typescript": "~6.0.3",
+    "vitest": "^4.0.8",
+    "jsdom": "^30.0.1",
+    "prettier": "^3.9.6",
+    "less": "4.9.1"
   },
   "dependencies": {
-    "cedar-embeddable-editor": "2.0.15"
+    "cedar-embeddable-editor": "2.0.15",
+    "@angular/core": "22.1.7",
+    "@angular/common": "22.1.7",
+    "@angular/compiler": "22.1.7",
+    "@angular/forms": "22.1.7",
+    "@angular/platform-browser": "22.1.7",
+    "@angular/router": "22.1.7",
+    "@org.metadatacenter/cedar-design-tokens": "0.1.0-dev.20260917.4bbf1832",
+    "rxjs": "~7.8.2",
+    "tslib": "^2.8.1"
+  },
+  "engines": {
+    "node": "^24.15.0"
   }
 }

@@ -1,28 +1,50 @@
 # cedar-workspace
 
-CEDAR's Workspace frontend: dashboard, folders, search, resource operations,
-sharing, categories, profile/settings, and launch points into authoring tools.
+CEDAR's split Workspace frontend. `/` and `/dashboard` run a standalone Angular
+22 application with Angular routing, signals, forms and shared CEDAR design tokens.
+The initial workspace provides a table, search, folder navigation, collapsible side
+panels, Info/Version tabs, and resource action dialogs. It deliberately has no
+categories, latest-version filter, type filters or tile view.
 
-This repository is being extracted from the legacy `cedar-template-editor`
-AngularJS monolith. It is not in the production release path yet. See
-[`MIGRATION.md`](MIGRATION.md) for the frozen source commit, current boundary,
-baseline test debt, and extraction gates.
+Template, element and field authoring opens the configured CED/CEFD Designer host;
+metadata creation/editing opens the existing CEE host. Profile, settings, groups,
+privacy, messaging and the CEE host shell still use `app/legacy.html` until their
+separate migration. No AngularJS runtime or styles load on the new workspace route.
+The combined `cedar-template-editor` application is unchanged.
 
 ## Local development
 
-Export `CEDAR_HOME`, source the normal CEDAR development profile, and run:
+Use Node 24.19.0. Start the managed app with `cedarcli native start frontend workspace`.
+For direct npm commands, export `CEDAR_HOME` and `CEDAR_PROFILE=develop`, then source
+`cedar-development/bin/templates/cedar-profile-native.sh`:
 
 ```sh
 cd "$CEDAR_HOME/cedar-workspace"
-npm start
+npm ci
+npm run build
+npm test
+npm run test:legacy
 ```
 
-The default development and LiveReload ports are `4201` and `35730`.
-Override them with `CEDAR_FRONTEND_PORT` and `CEDAR_LIVERELOAD_PORT` when
-needed. The production monolith continues to use port `4200`.
+Gulp also builds Angular before starting the port-4201 server or generating a server
+payload. After editing `src/`, run `npm run build` and reload. Assets are built outside
+the served tree, copied first, and the generated index is replaced last; a failed
+build preserves the last working app. Shared Keycloak/configuration files remain at
+their existing URLs. The root entry selects the modern or compatibility bootstrap
+without changing the requested URL. Returning from a legacy page to `/dashboard`
+performs a full-document handoff to Angular.
 
-The current unit baseline is run with `npm test`. Cross-application smoke tests
-live under `cedar-development/ops/e2e`.
+`npm test` covers the modern Angular components, navigation, permission decisions,
+REST authentication and conditional writes. `npm run test:legacy` covers retained
+compatibility services. The older split smoke in `cedar-development/ops/e2e` still
+contains AngularJS injector and dashboard-selector assumptions; migrate those probes
+to the modern UI before using it as the modern workspace acceptance gate.
+
+Resource reports supply lifecycle actions missing from listing summaries. Template
+reports are fetched in bounded batches; other reports are fetched when their menus
+or information panels open. Rename, move, delete, open-state and permission updates
+use read-time ETags and preserve the dialog input on conflict. Import retains the
+existing caDSR XML upload/status protocol.
 
 ## Publication and native server deployment
 
@@ -81,4 +103,4 @@ deployment and authenticated smokes before accepting the release in an environme
   CEE host.
 - Cross-application navigation follows
   [`docs/CROSS_APP_NAVIGATION.md`](docs/CROSS_APP_NAVIGATION.md).
-- Framework modernization is intentionally separate from the extraction.
+- New workspace development belongs in `src/`; do not add AngularJS UI.

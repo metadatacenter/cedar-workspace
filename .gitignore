@@ -23,3 +23,9 @@ tests/env.js
 tests/config/test-env.js
 
 app/third_party_components/cedar-embeddable-editor/
+
+/angular/cache/
+/.angular/
+/out-tsc/
+/app/workspace-build/
+/.workspace-build/

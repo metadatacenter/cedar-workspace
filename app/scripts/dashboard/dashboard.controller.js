@@ -1,17 +1,10 @@
 'use strict';
 
-define([
-  'angular',
-  'lib/angular-ui-tree/dist/angular-ui-tree'
-], function (angular) {
+// Compatibility handoff for in-app navigation from the remaining AngularJS pages.
+// The dashboard itself is owned by the standalone Angular workspace.
+define(['angular'], function (angular) {
   angular.module('cedar.templateEditor.dashboard.dashboardController', [])
-      .controller('DashboardController', DashboardController);
-
-  DashboardController.$inject = [];
-
-  function DashboardController() {
-    var vm = this;
-
-  };
-
+      .controller('DashboardController', ['$window', function ($window) {
+        $window.location.reload();
+      }]);
 });

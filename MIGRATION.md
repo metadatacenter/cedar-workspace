@@ -37,7 +37,8 @@ them as baseline debt, and require every newly introduced or migrated test to pa
 
 ## Current extraction checkpoint
 
-- Independent AngularJS bootstrap and package identity on port 4201
+- Standalone Angular 22 workspace bootstrap and package identity on port 4201;
+  remaining ancillary routes use an isolated AngularJS compatibility bootstrap
 - Workspace-owned dashboard, account, messaging, and CEE instance-shell routes
 - Full-document Template Designer navigation with exact-origin `returnTo` validation
 - Focused URL/auth/runtime contract suite: 7 passing tests
@@ -47,8 +48,8 @@ them as baseline debt, and require every newly introduced or migrated test to pa
 - CLI repository/process registration is preview-only and excluded from release operations
 - The full authenticated smoke is split-origin aware and includes exact Workspace-to-Designer return navigation
 - The approved local Keycloak callbacks and exact Web Origins pass their credential-free preflight
-- The authenticated split journey passes login/SSO, exact Designer return, authoring, Workspace CEE
-  create/save/edit, JSON/YAML serialization, OpenView, teardown, and folder-clear verification
+- The historical authenticated split journey covers login/SSO, Designer return, authoring and CEE.
+  Its AngularJS dashboard probes require migration before validating the modern workspace.
 - Workspace owns its minimal user application state and decodes CEE route identifiers exactly once;
   these runtime fixes are recorded by `f0d59519` and `95d16928`
 - Workspace is part of the checked seven-manifest CEE propagation inventory; every CEE release must
@@ -60,7 +61,7 @@ them as baseline debt, and require every newly introduced or migrated test to pa
 Workspace owns:
 
 - `/` and `/dashboard`
-- folders, browsing, search, breadcrumbs, categories, and pagination
+- folders, table browsing, search, breadcrumbs and pagination; categories are deferred
 - resource actions: create folder, copy, move, rename, share, publish, import,
   inclusion, submission, and deletion where currently exposed
 - profile, settings, privacy, logout, and messaging
