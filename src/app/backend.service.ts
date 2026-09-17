@@ -20,6 +20,14 @@ declare global {
     makeOpenEnabled?: boolean;
   }
 }
+export class HttpError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
 export interface Reply<T> {
   data: T;
   etag: string | null;
@@ -137,12 +145,16 @@ export class Backend {
           message = data.message || data.error || "";
         } catch {}
         if (response.status === 412)
-          throw new Error(
+          throw new HttpError(
+            412,
             /no longer exists/i.test(message)
               ? "This item was deleted. Your edits have been kept. Return to Workspace to choose another item."
               : "This item changed since you opened it. Your edits have been kept. Cancel and reopen to review the latest version.",
           );
-        throw new Error(message || `Request failed (${response.status}).`);
+        throw new HttpError(
+          response.status,
+          message || `Request failed (${response.status}).`,
+        );
       }
       return response;
     }

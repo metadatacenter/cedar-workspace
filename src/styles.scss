@@ -691,3 +691,40 @@ td:first-child a {
   gap: var(--cedar-space-2);
   margin-top: var(--cedar-space-3);
 }
+.account-groups {
+  display: grid;
+  grid-template-columns: minmax(16rem, 1fr) minmax(0, 2fr);
+  gap: var(--cedar-space-4);
+  align-items: start;
+}
+.account-group-list {
+  list-style: none;
+  padding: 0;
+}
+.account-group-list li {
+  padding: var(--cedar-space-3) 0;
+  border-bottom: 1px solid var(--cedar-border-rule);
+}
+.account-group-list small {
+  display: block;
+}
+.account-group-list [aria-current="true"] {
+  font-weight: 700;
+}
+.account-card form label {
+  display: block;
+  margin-top: var(--cedar-space-3);
+}
+.account-card textarea {
+  width: 100%;
+  min-height: 5rem;
+}
+@media (max-width: 700px) {
+  .account-groups {
+    grid-template-columns: 1fr;
+  }
+}
+
+.account-groups #group-name {
+  width: 100%;
+}

@@ -9,8 +9,8 @@ categories, latest-version filter, type filters or tile view.
 Template, element and field authoring opens the configured CED/CEFD Designer host;
 metadata creation/editing opens the standalone Angular CEE host at
 `/instances/create/:templateId` and `/instances/edit/:id`. Profile is also modern Angular,
-including account details and masked API-key management. Settings is modern Angular and saves the date format used by Workspace. Groups,
-privacy and messaging still use `app/legacy.html` until their separate migration.
+including account details and masked API-key management. Settings is modern Angular and saves the date format used by Workspace. Groups is modern Angular, including membership and administrator management with
+separate revisions for details and membership. Privacy and messaging still use `app/legacy.html` until their separate migration.
 No AngularJS runtime or styles load on the workspace, metadata or Profile routes.
 The combined `cedar-template-editor` application is unchanged.
 

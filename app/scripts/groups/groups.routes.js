@@ -8,9 +8,8 @@ define(['angular'], function (angular) {
 
   function groupsRoutes($routeProvider) {
     $routeProvider.when('/groups', {
-      templateUrl: 'scripts/groups/groups.html',
-      controller: 'GroupsController',
-      controllerAs: 'groups'
+      template: '<p>Opening Groups…</p>',
+      controller: ['$window', function ($window) { $window.location.reload(); }]
     });
   }
 });

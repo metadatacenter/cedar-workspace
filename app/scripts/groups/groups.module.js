@@ -2,11 +2,9 @@
 
 define([
   'angular',
-  'cedar/template-editor/groups/groups.routes',
-  'cedar/template-editor/groups/groups.controller'
+  'cedar/template-editor/groups/groups.routes'
 ], function (angular) {
   angular.module('cedar.templateEditor.groups', [
-    'cedar.templateEditor.groups.routes',
-    'cedar.templateEditor.groups.controller'
+    'cedar.templateEditor.groups.routes'
   ]);
 });
