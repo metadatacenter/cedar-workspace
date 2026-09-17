@@ -1,60 +1,8 @@
-// Include gulp & gulp plugins
-var gulp = require('gulp'),
-    jshint = require('gulp-jshint'),
-    less = require('gulp-less'),
-    stylish = require('jshint-stylish'),
-    autoprefixer = require('gulp-autoprefixer'),
-    plumber = require('gulp-plumber'),
-    rename = require('gulp-rename'),
-    uglify = require('gulp-uglify'),
-    connect = require('gulp-connect'),
-    htmlreplace = require('gulp-html-replace'),
-    ngAnnotate = require('gulp-ng-annotate'),
-    historyApiFallback = require('connect-history-api-fallback'),
-    Server = require('karma').Server,
-    replace = require('gulp-replace'),
-    wait = require('gulp-wait'),
-    colors = require('colors');
+// Configure, build and serve the standalone Angular Workspace.
+var gulp = require('gulp'), connect = require('gulp-connect'), replace = require('gulp-replace');
+require('colors');
 var execFileSync = require('child_process').execFileSync;
-
-/**
- * Create error handling exception.
- */
-var onError = function (err) {
-  process.stdout.write('\x07');
-  console.log(err.red);
-  this.emit('end'); //added so that gulp will end the task on error, and won't hang.
-};
-
-// Lint task
-gulp.task('lint', function (done) {
-  return gulp.src('app/scripts/*.js')
-      .pipe(jshint())
-      .pipe(jshint.reporter(stylish))
-      .pipe(connect.reload());
-  done();
-});
-
-// Compile LESS files
-gulp.task('less', function (done) {
-  return gulp.src(['app/less/style-creator.less'])
-      .pipe(plumber({
-        errorHandler: onError
-      }))
-      .pipe(less({math: 'always'}).on('error', console.error))
-      .pipe(autoprefixer({
-        browsers: ['> 1%', 'last 2 versions', 'Firefox ESR', 'Opera 12.1', 'IE 9'],
-        cascade : true
-      }))
-      .pipe(gulp.dest('app/css'))
-      .pipe(connect.reload());
-  done();
-});
-
-gulp.task('copy:resources', function () {
-  var glyphiconsGlob = 'app/bower_components/bootstrap/fonts/*.*';
-  return gulp.src(glyphiconsGlob).pipe(gulp.dest('app/fonts/'));
-});
+var onError = function(err) { throw new Error(String(err)); };
 
 gulp.task('build:workspace', function (done) {
   require('child_process').execFile(process.execPath, ['node_modules/@angular/cli/bin/ng.js', 'build'], {cwd: __dirname}, function (error, stdout, stderr) {
@@ -80,12 +28,6 @@ gulp.task('server-development', function (done) {
     fallback  : 'app/index.html',
     host: '0.0.0.0' // Listen on all interfaces
   });
-  done();
-});
-
-gulp.task('html', function (done) {
-  return gulp.src('/app/views/*.html')
-      .pipe(connect.reload());
   done();
 });
 
@@ -134,29 +76,6 @@ gulp.task('replace-version', function (done) {
       .pipe(replace('cedarGA4TrackingIdValue', cedarGA4TrackingId))
       .pipe(gulp.dest('app/config/'));
   done();
-});
-
-// Watch files for changes
-gulp.task('watch', function (done) {
-  gulp.watch('app/scripts/*.js', gulp.series('lint'));
-  gulp.watch('app/less/*.less', gulp.series('less'));
-  gulp.watch('app/views/*.html', gulp.series('html'));
-  done();
-});
-
-// Sets up the environment required to run the Karma tests in Travis
-gulp.task('karma-travis-env', gulp.series(['replace-url', 'replace-version', 'lint', 'less', 'copy:resources'], function (done) {
-  done();
-}));
-
-gulp.task('karma-tests', function (done) {
-  new Server({
-    configFile: __dirname + '/karma.conf.js',
-    singleRun: true
-  }, function (exitCode) {
-    done();
-    process.exit(exitCode);
-  }).start();
 });
 
 function exitWithError(msg) {
@@ -251,14 +170,13 @@ console.log();
 var taskNameList = ['build:workspace'];
 if (cedarFrontendBehavior === 'develop') {
   taskNameList.push('server-development');
-  taskNameList.push('watch');
 } else if (cedarFrontendBehavior === 'server') {
   console.log("Editor is configuring URLs, and exiting. The frontend content will be served by nginx");
 } else {
   exitWithError("Invalid CEDAR_FRONTEND_BEHAVIOR value. Please set to 'develop' or 'server'!");
 }
 
-taskNameList.push('lint', 'less', 'copy:resources', 'copy:cee', 'replace-url', 'replace-version');
+taskNameList.push('copy:cee', 'replace-url', 'replace-version');
 // Launch tasks
 gulp.task('default', gulp.series(taskNameList, function (done) {
   done();

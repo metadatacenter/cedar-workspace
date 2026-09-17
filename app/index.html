@@ -1,11 +1,9 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>CEDAR Workspace</title><meta name="viewport" content="width=device-width, initial-scale=1"></head>
 <body><p role="status">Loading CEDAR…</p><script>
-// Only choose a bootstrap document here. The workspace is a standalone Angular application.
-// Keep existing non-workspace routes available until their separate migration.
-const workspaceRoute = /^\/(?:(?:dashboard|profile|settings|groups|privacy|messaging|logout)\/?|)$/.test(location.pathname) || /^\/instances\/(?:create|edit)\/.+/.test(location.pathname);
-fetch(workspaceRoute ? '/workspace-build/index.html' : '/legacy.html', {cache: 'no-store'})
+// Every route loads the standalone Angular application.
+fetch('/workspace-build/index.html', {cache: 'no-store'})
   .then(response => { if (!response.ok) throw new Error('Unable to load CEDAR'); return response.text(); })
-  .then(html => { if (workspaceRoute && !/<cedar-workspace[\s>]/.test(html)) throw new Error('Workspace build is missing'); document.open(); document.write(html); document.close(); })
+  .then(html => { if (!/<cedar-workspace[\s>]/.test(html)) throw new Error('Workspace build is missing'); document.open(); document.write(html); document.close(); })
   .catch(() => { document.body.textContent = 'Unable to load CEDAR. Please reload or contact your administrator.'; });
 </script></body></html>

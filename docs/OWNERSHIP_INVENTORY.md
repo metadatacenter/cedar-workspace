@@ -7,7 +7,7 @@ gates pass; this inventory defines the intended boundary of the extracted applic
 ## Owned routes
 
 - `/` and `/dashboard`
-- `/profile`, `/settings`, `/privacy`, `/messaging`, and `/logout`
+- `/profile`, `/settings`, `/privacy`, `/groups`, and `/logout`
 - `/instances/create/:templateId` and `/instances/edit/:instanceId`
 
 The instance routes are a thin authenticated host for the independently released
@@ -18,9 +18,9 @@ return navigation. CEE source code does not live here.
 ## Retained application areas
 
 - Workspace search, browsing, folders, sharing, publication, import, and download flows
-- Account, settings, privacy, messaging, monitoring, and logout surfaces
-- Resource and category-tree widgets used by the Workspace
-- The minimal CEE host shell and its template-instance REST service
+- Account, settings, privacy, groups, monitoring, and logout surfaces
+- Resource table, Info/Version panels and action dialogs; categories are not supported
+- The Angular CEE host and its conditional REST persistence
 - Shared authentication, backend HTTP, URL, user, tracking, and UI infrastructure needed
   by those surfaces
 
@@ -44,7 +44,7 @@ identifiers. Instance routes remain on the Workspace origin. See
 
 ## Verification floor
 
-- `npm test` runs the focused URL-contract tests.
+- `npm test` runs the Angular suite and plain-JavaScript authentication adapter tests.
 - `npm start` serves Workspace on port 4201 and LiveReload on 35730 by default.
 - `/dashboard` and `/instances/create/:templateId` must both return the application shell.
 - The pinned CEE bundle must be served at

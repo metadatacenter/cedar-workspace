@@ -8,7 +8,7 @@ not AngularJS services or in-memory route state.
 
 | Application | Owned routes | Provisional local port |
 | --- | --- | --- |
-| `cedar-workspace` | `/`, `/dashboard`, `/profile`, `/settings`, `/privacy`, `/messaging`, `/logout`, `/instances/*` | 4201 |
+| `cedar-workspace` | `/`, `/dashboard`, `/profile`, `/settings`, `/privacy`, `/groups`, `/logout`, `/instances/*` | 4201 |
 | `cedar-template-designer` | `/templates/*`, `/elements/*`, `/fields/*` | 4202 |
 
 The CEE Web Component remains independently developed and released from

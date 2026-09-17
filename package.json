@@ -5,12 +5,10 @@
     "registry": "https://nexus.bmir.stanford.edu/repository/npm-cedar/"
   },
   "description": "CEDAR Workspace frontend",
-  "main": "app/scripts/app.js",
   "scripts": {
     "start": "gulp",
-    "test": "ng test --watch=false",
+    "test": "ng test --watch=false && node --test tools/*.test.mjs",
     "build": "ng build && node tools/stage-workspace.mjs",
-    "test:legacy": "node_modules/karma/bin/karma start karma.conf.js --browsers ChromeHeadless --single-run",
     "format": "prettier --write \"src/**/*.{ts,html,scss}\" angular.json tsconfig*.json"
   },
   "allowScripts": {

@@ -16,7 +16,7 @@ details and membership with separate revision tokens; Privacy retains the existi
 policy wording. No AngularJS runtime or styles load on any of these routes.
 Messaging has been removed; its old URL returns to Workspace.
 Logout also runs in Angular and does not depend on the profile service.
-The unused compatibility shell remains only until its removal.
+All routes now use the Angular application; the AngularJS compatibility shell is removed.
 The combined `cedar-template-editor` application is unchanged.
 
 ## Local development
@@ -30,28 +30,25 @@ cd "$CEDAR_HOME/cedar-workspace"
 npm ci
 npm run build
 npm test
-npm run test:legacy
 ```
 
 Gulp also builds Angular before starting the port-4201 server or generating a server
 payload. After editing `src/`, run `npm run build` and reload. Assets are built outside
 the served tree, copied first, and the generated index is replaced last; a failed
 build preserves the last working app. Shared Keycloak/configuration files remain at
-their existing URLs. The root entry selects the modern or compatibility bootstrap
-without changing the requested URL. Returning from a legacy page to `/dashboard`
-performs a full-document handoff to Angular.
+their existing URLs. The root entry loads Angular for every route. Unknown and retired routes return to
+`/dashboard`; no RequireJS or AngularJS bootstrap remains.
 
 The metadata host loads the staged CEE bundle on demand, configures permissions
 before rendering, and keeps the same editor mounted across create/update saves.
 Content ETags protect updates; conflicts and deleted resources retain local edits.
 Validation remains advisory. Dirty tracking recognizes exact reverts, guards
 navigation and includes changes made while a save is pending. Return links are
-restricted to the same-origin workspace. Legacy metadata routes only reload into
-this host; their former controller, template and private CEE services are removed.
+restricted to the same-origin workspace. The former AngularJS controllers, services, dialogs, filters and templates are removed.
 
 `npm test` covers the modern Angular components, navigation, permission decisions,
-REST authentication and conditional writes. `npm run test:legacy` covers retained
-compatibility services. With the native stack running and profile sourced, run
+REST authentication and conditional writes, plus the retained plain-JavaScript Keycloak
+adapter. With the native stack running and profile sourced, run
 `npm run smoke:workspace:modern:full` in `cedar-development/ops/e2e` for the modern
 Workspace journey, CED host conflict/versioning scenarios and all four account pages.
 Run account journeys separately with `npm run smoke:account:all`, or one page with

@@ -34,6 +34,7 @@ bootstrapApplication(App, {
         component: MetadataEditor,
         canDeactivate: [leaveMetadata],
       },
+      { path: "**", redirectTo: "dashboard" },
     ]),
   ],
 }).catch((error) => {
