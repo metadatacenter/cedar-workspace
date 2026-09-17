@@ -14,9 +14,10 @@ describe("CEE bundle loading", () => {
   });
   afterEach(() => {
     document
-      .querySelectorAll('script[src*="cedar-embeddable-editor.js"]')
+      .querySelectorAll('script[src*="/cedar-embeddable-editor/"]')
       .forEach((s) => s.remove());
     delete window.cedarCacheControl;
+    delete window.cedarCeeHostFonts;
     vi.restoreAllMocks();
     vi.useRealTimers();
   });
@@ -32,9 +33,20 @@ describe("CEE bundle loading", () => {
     await first;
     await loader.load();
     expect(
-      document.querySelectorAll('script[src*="cedar-embeddable-editor.js"]')
+      document.querySelectorAll('script[src*="/cedar-embeddable-editor/"]')
         .length,
     ).toBe(1);
+  });
+  it("uses the host-font bundle when deployment supplies it", async () => {
+    window.cedarCeeHostFonts = true;
+    const loaded = loader.load();
+    const script = document.querySelector(
+      'script[src*="cedar-embeddable-editor.host-fonts.js"]',
+    ) as HTMLScriptElement;
+    expect(script.src).toContain("?v=release%2042");
+    registered = true;
+    script.dispatchEvent(new Event("load"));
+    await loaded;
   });
   it("fails when a successful script does not register CEE, and permits retry", async () => {
     const first = loader.load();

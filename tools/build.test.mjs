@@ -57,10 +57,42 @@ test("deployment configuration completes writes and preserves explicit split ori
       await readFile(join(dir, "app/config/version.js"), "utf8"),
       context,
     );
+    assert.equal(context.window.cedarCeeHostFonts, false);
     assert.equal(context.window.cedarSourceCommit, "1".repeat(40));
     assert.equal(context.window.cedarAuthUrl, "https://auth.example");
     assert.equal(context.window.cedarDevelopmentMode, false);
     assert.equal(context.window.dataciteEnabled, false);
+    const { configure, copyCee } = await import("./workspace.mjs");
+    const installed = join(dir, "node_modules/cedar-embeddable-editor");
+    await mkdir(installed, { recursive: true });
+    await writeFile(
+      join(installed, "cedar-embeddable-editor.js"),
+      "standalone",
+    );
+    const hosted = "cedar-embeddable-editor.host-fonts.js";
+    await writeFile(join(installed, hosted), "host fonts");
+    await configure(dir, env);
+    await copyCee(dir);
+    vm.runInNewContext(
+      await readFile(join(dir, "app/config/version.js"), "utf8"),
+      context,
+    );
+    assert.equal(context.window.cedarCeeHostFonts, true);
+    const staged = join(
+      dir,
+      "app/third_party_components/cedar-embeddable-editor",
+      hosted,
+    );
+    assert.equal(await readFile(staged, "utf8"), "host fonts");
+    await rm(join(installed, hosted));
+    await configure(dir, env);
+    await copyCee(dir);
+    vm.runInNewContext(
+      await readFile(join(dir, "app/config/version.js"), "utf8"),
+      context,
+    );
+    assert.equal(context.window.cedarCeeHostFonts, false);
+    await assert.rejects(readFile(staged), { code: "ENOENT" });
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

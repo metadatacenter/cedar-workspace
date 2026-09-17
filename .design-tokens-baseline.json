@@ -22,13 +22,6 @@
       "value": "360px",
       "count": 1
     },
-    "472c27ad701a4ed0a88c": {
-      "file": "src/styles.scss",
-      "rule": "typography",
-      "property": "font-weight",
-      "value": "600",
-      "count": 1
-    },
     "473a56d2b8aabe988b20": {
       "file": "src/styles.scss",
       "rule": "geometry",
@@ -43,26 +36,12 @@
       "value": "calc(100vh - 80px)",
       "count": 1
     },
-    "7440779cbe03033accf7": {
-      "file": "src/styles.scss",
-      "rule": "typography",
-      "property": "font-weight",
-      "value": "700",
-      "count": 4
-    },
     "86f1243a81a768d0a01a": {
       "file": "src/styles.scss",
       "rule": "geometry",
       "property": "border-radius",
       "value": "16px",
       "count": 1
-    },
-    "88767a28a89c138f5cb6": {
-      "file": "src/styles.scss",
-      "rule": "typography",
-      "property": "font-weight",
-      "value": "500",
-      "count": 2
     },
     "986543a8a90c3de6d22c": {
       "file": "src/styles.scss",

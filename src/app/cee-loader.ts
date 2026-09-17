@@ -2,6 +2,7 @@ import { Injectable } from "@angular/core";
 declare global {
   interface Window {
     cedarCacheControl?: string;
+    cedarCeeHostFonts?: boolean;
   }
 }
 
@@ -20,7 +21,8 @@ export class CeeLoader {
         reject(new Error("Unable to load the metadata editor. Please reload."));
       };
       script.src =
-        "/third_party_components/cedar-embeddable-editor/cedar-embeddable-editor.js?v=" +
+        "/third_party_components/cedar-embeddable-editor/cedar-embeddable-editor" +
+        (window.cedarCeeHostFonts ? ".host-fonts.js?v=" : ".js?v=") +
         encodeURIComponent(window.cedarCacheControl || "local");
       script.onerror = fail;
       script.onload = () => {

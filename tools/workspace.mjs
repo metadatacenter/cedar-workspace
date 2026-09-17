@@ -6,6 +6,7 @@ import {
   writeFile,
   realpath,
   stat,
+  rm,
 } from "node:fs/promises";
 import { createServer } from "node:http";
 import { execFileSync } from "node:child_process";
@@ -13,6 +14,19 @@ import { extname, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
+const hostFontFile = "cedar-embeddable-editor.host-fonts.js";
+async function hasHostFonts(base) {
+  try {
+    return (
+      await stat(
+        resolve(base, "node_modules/cedar-embeddable-editor", hostFontFile),
+      )
+    ).isFile();
+  } catch (error) {
+    if (error.code === "ENOENT") return false;
+    throw error;
+  }
+}
 export async function configure(base = root, env = process.env) {
   const required = (name) => {
     if (env[name] === undefined)
@@ -40,6 +54,7 @@ export async function configure(base = root, env = process.env) {
   if (behavior === "server" && !/^[0-9a-f]{40}$/.test(commit))
     throw new Error("Server payload generation requires a Git source commit");
   const values = {
+    cedarCeeHostFonts: await hasHostFonts(base),
     cedarVersion: required("CEDAR_VERSION"),
     cedarVersionModifier: required("CEDAR_VERSION_MODIFIER"),
     cedarSourceCommit: commit,
@@ -110,6 +125,14 @@ export async function copyCee(base = root) {
     ),
     resolve(destination, "cedar-embeddable-editor.js"),
   );
+  if (await hasHostFonts(base)) {
+    await copyFile(
+      resolve(base, "node_modules/cedar-embeddable-editor", hostFontFile),
+      resolve(destination, hostFontFile),
+    );
+  } else {
+    await rm(resolve(destination, hostFontFile), { force: true });
+  }
 }
 
 const mime = {
