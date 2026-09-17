@@ -80,14 +80,6 @@ define([
       return window.encodeURIComponent(getAppData().cedarUserProfile.homeFolderId);
     };
 
-    service.getApiKeys = function () {
-      return getAppData().cedarUserProfile.apiKeys;
-    };
-
-    service.setApiKeys = function (apiKeys) {
-      getAppData().cedarUserProfile.apiKeys = apiKeys;
-    };
-
     service.getRoles = function () {
       return getAppData().cedarUserProfile.roles;
     };
@@ -127,10 +119,6 @@ define([
       var prefs = service.getUIPreferences();
       // Default to the US style used throughout the UI.
       return (prefs && prefs.preferredDateFormat) ? prefs.preferredDateFormat : 'MM/DD/YYYY';
-    };
-
-    service.setPreferredDateFormat = function (value) {
-      getAppData().cedarUserProfile.uiPreferences['preferredDateFormat'] = value;
     };
 
     service.saveUIPreference = function (name, property ,value) {

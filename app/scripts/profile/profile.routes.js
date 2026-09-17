@@ -17,8 +17,8 @@ define([
           controller: ['$window', function ($window) { $window.location.reload(); }]
         })
         .when('/privacy', {
-          templateUrl: 'scripts/profile/privacy.html',
-          controller : 'PrivacyController'
+          template: '<p>Opening Privacy…</p>',
+          controller: ['$window', function ($window) { $window.location.reload(); }]
         })
         .when('/settings', {
           template: '<p>Opening Settings…</p>',

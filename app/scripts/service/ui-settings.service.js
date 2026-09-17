@@ -146,10 +146,6 @@ define([
     };
 
 
-    service.savePreferredDateFormat = function(prefValue) {
-      service.saveUIPreference('preferredDateFormat', prefValue);
-    };
-
     return service;
 
   };

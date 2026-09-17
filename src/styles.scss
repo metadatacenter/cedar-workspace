@@ -728,3 +728,14 @@ td:first-child a {
 .account-groups #group-name {
   width: 100%;
 }
+
+.account-nav [aria-current="page"] {
+  font-weight: 700;
+  text-decoration: underline;
+}
+.account-policy {
+  line-height: 1.6;
+}
+.account-policy li {
+  margin-bottom: var(--cedar-space-3);
+}

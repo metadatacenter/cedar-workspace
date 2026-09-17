@@ -8,10 +8,13 @@ categories, latest-version filter, type filters or tile view.
 
 Template, element and field authoring opens the configured CED/CEFD Designer host;
 metadata creation/editing opens the standalone Angular CEE host at
-`/instances/create/:templateId` and `/instances/edit/:id`. Profile is also modern Angular,
-including account details and masked API-key management. Settings is modern Angular and saves the date format used by Workspace. Groups is modern Angular, including membership and administrator management with
-separate revisions for details and membership. Privacy and messaging still use `app/legacy.html` until their separate migration.
-No AngularJS runtime or styles load on the workspace, metadata or Profile routes.
+`/instances/create/:templateId` and `/instances/edit/:id`.
+
+The four account routes are also Angular: Profile provides account details and masked
+API-key management; Settings saves the date format used by Workspace; Groups manages
+details and membership with separate revision tokens; Privacy retains the existing
+policy wording. No AngularJS runtime or styles load on any of these routes.
+Messaging and logout retain the temporary `app/legacy.html` compatibility entry.
 The combined `cedar-template-editor` application is unchanged.
 
 ## Local development
@@ -48,7 +51,9 @@ this host; their former controller, template and private CEE services are remove
 REST authentication and conditional writes. `npm run test:legacy` covers retained
 compatibility services. With the native stack running and profile sourced, run
 `npm run smoke:workspace:modern:full` in `cedar-development/ops/e2e` for the modern
-Workspace journey plus CED host conflict/versioning scenarios. The existing
+Workspace journey, CED host conflict/versioning scenarios and all four account pages.
+Run account journeys separately with `npm run smoke:account:all`, or one page with
+`npm run smoke:account -- profile` (also `settings`, `groups`, `privacy`). The existing
 AngularJS `npm run smoke` remains unchanged for `cedar.metadatacenter.*`.
 
 Resource reports supply lifecycle actions missing from listing summaries. Template
