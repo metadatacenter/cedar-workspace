@@ -210,8 +210,8 @@
               >
               }
             </td>
-            <td>{{r['pav:createdOn'] | date:'MM/dd/yyyy'}}</td>
-            <td>{{r['pav:lastUpdatedOn'] | date:'MM/dd/yyyy'}}</td>
+            <td>{{r['pav:createdOn'] | date:preferredDateFormat}}</td>
+            <td>{{r['pav:lastUpdatedOn'] | date:preferredDateFormat}}</td>
             <td class="row-actions" (click)="$event.stopPropagation()">
               @if(r.isOpen){<a
                 [href]="openView(r)"
@@ -325,13 +325,13 @@
       <dd>{{r.ownedByUserName || '—'}}</dd>
       <dt>Created</dt>
       <dd>
-        {{r['pav:createdOn']|date:'mediumDate'}}<small
+        {{r['pav:createdOn']|date:preferredDateFormat}}<small
           >{{r.createdByUserName?'by '+r.createdByUserName:''}}</small
         >
       </dd>
       <dt>Modified</dt>
       <dd>
-        {{r['pav:lastUpdatedOn']|date:'mediumDate'}}<small
+        {{r['pav:lastUpdatedOn']|date:preferredDateFormat}}<small
           >{{r.lastUpdatedByUserName?'by '+r.lastUpdatedByUserName:''}}</small
         >
       </dd>
@@ -355,7 +355,8 @@
       <h3>Derived from</h3>
       <a [href]="link(derived)">{{title(derived)}}</a
       ><small
-        >Modified {{derived['pav:lastUpdatedOn']|date:'mediumDate'}}</small
+        >Modified
+        {{derived['pav:lastUpdatedOn']|date:preferredDateFormat}}</small
       >
     </section>
     } @if(r.isBasedOn;as based){
@@ -398,7 +399,9 @@
           >{{v['pav:version']||'Unversioned'}} · {{title(v)}}</a
         >
         <p>{{v['bibo:status']}}</p>
-        <small>Modified {{v['pav:lastUpdatedOn']|date:'mediumDate'}}</small>
+        <small
+          >Modified {{v['pav:lastUpdatedOn']|date:preferredDateFormat}}</small
+        >
       </article>
       }
     </div>

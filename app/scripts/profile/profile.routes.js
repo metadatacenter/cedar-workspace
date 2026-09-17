@@ -21,8 +21,8 @@ define([
           controller : 'PrivacyController'
         })
         .when('/settings', {
-          templateUrl: 'scripts/profile/settings.html',
-          controller : 'SettingsController'
+          template: '<p>Opening Settings…</p>',
+          controller: ['$window', function ($window) { $window.location.reload(); }]
         });
   }
 

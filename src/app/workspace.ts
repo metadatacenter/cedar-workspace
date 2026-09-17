@@ -5,6 +5,7 @@ import {
   inject,
   signal,
 } from "@angular/core";
+import { dateFormat } from "./date-format";
 import { DatePipe } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { ActivatedRoute, Router, RouterLink } from "@angular/router";
@@ -96,6 +97,9 @@ export function actions(r: Resource): Action[] {
   templateUrl: "./workspace.html",
 })
 export class Workspace {
+  get preferredDateFormat() {
+    return dateFormat(this.api.profile?.uiPreferences?.preferredDateFormat);
+  }
   readonly api = inject(Backend);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
