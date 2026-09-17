@@ -42,6 +42,18 @@ describe("Authorized backend", () => {
     ).rejects.toThrow("Your edits have been kept");
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
+  it("distinguishes deletion conflicts from concurrent updates", async () => {
+    fetcher.mockResolvedValue(
+      new Response(
+        JSON.stringify({ message: "The artifact no longer exists" }),
+        { status: 412 },
+      ),
+    );
+    await expect(
+      api.request("/template-instances/id", "PUT", {}, '"loaded"'),
+    ).rejects.toThrow("This item was deleted. Your edits have been kept.");
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
   it("refreshes once on 401 and keeps the conditional request", async () => {
     fetcher
       .mockResolvedValueOnce(new Response("", { status: 401 }))

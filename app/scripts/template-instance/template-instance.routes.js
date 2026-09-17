@@ -1,24 +1,12 @@
 'use strict';
-
-define([
-  'angular'
-], function (angular) {
+define(['angular'], function (angular) {
   angular.module('cedar.templateEditor.templateInstance.routes', [])
-      .config(templateInstanceRoutes);
-
-  templateInstanceRoutes.$inject = ['$routeProvider'];
-
-  function templateInstanceRoutes($routeProvider) {
-    $routeProvider
-        .when('/instances/create/:templateId*?', {
-          templateUrl: 'scripts/template-instance/create-instance.html',
-          controller: 'CreateInstanceController',
-          controllerAs: 'vm'
-        })
-        .when('/instances/edit/:id*', {
-          templateUrl: 'scripts/template-instance/create-instance.html',
-          controller: 'CreateInstanceController',
-          controllerAs: 'vm'
-        });
-  }
+    .config(['$routeProvider', function ($routeProvider) {
+      var handoff = {
+        template: '<p role="status">Opening metadata editor…</p>',
+        controller: ['$window', function ($window) { $window.location.reload(); }]
+      };
+      $routeProvider.when('/instances/create/:templateId*?', handoff)
+        .when('/instances/edit/:id*', handoff);
+    }]);
 });

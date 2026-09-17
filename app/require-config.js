@@ -23,7 +23,6 @@ require.config({
     'flow'    : 'bower_components/flow.js/dist/flow',
 
     'artifact-selector': 'third_party_components/artifact-selector/artifact-selector',
-    'cedar-embeddable-editor': 'third_party_components/cedar-embeddable-editor/cedar-embeddable-editor'
 
   },
   shim    : {
@@ -57,10 +56,6 @@ require.config({
       deps: ['angular'],
       exports: 'artifact-selector'
     },
-    'cedar-embeddable-editor': {
-      deps: ['angular'],
-      exports: 'cedar-embeddable-editor'
-    }
   },
   priority: [
     'jquery',
@@ -89,11 +84,10 @@ require([
     function continueWithAngularApp() {
       require([
         'angular',
-        'cedar-embeddable-editor',
         'artifact-selector',
         'app',
         'ngFlow'
-      ], function (angular, cedarEmbeddableEditor, artifactSelector, app, ngFlow) {
+      ], function (angular, artifactSelector, app, ngFlow) {
         angular.bootstrap(document, ['cedar.workspace']);
       });
     }

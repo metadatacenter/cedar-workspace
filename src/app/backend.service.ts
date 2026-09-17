@@ -26,7 +26,11 @@ export class Backend {
   private auth!: Auth;
   private refresh?: Promise<void>;
   private readonly session = crypto.randomUUID();
-  async init() {
+  private initialization?: Promise<boolean>;
+  init(): Promise<boolean> {
+    return (this.initialization ||= this.initialize());
+  }
+  private async initialize() {
     const response = await fetch("/config/url-service.conf.json", {
       cache: "no-store",
     });
@@ -109,15 +113,17 @@ export class Backend {
         continue;
       }
       if (!response.ok) {
-        if (response.status === 412)
-          throw new Error(
-            "This item changed since you opened it. Your edits have been kept. Cancel and reopen to review the latest version.",
-          );
         let message = "";
         try {
           const data = await response.json();
           message = data.message || data.error || "";
         } catch {}
+        if (response.status === 412)
+          throw new Error(
+            /no longer exists/i.test(message)
+              ? "This item was deleted. Your edits have been kept. Return to Workspace to choose another item."
+              : "This item changed since you opened it. Your edits have been kept. Cancel and reopen to review the latest version.",
+          );
         throw new Error(message || `Request failed (${response.status}).`);
       }
       return response;

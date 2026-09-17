@@ -568,3 +568,58 @@ td:first-child a {
   text-overflow: ellipsis;
   vertical-align: middle;
 }
+
+.metadata-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--cedar-surface-panel);
+  border-bottom: 1px solid var(--cedar-border-rule);
+  > div {
+    flex: 1;
+    min-width: 0;
+  }
+  strong,
+  small {
+    display: block;
+    overflow-wrap: anywhere;
+  }
+  small {
+    color: var(--cedar-text-muted);
+  }
+}
+.metadata-content {
+  max-width: 90rem;
+  margin: auto;
+  padding: 1.5rem;
+  > label {
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+  > input {
+    width: 100%;
+    margin-bottom: 1.5rem;
+  }
+  cedar-embeddable-editor {
+    display: block;
+  }
+  cedar-embeddable-editor[hidden] {
+    display: none;
+  }
+}
+.metadata-quality {
+  padding: 1rem;
+  border: 1px solid var(--cedar-border-rule);
+}
+@media (max-width: 600px) {
+  .metadata-toolbar {
+    flex-wrap: wrap;
+  }
+  .metadata-content {
+    padding: 0.75rem;
+  }
+}

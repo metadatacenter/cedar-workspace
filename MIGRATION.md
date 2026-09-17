@@ -72,7 +72,7 @@ Workspace does not own:
 - template, element, or field authoring
 - controlled-term authoring UI except where a Workspace-owned action proves it is
   genuinely needed
-- metadata instance create/edit UI
+- metadata field rendering (owned by CEE; Workspace owns its modern Angular persistence/navigation host)
 
 ## Initial ownership map
 
@@ -84,7 +84,7 @@ Workspace does not own:
 | shared `core/`, `layout/`, `service/`, `widget/` | Classify and retain only used files |
 | `template/`, `template-element/`, `template-field/` | Remove after external navigation is live |
 | `controlled-term/`, designer `form/` code | Remove unless dependency evidence says otherwise |
-| `template-instance/` | Remove after canonical CEE routes are live |
+| `template-instance/` | Compatibility reload only; the CEE host is `src/app/metadata-editor.ts` |
 
 ## Extraction gates
 

@@ -7,9 +7,10 @@ panels, Info/Version tabs, and resource action dialogs. It deliberately has no
 categories, latest-version filter, type filters or tile view.
 
 Template, element and field authoring opens the configured CED/CEFD Designer host;
-metadata creation/editing opens the existing CEE host. Profile, settings, groups,
-privacy, messaging and the CEE host shell still use `app/legacy.html` until their
-separate migration. No AngularJS runtime or styles load on the new workspace route.
+metadata creation/editing opens the standalone Angular CEE host at
+`/instances/create/:templateId` and `/instances/edit/:id`. Profile, settings, groups,
+privacy and messaging still use `app/legacy.html` until their separate migration.
+No AngularJS runtime or styles load on the workspace or metadata routes.
 The combined `cedar-template-editor` application is unchanged.
 
 ## Local development
@@ -33,6 +34,14 @@ build preserves the last working app. Shared Keycloak/configuration files remain
 their existing URLs. The root entry selects the modern or compatibility bootstrap
 without changing the requested URL. Returning from a legacy page to `/dashboard`
 performs a full-document handoff to Angular.
+
+The metadata host loads the staged CEE bundle on demand, configures permissions
+before rendering, and keeps the same editor mounted across create/update saves.
+Content ETags protect updates; conflicts and deleted resources retain local edits.
+Validation remains advisory. Dirty tracking recognizes exact reverts, guards
+navigation and includes changes made while a save is pending. Return links are
+restricted to the same-origin workspace. Legacy metadata routes only reload into
+this host; their former controller, template and private CEE services are removed.
 
 `npm test` covers the modern Angular components, navigation, permission decisions,
 REST authentication and conditional writes. `npm run test:legacy` covers retained
@@ -100,8 +109,8 @@ deployment and authenticated smokes before accepting the release in an environme
 ## Migration constraints
 
 - Do not route production traffic here until preview and staging gates pass.
-- Do not copy metadata instance editing into this repository; use the canonical
-  CEE host.
+- CEE owns metadata field rendering; the Angular host owns persistence, permissions
+  and navigation. Do not reimplement CEE widgets in the host.
 - Cross-application navigation follows
   [`docs/CROSS_APP_NAVIGATION.md`](docs/CROSS_APP_NAVIGATION.md).
 - New workspace development belongs in `src/`; do not add AngularJS UI.
