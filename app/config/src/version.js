@@ -8,6 +8,5 @@ window.cedarCacheControl = window.cedarVersion + window.cedarVersionModifier +
 window.cedarAuthUrl = "cedarAuthUrlValue";
 window.versioningEnabled = true;
 window.makeOpenEnabled = true;
-window.categoryTreeEnabled = true;
 window.dataciteEnabled = dataciteEnabledValue;
 window.cedarGA4TrackingId = "cedarGA4TrackingIdValue";

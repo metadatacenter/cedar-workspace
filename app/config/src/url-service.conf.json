@@ -1,17 +1,11 @@
 {
   "resourceRestAPI": "resourceServerUrl",
   "userRestAPI": "userServerUrl",
-  "terminologyRestAPI": "terminologyServerUrl",
-  "valueRecommenderRestAPI": "valueRecommenderServerUrl",
-  "schemaRestAPI": "schemaServerUrl",
   "groupRestAPI": "groupServerUrl",
-  "bioontologyRestAPI": "https://data.bioontology.org/",
-  "submissionRestAPI": "submissionServerUrl",
-  "openViewBase": "openViewBaseUrl",
   "impexRestAPI": "impexServerUrl",
   "workspaceFrontend": "workspaceFrontendUrl",
   "templateDesignerFrontend": "templateDesignerFrontendUrl",
-  "monitoringFrontend": "monitoringFrontendUrl",
+  "openViewBase": "openViewBaseUrl",
   "dataciteDOIBase": "dataciteDOIBaseUrl",
-  "downloadBase": "downloadBaseUrl"
+  "monitoringFrontend": "monitoringFrontendUrl"
 }

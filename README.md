@@ -16,7 +16,9 @@ details and membership with separate revision tokens; Privacy retains the existi
 policy wording. No AngularJS runtime or styles load on any of these routes.
 Messaging has been removed; its old URL returns to Workspace.
 Logout also runs in Angular and does not depend on the profile service.
-All routes now use the Angular application; the AngularJS compatibility shell is removed.
+All routes now use the Angular application. The AngularJS shell, Bower vendors, old
+icon fonts, RequireJS and obsolete build/test packages are removed. The retained
+Keycloak adapter and bundle are plain JavaScript used by Angular.
 The combined `cedar-template-editor` application is unchanged.
 
 ## Local development
@@ -32,8 +34,8 @@ npm run build
 npm test
 ```
 
-Gulp also builds Angular before starting the port-4201 server or generating a server
-payload. After editing `src/`, run `npm run build` and reload. Assets are built outside
+Gulp finishes configuration, CEE staging and the Angular build before starting the
+port-4201 server or completing a server payload. After editing `src/`, run `npm run build` and reload. Assets are built outside
 the served tree, copied first, and the generated index is replaced last; a failed
 build preserves the last working app. Shared Keycloak/configuration files remain at
 their existing URLs. The root entry loads Angular for every route. Unknown and retired routes return to
@@ -48,9 +50,11 @@ restricted to the same-origin workspace. The former AngularJS controllers, servi
 
 `npm test` covers the modern Angular components, navigation, permission decisions,
 REST authentication and conditional writes, plus the retained plain-JavaScript Keycloak
-adapter. With the native stack running and profile sourced, run
+adapter. Node checks also verify generated deployment configuration, atomic asset
+staging and the npm package contents. With the native stack running and profile sourced, run
 `npm run smoke:workspace:modern:full` in `cedar-development/ops/e2e` for the modern
-Workspace journey, CED host conflict/versioning scenarios and all four account pages.
+Workspace journey, CED host conflict/versioning scenarios, all four account pages,
+and logout/retired-route checks.
 Run account journeys separately with `npm run smoke:account:all`, or one page with
 `npm run smoke:account -- profile` (also `settings`, `groups`, `privacy`). The existing
 AngularJS `npm run smoke` remains unchanged for `cedar.metadatacenter.*`.

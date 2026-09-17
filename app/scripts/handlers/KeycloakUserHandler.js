@@ -26,16 +26,8 @@ function KeycloakUserHandler() {
     return keycloak.token;
   };
 
-  this.getRefreshToken = function () {
-    return keycloak.refreshToken;
-  };
-
   this.getParsedToken = function () {
     return keycloak.tokenParsed;
-  };
-
-  this.getTokenValiditySeconds = function() {
-    return Math.round(keycloak.tokenParsed.exp + keycloak.timeSkew - new Date().getTime() / 1000);
   };
 
   this.refreshToken = function (minValidity, successCallback, errorCallback) {
