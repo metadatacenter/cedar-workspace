@@ -1,0 +1,207 @@
+<dialog
+  #dialog
+  aria-labelledby="permissions-title"
+  (cancel)="$event.preventDefault(); close()"
+>
+  <header class="permissions-header">
+    <button
+      class="close"
+      aria-label="Close permissions"
+      [disabled]="busy()"
+      (click)="close()"
+    >
+      ×
+    </button>
+    <h2 id="permissions-title">Permissions</h2>
+    <div class="resource-context">
+      <span class="resource-avatar"
+        ><cedar-icon [name]="resource.resourceType"
+      /></span>
+      <div>
+        <div class="resource-name">{{title(resource)}}</div>
+        <div class="resource-type">
+          {{resource.resourceType === 'instance' ? 'Metadata' :
+          resource.resourceType}}
+        </div>
+      </div>
+    </div>
+  </header>
+  <div class="permissions-body">
+    @if(error()) {
+    <div role="alert" class="alert">
+      {{error()}} @if(failedChange()) {
+      <p>Not saved: {{failedChange()}}.</p>
+      }
+      <button (click)="load()" [disabled]="busy()">Reload permissions</button>
+    </div>
+    } @if(notice()) {
+    <p role="status" class="notice">{{notice()}}</p>
+    } @if(busy()) {
+    <p role="status">Loading…</p>
+    } @if(resource.resourceType === 'folder') {
+    <div class="folder-notice">
+      <cedar-icon name="folder" /><span
+        >Access granted here also applies to the resources this folder
+        contains.</span
+      >
+    </div>
+    } @if(canManage) {
+    <section class="access-panel">
+      <h3>Add users or groups</h3>
+      <p>Choose one user or group and assign a role.</p>
+      <form class="add-controls" (ngSubmit)="add()">
+        <cedar-group-picker
+          class="principal-picker"
+          id="share-principal"
+          label="User or group"
+          placeholder="Search by name"
+          [options]="options"
+          [value]="personId"
+          (valueChange)="selectPerson($event)"
+          [disabled]="busy() || stale()"
+        />
+        <div class="role-picker">
+          <label for="share-role">Role</label>
+          <select
+            id="share-role"
+            name="role"
+            [(ngModel)]="role"
+            [disabled]="!selectedPerson || busy() || stale()"
+          >
+            <option value="viewer">Viewer</option>
+            @if(!selectedPerson?.specialGroup) {
+            <option value="editor">Editor</option>
+            <option value="manager">Manager</option>
+            }
+          </select>
+        </div>
+        <button
+          class="primary add-button"
+          [disabled]="!selectedPerson || busy() || stale()"
+        >
+          Add
+        </button>
+      </form>
+      <div class="role-help" aria-label="Role descriptions">
+        <span><strong>Viewer</strong> can view.</span>
+        <span><strong>Editor</strong> can view and change content.</span>
+        <span><strong>Manager</strong> can view, edit and manage access.</span>
+      </div>
+    </section>
+    } @if(permissions(); as p) {
+    <section class="access-panel">
+      <h3>Access on this resource</h3>
+      <p>
+        The table shows the owner and roles assigned directly to this resource.
+        {{canManage ? 'Role changes are saved immediately.' : 'Only a Manager or
+        the owner can change roles.'}}
+      </p>
+      <div
+        class="access-list"
+        role="table"
+        aria-label="Direct resource permissions"
+      >
+        <div class="access-row access-header" role="row">
+          <span class="principal-cell" role="columnheader"
+            ><span class="sr-only">User or group</span></span
+          >
+          <span class="type-cell" role="columnheader">Type</span
+          ><span class="role-cell" role="columnheader">Role</span>
+          <span class="owner-cell" role="columnheader">Owner</span
+          ><span class="action-cell" role="columnheader"
+            ><span class="sr-only">Remove access</span></span
+          >
+        </div>
+        <div class="access-row" role="row">
+          <div class="principal-cell" role="cell">
+            <span class="avatar"><cedar-icon name="user" /></span
+            ><span class="principal-name">{{principalName(p.owner)}}</span>
+          </div>
+          <span class="type-cell" role="cell">User</span>
+          <span
+            class="role-cell"
+            role="cell"
+            aria-label="Ownership is separate from roles"
+          ></span>
+          <span
+            class="owner-cell"
+            role="cell"
+            title="The owner can manage access and transfer ownership."
+            ><input
+              type="checkbox"
+              checked
+              disabled
+              [attr.aria-label]="principalName(p.owner) + ' is the owner'"
+          /></span>
+          <span class="action-cell" role="cell"
+            ><button disabled aria-label="The owner cannot be removed">
+              <cedar-icon name="trash" /></button
+          ></span>
+        </div>
+        @for(g of grants; track g.node['@id']) {
+        <div class="access-row" role="row">
+          <div class="principal-cell" role="cell">
+            <span class="avatar" [class.group]="g.kind === 'group'"
+              ><cedar-icon
+                [name]="g.kind === 'group' ? 'group' : 'user'" /></span
+            ><span class="principal-name" [title]="principalName(g.node)"
+              >{{principalName(g.node)}}</span
+            >
+          </div>
+          <span class="type-cell" role="cell"
+            >{{g.kind === 'group' ? 'Group' : 'User'}}</span
+          >
+          <span class="role-cell" role="cell">
+            <select
+              (change)="changeRole(g, $any($event.target).value); $any($event.target).value = g.role"
+              [disabled]="!canManage || busy() || stale()"
+              [attr.aria-label]="'Role for ' + principalName(g.node)"
+            >
+              <option value="viewer" [selected]="g.role === 'viewer'">
+                Viewer
+              </option>
+              @if(!g.node.specialGroup) {
+              <option value="editor" [selected]="g.role === 'editor'">
+                Editor
+              </option>
+              <option value="manager" [selected]="g.role === 'manager'">
+                Manager
+              </option>
+              }
+            </select>
+          </span>
+          <span
+            class="owner-cell"
+            role="cell"
+            [title]="g.kind === 'group' ? 'A group cannot own a resource.' : 'Make this user the owner'"
+          >
+            <input
+              type="checkbox"
+              [checked]="false"
+              (click)="$event.preventDefault(); transfer(g)"
+              [disabled]="g.kind === 'group' || !canTransfer || busy() || stale()"
+              [attr.aria-label]="'Make ' + principalName(g.node) + ' the owner'"
+            />
+          </span>
+          <span class="action-cell" role="cell">
+            @if(canManage) {
+            <button
+              [disabled]="busy() || stale()"
+              (click)="remove(g)"
+              [attr.aria-label]="'Remove access for ' + principalName(g.node)"
+              title="Remove access"
+            >
+              <cedar-icon name="trash" />
+            </button>
+            }
+          </span>
+        </div>
+        }
+      </div>
+    </section>
+    }
+  </div>
+  <footer>
+    <button class="primary" [disabled]="busy()" (click)="close()">Done</button>
+  </footer>
+</dialog>

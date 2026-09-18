@@ -14,24 +14,6 @@ import {
 import { FormsModule } from "@angular/forms";
 import { Backend } from "./backend.service";
 import { Resource, Listing, title, can } from "./resource";
-interface Person {
-  "@id": string;
-  name?: string;
-  "schema:name"?: string;
-  firstName?: string;
-  lastName?: string;
-  resourceType?: string;
-}
-interface Grant {
-  node: Person;
-  role: string;
-  kind: "user" | "group";
-}
-interface Permissions {
-  owner: Person;
-  userPermissions: { user: Person; role: string }[];
-  groupPermissions: { group: Person; role: string }[];
-}
 @Component({
   selector: "cedar-resource-dialog",
   imports: [FormsModule],
@@ -51,8 +33,6 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   readonly error = signal("");
   readonly folders = signal<Resource[]>([]);
   readonly path = signal<Resource[]>([]);
-  readonly people = signal<Person[]>([]);
-  readonly grants = signal<Grant[]>([]);
   readonly status = signal("");
   name = "";
   description = "";
@@ -63,11 +43,6 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   targetTotal = 0;
   propagate = true;
   newFolderName = "";
-  personId = "";
-  role = "viewer";
-  owner?: Person;
-  newOwner = "";
-  confirmTransfer = false;
   files: File[] = [];
   private etag: string | null = null;
   private alive = true;
@@ -78,7 +53,6 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
         {
           "new-folder": "New folder",
           rename: "Rename / description",
-          share: "Share",
           copy: "Copy",
           move: "Move",
           delete: "Delete",
@@ -93,14 +67,6 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   }
   get choosesFolder() {
     return ["copy", "move", "draft"].includes(this.action);
-  }
-  personName(p: Person) {
-    return (
-      p.name ||
-      p["schema:name"] ||
-      [p.firstName, p.lastName].filter(Boolean).join(" ") ||
-      p["@id"]
-    );
   }
   ngAfterViewInit() {
     this.dialog.nativeElement.showModal();
@@ -120,35 +86,7 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
         this.name = title(r);
         this.description = r["schema:description"] || "";
         this.version = r["pav:version"] || "0.0.1";
-        if (this.action === "share") {
-          const reply = await this.api.request<Permissions>(
-            this.api.path(r) + "/permissions",
-          );
-          this.etag = reply.etag;
-          this.owner = reply.data.owner;
-          this.grants.set([
-            ...reply.data.userPermissions.map((p) => ({
-              node: p.user,
-              role: p.role,
-              kind: "user" as const,
-            })),
-            ...reply.data.groupPermissions.map((p) => ({
-              node: p.group,
-              role: p.role,
-              kind: "group" as const,
-            })),
-          ]);
-          const [users, groups] = await Promise.all([
-            this.api.request<{ users: Person[] }>("/users"),
-            this.api.request<{ groups: Person[] }>(
-              this.api.config.groupRestAPI + "/groups",
-            ),
-          ]);
-          this.people.set([
-            ...users.data.users.map((p) => ({ ...p, resourceType: "user" })),
-            ...groups.data.groups.map((p) => ({ ...p, resourceType: "group" })),
-          ]);
-        } else if (
+        if (
           ["rename", "move", "delete", "make-open", "make-not-open"].includes(
             this.action,
           )
@@ -206,22 +144,6 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
         this.target !== this.resource?.["@id"])
     );
   }
-  addGrant() {
-    const p = this.people().find((p) => p["@id"] === this.personId);
-    if (!p || p["@id"] === this.owner?.["@id"]) return;
-    this.grants.update((list) => [
-      ...list.filter((g) => g.node["@id"] !== p["@id"]),
-      {
-        node: p,
-        role: this.role,
-        kind: p.resourceType === "group" ? "group" : "user",
-      },
-    ]);
-    this.personId = "";
-  }
-  removeGrant(id: string) {
-    this.grants.update((list) => list.filter((g) => g.node["@id"] !== id));
-  }
   chooseFiles(event: Event) {
     this.files = Array.from((event.target as HTMLInputElement).files || []);
   }
@@ -233,14 +155,9 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
     const id = r?.["@id"];
     try {
       if (
-        [
-          "rename",
-          "move",
-          "delete",
-          "make-open",
-          "make-not-open",
-          "share",
-        ].includes(this.action) &&
+        ["rename", "move", "delete", "make-open", "make-not-open"].includes(
+          this.action,
+        ) &&
         !this.etag
       )
         throw new Error(
@@ -316,37 +233,6 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
             { "@id": id },
             this.etag,
           );
-          break;
-        case "share":
-          if (this.confirmTransfer && this.newOwner) {
-            await this.api.request(
-              "/command/transfer-resource-ownership",
-              "POST",
-              { "@id": id, newOwnerId: this.newOwner },
-              this.etag,
-            );
-          } else {
-            await this.api.request(
-              this.api.path(r!) + "/permissions",
-              "PUT",
-              {
-                owner: { "@id": this.owner!["@id"] },
-                userPermissions: this.grants()
-                  .filter((g) => g.kind === "user")
-                  .map((g) => ({
-                    user: { "@id": g.node["@id"] },
-                    role: g.role,
-                  })),
-                groupPermissions: this.grants()
-                  .filter((g) => g.kind === "group")
-                  .map((g) => ({
-                    group: { "@id": g.node["@id"] },
-                    role: g.role,
-                  })),
-              },
-              this.etag,
-            );
-          }
           break;
         case "import":
           await this.importFiles();

@@ -134,12 +134,29 @@ describe("Angular Workspace", () => {
     expect(f.componentInstance.rows()).toEqual([template]);
     expect(f.componentInstance.error()).toBe("");
   });
+  it("opens Permissions without changing the workspace route or its selected listing", async () => {
+    const f = await render();
+    const before = window.location.href;
+    const rows = f.componentInstance.rows();
+    await f.componentInstance.act("permissions", template);
+    expect(f.componentInstance.dialog()).toEqual({
+      action: "permissions",
+      resource: template,
+    });
+    expect(window.location.href).toBe(before);
+    expect(f.componentInstance.rows()).toBe(rows);
+  });
   it("exposes the original action set and gates it using the server capabilities", () => {
     const list = actions(template);
+    expect(list.find((a) => a.id === "permissions")).toEqual({
+      id: "permissions",
+      label: "Permissions…",
+      enabled: true,
+    });
     expect(list.map((a) => a.id)).toEqual([
       "populate",
       "open",
-      "share",
+      "permissions",
       "copy",
       "move",
       "rename",

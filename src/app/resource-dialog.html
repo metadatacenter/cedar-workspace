@@ -89,68 +89,7 @@
         <p>You cannot use this folder as the destination.</p>
         }
       </section>
-      } @if(action==='share'){
-      <p>Owner: {{owner?personName(owner):'Loading…'}}</p>
-      @for(g of grants();track g.node['@id']){
-      <div class="grant">
-        <span>{{personName(g.node)}}</span
-        ><select
-          [name]="'role-'+g.node['@id']"
-          [(ngModel)]="g.role"
-          aria-label="Access role"
-        >
-          <option value="viewer">Viewer</option>
-          <option value="editor">Editor</option>
-          <option value="manager">Manager</option></select
-        ><button
-          type="button"
-          (click)="removeGrant(g.node['@id'])"
-          aria-label="Remove access"
-        >
-          ×
-        </button>
-      </div>
-      }
-      <label
-        >Add person or group<select name="person" [(ngModel)]="personId">
-          <option value="">Choose…</option>
-          @for(p of people();track p['@id']){
-          <option [value]="p['@id']">
-            {{personName(p)}} ({{p.resourceType}})
-          </option>
-          }
-        </select></label
-      >
-      <div class="grant">
-        <select name="role" [(ngModel)]="role" aria-label="New access role">
-          <option value="viewer">Viewer</option>
-          <option value="editor">Editor</option>
-          <option value="manager">Manager</option></select
-        ><button type="button" (click)="addGrant()" [disabled]="!personId">
-          Add
-        </button>
-      </div>
-      @if(can(resource,'transferOwnership')){
-      <details>
-        <summary>Transfer ownership</summary>
-        <label
-          >New owner<select name="newOwner" [(ngModel)]="newOwner">
-            <option value="">Choose…</option>
-            @for(p of people();track
-            p['@id']){@if(p.resourceType==='user'&&p['@id']!==owner?.['@id']){
-            <option [value]="p['@id']">{{personName(p)}}</option>
-            }}
-          </select></label
-        ><label class="check"
-          ><input
-            type="checkbox"
-            name="transfer"
-            [(ngModel)]="confirmTransfer"
-          />Transfer ownership instead of saving sharing changes. I may lose
-          access.</label
-        >
-      </details>
-      } } @if(action==='delete'){
+      } @if(action==='delete'){
       <p>
         This will delete this {{resource?.resourceType}}. Confirm to continue.
       </p>
@@ -175,10 +114,9 @@
       ><button
         class="primary"
         type="submit"
-        [disabled]="busy()||!destinationAllowed|| (confirmTransfer&&!newOwner)"
+        [disabled]="busy()||!destinationAllowed"
       >
-        {{busy()?'Working…':action==='delete'?'Delete':confirmTransfer?'Transfer
-        ownership':'Save'}}
+        {{busy()?'Working…':action==='delete'?'Delete':'Save'}}
       </button>
     </footer>
   </form>

@@ -22,6 +22,7 @@ import {
 } from "./resource";
 import { Icon } from "./icon";
 import { ResourceDialog } from "./resource-dialog";
+import { PermissionsDialog } from "./permissions-dialog";
 export interface Action {
   id: string;
   label: string;
@@ -36,7 +37,7 @@ export function actions(r: Resource): Action[] {
       enabled: r.resourceType === "template" && cap("populate"),
     },
     { id: "open", label: "Open", enabled: cap("readResource") },
-    { id: "share", label: "Share", enabled: cap("manageGrants") },
+    { id: "permissions", label: "Permissions…", enabled: cap("readResource") },
     {
       id: "copy",
       label: "Copy",
@@ -93,7 +94,14 @@ export function actions(r: Resource): Action[] {
 }
 @Component({
   selector: "cedar-workspace-page",
-  imports: [FormsModule, DatePipe, RouterLink, ResourceDialog, Icon],
+  imports: [
+    FormsModule,
+    DatePipe,
+    RouterLink,
+    ResourceDialog,
+    PermissionsDialog,
+    Icon,
+  ],
   templateUrl: "./workspace.html",
 })
 export class Workspace {
@@ -420,6 +428,11 @@ export class Workspace {
       .querySelector<HTMLDetailsElement>(".new-menu")
       ?.removeAttribute("open");
     this.dialog.set({ action });
+  }
+  permissionsClosed(message?: string) {
+    if (message) this.notice.set(message);
+    this.dialog.set(null);
+    void this.load();
   }
   saved() {
     this.dialog.set(null);

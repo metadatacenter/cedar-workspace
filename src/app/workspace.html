@@ -410,10 +410,15 @@
     } }
   </aside>
 </div>
-@if(dialog();as d){<cedar-resource-dialog
+@if(dialog();as d){ @if(d.action === 'permissions' && d.resource) {
+<cedar-permissions-dialog
+  [resource]="d.resource"
+  (closed)="permissionsClosed($event)"
+/>
+} @else {<cedar-resource-dialog
   [action]="d.action"
   [resource]="d.resource"
   [folder]="folder"
   (closed)="dialog.set(null)"
   (saved)="saved()"
-/>} }
+/>} } }

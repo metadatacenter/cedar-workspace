@@ -27,6 +27,9 @@ import { Component, Input } from "@angular/core";
 export class Icon {
   @Input() name = "field";
   readonly paths: Record<string, string> = {
+    trash: "M3 6h18 M9 6V3h6v3 M5 6l1 15h12l1-15 M10 10v7 M14 10v7",
+    group:
+      "M9 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6 M2 20v-4a7 7 0 0 1 14 0v4z M17 3a3 3 0 0 1 0 6 M19 12a5 5 0 0 1 3 5v3",
     folder: "M3 6h7l2 2h9v12H3z M3 6V4h7l2 2h9v2",
     template: "M5 2h9l5 5v15H5z M14 2v6h5 M8 12h8 M8 16h8",
     element: "M12 2l9 5v10l-9 5-9-5V7z M3 7l9 5 9-5 M12 12v10",

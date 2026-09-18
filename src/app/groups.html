@@ -286,12 +286,13 @@
             }
           </span>
         </div>
-        } @empty {
+        } @empty { @if(restricted()) {
         <div class="groups-empty-members">
-          {{restricted() ? 'Only a Group Administrator can see who is in this
-          group.' : 'This group has no members.'}}
+          Only a Group Administrator can see who is in this group.
         </div>
-        }
+        } @else if(members()) {
+        <div class="groups-empty-members">This group has no members.</div>
+        } }
       </div>
     </div>
   </div>

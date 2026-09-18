@@ -36,6 +36,7 @@ export class Groups implements OnInit {
   readonly ready = signal(false);
   readonly busy = signal(false);
   readonly error = signal("");
+  readonly stale = signal(false);
   readonly notice = signal("");
   readonly groups = signal<Group[]>([]);
   readonly users = signal<GroupUser[]>([]);
@@ -52,7 +53,11 @@ export class Groups implements OnInit {
   get groupOptions() {
     return this.filteredGroups.map((g) => ({
       id: g["@id"],
-      label: groupName(g),
+      label:
+        groupName(g) +
+        (g["schema:description"]?.trim()
+          ? " - " + g["schema:description"]!.trim()
+          : ""),
     }));
   }
   get memberOptions() {
@@ -149,6 +154,7 @@ export class Groups implements OnInit {
   }
   private fail(e: unknown) {
     this.error.set(e instanceof Error ? e.message : String(e));
+    if (e instanceof HttpError && e.status === 412) this.stale.set(true);
   }
   async select(g: Group) {
     if (this.busy()) return;
@@ -158,6 +164,7 @@ export class Groups implements OnInit {
     const generation = ++this.generation;
     this.selected.set(null);
     this.members.set(null);
+    this.stale.set(false);
     this.restricted.set(false);
     this.selecting.set(true);
     this.groupEtag = this.memberEtag = null;
@@ -205,8 +212,13 @@ export class Groups implements OnInit {
       );
     return value;
   }
-  private async write(action: () => Promise<void>, message: string) {
-    if (this.busy() || this.selecting()) return;
+  private async write(
+    action: () => Promise<void>,
+    message: string,
+    needsRevision = true,
+  ) {
+    if (this.busy() || this.selecting() || (needsRevision && this.stale()))
+      return;
     this.busy.set(true);
     this.error.set("");
     this.notice.set("");
@@ -222,17 +234,21 @@ export class Groups implements OnInit {
   async create() {
     const name = this.newName.trim();
     if (!name) return;
-    await this.write(async () => {
-      const r = await this.api.request<Group>(this.base, "POST", {
-        "schema:name": name,
-        "schema:description": "",
-      });
-      this.groups.update((gs) => [...gs, r.data]);
-      this.createdGroup = r.data;
-      this.newName = "";
-      this.search = "";
-      await this.load(r.data);
-    }, "Group created.");
+    await this.write(
+      async () => {
+        const r = await this.api.request<Group>(this.base, "POST", {
+          "schema:name": name,
+          "schema:description": "",
+        });
+        this.groups.update((gs) => [...gs, r.data]);
+        this.createdGroup = r.data;
+        this.newName = "";
+        this.search = "";
+        await this.load(r.data);
+      },
+      "Group created.",
+      false,
+    );
   }
   async save() {
     const g = this.selected();
@@ -267,6 +283,7 @@ export class Groups implements OnInit {
       !window.confirm("Delete group “" + groupName(g) + "”?")
     )
       return;
+    if (this.selected() !== g || !this.canAdmin || this.busy()) return;
     await this.write(async () => {
       await this.api.request(
         this.path(g),
@@ -297,6 +314,7 @@ export class Groups implements OnInit {
       !window.confirm("Remove " + userName(m.user) + " from this group?")
     )
       return;
+    if (!this.members()?.includes(m) || this.onlyAdmin(m)) return;
     await this.saveMembers(this.members()!.filter((v) => v !== m));
   }
   async toggleAdmin(m: Member) {
@@ -314,6 +332,7 @@ export class Groups implements OnInit {
       )
     )
       return;
+    if (!this.members()?.includes(m) || this.onlyAdmin(m)) return;
     await this.saveMembers(
       this.members()!.map((v) =>
         v === m ? { ...v, administrator: !v.administrator } : v,
