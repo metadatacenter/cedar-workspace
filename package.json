@@ -12,7 +12,9 @@
     "format": "prettier --write \"src/**/*.{ts,html,scss}\" angular.json tsconfig*.json",
     "build:deployment": "node tools/workspace.mjs build",
     "configure": "node tools/workspace.mjs configure",
-    "copy:cee": "node tools/workspace.mjs copy-cee"
+    "copy:cee": "node tools/workspace.mjs copy-cee",
+    "test:browser": "npm --prefix browser test",
+    "test:visual": "bash browser/run-visual.sh"
   },
   "allowScripts": {
     "@parcel/watcher@2.6.0": true,

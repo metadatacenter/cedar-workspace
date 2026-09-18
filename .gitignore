@@ -28,3 +28,6 @@ app/third_party_components/cedar-embeddable-editor/
 # Local legacy test credentials may remain on developer machines; never package them.
 tests/env.js
 tests/config/test-env.js
+
+/browser/test-results/
+/browser/playwright-report/
