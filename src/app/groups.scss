@@ -1,7 +1,7 @@
 @use "@org.metadatacenter/cedar-design-tokens/controls";
 #groups-page {
   min-height: 100vh;
-  background: var(--cedar-surface-authoring);
+  background: var(--cedar-color-on-primary);
 
   .navbar-back {
     padding: var(--cedar-space-4) var(--cedar-space-6);
@@ -31,9 +31,10 @@
     margin-bottom: var(--cedar-space-6);
 
     h1 {
-      line-height: normal;
+      line-height: var(--cedar-line-height-artifact-title);
       margin: 0 0 var(--cedar-space-2);
-      font-size: var(--cedar-font-size-display);
+      font-size: var(--cedar-font-size-artifact-title);
+      color: var(--cedar-color-artifact-title);
       font-weight: var(--cedar-font-weight-medium);
     }
 
@@ -75,13 +76,12 @@
   .groups-card {
     margin-bottom: 20px;
     padding: var(--cedar-space-6);
-    border: 1px solid var(--cedar-control-border-authoring);
-    border-radius: var(--cedar-control-radius-default);
+    border-bottom: 1px solid var(--cedar-border-rule);
     background: var(--cedar-color-on-primary);
 
     h2,
     h3 {
-      line-height: normal;
+      line-height: var(--cedar-line-height-artifact-title);
       margin-top: 0;
       font-weight: var(--cedar-font-weight-medium);
     }
@@ -240,7 +240,7 @@
   .groups-member-count {
     min-width: 32px;
     padding: 5px 9px;
-    border-radius: 16px;
+    border-radius: 0;
     background: var(--cedar-surface-panel);
     text-align: center;
   }
@@ -278,7 +278,8 @@
 
   .groups-member-row {
     min-height: var(--cedar-table-row-height);
-    padding: var(--cedar-table-cell-padding-block) var(--cedar-table-cell-padding-inline);
+    padding: var(--cedar-table-cell-padding-block)
+      var(--cedar-table-cell-padding-inline);
   }
 
   .groups-member-row + .groups-member-row {
@@ -408,10 +409,9 @@
     padding: 6px var(--cedar-space-3);
     font: inherit;
     background: var(--cedar-color-on-primary);
-    border: 1px solid var(--cedar-control-border-authoring);
+    border: 1px solid var(--cedar-control-border-default);
     border-radius: var(--cedar-control-radius-default);
-    box-shadow: inset 0 1px 1px
-      color-mix(in srgb, var(--cedar-text-primary) 8%, transparent);
+    box-shadow: none;
     &:disabled {
       background: var(--cedar-surface-panel);
       opacity: 1;
@@ -427,7 +427,9 @@
     border-radius: var(--cedar-control-radius-default);
     line-height: var(--cedar-control-line-height-default);
   }
-  .btn { @include controls.action-states; }
+  .btn {
+    @include controls.action-states;
+  }
   .btn-primary {
     @include controls.primary-action;
     border-color: var(--cedar-action-primary-hover-surface);
@@ -461,48 +463,7 @@
     @include controls.focus-ring;
   }
 }
-.groups-topbar {
-  min-height: 65px;
-  height: 65px;
-  padding: var(--cedar-space-2) var(--cedar-space-6);
-  gap: var(--cedar-space-6);
-  background: var(--cedar-color-component-title);
-  .brand {
-    width: 186px;
-  }
-  .brand img {
-    width: 130px;
-    max-height: 50px;
-  }
-  .search {
-    max-width: none;
-    margin-right: auto;
-    flex: 0 1 690px;
-    height: 34px;
-  }
-  .search input {
-    min-height: 0;
-    padding: 6px var(--cedar-space-3);
-  }
-  .search button {
-    min-height: 0;
-    padding: var(--cedar-space-1) var(--cedar-space-2);
-  }
-  .header-menu:first-of-type {
-    margin-left: auto;
-  }
-}
 @media (max-width: 600px) {
-  .groups-topbar {
-    padding: var(--cedar-space-2) var(--cedar-space-4);
-    gap: var(--cedar-space-3);
-  }
-  .groups-topbar .brand {
-    width: auto;
-  }
-  .groups-topbar .search {
-    display: none;
-  }
   #groups-page .groups-member-row .groups-admin-control {
     flex-basis: 130px;
     margin-left: 0;

@@ -69,14 +69,14 @@ import { FormsModule } from "@angular/forms";
         height: var(--cedar-control-height-default);
         min-height: 0;
         padding: 6px var(--cedar-space-3);
-        border-color: var(--cedar-control-border-authoring);
+        border-color: var(--cedar-control-border-default);
       }
       input::placeholder {
         color: var(--cedar-text-muted);
       }
       .options {
         position: absolute;
-        z-index: 5;
+        z-index: var(--cedar-layer-menu);
         top: 100%;
         left: 0;
         min-width: 160px;
@@ -85,13 +85,14 @@ import { FormsModule } from "@angular/forms";
         background: var(--cedar-color-on-primary);
         border: 1px solid var(--cedar-border-rule);
         border-radius: var(--cedar-control-radius-default);
-        box-shadow: 0 6px 12px rgb(0 0 0 / 18%);
+        box-shadow: var(--cedar-menu-shadow);
       }
       button {
         display: block;
         width: 100%;
-        min-height: 0;
-        padding: 3px 20px;
+        min-height: var(--cedar-menu-item-height);
+        padding: var(--cedar-menu-item-padding-block)
+          var(--cedar-menu-item-padding-inline);
         border-radius: 0;
         text-align: left;
         color: var(--cedar-text-primary);

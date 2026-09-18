@@ -26,7 +26,9 @@ dialog::backdrop {
 }
 h2 {
   margin: 0 40px 14px 0;
-  font-size: var(--cedar-font-size-heading);
+  font-size: var(--cedar-font-size-artifact-title);
+  color: var(--cedar-color-artifact-title);
+  line-height: var(--cedar-line-height-artifact-title);
   font-weight: var(--cedar-font-weight-medium);
 }
 .close {
@@ -50,9 +52,7 @@ h2 {
   justify-content: center;
   width: 36px;
   height: 36px;
-  border-radius: 50%;
-  background: var(--cedar-color-primary);
-  color: var(--cedar-color-on-primary);
+  color: var(--cedar-color-primary);
   flex-shrink: 0;
 }
 .resource-name {
@@ -111,7 +111,7 @@ select {
   width: 100%;
   height: var(--cedar-control-height-default);
   padding: 6px var(--cedar-space-3);
-  border-color: var(--cedar-control-border-authoring);
+  border-color: var(--cedar-control-border-default);
 }
 select:disabled {
   background: var(--cedar-control-readonly-surface);
@@ -150,7 +150,8 @@ select:disabled {
   display: flex;
   align-items: center;
   min-height: var(--cedar-table-row-height);
-  padding: var(--cedar-table-cell-padding-block) var(--cedar-table-cell-padding-inline);
+  padding: var(--cedar-table-cell-padding-block)
+    var(--cedar-table-cell-padding-inline);
   gap: var(--cedar-space-3);
 }
 .access-row + .access-row {

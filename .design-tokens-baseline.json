@@ -22,32 +22,11 @@
       "value": "360px",
       "count": 1
     },
-    "473a56d2b8aabe988b20": {
-      "file": "src/styles.scss",
-      "rule": "geometry",
-      "property": "border-radius",
-      "value": "40px",
-      "count": 1
-    },
     "551c6308fa0d307c10e8": {
       "file": "src/styles.scss",
       "rule": "geometry",
       "property": "min-height",
       "value": "calc(100vh - 80px)",
-      "count": 1
-    },
-    "86f1243a81a768d0a01a": {
-      "file": "src/styles.scss",
-      "rule": "geometry",
-      "property": "border-radius",
-      "value": "16px",
-      "count": 1
-    },
-    "986543a8a90c3de6d22c": {
-      "file": "src/styles.scss",
-      "rule": "typography",
-      "property": "line-height",
-      "value": "1.4",
       "count": 1
     },
     "9d6b94990f9ceacd0315": {
