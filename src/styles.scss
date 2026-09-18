@@ -1,3 +1,4 @@
+@use "@org.metadatacenter/cedar-design-tokens/patterns";
 @use "@org.metadatacenter/cedar-design-tokens/motion";
 @use "@org.metadatacenter/cedar-design-tokens/controls";
 @use "@org.metadatacenter/cedar-design-tokens/fonts/roboto-400";
@@ -127,13 +128,8 @@ textarea {
 .new-menu nav,
 .resource-menu {
   position: absolute;
-  z-index: var(--cedar-layer-menu);
-  background: var(--cedar-overlay-surface);
-  border: 1px solid var(--cedar-overlay-border);
-  border-radius: var(--cedar-menu-radius);
-  box-shadow: var(--cedar-menu-shadow);
+  @include patterns.menu-surface;
   min-width: 180px;
-  padding: var(--cedar-menu-padding);
 }
 .header-menu nav {
   right: 0;
@@ -144,10 +140,7 @@ textarea {
 .new-menu button,
 .resource-menu button {
   display: block;
-  text-align: left;
-  padding: var(--cedar-menu-item-padding-block)
-    var(--cedar-menu-item-padding-inline);
-  min-height: var(--cedar-menu-item-height);
+  @include patterns.menu-item;
   width: 100%;
 }
 .workspace {
@@ -262,11 +255,9 @@ th button {
   padding: var(--cedar-space-4);
 }
 td {
-  padding: var(--cedar-table-cell-padding-block)
-    var(--cedar-table-cell-padding-inline);
+  @include patterns.table-cell;
   height: var(--cedar-table-row-height);
   vertical-align: middle;
-  border-bottom: 1px solid var(--cedar-table-divider);
 }
 td:first-child {
   max-width: 480px;
@@ -326,9 +317,7 @@ tr.selected:hover {
 }
 .empty,
 .loading {
-  padding: var(--cedar-empty-state-padding);
-  text-align: center;
-  color: var(--cedar-text-muted);
+  @include patterns.empty-state;
 }
 .information {
   position: relative;
@@ -339,9 +328,7 @@ tr.selected:hover {
   overflow-wrap: anywhere;
 }
 .information h1 {
-  font-size: var(--cedar-font-size-artifact-title);
-  color: var(--cedar-color-artifact-title);
-  line-height: var(--cedar-line-height-artifact-title);
+  @include patterns.artifact-title;
   margin: 0 0 var(--cedar-space-3);
 }
 .badge {
@@ -428,15 +415,7 @@ dd small {
 dialog {
   width: min(620px, calc(100vw - 32px));
   max-height: 90vh;
-  border: 1px solid var(--cedar-border-rule);
-  border-radius: var(--cedar-dialog-radius);
-  padding: var(--cedar-dialog-padding);
-  color: var(--cedar-text-primary);
-  background: var(--cedar-overlay-surface);
-  box-shadow: var(--cedar-dialog-shadow);
-}
-dialog::backdrop {
-  background: var(--cedar-dialog-backdrop);
+  @include patterns.dialog-surface;
 }
 dialog header,
 dialog footer {
@@ -446,9 +425,7 @@ dialog footer {
   gap: var(--cedar-dialog-action-gap);
 }
 dialog h2 {
-  font-size: var(--cedar-font-size-artifact-title);
-  color: var(--cedar-color-artifact-title);
-  line-height: var(--cedar-line-height-artifact-title);
+  @include patterns.artifact-title;
   margin: 0;
 }
 dialog footer {
@@ -662,9 +639,7 @@ td:first-child a {
 }
 .account-header h1 {
   margin: 0;
-  font-size: var(--cedar-font-size-artifact-title);
-  color: var(--cedar-color-artifact-title);
-  line-height: var(--cedar-line-height-artifact-title);
+  @include patterns.artifact-title;
 }
 .account-content {
   max-width: 70rem;
@@ -771,7 +746,5 @@ textarea {
 @include motion.reduced-motion;
 
 .field-error {
-  color: var(--cedar-status-error-text);
-  font-size: var(--cedar-font-size-small);
-  margin-top: var(--cedar-form-help-gap);
+  @include patterns.field-error;
 }

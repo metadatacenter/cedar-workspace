@@ -1,3 +1,4 @@
+@use "@org.metadatacenter/cedar-design-tokens/patterns";
 :host {
   font-family: var(--cedar-font-family);
   font-size: var(--cedar-font-size);
@@ -26,10 +27,7 @@ dialog::backdrop {
 }
 h2 {
   margin: 0 40px 14px 0;
-  font-size: var(--cedar-font-size-artifact-title);
-  color: var(--cedar-color-artifact-title);
-  line-height: var(--cedar-line-height-artifact-title);
-  font-weight: var(--cedar-font-weight-medium);
+  @include patterns.artifact-title;
 }
 .close {
   position: absolute;
@@ -101,11 +99,7 @@ p {
   line-height: var(--cedar-control-line-height-authoring);
 }
 label {
-  display: block;
-  margin: 0 0 var(--cedar-form-label-gap);
-  color: var(--cedar-text-muted);
-  font-size: var(--cedar-font-size-small);
-  font-weight: var(--cedar-font-weight-medium);
+  @include patterns.field-label;
 }
 select {
   width: 100%;

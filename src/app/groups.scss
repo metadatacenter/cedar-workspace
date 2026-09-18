@@ -1,3 +1,4 @@
+@use "@org.metadatacenter/cedar-design-tokens/patterns";
 @use "@org.metadatacenter/cedar-design-tokens/controls";
 #groups-page {
   min-height: 100vh;
@@ -31,11 +32,8 @@
     margin-bottom: var(--cedar-space-6);
 
     h1 {
-      line-height: var(--cedar-line-height-artifact-title);
+      @include patterns.artifact-title;
       margin: 0 0 var(--cedar-space-2);
-      font-size: var(--cedar-font-size-artifact-title);
-      color: var(--cedar-color-artifact-title);
-      font-weight: var(--cedar-font-weight-medium);
     }
 
     p {
