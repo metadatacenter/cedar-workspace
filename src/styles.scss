@@ -250,8 +250,10 @@ th button {
   padding: var(--cedar-space-4);
 }
 td {
-  padding: var(--cedar-space-4);
-  border-bottom: 1px solid var(--cedar-border-rule-light);
+  padding: var(--cedar-table-cell-padding-block) var(--cedar-table-cell-padding-inline);
+  height: var(--cedar-table-row-height);
+  vertical-align: middle;
+  border-bottom: 1px solid var(--cedar-table-divider);
 }
 td:first-child {
   max-width: 480px;
@@ -308,7 +310,7 @@ tr.selected, tr.selected:hover {
 }
 .empty,
 .loading {
-  padding: calc(2 * var(--cedar-space-6)) var(--cedar-space-6);
+  padding: var(--cedar-empty-state-padding);
   text-align: center;
   color: var(--cedar-text-muted);
 }
@@ -447,8 +449,8 @@ fieldset {
 label {
   display: flex;
   flex-direction: column;
-  gap: var(--cedar-space-2);
-  margin: var(--cedar-space-4) 0;
+  gap: var(--cedar-form-label-gap);
+  margin: var(--cedar-form-field-gap) 0;
 }
 .check {
   flex-direction: row;
@@ -494,7 +496,7 @@ label {
     padding: var(--cedar-space-3);
   }
   td {
-    padding: var(--cedar-space-3);
+    padding-inline: var(--cedar-table-cell-padding-inline-authoring);
   }
 }
 @media (max-width: 760px) {

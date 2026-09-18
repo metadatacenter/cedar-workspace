@@ -102,7 +102,7 @@ p {
 }
 label {
   display: block;
-  margin: 0 0 6px;
+  margin: 0 0 var(--cedar-form-label-gap);
   color: var(--cedar-text-muted);
   font-size: var(--cedar-font-size-small);
   font-weight: var(--cedar-font-weight-medium);
@@ -137,7 +137,7 @@ select:disabled {
   flex-wrap: wrap;
   justify-content: space-between;
   gap: var(--cedar-space-2) var(--cedar-space-6);
-  margin-top: 10px;
+  margin-top: var(--cedar-form-help-gap);
   color: var(--cedar-text-muted);
   font-size: var(--cedar-font-size-small);
 }
@@ -149,8 +149,8 @@ select:disabled {
 .access-row {
   display: flex;
   align-items: center;
-  min-height: 42px;
-  padding: var(--cedar-space-1) 10px;
+  min-height: var(--cedar-table-row-height);
+  padding: var(--cedar-table-cell-padding-block) var(--cedar-table-cell-padding-inline);
   gap: var(--cedar-space-3);
 }
 .access-row + .access-row {
