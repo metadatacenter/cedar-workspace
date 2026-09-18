@@ -1,3 +1,4 @@
+@use "@org.metadatacenter/cedar-design-tokens/controls";
 @use "@org.metadatacenter/cedar-design-tokens/fonts/roboto-400";
 @use "@org.metadatacenter/cedar-design-tokens/fonts/roboto-500";
 @import "@org.metadatacenter/cedar-design-tokens/custom-properties.css";
@@ -42,16 +43,11 @@ button {
   background: transparent;
   color: var(--cedar-color-primary);
 }
-button:hover:not(:disabled) {
-  background: var(--cedar-surface-tinted);
-}
-button:disabled {
-  opacity: 0.45;
-  cursor: default;
+button {
+  @include controls.action-states;
 }
 :focus-visible {
-  outline: 2px solid var(--cedar-color-primary);
-  outline-offset: 2px;
+  @include controls.focus-ring;
 }
 input,
 select,
@@ -179,15 +175,11 @@ textarea {
   position: relative;
 }
 .primary {
-  background: var(--cedar-color-primary);
-  color: var(--cedar-color-on-primary);
+  @include controls.primary-action;
   border-radius: var(--cedar-control-radius-default);
   padding: var(--cedar-space-2) var(--cedar-space-4);
   display: inline-block;
   list-style: none;
-}
-.primary:hover:not(:disabled) {
-  background: var(--cedar-primary-700);
 }
 .new-menu summary span {
   padding-left: var(--cedar-space-3);
@@ -748,3 +740,5 @@ td:first-child a {
 .account-policy li {
   margin-bottom: var(--cedar-space-3);
 }
+
+input, select, textarea { @include controls.input-states; }

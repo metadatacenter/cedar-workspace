@@ -1,3 +1,4 @@
+@use "@org.metadatacenter/cedar-design-tokens/controls";
 #groups-page {
   min-height: 100vh;
   background: var(--cedar-surface-authoring);
@@ -426,16 +427,10 @@
     border-radius: var(--cedar-control-radius-default);
     line-height: var(--cedar-control-line-height-default);
   }
+  .btn { @include controls.action-states; }
   .btn-primary {
-    color: var(--cedar-color-on-primary);
-    background: var(--cedar-color-primary);
-    border-color: var(--cedar-primary-700);
-  }
-  .btn-primary:hover:not(:disabled) {
-    background: var(--cedar-primary-800);
-  }
-  .btn:disabled {
-    opacity: 0.65;
+    @include controls.primary-action;
+    border-color: var(--cedar-action-primary-hover-surface);
   }
   .groups-delete-button {
     min-height: 22px;
@@ -463,8 +458,7 @@
     margin-bottom: 10px;
   }
   .groups-tab:focus-visible {
-    outline: 2px solid var(--cedar-color-primary);
-    outline-offset: 2px;
+    @include controls.focus-ring;
   }
 }
 .groups-topbar {
