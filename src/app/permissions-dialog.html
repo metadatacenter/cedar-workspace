@@ -153,6 +153,7 @@
           >
           <span class="role-cell" role="cell">
             <select
+              [class.readonly-role]="!canManage"
               (change)="changeRole(g, $any($event.target).value); $any($event.target).value = g.role"
               [disabled]="!canManage || busy() || stale()"
               [attr.aria-label]="'Role for ' + principalName(g.node)"

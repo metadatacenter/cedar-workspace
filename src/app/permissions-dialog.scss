@@ -117,6 +117,12 @@ select:disabled {
   background: var(--cedar-control-readonly-surface);
   color: var(--cedar-text-readonly);
 }
+// Viewing a role is readable content, even though its native select remains inert.
+select.readonly-role:disabled {
+  opacity: 1;
+  color: var(--cedar-text-readonly);
+  background: var(--cedar-control-readonly-surface);
+}
 .add-controls {
   display: flex;
   align-items: flex-end;
