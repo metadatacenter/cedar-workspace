@@ -118,13 +118,12 @@ textarea {
 .resource-menu {
   position: absolute;
   z-index: 5;
-  background: var(--cedar-color-on-primary);
-  border: 1px solid var(--cedar-border-rule);
-  border-radius: var(--cedar-control-radius-default);
-  box-shadow: 0 4px 18px
-    color-mix(in srgb, var(--cedar-text-primary) 15%, transparent);
+  background: var(--cedar-overlay-surface);
+  border: 1px solid var(--cedar-overlay-border);
+  border-radius: var(--cedar-menu-radius);
+  box-shadow: var(--cedar-menu-shadow);
   min-width: 180px;
-  padding: var(--cedar-space-1);
+  padding: var(--cedar-menu-padding);
 }
 .header-menu nav {
   right: 0;
@@ -136,7 +135,8 @@ textarea {
 .resource-menu button {
   display: block;
   text-align: left;
-  padding: var(--cedar-space-2) var(--cedar-space-3);
+  padding: var(--cedar-menu-item-padding-block) var(--cedar-menu-item-padding-inline);
+  min-height: var(--cedar-menu-item-height);
   width: 100%;
 }
 .workspace {
@@ -413,19 +413,21 @@ dialog {
   width: min(620px, calc(100vw - 32px));
   max-height: 90vh;
   border: 1px solid var(--cedar-border-rule);
-  border-radius: var(--cedar-control-radius-default);
-  padding: var(--cedar-space-6);
+  border-radius: var(--cedar-dialog-radius);
+  padding: var(--cedar-dialog-padding);
   color: var(--cedar-text-primary);
+  background: var(--cedar-overlay-surface);
+  box-shadow: var(--cedar-dialog-shadow);
 }
 dialog::backdrop {
-  background: color-mix(in srgb, var(--cedar-text-primary) 45%, transparent);
+  background: var(--cedar-dialog-backdrop);
 }
 dialog header,
 dialog footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--cedar-space-4);
+  gap: var(--cedar-dialog-action-gap);
 }
 dialog h2 {
   font-size: var(--cedar-font-size-heading);
@@ -433,7 +435,7 @@ dialog h2 {
 }
 dialog footer {
   justify-content: flex-end;
-  margin-top: var(--cedar-space-6);
+  margin-top: var(--cedar-dialog-padding);
 }
 fieldset {
   border: 0;
