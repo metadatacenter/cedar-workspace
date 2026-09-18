@@ -381,7 +381,8 @@
 :host {
   display: block;
   color: var(--cedar-text-primary);
-  font: var(--cedar-font-size)/1.5 var(--cedar-font-family);
+  font: var(--cedar-font-size)/var(--cedar-control-line-height-default)
+    var(--cedar-font-family);
 }
 #groups-page {
   min-height: calc(100vh - 65px);
