@@ -1,51 +1,50 @@
 {
   "name": "cedar-workspace",
-  "version": "2.9.16",
+  "version": "2.9.17",
   "publishConfig": {
     "registry": "https://nexus.bmir.stanford.edu/repository/npm-cedar/"
   },
   "description": "CEDAR Workspace frontend",
-  "main": "app/scripts/app.js",
   "scripts": {
-    "start": "gulp",
-    "test": "node_modules/karma/bin/karma start karma.conf.js --browsers ChromeHeadless --single-run"
+    "start": "node tools/workspace.mjs start",
+    "test": "ng test --watch=false && node --test tools/*.test.mjs",
+    "build": "ng build && node tools/stage-workspace.mjs",
+    "format": "prettier --write \"src/**/*.{ts,html,scss}\" angular.json tsconfig*.json",
+    "build:deployment": "node tools/workspace.mjs build",
+    "configure": "node tools/workspace.mjs configure",
+    "copy:cee": "node tools/workspace.mjs copy-cee"
   },
   "allowScripts": {
-    "es5-ext@0.10.62": false,
-    "fsevents@1.2.13 || 2.3.2": true
+    "@parcel/watcher@2.6.0": true,
+    "esbuild@0.28.2": true,
+    "lmdb@3.5.6": true,
+    "msgpackr-extract@3.0.4": true,
+    "fsevents@2.3.3": true
   },
   "author": "Metadatacenter.org",
   "license": "BSD-2-Clause",
   "devDependencies": {
-    "colors": "1.1.2",
-    "connect-history-api-fallback": "1.1.0",
-    "gulp": "4.0.0",
-    "gulp-autoprefixer": "2.3.1",
-    "gulp-connect": "5.7.0",
-    "gulp-html-replace": "1.6.2",
-    "gulp-jshint": "1.12.0",
-    "gulp-less": "3.3.2",
-    "gulp-ng-annotate": "0.5.3",
-    "gulp-plumber": "1.1.0",
-    "gulp-rename": "1.2.2",
-    "gulp-replace": "0.5.4",
-    "gulp-uglify": "1.5.4",
-    "gulp-wait": "0.0.2",
-    "jasmine-core": "2.7.0",
-    "jshint-stylish": "1.0.2",
-    "karma": "^6.4.1",
-    "karma-chrome-launcher": "^3.2.0",
-    "karma-firefox-launcher": "0.1.7",
-    "karma-jasmine": "0.3.8",
-    "karma-mocha": "1.3.0",
-    "karma-mocha-reporter": "2.2.3",
-    "karma-ng-html2js-preprocessor": "1.0.0",
-    "karma-notify-send-reporter": "0.0.3",
-    "karma-requirejs": "0.2.6",
-    "karma-spec-reporter": "0.0.31",
-    "requirejs": "2.1.22"
+    "@angular/build": "22.1.8",
+    "@angular/cli": "22.1.8",
+    "@angular/compiler-cli": "22.1.7",
+    "jsdom": "^30.0.1",
+    "prettier": "^3.9.6",
+    "typescript": "~6.0.3",
+    "vitest": "^4.0.8"
   },
   "dependencies": {
-    "cedar-embeddable-editor": "2.0.15"
+    "@angular/common": "22.1.7",
+    "@angular/compiler": "22.1.7",
+    "@angular/core": "22.1.7",
+    "@angular/forms": "22.1.7",
+    "@angular/platform-browser": "22.1.7",
+    "@angular/router": "22.1.7",
+    "@org.metadatacenter/cedar-design-tokens": "0.1.0-dev.20260917.156f7425",
+    "cedar-embeddable-editor": "2.0.16",
+    "rxjs": "~7.8.2",
+    "tslib": "^2.8.1"
+  },
+  "engines": {
+    "node": "^24.15.0"
   }
 }

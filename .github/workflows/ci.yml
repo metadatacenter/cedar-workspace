@@ -18,6 +18,9 @@ env:
   NPM_CONFIG_STRICT_ALLOW_SCRIPTS: "true"
 
 jobs:
+  adoption:
+    uses: metadatacenter/cedar-design-tokens/.github/workflows/adoption.yml@develop
+
   package:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -35,20 +38,25 @@ jobs:
       - name: Install the locked dependency graph
         run: npm ci
 
+      - name: Build the Angular workspace
+        run: npm run build
+
       - name: Prove the train package can be assembled
         run: npm pack --dry-run
 
-      - name: Run the unit suite
+      - name: Build the deployment payload
         env:
-          CHROME_BIN: /usr/bin/google-chrome
-          CEDAR_FRONTEND_BEHAVIOR: develop
-          CEDAR_FRONTEND_TARGET: local
-          CEDAR_FRONTEND_local_UI_HOST: metadatacenter.orgx
-          CEDAR_FRONTEND_local_REST_HOST: metadatacenter.orgx
+          CEDAR_FRONTEND_BEHAVIOR: server
+          CEDAR_FRONTEND_TARGET: ci
+          CEDAR_FRONTEND_ci_UI_HOST: metadatacenter.example
+          CEDAR_FRONTEND_ci_REST_HOST: metadatacenter.example
+          CEDAR_WORKSPACE_FRONTEND_URL: https://workspace.metadatacenter.example
+          CEDAR_TEMPLATE_DESIGNER_FRONTEND_URL: https://designer.metadatacenter.example
           CEDAR_VERSION: 0.0.0-ci
           CEDAR_VERSION_MODIFIER: ''
           CEDAR_DATACITE_ENABLED: 'false'
           CEDAR_GA4_TRACKING_ID: ''
-        # The suite loads config/url-service.conf.json, which these tasks write from
-        # their templates. The hosts above only have to parse; nothing here calls them.
-        run: npx gulp replace-url replace-version && npm test
+        run: npm run build:deployment
+
+      - name: Run Angular, authentication and packaging suites
+        run: npm test

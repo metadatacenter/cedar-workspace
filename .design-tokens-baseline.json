@@ -1,0 +1,90 @@
+{
+  "schema": 1,
+  "findings": {
+    "2b84a49f998e00abd6d5": {
+      "file": "src/styles.scss",
+      "rule": "geometry",
+      "property": "min-height",
+      "value": "44px",
+      "count": 1
+    },
+    "3a98bbafdb9202685665": {
+      "file": "src/styles.scss",
+      "rule": "typography",
+      "property": "line-height",
+      "value": "1.7",
+      "count": 1
+    },
+    "4215a6cc49338b7e762d": {
+      "file": "src/styles.scss",
+      "rule": "geometry",
+      "property": "min-height",
+      "value": "360px",
+      "count": 1
+    },
+    "473a56d2b8aabe988b20": {
+      "file": "src/styles.scss",
+      "rule": "geometry",
+      "property": "border-radius",
+      "value": "40px",
+      "count": 1
+    },
+    "551c6308fa0d307c10e8": {
+      "file": "src/styles.scss",
+      "rule": "geometry",
+      "property": "min-height",
+      "value": "calc(100vh - 80px)",
+      "count": 1
+    },
+    "86f1243a81a768d0a01a": {
+      "file": "src/styles.scss",
+      "rule": "geometry",
+      "property": "border-radius",
+      "value": "16px",
+      "count": 1
+    },
+    "986543a8a90c3de6d22c": {
+      "file": "src/styles.scss",
+      "rule": "typography",
+      "property": "line-height",
+      "value": "1.4",
+      "count": 1
+    },
+    "9d6b94990f9ceacd0315": {
+      "file": "src/styles.scss",
+      "rule": "typography",
+      "property": "line-height",
+      "value": "1.6",
+      "count": 1
+    },
+    "a79611315819abf5d622": {
+      "file": "src/styles.scss",
+      "rule": "geometry",
+      "property": "min-height",
+      "value": "5rem",
+      "count": 1
+    },
+    "d48c98436a7ae8806369": {
+      "file": "src/styles.scss",
+      "rule": "geometry",
+      "property": "min-height",
+      "value": "52px",
+      "count": 1
+    },
+    "d4e583b9b678d0da1eba": {
+      "file": "src/styles.scss",
+      "rule": "geometry",
+      "property": "height",
+      "value": "1px",
+      "count": 1
+    },
+    "e6c206f7d36065ee011a": {
+      "file": "src/styles.scss",
+      "rule": "geometry",
+      "property": "min-height",
+      "value": "80px",
+      "count": 1
+    }
+  },
+  "exceptions": {}
+}

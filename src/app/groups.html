@@ -1,0 +1,130 @@
+<cedar-account-shell
+  title="Groups"
+  [loading]="loading() || selecting()"
+  [error]="error()"
+  [notice]="notice()"
+>
+  @if(ready()){
+  <section class="account-card">
+    <h2>Create a group</h2>
+    <form (ngSubmit)="create()">
+      <label for="new-group-name">New group name</label
+      ><input
+        id="new-group-name"
+        name="newName"
+        [(ngModel)]="newName"
+        [disabled]="busy() || selecting()"
+        required
+      /><button
+        class="primary"
+        [disabled]="busy() || selecting() || !newName.trim()"
+      >
+        Create group
+      </button>
+    </form>
+  </section>
+  <div class="account-groups">
+    <section class="account-card">
+      <h2>Manage groups</h2>
+      <label for="group-search">Search groups</label
+      ><input id="group-search" [(ngModel)]="search" />
+      <ul class="account-group-list">
+        @for(g of filteredGroups;track g['@id']){
+        <li>
+          <button
+            [attr.aria-current]="selected()?.['@id']===g['@id']?'true':null"
+            [disabled]="busy()"
+            (click)="select(g)"
+          >
+            {{groupName(g)}}</button
+          >@if(g['schema:description']){<small>{{g['schema:description']}}</small>}
+        </li>
+        }@empty{
+        <li>No matching groups.</li>
+        }
+      </ul>
+    </section>
+    @if(selected();as g){
+    <section class="account-card">
+      <h2>{{groupName(g)}}</h2>
+      <button [disabled]="busy() || selecting()" (click)="select(g)">
+        Reload group
+      </button>
+      @if(canAdmin){
+      <form (ngSubmit)="save()">
+        <label for="group-name">Group name</label
+        ><input
+          id="group-name"
+          name="editName"
+          [(ngModel)]="editName"
+          [disabled]="busy()"
+          required
+        />
+        <label for="group-description">Description</label
+        ><textarea
+          id="group-description"
+          name="editDescription"
+          [(ngModel)]="editDescription"
+          [disabled]="busy()"
+        ></textarea>
+        <div class="account-actions">
+          <button class="primary" [disabled]="busy() || !editName.trim()">
+            Save details</button
+          ><button type="button" [disabled]="busy()" (click)="remove()">
+            Delete group
+          </button>
+        </div>
+      </form>
+      }@else{
+      <p>{{g['schema:description']}}</p>
+      }
+      <h3>Members</h3>
+      @if(restricted()){
+      <p>Only group administrators can view and manage membership.</p>
+      } @if(members();as roster){
+      <ul class="account-group-list">
+        @for(m of roster;track m.user['@id']){
+        <li class="account-member" [attr.aria-label]="userName(m.user)">
+          <strong>{{userName(m.user)}}</strong> ·
+          {{m.administrator?'Administrator':'Member'}} @if(canAdmin){
+          <div class="account-actions">
+            <button
+              [disabled]="busy() || onlyAdmin(m)"
+              (click)="toggleAdmin(m)"
+            >
+              {{m.administrator?'Remove administrator':'Make administrator'}}</button
+            ><button
+              [disabled]="busy() || onlyAdmin(m)"
+              (click)="removeMember(m)"
+            >
+              Remove member
+            </button>
+          </div>
+          }
+        </li>
+        }@empty{
+        <li>No members.</li>
+        }
+      </ul>
+      } @if(canAdmin){
+      <p>The group must retain at least one administrator.</p>
+      <form (ngSubmit)="addMember()">
+        <label for="group-member">Add a member</label
+        ><select
+          id="group-member"
+          name="newMember"
+          [(ngModel)]="newMember"
+          [disabled]="busy()"
+        >
+          <option value="">Select a user</option>
+          @for(u of availableUsers;track u['@id']){
+          <option [value]="u['@id']">{{userName(u)}}</option>
+          }</select
+        ><button [disabled]="busy() || !newMember">Add member</button>
+      </form>
+      }
+    </section>
+    }
+  </div>
+  }
+</cedar-account-shell>

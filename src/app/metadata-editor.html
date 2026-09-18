@@ -1,0 +1,56 @@
+<header class="metadata-toolbar">
+  <button (click)="back()" [disabled]="saving()">← Workspace</button>
+  <div>
+    <strong>{{name || 'Metadata'}}</strong><small>{{templateName}}</small>
+  </div>
+  <span role="status"
+    >{{loading() ? 'Loading…' : saving() ? 'Saving…' : !writable() ? 'Read only'
+    : dirty() ? 'Unsaved changes' : 'Saved'}}</span
+  >
+  @if(writable()) {<button
+    id="button-save-metadata"
+    class="primary"
+    (click)="save()"
+    [disabled]="loading() || saving()"
+  >
+    Save</button
+  >}
+</header>
+<main class="metadata-content">
+  @if(error()){
+  <p role="alert" class="alert">{{error()}}</p>
+  } @if(notice()){
+  <p role="status" class="notice">{{notice()}}</p>
+  } @if(!loading()) {
+  <label for="instance-name">Metadata name</label>
+  <input
+    id="instance-name"
+    [(ngModel)]="name"
+    (ngModelChange)="changed()"
+    [readOnly]="!writable()"
+  />
+  @if(!writable()){
+  <p role="status">You have read-only access to this metadata.</p>
+  } }
+  <cedar-embeddable-editor
+    #editor
+    [hidden]="loading()"
+  ></cedar-embeddable-editor>
+  @if(quality()?.isValid === false){
+  <section class="metadata-quality" aria-label="Metadata quality issues">
+    <strong>Metadata quality issues</strong>
+    <p>This metadata can still be saved.</p>
+    @if(missingRequired){
+    <p>{{missingRequired}} required fields are missing.</p>
+    }
+    <ul>
+      @for(problem of quality()?.problems || []; track $index){
+      <li>
+        {{problem.path.join(' / ') || problem.field || 'Metadata'}}:
+        {{problem.message || problem.code}}
+      </li>
+      }
+    </ul>
+  </section>
+  }
+</main>

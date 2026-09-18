@@ -5,7 +5,6 @@ dist/*
 
 npm-debug.log
 .tmp
-.sass-cache
 .idea/
 *.iml
 .project
@@ -15,11 +14,17 @@ npm-debug.log
 .DS_Store
 
 app/config/url-service.conf.json
-app/config/controlled-term-data-service.conf.json
 app/config/version.js
 app/config/build-info.json
-app/css/style-creator.css
-tests/env.js
-tests/config/test-env.js
 
 app/third_party_components/cedar-embeddable-editor/
+
+/angular/cache/
+/.angular/
+/out-tsc/
+/app/workspace-build/
+/.workspace-build/
+
+# Local legacy test credentials may remain on developer machines; never package them.
+tests/env.js
+tests/config/test-env.js

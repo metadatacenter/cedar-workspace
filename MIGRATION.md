@@ -35,83 +35,19 @@ them as baseline debt, and require every newly introduced or migrated test to pa
 | `fc083f78` - take CEE `2.0.0-dev.20260820.a8cc4cc` | Ported into the extraction worktree on 2026-08-20 |
 | `a6b29576` - remove legacy artifact frontend routing | Equivalent dead routing and references are absent from Workspace |
 
-## Current extraction checkpoint
+## Current application boundary
 
-- Independent AngularJS bootstrap and package identity on port 4201
-- Workspace-owned dashboard, account, messaging, and CEE instance-shell routes
-- Full-document Template Designer navigation with exact-origin `returnTo` validation
-- Focused URL/auth/runtime contract suite: 7 passing tests
-- Spreadsheet mode, Designer authoring, legacy renderer, obsolete broad tests, and unreachable vendors removed
-- Docker construction moved to `cedar-docker-build`; the image consumes an immutable npm artifact
-- Runtime build identity exposes the clean source commit and exact served-tree SHA-256 with no-store caching
-- CLI repository/process registration is preview-only and excluded from release operations
-- The full authenticated smoke is split-origin aware and includes exact Workspace-to-Designer return navigation
-- The approved local Keycloak callbacks and exact Web Origins pass their credential-free preflight
-- The authenticated split journey passes login/SSO, exact Designer return, authoring, Workspace CEE
-  create/save/edit, JSON/YAML serialization, OpenView, teardown, and folder-clear verification
-- Workspace owns its minimal user application state and decodes CEE route identifiers exactly once;
-  these runtime fixes are recorded by `f0d59519` and `95d16928`
-- Workspace is part of the checked seven-manifest CEE propagation inventory; every CEE release must
-  update its exact manifest and lockfile pin, rebuild the Workspace payload, and verify the served
-  bundle hash before environment acceptance
+Workspace is a standalone Angular 22 application. All its routes, account pages and
+CEE host use `src/`. Messaging has been removed; unknown and retired routes return to
+`/dashboard`. The AngularJS shell, controllers, directives, services, templates,
+styles and Karma harness are removed. The plain-JavaScript Keycloak adapter remains
+because the modern application uses it; it has a Node test suite.
 
-## Product boundary
+Workspace owns browsing, resource actions, Profile, Settings, Groups, Privacy, logout,
+and metadata persistence through CEE. Designer owns template/element/field authoring.
+See [ownership](docs/OWNERSHIP_INVENTORY.md) and
+[navigation](docs/CROSS_APP_NAVIGATION.md) for current contracts.
 
-Workspace owns:
-
-- `/` and `/dashboard`
-- folders, browsing, search, breadcrumbs, categories, and pagination
-- resource actions: create folder, copy, move, rename, share, publish, import,
-  inclusion, submission, and deletion where currently exposed
-- profile, settings, privacy, logout, and messaging
-- cross-application launches into Template Designer and the canonical CEE host
-
-Workspace does not own:
-
-- template, element, or field authoring
-- controlled-term authoring UI except where a Workspace-owned action proves it is
-  genuinely needed
-- metadata instance create/edit UI
-
-## Initial ownership map
-
-| Area | Disposition |
-| --- | --- |
-| `dashboard/`, `search-browse/`, `category-tree/` | Keep |
-| Workspace resource-operation directives in `modal/` | Keep |
-| `profile/`, `messaging/` | Keep |
-| shared `core/`, `layout/`, `service/`, `widget/` | Classify and retain only used files |
-| `template/`, `template-element/`, `template-field/` | Remove after external navigation is live |
-| `controlled-term/`, designer `form/` code | Remove unless dependency evidence says otherwise |
-| `template-instance/` | Remove after canonical CEE routes are live |
-
-## Extraction gates
-
-The current inter-application boundary is documented in
-[`docs/CROSS_APP_NAVIGATION.md`](docs/CROSS_APP_NAVIGATION.md).
-
-- [x] Clone from the frozen source commit without modifying the source worktree
-- [x] Give the package a distinct repository identity
-- [x] Draft versioned cross-app URL, authentication, and `returnTo` contracts
-- [ ] Ratify contract decisions and production origins
-- [x] Replace internal Designer route changes with full-document navigation
-- [x] Validate `returnTo` against the configured Workspace origin
-- [x] Split the eager service module so only Workspace dependencies load
-- [x] Remove Designer authoring and legacy instance-renderer source; retain only the CEE route shell
-- [x] Separately host root-relative static assets on the Workspace origin
-- [x] Serve the unpruned baseline independently on port 4201 (LiveReload 35730)
-- [x] Produce a Workspace-only build after pruning
-- [x] Add Workspace-focused unit and credential-free cross-application smoke tests
-- [x] Build and run a local-source preview image without a published frontend tarball
-- [x] Prove and record clean source identity plus the exact environment-generated served bundle
-- [x] Add a split-aware authenticated browser journey without changing the production-monolith smoke
-- [x] Pass local preview routing, auth, deep-link, and route-only rollback tests
-- [x] Add Workspace to the checked CEE release-consumer inventory
-- [ ] Pass staging parity before any production routing changes
-
-## Change discipline
-
-- Make coherent commits as migration checkpoints and push them to the approved independent remote.
-- Keep the legacy production repository unchanged.
-- Record every ambiguous shared file here before deleting it.
-- Prefer copy-and-subtract to a framework rewrite; modernization is a later project.
+The combined `cedar-template-editor` repository and its AngularJS smoke remain intact.
+`npm test` and the full modern Workspace smoke are the current verification gates;
+see the README for build and deployment commands.
