@@ -1,3 +1,4 @@
+@use '@org.metadatacenter/cedar-design-tokens/motion';
 @use "@org.metadatacenter/cedar-design-tokens/controls";
 @use "@org.metadatacenter/cedar-design-tokens/fonts/roboto-400";
 @use "@org.metadatacenter/cedar-design-tokens/fonts/roboto-500";
@@ -117,7 +118,7 @@ textarea {
 .new-menu nav,
 .resource-menu {
   position: absolute;
-  z-index: 5;
+  z-index: var(--cedar-layer-menu);
   background: var(--cedar-overlay-surface);
   border: 1px solid var(--cedar-overlay-border);
   border-radius: var(--cedar-menu-radius);
@@ -584,7 +585,7 @@ td:first-child a {
 .metadata-toolbar {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: var(--cedar-layer-sticky);
   display: flex;
   align-items: center;
   gap: var(--cedar-space-4);
@@ -750,3 +751,5 @@ td:first-child a {
 input, select, textarea { @include controls.input-states; }
 
 .topbar :focus-visible { outline-color: var(--cedar-color-on-primary); }
+
+@include motion.reduced-motion;
