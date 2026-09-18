@@ -114,6 +114,7 @@ export const test = base.extend({
         method: request.method(),
         path,
         body: request.postDataJSON(),
+        revision: request.headers()["if-match"],
       });
       if (state.pending && request.method() !== "GET")
         await new Promise((resolve) => setTimeout(resolve, 250));

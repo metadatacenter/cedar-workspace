@@ -1,3 +1,4 @@
+import { DialogKeyboard } from "./dialog-keyboard";
 import { Icon } from "./icon";
 import {
   AfterViewInit,
@@ -17,7 +18,7 @@ import { Backend } from "./backend.service";
 import { Resource, Listing, title, can } from "./resource";
 @Component({
   selector: "cedar-resource-dialog",
-  imports: [Icon, FormsModule],
+  imports: [DialogKeyboard, Icon, FormsModule],
   templateUrl: "./resource-dialog.html",
 })
 export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
@@ -35,6 +36,7 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   readonly folders = signal<Resource[]>([]);
   readonly path = signal<Resource[]>([]);
   readonly status = signal("");
+  submitted = false;
   name = "";
   description = "";
   version = "";
@@ -45,6 +47,7 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   propagate = true;
   newFolderName = "";
   files: File[] = [];
+  private initialValues: string | null = null;
   private etag: string | null = null;
   private alive = true;
   private originalFocus = document.activeElement as HTMLElement | null;
@@ -79,6 +82,27 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   ngOnInit() {
     void this.load();
   }
+  private values() {
+    return JSON.stringify([
+      this.name,
+      this.description,
+      this.version,
+      this.target,
+      this.propagate,
+      this.newFolderName,
+      this.files.map((f) => f.name),
+    ]);
+  }
+  close() {
+    if (this.busy()) return;
+    if (
+      this.initialValues !== null &&
+      this.values() !== this.initialValues &&
+      !window.confirm("Discard unsaved changes?")
+    )
+      return;
+    this.closed.emit();
+  }
   async load() {
     try {
       const r = this.resource;
@@ -106,6 +130,7 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
       this.fail(e);
     } finally {
       this.busy.set(false);
+      this.initialValues = this.values();
     }
   }
   fail(e: unknown) {
@@ -148,8 +173,22 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   chooseFiles(event: Event) {
     this.files = Array.from((event.target as HTMLInputElement).files || []);
   }
+  get nameError() {
+    return ["new-folder", "rename", "copy"].includes(this.action) &&
+      !this.name.trim()
+      ? "Enter a name."
+      : "";
+  }
+  get versionError() {
+    return ["publish", "draft"].includes(this.action) &&
+      !/^\d+\.\d+\.\d+$/.test(this.version)
+      ? "Use a version such as 1.0.0."
+      : "";
+  }
   async submit() {
     if (this.busy() || !this.destinationAllowed) return;
+    this.submitted = true;
+    if (this.nameError || this.versionError) return;
     this.busy.set(true);
     this.error.set("");
     const r = this.resource;

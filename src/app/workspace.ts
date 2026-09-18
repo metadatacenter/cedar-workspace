@@ -163,7 +163,23 @@ export class Workspace {
           map.keys.forEach((key) => this.params.set(key, map.get(key)!));
           this.search = map.get("search") || "";
           this.folder = map.get("folderId") || this.api.profile.homeFolderId;
-          this.offset.set(0);
+          const sort = map.get("sort") || "name";
+          this.sort = [
+            "name",
+            "-name",
+            "createdOnTS",
+            "-createdOnTS",
+            "lastUpdatedOnTS",
+            "-lastUpdatedOnTS",
+          ].includes(sort)
+            ? sort
+            : "name";
+          const offset = Number(map.get("offset") || 0);
+          this.offset.set(
+            Number.isSafeInteger(offset) && offset >= 0
+              ? Math.floor(offset / 50) * 50
+              : 0,
+          );
           void this.load();
         });
     } catch (e) {
@@ -246,6 +262,7 @@ export class Workspace {
       });
     }
   }
+  private menuTrigger: HTMLElement | null = null;
   menuTop = signal(8);
   menuLeft = signal(8);
   @HostListener("document:click", ["$event"]) dismissMenu(event: MouseEvent) {
@@ -262,7 +279,33 @@ export class Workspace {
   @HostListener("window:resize")
   @HostListener("document:keydown.escape")
   escapeMenu() {
+    if (this.menu()) this.menuTrigger?.focus();
     this.menu.set(null);
+    this.host.nativeElement
+      .querySelectorAll<HTMLDetailsElement>("details[open]")
+      .forEach((menu) => {
+        menu.open = false;
+        menu.querySelector<HTMLElement>("summary")?.focus();
+      });
+  }
+  menuKey(event: KeyboardEvent) {
+    const keys = ["ArrowDown", "ArrowUp", "Home", "End"];
+    if (!keys.includes(event.key)) return;
+    event.preventDefault();
+    const buttons = [
+      ...this.host.nativeElement.querySelectorAll<HTMLButtonElement>(
+        ".resource-menu button:not(:disabled)",
+      ),
+    ];
+    const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+    const next =
+      event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? buttons.length - 1
+          : (index + (event.key === "ArrowDown" ? 1 : -1) + buttons.length) %
+            buttons.length;
+    buttons[next]?.focus();
   }
   async select(r: Resource, reveal = true) {
     const read = ++this.detailRead;
@@ -314,7 +357,8 @@ export class Workspace {
       this.menu.set(null);
       return;
     }
-    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    this.menuTrigger = event.currentTarget as HTMLElement;
+    const rect = this.menuTrigger.getBoundingClientRect();
     this.menuLeft.set(
       Math.max(8, Math.min(rect.right - 220, window.innerWidth - 228)),
     );
@@ -325,6 +369,9 @@ export class Workspace {
         if (this.menu() !== r["@id"]) return;
         const menu =
           this.host.nativeElement.querySelector<HTMLElement>(".resource-menu");
+        menu
+          ?.querySelector<HTMLButtonElement>("button:not(:disabled)")
+          ?.focus();
         if (menu)
           this.menuTop.set(
             Math.max(
@@ -357,13 +404,21 @@ export class Workspace {
     });
   }
   changeSort(field: string) {
-    this.sort = this.sort === field ? "-" + field : field;
-    this.offset.set(0);
-    void this.load();
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParamsHandling: "merge",
+      queryParams: {
+        sort: this.sort === field ? "-" + field : field,
+        offset: null,
+      },
+    });
   }
   page(delta: number) {
-    this.offset.set(Math.max(0, this.offset() + delta * 50));
-    void this.load();
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParamsHandling: "merge",
+      queryParams: { offset: Math.max(0, this.offset() + delta * 50) },
+    });
   }
   link(r: Resource, populate = false) {
     return resourceLink(
@@ -393,6 +448,7 @@ export class Workspace {
     );
   }
   async act(id: string, r: Resource) {
+    this.menuTrigger?.focus();
     this.menu.set(null);
     this.error.set("");
     if (!actions(r).find((a) => a.id === id)?.enabled) return;

@@ -1,14 +1,15 @@
 <dialog
+  cedarDialogKeyboard
   #dialog
   aria-labelledby="dialog-title"
-  (cancel)="$event.preventDefault(); !busy() && closed.emit()"
+  (cancel)="$event.preventDefault(); close()"
 >
   <form (ngSubmit)="submit()">
     <header>
       <h2 id="dialog-title">{{heading}}</h2>
       <button
         type="button"
-        (click)="closed.emit()"
+        (click)="close()"
         [disabled]="busy()"
         aria-label="Close dialog"
       >
@@ -23,12 +24,17 @@
     <fieldset [disabled]="busy()">
       @if(['new-folder','rename','copy'].includes(action)){<label
         >Name<input
+          [attr.aria-invalid]="submitted && nameError ? true : null"
+          [attr.aria-describedby]="submitted && nameError ? 'name-error' : null"
           name="name"
           [(ngModel)]="name"
           required
           pattern=".*\S.*"
-          autofocus /></label
-      >} @if(['new-folder','rename'].includes(action)){<label
+          autofocus
+      /></label>
+      @if(submitted && nameError){
+      <p id="name-error" class="field-error" role="alert">{{nameError}}</p>
+      } } @if(['new-folder','rename'].includes(action)){<label
         >Description<textarea
           name="description"
           [(ngModel)]="description"
@@ -36,11 +42,18 @@
         ></textarea></label
       >} @if(['publish','draft'].includes(action)){<label
         >Version<input
+          [attr.aria-invalid]="submitted && versionError ? true : null"
+          [attr.aria-describedby]="submitted && versionError ? 'version-error' : null"
           name="version"
           [(ngModel)]="version"
           required
-          pattern="[0-9]+\.[0-9]+\.[0-9]+" /></label
-      >} @if(action==='draft'){<label class="check"
+          pattern="[0-9]+\.[0-9]+\.[0-9]+"
+      /></label>
+      @if(submitted && versionError){
+      <p id="version-error" class="field-error" role="alert">
+        {{versionError}}
+      </p>
+      } } @if(action==='draft'){<label class="check"
         ><input type="checkbox" name="propagate" [(ngModel)]="propagate" />Keep
         sharing permissions</label
       ><label
@@ -109,8 +122,7 @@
     <p class="description" role="status">{{status()}}</p>
     }
     <footer>
-      <button type="button" (click)="closed.emit()" [disabled]="busy()">
-        Cancel</button
+      <button type="button" (click)="close()" [disabled]="busy()">Cancel</button
       ><button
         class="primary"
         type="submit"

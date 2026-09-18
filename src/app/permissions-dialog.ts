@@ -1,3 +1,4 @@
+import { DialogKeyboard } from "./dialog-keyboard";
 import {
   AfterViewInit,
   Component,
@@ -43,7 +44,7 @@ export const principalName = (p: Principal) =>
 
 @Component({
   selector: "cedar-permissions-dialog",
-  imports: [FormsModule, GroupPicker, Icon],
+  imports: [DialogKeyboard, FormsModule, GroupPicker, Icon],
   templateUrl: "./permissions-dialog.html",
   styleUrl: "./permissions-dialog.scss",
 })

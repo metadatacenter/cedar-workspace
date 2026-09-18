@@ -769,3 +769,9 @@ textarea {
 }
 
 @include motion.reduced-motion;
+
+.field-error {
+  color: var(--cedar-status-error-text);
+  font-size: var(--cedar-font-size-small);
+  margin-top: var(--cedar-form-help-gap);
+}

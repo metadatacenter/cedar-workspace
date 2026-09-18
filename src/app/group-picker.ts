@@ -19,7 +19,7 @@ import { FormsModule } from "@angular/forms";
       role="combobox"
       autocomplete="off"
       [attr.aria-expanded]="open && matches.length > 0"
-      [attr.aria-controls]="id + '-options'"
+      [attr.aria-controls]="open && matches.length ? id + '-options' : null"
       [attr.aria-activedescendant]="
         open && matches.length ? id + '-option-' + active : null
       "
@@ -33,10 +33,16 @@ import { FormsModule } from "@angular/forms";
       (blur)="open = false"
     />
     @if (open && matches.length) {
-      <div class="options" role="listbox" [id]="id + '-options'">
+      <div
+        class="options"
+        role="listbox"
+        [attr.aria-label]="label"
+        [id]="id + '-options'"
+      >
         @for (option of matches; track option.id; let i = $index) {
           <button
             type="button"
+            tabindex="-1"
             role="option"
             [id]="id + '-option-' + i"
             [attr.aria-selected]="i === active"
@@ -48,6 +54,8 @@ import { FormsModule } from "@angular/forms";
           </button>
         }
       </div>
+    } @else if (open && query.trim()) {
+      <p role="status">No matches found.</p>
     }
   `,
   styles: [
@@ -144,7 +152,9 @@ export class GroupPicker implements OnChanges {
     if (this.clearOnPick) this.query = "";
   }
   key(event: KeyboardEvent) {
-    if (event.key === "Escape") {
+    if (event.key === "Escape" && this.open) {
+      event.preventDefault();
+      event.stopPropagation();
       this.open = false;
       return;
     }

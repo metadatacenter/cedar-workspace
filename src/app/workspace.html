@@ -254,7 +254,7 @@
                 aria-label="Artifact actions"
                 [style.left.px]="menuLeft()"
                 [style.top.px]="menuTop()"
-                (keydown.escape)="menu.set(null)"
+                (keydown)="menuKey($event)"
               >
                 @for(a of actions(r);track a.id){<button
                   [disabled]="!a.enabled"
