@@ -79,8 +79,8 @@ h2 {
   margin: 20px 0 var(--cedar-space-1);
   padding: var(--cedar-space-3);
   border-left: 3px solid var(--cedar-color-primary);
-  background: var(--cedar-surface-tinted);
-  color: var(--cedar-text-muted);
+  background: var(--cedar-status-info-surface);
+  color: var(--cedar-status-info-text);
 }
 .access-panel {
   padding: 14px 0 var(--cedar-space-4);
@@ -114,8 +114,8 @@ select {
   border-color: var(--cedar-control-border-authoring);
 }
 select:disabled {
-  background: var(--cedar-surface-panel);
-  color: var(--cedar-text-muted);
+  background: var(--cedar-control-readonly-surface);
+  color: var(--cedar-text-readonly);
 }
 .add-controls {
   display: flex;

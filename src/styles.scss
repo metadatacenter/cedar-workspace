@@ -10,7 +10,7 @@ body {
   font-family: var(--cedar-font-family);
   font-size: var(--cedar-font-size);
   color: var(--cedar-text-primary);
-  background: var(--cedar-surface-authoring);
+  background: var(--cedar-surface-canvas);
 }
 
 button,
@@ -263,9 +263,10 @@ td:first-child a {
 td:not(:first-child) {
   white-space: nowrap;
 }
-tbody tr:hover,
-tr.selected {
-  background: var(--cedar-surface-tinted);
+tbody tr:hover { background: var(--cedar-surface-row-hover); }
+tr.selected, tr.selected:hover {
+  background: var(--cedar-surface-selected);
+  color: var(--cedar-text-selected);
 }
 .resource-icon {
   display: inline-block;
@@ -393,11 +394,12 @@ dd small {
   align-items: center;
 }
 .alert {
-  color: var(--cedar-color-error);
-  background: var(--cedar-surface-advisory);
+  color: var(--cedar-status-error-text);
+  background: var(--cedar-status-error-surface);
 }
 .notice {
-  background: var(--cedar-surface-tinted);
+  color: var(--cedar-status-info-text);
+  background: var(--cedar-status-info-surface);
 }
 .sr-only {
   position: absolute;
@@ -744,3 +746,5 @@ td:first-child a {
 }
 
 input, select, textarea { @include controls.input-states; }
+
+.topbar :focus-visible { outline-color: var(--cedar-color-on-primary); }
