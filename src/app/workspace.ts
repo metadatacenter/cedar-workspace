@@ -4,6 +4,9 @@ import {
   HostListener,
   inject,
   signal,
+  afterNextRender,
+  ElementRef,
+  Injector,
 } from "@angular/core";
 import { dateFormat } from "./date-format";
 import { DatePipe } from "@angular/common";
@@ -112,6 +115,8 @@ export class Workspace {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private destroy = inject(DestroyRef);
+  private host: ElementRef<HTMLElement> = inject(ElementRef);
+  private injector = inject(Injector);
   readonly title = title;
   readonly can = can;
   readonly actions = actions;
@@ -241,8 +246,8 @@ export class Workspace {
       });
     }
   }
-  menuTop = 0;
-  menuLeft = 0;
+  menuTop = signal(8);
+  menuLeft = signal(8);
   @HostListener("document:click", ["$event"]) dismissMenu(event: MouseEvent) {
     const target = event.target as Element;
     if (!target.closest(".row-actions")) this.menu.set(null);
@@ -254,7 +259,9 @@ export class Workspace {
         if (!menu.contains(target)) menu.open = false;
       });
   }
-  @HostListener("document:keydown.escape") escapeMenu() {
+  @HostListener("window:resize")
+  @HostListener("document:keydown.escape")
+  escapeMenu() {
     this.menu.set(null);
   }
   async select(r: Resource, reveal = true) {
@@ -308,12 +315,29 @@ export class Workspace {
       return;
     }
     const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-    this.menuLeft = Math.max(8, rect.right - 220);
-    this.menuTop = Math.max(
-      80,
-      Math.min(rect.bottom, window.innerHeight - 350),
+    this.menuLeft.set(
+      Math.max(8, Math.min(rect.right - 220, window.innerWidth - 228)),
     );
+    this.menuTop.set(8);
     this.menu.set(r["@id"]);
+    afterNextRender(
+      () => {
+        if (this.menu() !== r["@id"]) return;
+        const menu =
+          this.host.nativeElement.querySelector<HTMLElement>(".resource-menu");
+        if (menu)
+          this.menuTop.set(
+            Math.max(
+              8,
+              Math.min(
+                rect.bottom,
+                window.innerHeight - menu.getBoundingClientRect().height - 8,
+              ),
+            ),
+          );
+      },
+      { injector: this.injector },
+    );
     try {
       const { data } = await this.api.report(r);
       this.rows.update((rows) =>

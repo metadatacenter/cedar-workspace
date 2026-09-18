@@ -243,8 +243,9 @@
               @if(menu()===r['@id']){
               <div
                 class="resource-menu"
-                [style.left.px]="menuLeft"
-                [style.top.px]="menuTop"
+                aria-label="Artifact actions"
+                [style.left.px]="menuLeft()"
+                [style.top.px]="menuTop()"
                 (keydown.escape)="menu.set(null)"
               >
                 @for(a of actions(r);track a.id){<button

@@ -1,6 +1,6 @@
 import { TestBed } from "@angular/core/testing";
 import { provideRouter } from "@angular/router";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Workspace, actions } from "./workspace";
 import { Backend } from "./backend.service";
 import { Config, Resource } from "./resource";
@@ -20,8 +20,10 @@ const config = {
   resourceRestAPI: "https://api.example",
   templateDesignerFrontend: "https://designer.example",
   workspaceFrontend: "https://workspace.example",
+  openViewBase: "https://openview.example",
 } as Config;
 describe("Angular Workspace", () => {
+  afterEach(() => vi.unstubAllGlobals());
   let api: {
     init: ReturnType<typeof vi.fn>;
     request: ReturnType<typeof vi.fn>;
@@ -175,5 +177,132 @@ describe("Angular Workspace", () => {
     ]);
     expect(list.find((a) => a.id === "delete")?.enabled).toBe(false);
     expect(list.find((a) => a.id === "open")?.enabled).toBe(true);
+  });
+  for (const resourceType of [
+    "template",
+    "element",
+    "field",
+    "instance",
+    "folder",
+  ] as const) {
+    for (const editable of [false, true]) {
+      it(`renders the legacy menu for ${editable ? "editable" : "read-only"} ${resourceType} resources`, async () => {
+        vi.stubGlobal("dataciteEnabled", false);
+        vi.stubGlobal("makeOpenEnabled", true);
+        const f = await render();
+        const resource: Resource = {
+          ...template,
+          resourceType,
+          pathInfo: [folder],
+          currentUserPermissions: {
+            capabilities: [
+              "readResource",
+              ...(editable
+                ? [
+                    "copyFromResource",
+                    "moveResource",
+                    "updateResource",
+                    "deleteResource",
+                  ]
+                : []),
+            ],
+            availableActions: editable
+              ? ["populate", "publish", "enableOpenView"]
+              : [],
+          },
+        };
+        api.report.mockResolvedValue({ data: resource });
+        f.componentInstance.rows.set([resource]);
+        f.detectChanges();
+        (
+          f.nativeElement.querySelector(
+            '[aria-label="Actions for A template"]',
+          ) as HTMLButtonElement
+        ).click();
+        await f.whenStable();
+        f.detectChanges();
+        const buttons = [
+          ...(
+            f.nativeElement as HTMLElement
+          ).querySelectorAll<HTMLButtonElement>(".resource-menu button"),
+        ];
+        expect(buttons.map((b) => b.textContent?.trim())).toEqual([
+          "Populate",
+          "Open",
+          "Permissions…",
+          "Copy",
+          "Move",
+          "Rename",
+          "Copy Folder ID",
+          "Copy Parent Folder ID",
+          "Download JSON",
+          "Download YAML",
+          "Download Compact YAML",
+          ...(resourceType === "instance" ? [] : ["Publish", "Create Draft"]),
+          "Delete",
+          "DataCite wizard",
+          "Make Open",
+          "Make Not Open",
+          "Open in OpenView",
+        ]);
+        const disabled = (name: string) =>
+          buttons.find((b) => b.textContent?.trim() === name)!.disabled;
+        expect(disabled("Permissions…")).toBe(false);
+        expect(disabled("Copy")).toBe(!editable || resourceType === "folder");
+        expect(disabled("Populate")).toBe(
+          !editable || resourceType !== "template",
+        );
+        expect(disabled("Delete")).toBe(!editable);
+        expect(disabled("Download JSON")).toBe(resourceType === "folder");
+        expect(disabled("Copy Folder ID")).toBe(resourceType !== "folder");
+        expect(disabled("DataCite wizard")).toBe(true);
+        expect(disabled("Make Open")).toBe(!editable);
+        const act = vi.spyOn(f.componentInstance, "act");
+        buttons
+          .find((b) => b.textContent?.trim() === "DataCite wizard")!
+          .click();
+        expect(act).not.toHaveBeenCalled();
+      });
+    }
+  }
+  it("shows published lifecycle actions from the fresh report and leaves disabled features visible", async () => {
+    vi.stubGlobal("makeOpenEnabled", false);
+    vi.stubGlobal("dataciteEnabled", false);
+    const f = await render();
+    api.report.mockResolvedValue({
+      data: {
+        ...template,
+        isOpen: true,
+        currentUserPermissions: {
+          capabilities: ["readResource"],
+          availableActions: ["createDraft", "disableOpenView"],
+        },
+      },
+    });
+    (
+      f.nativeElement.querySelector(
+        '[aria-label="Actions for A template"]',
+      ) as HTMLButtonElement
+    ).click();
+    await f.whenStable();
+    f.detectChanges();
+    const button = (label: string) =>
+      [
+        ...(f.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>(
+          ".resource-menu button",
+        ),
+      ].find((b) => b.textContent?.trim() === label)!;
+    expect(button("Create Draft").disabled).toBe(false);
+    for (const label of [
+      "Publish",
+      "Make Open",
+      "Make Not Open",
+      "Open in OpenView",
+      "DataCite wizard",
+    ])
+      expect(button(label).disabled).toBe(true);
+    window.dispatchEvent(new Event("resize"));
+    f.detectChanges();
+    expect(f.nativeElement.querySelector(".resource-menu")).toBeNull();
   });
 });
