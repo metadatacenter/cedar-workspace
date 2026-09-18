@@ -1,8 +1,10 @@
+import { Icon } from "./icon";
 import { Component, Input } from "@angular/core";
 @Component({
+  imports: [Icon],
   selector: "cedar-account-shell",
   template: ` <header class="account-header">
-      <a href="/dashboard">← Workspace</a>
+      <a href="/dashboard"><cedar-icon name="back" /> Workspace</a>
       <h1>{{ title }}</h1>
     </header>
     <nav class="account-nav" aria-label="Account pages">

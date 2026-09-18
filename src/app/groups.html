@@ -34,8 +34,7 @@
 <div id="groups-page">
   <div class="navbar-back">
     <a href="/dashboard" aria-label="Back to Workspace"
-      ><span aria-hidden="true">←</span
-      ><span class="document-title">Groups</span></a
+      ><cedar-icon name="back" /><span class="document-title">Groups</span></a
     >
   </div>
   <main class="groups-content">
@@ -299,13 +298,5 @@
   }
 </ng-template>
 <ng-template #trash>
-  <svg
-    width="16"
-    height="18"
-    viewBox="0 0 16 18"
-    fill="currentColor"
-    aria-hidden="true"
-  >
-    <path d="M5 1h6l1 2h3v2H1V3h3zM3 6h10l-1 11H4zm3 2v7h1V8zm3 0v7h1V8z" />
-  </svg>
+  <cedar-icon name="delete" />
 </ng-template>

@@ -1,3 +1,4 @@
+import { Icon } from "./icon";
 import {
   AfterViewInit,
   Component,
@@ -16,7 +17,7 @@ import { Backend } from "./backend.service";
 import { Resource, Listing, title, can } from "./resource";
 @Component({
   selector: "cedar-resource-dialog",
-  imports: [FormsModule],
+  imports: [Icon, FormsModule],
   templateUrl: "./resource-dialog.html",
 })
 export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {

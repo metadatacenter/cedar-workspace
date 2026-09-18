@@ -45,12 +45,16 @@
 @if(error()){
 <div class="alert" role="alert">
   {{error()}}
-  <button (click)="error.set('')" aria-label="Dismiss error">×</button>
+  <button (click)="error.set('')" aria-label="Dismiss error">
+    <cedar-icon name="close" />
+  </button>
 </div>
 } @if(notice()){
 <div class="notice" role="status">
   {{notice()}}
-  <button (click)="notice.set('')" aria-label="Dismiss notification">×</button>
+  <button (click)="notice.set('')" aria-label="Dismiss notification">
+    <cedar-icon name="close" />
+  </button>
 </div>
 } @if(!ready()){
 <p class="loading" role="status">Connecting to your workspace…</p>
@@ -164,7 +168,11 @@
               [attr.aria-sort]="sort==='name'?'ascending':sort==='-name'?'descending':'none'"
             >
               <button (click)="changeSort('name')">
-                Title {{sort==='name'?'▴':sort==='-name'?'▾':''}}
+                Title @if(sort === "name" || sort === "-name") {
+                <cedar-icon
+                  [name]="sort === 'name' ? 'chevron-up' : 'chevron-down'"
+                />
+                }
               </button>
             </th>
             <th
@@ -224,7 +232,7 @@
                 [href]="link(r,true)"
                 aria-label="Populate template"
                 title="Populate template"
-                ><cedar-icon name="instance" /></a
+                ><cedar-icon name="populate" /></a
               >}
               <button
                 (click)="select(r)"

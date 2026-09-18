@@ -1,5 +1,7 @@
 <header class="metadata-toolbar">
-  <button (click)="back()" [disabled]="saving()">← Workspace</button>
+  <button (click)="back()" [disabled]="saving()">
+    <cedar-icon name="back" /> Workspace
+  </button>
   <div>
     <strong>{{name || 'Metadata'}}</strong><small>{{templateName}}</small>
   </div>

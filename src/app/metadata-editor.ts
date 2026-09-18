@@ -1,3 +1,4 @@
+import { Icon } from "./icon";
 import {
   AfterViewInit,
   Component,
@@ -78,7 +79,7 @@ export const leaveMetadata: CanDeactivateFn<MetadataEditor> = (editor) =>
 
 @Component({
   selector: "cedar-metadata-page",
-  imports: [FormsModule],
+  imports: [Icon, FormsModule],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: "./metadata-editor.html",
 })
