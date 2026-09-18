@@ -1,7 +1,9 @@
 import { Component, OnInit, inject, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { Backend, HttpError } from "./backend.service";
-import { AccountShell } from "./account-shell";
+import { NgTemplateOutlet } from "@angular/common";
+import { Icon } from "./icon";
+import { GroupPicker } from "./group-picker";
 export interface Group {
   "@id": string;
   "schema:name": string;
@@ -24,7 +26,8 @@ export const userName = (u: GroupUser) =>
   [u.firstName, u.lastName].filter(Boolean).join(" ") || "Unnamed user";
 @Component({
   selector: "cedar-groups-page",
-  imports: [FormsModule, AccountShell],
+  imports: [FormsModule, NgTemplateOutlet, Icon, GroupPicker],
+  styleUrl: "./groups.scss",
   templateUrl: "./groups.html",
 })
 export class Groups implements OnInit {
@@ -43,7 +46,44 @@ export class Groups implements OnInit {
   groupEtag: string | null = null;
   memberEtag: string | null = null;
   private generation = 0;
+  activeTab: "manage" | "create" = "manage";
+  createdGroup: Group | null = null;
   search = "";
+  get groupOptions() {
+    return this.filteredGroups.map((g) => ({
+      id: g["@id"],
+      label: groupName(g),
+    }));
+  }
+  get memberOptions() {
+    return this.availableUsers.map((u) => ({
+      id: u["@id"],
+      label: userName(u),
+    }));
+  }
+  async chooseGroup(id: string) {
+    const group = this.groups().find((g) => g["@id"] === id);
+    if (group) await this.select(group);
+  }
+  async selectTab(tab: "manage" | "create") {
+    if (this.busy() || this.selecting()) return;
+    this.activeTab = tab;
+    if (
+      tab === "manage" &&
+      this.selected()?.["@id"] === this.createdGroup?.["@id"]
+    ) {
+      this.selected.set(null);
+      this.members.set(null);
+      this.newMember = "";
+    }
+    if (
+      tab === "create" &&
+      this.createdGroup &&
+      this.selected()?.["@id"] !== this.createdGroup["@id"]
+    ) {
+      await this.select(this.createdGroup);
+    }
+  }
   newName = "";
   editName = "";
   editDescription = "";
@@ -188,6 +228,7 @@ export class Groups implements OnInit {
         "schema:description": "",
       });
       this.groups.update((gs) => [...gs, r.data]);
+      this.createdGroup = r.data;
       this.newName = "";
       this.search = "";
       await this.load(r.data);
@@ -210,6 +251,8 @@ export class Groups implements OnInit {
       this.groupEtag = r.etag;
       const current = { ...g, ...body };
       this.selected.set(current);
+      if (this.createdGroup?.["@id"] === current["@id"])
+        this.createdGroup = current;
       this.groups.update((gs) =>
         gs.map((v) => (v["@id"] === g["@id"] ? current : v)),
       );
@@ -234,6 +277,7 @@ export class Groups implements OnInit {
       this.groups.update((gs) => gs.filter((v) => v["@id"] !== g["@id"]));
       this.selected.set(null);
       this.members.set(null);
+      if (this.createdGroup?.["@id"] === g["@id"]) this.createdGroup = null;
     }, "Group deleted.");
   }
   async addMember() {
