@@ -30,7 +30,7 @@
     margin-bottom: var(--cedar-space-6);
 
     h1 {
-      line-height: 1.1;
+      line-height: normal;
       margin: 0 0 var(--cedar-space-2);
       font-size: var(--cedar-font-size-display);
       font-weight: var(--cedar-font-weight-medium);
@@ -39,7 +39,7 @@
     p {
       margin: 0;
       color: var(--cedar-text-muted);
-      line-height: 1.5;
+      line-height: var(--cedar-control-line-height-default);
     }
   }
 
@@ -80,7 +80,7 @@
 
     h2,
     h3 {
-      line-height: 1.1;
+      line-height: normal;
       margin-top: 0;
       font-weight: var(--cedar-font-weight-medium);
     }
@@ -204,8 +204,8 @@
   .groups-delete-button {
     height: 22px;
     padding: 0;
-    line-height: 1;
-    font-size: 22px;
+    display: inline-flex;
+    align-items: center;
     transform: translateY(-8px);
   }
 
@@ -408,7 +408,8 @@
     background: var(--cedar-color-on-primary);
     border: 1px solid var(--cedar-control-border-authoring);
     border-radius: var(--cedar-control-radius-default);
-    box-shadow: inset 0 1px 1px rgb(0 0 0 / 8%);
+    box-shadow: inset 0 1px 1px
+      color-mix(in srgb, var(--cedar-text-primary) 8%, transparent);
     &:disabled {
       background: var(--cedar-surface-panel);
       opacity: 1;
@@ -422,7 +423,7 @@
     padding: 6px var(--cedar-space-3);
     border: 1px solid transparent;
     border-radius: var(--cedar-control-radius-default);
-    line-height: 20px;
+    line-height: var(--cedar-control-line-height-default);
   }
   .btn-primary {
     color: var(--cedar-color-on-primary);

@@ -99,7 +99,7 @@ p {
   margin: 0 0 var(--cedar-space-2);
   color: var(--cedar-text-muted);
   font-size: var(--cedar-font-size-small);
-  line-height: 1.5;
+  line-height: var(--cedar-control-line-height-authoring);
 }
 label {
   display: block;
