@@ -298,3 +298,88 @@ test("success toast expires and pauses while hovered without blocking the form",
     "Updated group",
   );
 });
+
+for (const [label, field] of [
+  ["Created", "createdOnTS"],
+  ["Modified", "lastUpdatedOnTS"],
+]) {
+  test(`${label} sorting shows direction and survives reload`, async ({
+    page,
+    api,
+  }) => {
+    await page.goto("/dashboard?offset=50");
+    const heading = page.getByRole("columnheader", {
+      name: label,
+      exact: true,
+    });
+    const button = heading.getByRole("button", { name: label });
+    await button.click();
+    await expect(page).toHaveURL(new RegExp(`sort=${field}`));
+    await expect(heading).toHaveAttribute("aria-sort", "ascending");
+    await expect(
+      heading.locator('[data-cedar-icon="chevron-up"]'),
+    ).toBeVisible();
+    await expect(page).not.toHaveURL(/offset=50/);
+    await button.click();
+    await expect(page).toHaveURL(new RegExp(`sort=-${field}`));
+    await expect(heading).toHaveAttribute("aria-sort", "descending");
+    await expect(
+      heading.locator('[data-cedar-icon="chevron-down"]'),
+    ).toBeVisible();
+    await page.reload();
+    await expect(heading).toHaveAttribute("aria-sort", "descending");
+    await expect(
+      heading.locator('[data-cedar-icon="chevron-down"]'),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("columnheader", { name: "Title" }),
+    ).toHaveAttribute("aria-sort", "none");
+  });
+}
+
+test("folder separators have equal token spacing in navigation, details and destinations", async ({
+  page,
+  api,
+}) => {
+  api.pathInfo = [
+    { "@id": "root", "schema:name": "/" },
+    { "@id": "users", "schema:name": "Users" },
+    { "@id": "home", "schema:name": "My workspace" },
+  ];
+  await dashboard(page);
+  async function spaced(locator, count) {
+    await expect(locator).toHaveCount(count);
+    for (const separator of await locator.all()) {
+      expect(
+        await separator.evaluate((node) => {
+          const style = getComputedStyle(node);
+          const token = getComputedStyle(node)
+            .getPropertyValue("--cedar-space-2")
+            .trim();
+          return {
+            start: style.marginInlineStart,
+            end: style.marginInlineEnd,
+            token,
+          };
+        }),
+      ).toEqual({ start: "8px", end: "8px", token: "8px" });
+      await expect(separator).toHaveAttribute("aria-hidden", "true");
+    }
+  }
+  await spaced(page.locator(".breadcrumbs .breadcrumb-separator"), 2);
+  await page
+    .getByRole("button", { name: "Show information", exact: true })
+    .click();
+  await spaced(page.locator(".information .breadcrumb-separator"), 2);
+  await page
+    .getByRole("button", { name: "Actions for Study metadata" })
+    .click();
+  await page
+    .locator(".resource-menu")
+    .getByRole("button", { name: "Move", exact: true })
+    .click();
+  await spaced(page.locator("dialog .breadcrumbs .breadcrumb-separator"), 3);
+  await expect(
+    page.locator("dialog .breadcrumbs button").filter({ hasText: "/" }),
+  ).toHaveCount(0);
+});

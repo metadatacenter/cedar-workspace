@@ -141,7 +141,9 @@
           [queryParams]="{folderId:p['@id']}"
           [attr.aria-current]="last?'page':null"
           >{{title(p)==='/'?'All':title(p)}}</a
-        >@if(!last){<span>/</span>}} }
+        >@if(!last){<span class="breadcrumb-separator" aria-hidden="true"
+          >/</span
+        >}} }
       </nav>
       <button
         (click)="load()"
@@ -172,12 +174,25 @@
             <th
               [attr.aria-sort]="sort==='createdOnTS'?'ascending':sort==='-createdOnTS'?'descending':'none'"
             >
-              <button (click)="changeSort('createdOnTS')">Created</button>
+              <button (click)="changeSort('createdOnTS')">
+                Created @if(sort === "createdOnTS" || sort === "-createdOnTS") {
+                <cedar-icon
+                  [name]="sort === 'createdOnTS' ? 'chevron-up' : 'chevron-down'"
+                />
+                }
+              </button>
             </th>
             <th
               [attr.aria-sort]="sort==='lastUpdatedOnTS'?'ascending':sort==='-lastUpdatedOnTS'?'descending':'none'"
             >
-              <button (click)="changeSort('lastUpdatedOnTS')">Modified</button>
+              <button (click)="changeSort('lastUpdatedOnTS')">
+                Modified @if(sort === "lastUpdatedOnTS" || sort ===
+                "-lastUpdatedOnTS") {
+                <cedar-icon
+                  [name]="sort === 'lastUpdatedOnTS' ? 'chevron-up' : 'chevron-down'"
+                />
+                }
+              </button>
             </th>
             <th><span class="sr-only">Actions</span></th>
           </tr>
@@ -321,8 +336,8 @@
         @for(p of r.pathInfo;track p['@id'];let last=$last){@if(!last){<a
           routerLink="/dashboard"
           [queryParams]="{folderId:p['@id']}"
-          >{{title(p)==='/'?'All':title(p)}} / </a
-        >}}
+          >{{title(p)==='/'?'All':title(p)}}</a
+        ><span class="breadcrumb-separator" aria-hidden="true">/</span>}}
       </dd>
       <dt>Owner</dt>
       <dd>{{r.ownedByUserName || '—'}}</dd>

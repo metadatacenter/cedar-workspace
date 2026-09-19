@@ -160,12 +160,10 @@ export const test = base.extend({
         };
       else if (path.endsWith("/groups/team/users")) {
         if (request.method() === "PUT")
-          state.members = request
-            .postDataJSON()
-            .users.map((member) => ({
-              ...member,
-              user: member.user["@id"] === owner["@id"] ? owner : collaborator,
-            }));
+          state.members = request.postDataJSON().users.map((member) => ({
+            ...member,
+            user: member.user["@id"] === owner["@id"] ? owner : collaborator,
+          }));
         body = { users: state.members };
       } else if (path.endsWith("/groups/team")) body = group;
       else if (path.endsWith("/groups"))
@@ -173,9 +171,11 @@ export const test = base.extend({
       else if (path.endsWith("/users")) body = { users: [owner, collaborator] };
       else if (path.endsWith("/contents") || path.endsWith("/search"))
         body = {
-          resources: url.searchParams.has("is_based_on") ? [] : [item],
+          resources: url.searchParams.has("is_based_on")
+            ? []
+            : [{ ...item, pathInfo: state.pathInfo }],
           totalCount: 1,
-          pathInfo: [folder],
+          pathInfo: state.pathInfo ?? [folder],
         };
       else if (path.includes("/folders/home")) body = folder;
       else if (path.includes("/template-instances/instance"))

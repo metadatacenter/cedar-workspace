@@ -66,11 +66,12 @@
         <nav class="breadcrumbs">
           <button type="button" (click)="browse(api.profile.homeFolderId)">
             Home</button
-          >@for(p of path();track p['@id']){<button
-            type="button"
-            (click)="browse(p['@id'])"
-          >
-            {{title(p)}} /</button
+          >@for(p of path();track p['@id']){<span
+            class="breadcrumb-separator"
+            aria-hidden="true"
+            >/</span
+          ><button type="button" (click)="browse(p['@id'])">
+            {{title(p)==='/'?'All':title(p)}}</button
           >}
         </nav>
         <div class="folder-list">

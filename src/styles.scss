@@ -230,7 +230,13 @@ main {
 .breadcrumbs {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--cedar-space-2);
+  align-items: center;
+  row-gap: var(--cedar-space-2);
+  color: var(--cedar-text-muted);
+}
+.breadcrumb-separator {
+  display: inline-block;
+  margin-inline: var(--cedar-space-2);
   color: var(--cedar-text-muted);
 }
 .table-scroll {
