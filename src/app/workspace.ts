@@ -110,6 +110,7 @@ export function actions(r: Resource): Action[] {
   templateUrl: "./workspace.html",
 })
 export class Workspace {
+  readonly cedarVersion = window.cedarVersion || "unknown";
   get preferredDateFormat() {
     return dateFormat(this.api.profile?.uiPreferences?.preferredDateFormat);
   }

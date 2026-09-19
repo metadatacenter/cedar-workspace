@@ -70,34 +70,14 @@ form input {
   width: 100%;
 }
 
-// Flat section panels follow the editor's understated heading and divider treatment.
-.account-card {
-  padding: 0;
-  margin-bottom: var(--cedar-space-4);
-  border: 1px solid var(--cedar-border-rule);
-  border-radius: var(--cedar-control-radius-authoring);
-  overflow: hidden;
-}
-.profile-section-heading {
-  display: flex;
-  align-items: center;
-  gap: var(--cedar-space-2);
-  margin: 0;
-  padding: var(--cedar-space-3) var(--cedar-space-4);
-  color: var(--cedar-color-artifact-title);
-  background: var(--cedar-surface-panel);
-  border-bottom: 1px solid var(--cedar-border-rule);
-}
-.profile-section-heading cedar-icon {
+.account-section-heading cedar-icon {
   color: var(--cedar-color-primary);
 }
-.profile-section-heading small {
+.account-section-heading small {
   margin-inline-start: auto;
   font-size: var(--cedar-font-size-small);
 }
-.profile-section-body {
-  padding: var(--cedar-space-3) var(--cedar-space-4);
-}
+
 .profile-facts dt:last-of-type,
 .profile-facts dd:last-of-type {
   border-bottom: 0;

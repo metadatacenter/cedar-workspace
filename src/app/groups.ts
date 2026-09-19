@@ -33,6 +33,7 @@ export const userName = (u: GroupUser) =>
   templateUrl: "./groups.html",
 })
 export class Groups implements OnInit {
+  readonly cedarVersion = window.cedarVersion || "unknown";
   readonly confirmation = inject(Confirmation);
   readonly api = inject(Backend);
   readonly loading = signal(true);

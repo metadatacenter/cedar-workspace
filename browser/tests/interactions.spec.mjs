@@ -394,8 +394,8 @@ test("profile sections expose labelled copy actions for API examples", async ({
     });
   });
   await page.goto("/profile");
-  await expect(page.locator(".profile-section-heading")).toHaveCount(3);
-  await expect(page.locator(".profile-section-heading cedar-icon")).toHaveCount(
+  await expect(page.locator(".account-section-heading")).toHaveCount(3);
+  await expect(page.locator(".account-section-heading cedar-icon")).toHaveCount(
     3,
   );
   const example = page.locator(".profile-example").first();
@@ -408,3 +408,31 @@ test("profile sections expose labelled copy actions for API examples", async ({
   await expect.poll(() => page.evaluate(() => window.profileCopied)).toBe(text);
   expect(text).toContain("<API_KEY>");
 });
+
+for (const route of ["settings", "privacy", "profile"]) {
+  test(`${route} is a styled standalone account page`, async ({
+    page,
+    api,
+  }, testInfo) => {
+    await page.goto("/" + route);
+    await expect(page.locator(".account-card").first()).toBeVisible();
+    await expect(
+      page.getByRole("navigation", { name: "Account pages" }),
+    ).toHaveCount(0);
+    await expect(page.locator(".account-section-heading").first()).toHaveCSS(
+      "border-bottom-width",
+      "1px",
+    );
+    for (const width of [1440, 375]) {
+      await page.setViewportSize({ width, height: 900 });
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth,
+        ),
+      ).toBe(true);
+      await page.screenshot({
+        path: testInfo.outputPath(`${route}-${width}.png`),
+      });
+    }
+  });
+}

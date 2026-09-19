@@ -6,8 +6,8 @@
 >
   @if(profile){
   <section class="account-card">
-    <h2 class="profile-section-heading"><cedar-icon name="user" />Account</h2>
-    <div class="profile-section-body">
+    <h2 class="account-section-heading"><cedar-icon name="user" />Account</h2>
+    <div class="account-section-body">
       <dl class="profile-facts">
         @for(field of fields;track field[0]){
         <dt>{{field[0]}}</dt>
@@ -34,10 +34,10 @@
     </div>
   </section>
   <section class="account-card">
-    <h2 class="profile-section-heading">
+    <h2 class="account-section-heading">
       <cedar-icon name="lock" />API Keys <small>{{keys().length}} / 20</small>
     </h2>
-    <div class="profile-section-body">
+    <div class="account-section-body">
       <p>
         Keep your keys secret. Each grants access to your CEDAR account. Keep at
         least one active key.
@@ -85,10 +85,10 @@
     </div>
   </section>
   <section class="account-card">
-    <h2 class="profile-section-heading">
+    <h2 class="account-section-heading">
       <cedar-icon name="code" />Using the CEDAR REST API
     </h2>
-    <div class="profile-section-body">
+    <div class="account-section-body">
       <p>
         Replace &lt;API_KEY&gt; with a key above. Artifact identifiers in URLs
         must be URL encoded.

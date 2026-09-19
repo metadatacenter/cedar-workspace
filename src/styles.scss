@@ -789,3 +789,72 @@ textarea {
 .field-error {
   @include patterns.field-error;
 }
+
+// Flat section panels follow the editor's understated heading and divider treatment.
+.account-card {
+  padding: 0;
+  margin-bottom: var(--cedar-space-4);
+  border: 1px solid var(--cedar-border-rule);
+  border-radius: var(--cedar-control-radius-authoring);
+  overflow: hidden;
+}
+.account-section-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--cedar-space-2);
+  margin: 0;
+  padding: var(--cedar-space-3) var(--cedar-space-4);
+  color: var(--cedar-color-artifact-title);
+  background: var(--cedar-surface-panel);
+  border-bottom: 1px solid var(--cedar-border-rule);
+}
+
+.account-section-body {
+  padding: var(--cedar-space-3) var(--cedar-space-4);
+}
+.account-content {
+  width: 100%;
+  min-width: 0;
+  padding: var(--cedar-space-4);
+}
+.account-section-body > :first-child {
+  margin-top: 0;
+}
+.account-section-body > :last-child {
+  margin-bottom: 0;
+}
+.account-facts {
+  margin: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 4fr);
+}
+.account-facts dt,
+.account-facts dd {
+  margin: 0;
+  min-height: var(--cedar-control-height-default);
+  padding-block: var(--cedar-space-1);
+  display: flex;
+  align-items: center;
+}
+.account-facts dt:last-of-type,
+.account-facts dd:last-of-type {
+  border-bottom: 0;
+}
+.brand-label {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.brand-version {
+  color: var(--cedar-text-muted);
+  font-size: var(--cedar-font-size-small);
+  font-weight: var(--cedar-font-weight-regular);
+}
+@media (max-width: 700px) {
+  .account-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .account-facts dt {
+    border-bottom: 0;
+    min-height: 0;
+  }
+}

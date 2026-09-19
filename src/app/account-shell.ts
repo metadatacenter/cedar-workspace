@@ -8,25 +8,6 @@ import { Component, Input } from "@angular/core";
       <a href="/dashboard"><cedar-icon name="back" /> Workspace</a>
       <h1>{{ title }}</h1>
     </header>
-    <nav class="account-nav" aria-label="Account pages">
-      <a
-        href="/profile"
-        [attr.aria-current]="title === 'Profile' ? 'page' : null"
-        >Profile</a
-      ><a
-        href="/settings"
-        [attr.aria-current]="title === 'Settings' ? 'page' : null"
-        >Settings</a
-      ><a
-        href="/groups"
-        [attr.aria-current]="title === 'Groups' ? 'page' : null"
-        >Groups</a
-      ><a
-        href="/privacy"
-        [attr.aria-current]="title === 'Privacy' ? 'page' : null"
-        >Privacy</a
-      >
-    </nav>
     <main class="account-content">
       @if (error) {
         <p class="alert" role="alert">{{ error }}</p>
