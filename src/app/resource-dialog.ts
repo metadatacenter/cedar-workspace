@@ -1,3 +1,4 @@
+import { Confirmation } from "./confirmation";
 import { DialogKeyboard } from "./dialog-keyboard";
 import { Icon } from "./icon";
 import {
@@ -22,6 +23,7 @@ import { Resource, Listing, title, can } from "./resource";
   templateUrl: "./resource-dialog.html",
 })
 export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
+  readonly confirmation = inject(Confirmation);
   @Input({ required: true }) action = "";
   @Input() resource?: Resource;
   @Input({ required: true }) folder = "";
@@ -89,12 +91,12 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
       this.newFolderName,
     ]);
   }
-  close() {
+  async close() {
     if (this.busy()) return;
     if (
       this.initialValues !== null &&
       this.values() !== this.initialValues &&
-      !window.confirm("Discard unsaved changes?")
+      !(await this.confirmation.confirm("Discard unsaved changes?"))
     )
       return;
     this.closed.emit();

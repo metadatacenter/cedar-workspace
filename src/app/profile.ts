@@ -1,3 +1,4 @@
+import { Confirmation } from "./confirmation";
 import { Component, OnInit, inject, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { Backend } from "./backend.service";
@@ -25,6 +26,7 @@ export function displayAccountDate(
   templateUrl: "./profile.html",
 })
 export class Profile implements OnInit {
+  readonly confirmation = inject(Confirmation);
   readonly api = inject(Backend);
   readonly loading = signal(true);
   readonly busy = signal(false);
@@ -114,11 +116,11 @@ export class Profile implements OnInit {
     if (
       action !== "create" &&
       (!key ||
-        !window.confirm(
+        !(await this.confirmation.confirm(
           action === "delete"
             ? "Delete this API key? Scripts using it will stop working."
             : "Regenerate this API key? Its previous value will immediately stop working.",
-        ))
+        )))
     )
       return;
     this.busy.set(true);

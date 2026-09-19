@@ -1,3 +1,4 @@
+import { Confirmation } from "./confirmation";
 import { TestBed } from "@angular/core/testing";
 import { beforeEach, afterEach, describe, it, expect, vi } from "vitest";
 import { Groups, Group, Member } from "./groups";
@@ -38,7 +39,7 @@ describe("Groups", () => {
     host.groupEtag = '"group1"';
     host.memberEtag = '"members1"';
     host.editName = "Team";
-    vi.spyOn(window, "confirm").mockReturnValue(true);
+    vi.spyOn(TestBed.inject(Confirmation), "confirm").mockResolvedValue(true);
   });
   afterEach(() => vi.restoreAllMocks());
   it("writes narrowed details with the group revision and advances it", async () => {
@@ -101,11 +102,11 @@ describe("Groups", () => {
     await host.removeMember(me);
     await host.toggleAdmin(me);
     expect(request).not.toHaveBeenCalled();
-    expect(window.confirm).not.toHaveBeenCalled();
+    expect(TestBed.inject(Confirmation).confirm).not.toHaveBeenCalled();
   });
   it("honors cancelled administrator and deletion confirmations", async () => {
     host.members.set([me, other]);
-    vi.mocked(window.confirm).mockReturnValue(false);
+    vi.mocked(TestBed.inject(Confirmation).confirm).mockResolvedValue(false);
     await host.toggleAdmin(other);
     await host.remove();
     expect(request).not.toHaveBeenCalled();
@@ -284,7 +285,9 @@ describe("Groups", () => {
   });
   it("keeps administrator state unchanged when confirmation or the save fails", async () => {
     host.members.set([me, other]);
-    vi.mocked(window.confirm).mockReturnValueOnce(false);
+    vi.mocked(TestBed.inject(Confirmation).confirm).mockResolvedValueOnce(
+      false,
+    );
     await host.toggleAdmin(other);
     expect(host.members()).toEqual([me, other]);
     request.mockRejectedValueOnce(new Error("Unavailable"));
@@ -296,7 +299,7 @@ describe("Groups", () => {
     host.members.set([me, admin]);
     request.mockResolvedValue({ data: { users: [me, other] }, etag: '"m2"' });
     await host.toggleAdmin(admin);
-    expect(window.confirm).toHaveBeenCalledWith(
+    expect(TestBed.inject(Confirmation).confirm).toHaveBeenCalledWith(
       "Remove administrator access for Other?",
     );
     expect(host.members()).toEqual([me, other]);
@@ -304,10 +307,12 @@ describe("Groups", () => {
   });
   it("does not delete another selection if it changes during confirmation", async () => {
     const next = { ...g, "@id": "next" };
-    vi.mocked(window.confirm).mockImplementation(() => {
-      host.selected.set(next);
-      return true;
-    });
+    vi.mocked(TestBed.inject(Confirmation).confirm).mockImplementation(
+      async () => {
+        host.selected.set(next);
+        return true;
+      },
+    );
     await host.remove();
     expect(request).not.toHaveBeenCalled();
     expect(host.selected()).toEqual(next);
@@ -342,7 +347,7 @@ describe("Groups", () => {
     host.members.set([me, other]);
     request.mockResolvedValue({ data: { users: [me] }, etag: '"m2"' });
     await host.removeMember(other);
-    expect(window.confirm).toHaveBeenCalledWith(
+    expect(TestBed.inject(Confirmation).confirm).toHaveBeenCalledWith(
       "Remove Other from this group?",
     );
     expect(host.members()).toEqual([me]);

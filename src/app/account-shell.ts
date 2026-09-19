@@ -1,7 +1,8 @@
+import { Toast } from "./toast";
 import { Icon } from "./icon";
 import { Component, Input } from "@angular/core";
 @Component({
-  imports: [Icon],
+  imports: [Toast, Icon],
   selector: "cedar-account-shell",
   template: ` <header class="account-header">
       <a href="/dashboard"><cedar-icon name="back" /> Workspace</a>
@@ -31,7 +32,7 @@ import { Component, Input } from "@angular/core";
         <p class="alert" role="alert">{{ error }}</p>
       }
       @if (notice) {
-        <p class="notice" role="status">{{ notice }}</p>
+        <cedar-toast [message]="notice" />
       }
       @if (loading) {
         <p role="status">Loading…</p>

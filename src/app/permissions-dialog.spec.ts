@@ -1,3 +1,4 @@
+import { Confirmation } from "./confirmation";
 import { TestBed } from "@angular/core/testing";
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import {
@@ -54,7 +55,7 @@ describe("Permissions dialog", () => {
     host.resource = resource;
     await host.load();
     api.request.mockClear();
-    vi.spyOn(window, "confirm").mockReturnValue(true);
+    vi.spyOn(TestBed.inject(Confirmation), "confirm").mockResolvedValue(true);
   });
   afterEach(() => vi.restoreAllMocks());
   it("saves a selected principal immediately with identifier-only grants and the permissions revision", async () => {
@@ -113,7 +114,7 @@ describe("Permissions dialog", () => {
       groupPermissions: [{ group: everyone, role: "viewer" }],
     });
     await host.transfer(host.grants[1]);
-    expect(window.confirm).not.toHaveBeenCalled();
+    expect(TestBed.inject(Confirmation).confirm).not.toHaveBeenCalled();
     const transferred = {
       owner: user,
       userPermissions: [],
@@ -157,7 +158,7 @@ describe("Permissions dialog", () => {
       ...initial,
       userPermissions: [{ user, role: "viewer" }],
     });
-    vi.mocked(window.confirm).mockReturnValue(false);
+    vi.mocked(TestBed.inject(Confirmation).confirm).mockResolvedValue(false);
     await host.transfer(host.grants[0]);
     expect(api.request).not.toHaveBeenCalled();
   });
@@ -287,7 +288,7 @@ describe("Permissions dialog", () => {
   it("permits transfer only to a directly granted user, never a directory-only user", async () => {
     await host.transfer({ node: user, kind: "user", role: "viewer" });
     expect(api.request).not.toHaveBeenCalled();
-    expect(window.confirm).not.toHaveBeenCalled();
+    expect(TestBed.inject(Confirmation).confirm).not.toHaveBeenCalled();
   });
   it("waits for a grant save before another role change, removal, or transfer", async () => {
     host.permissions.set({
@@ -303,7 +304,7 @@ describe("Permissions dialog", () => {
     await host.changeRole(u, "manager");
     await host.transfer(u);
     expect(api.request).toHaveBeenCalledTimes(1);
-    expect(window.confirm).not.toHaveBeenCalled();
+    expect(TestBed.inject(Confirmation).confirm).not.toHaveBeenCalled();
     expect(host.grants).toHaveLength(2);
     resolve({
       data: { ...initial, userPermissions: [{ user, role: "viewer" }] },
@@ -324,6 +325,7 @@ describe("Permissions dialog", () => {
     const [u, g] = host.grants;
     api.request.mockReturnValue(new Promise(() => {}));
     void host.transfer(u);
+    await Promise.resolve();
     await host.remove(g);
     await host.changeRole(u, "editor");
     expect(api.request).toHaveBeenCalledTimes(1);
@@ -340,10 +342,12 @@ describe("Permissions dialog", () => {
     });
     const [u, g] = host.grants;
     api.request.mockReturnValue(new Promise(() => {}));
-    vi.mocked(window.confirm).mockImplementation(() => {
-      void host.remove(g);
-      return true;
-    });
+    vi.mocked(TestBed.inject(Confirmation).confirm).mockImplementation(
+      async () => {
+        void host.remove(g);
+        return true;
+      },
+    );
     await host.transfer(u);
     expect(api.request).toHaveBeenCalledTimes(1);
     expect(api.request.mock.calls[0][1]).toBe("PUT");

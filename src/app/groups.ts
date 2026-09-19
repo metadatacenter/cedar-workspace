@@ -1,3 +1,5 @@
+import { Toast } from "./toast";
+import { Confirmation } from "./confirmation";
 import { Component, OnInit, inject, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { Backend, HttpError } from "./backend.service";
@@ -26,11 +28,12 @@ export const userName = (u: GroupUser) =>
   [u.firstName, u.lastName].filter(Boolean).join(" ") || "Unnamed user";
 @Component({
   selector: "cedar-groups-page",
-  imports: [FormsModule, NgTemplateOutlet, Icon, GroupPicker],
+  imports: [Toast, FormsModule, NgTemplateOutlet, Icon, GroupPicker],
   styleUrl: "./groups.scss",
   templateUrl: "./groups.html",
 })
 export class Groups implements OnInit {
+  readonly confirmation = inject(Confirmation);
   readonly api = inject(Backend);
   readonly loading = signal(true);
   readonly ready = signal(false);
@@ -280,7 +283,7 @@ export class Groups implements OnInit {
       !g ||
       !this.canAdmin ||
       this.busy() ||
-      !window.confirm("Delete group “" + groupName(g) + "”?")
+      !(await this.confirmation.confirm("Delete group “" + groupName(g) + "”?"))
     )
       return;
     if (this.selected() !== g || !this.canAdmin || this.busy()) return;
@@ -311,7 +314,9 @@ export class Groups implements OnInit {
       this.onlyAdmin(m) ||
       !this.members()?.includes(m) ||
       this.busy() ||
-      !window.confirm("Remove " + userName(m.user) + " from this group?")
+      !(await this.confirmation.confirm(
+        "Remove " + userName(m.user) + " from this group?",
+      ))
     )
       return;
     if (!this.members()?.includes(m) || this.onlyAdmin(m)) return;
@@ -323,13 +328,13 @@ export class Groups implements OnInit {
       this.onlyAdmin(m) ||
       !this.members()?.includes(m) ||
       this.busy() ||
-      !window.confirm(
+      !(await this.confirmation.confirm(
         (m.administrator
           ? "Remove administrator access for "
           : "Make an administrator: ") +
           userName(m.user) +
           "?",
-      )
+      ))
     )
       return;
     if (!this.members()?.includes(m) || this.onlyAdmin(m)) return;

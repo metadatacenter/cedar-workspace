@@ -48,6 +48,10 @@ export const test = base.extend({
     const state = {
       readonly: false,
       monitoring: false,
+      members: [
+        { user: owner, administrator: true, member: true },
+        { user: collaborator, administrator: false, member: true },
+      ],
       fail: false,
       requests: [],
       pending: false,
@@ -154,14 +158,16 @@ export const test = base.extend({
             { user: collaborator, administrator: false, member: true },
           ],
         };
-      else if (path.endsWith("/groups/team/users"))
-        body = {
-          users: [
-            { user: owner, administrator: true, member: true },
-            { user: collaborator, administrator: false, member: true },
-          ],
-        };
-      else if (path.endsWith("/groups/team")) body = group;
+      else if (path.endsWith("/groups/team/users")) {
+        if (request.method() === "PUT")
+          state.members = request
+            .postDataJSON()
+            .users.map((member) => ({
+              ...member,
+              user: member.user["@id"] === owner["@id"] ? owner : collaborator,
+            }));
+        body = { users: state.members };
+      } else if (path.endsWith("/groups/team")) body = group;
       else if (path.endsWith("/groups"))
         body = request.method() === "POST" ? group : { groups: [group] };
       else if (path.endsWith("/users")) body = { users: [owner, collaborator] };

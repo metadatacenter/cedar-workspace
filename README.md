@@ -123,3 +123,17 @@ deployment and authenticated smokes before accepting the release in an environme
 - Cross-application navigation follows
   [`docs/CROSS_APP_NAVIGATION.md`](docs/CROSS_APP_NAVIGATION.md).
 - New workspace development belongs in `src/`; do not add AngularJS UI.
+
+## Confirmations and success feedback
+
+Use the shared `Confirmation` service for in-app confirmation, awaiting its result
+before writing and rechecking the target and permissions afterward. The root outlet
+provides a styled, labelled modal with Cancel focused, Escape cancellation, focus
+containment and focus restoration; it supports a confirmation above an existing dialog.
+Do not add browser `confirm()` or `alert()` calls. The native `beforeunload` warning
+is retained for browser navigation and tab closing, where custom dialogs are unavailable.
+
+Use `Toast` for successful modifications and copy feedback. It announces politely,
+can be dismissed, expires after six seconds and pauses on hover or focus. Render it
+inside the owning dialog when one is open, so it remains accessible in the modal's
+layer. Errors, stale-write conflicts and actionable recovery messages stay inline.

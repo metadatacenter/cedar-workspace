@@ -22,7 +22,7 @@
   @if(error()){
   <p role="alert" class="alert">{{error()}}</p>
   } @if(notice()){
-  <p role="status" class="notice">{{notice()}}</p>
+  <cedar-toast [message]="notice()" />
   } @if(!loading()) {
   <label for="instance-name">Metadata name</label>
   <input

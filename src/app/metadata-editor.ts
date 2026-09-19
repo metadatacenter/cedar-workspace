@@ -1,3 +1,5 @@
+import { Toast } from "./toast";
+import { Confirmation } from "./confirmation";
 import { Icon } from "./icon";
 import {
   AfterViewInit,
@@ -79,11 +81,12 @@ export const leaveMetadata: CanDeactivateFn<MetadataEditor> = (editor) =>
 
 @Component({
   selector: "cedar-metadata-page",
-  imports: [Icon, FormsModule],
+  imports: [Toast, Icon, FormsModule],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: "./metadata-editor.html",
 })
 export class MetadataEditor implements AfterViewInit, OnDestroy {
+  readonly confirmation = inject(Confirmation);
   readonly api = inject(Backend);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -274,11 +277,14 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       this.saving.set(false);
     }
   }
-  mayLeave() {
+  async mayLeave() {
     return (
       this.updatingAddress ||
       (!this.saving() &&
-        (!this.dirty() || window.confirm("Discard unsaved metadata changes?")))
+        (!this.dirty() ||
+          (await this.confirmation.confirm(
+            "Discard unsaved metadata changes?",
+          ))))
     );
   }
   back() {

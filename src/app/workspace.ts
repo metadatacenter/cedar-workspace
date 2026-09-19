@@ -1,3 +1,4 @@
+import { Toast } from "./toast";
 import {
   Component,
   DestroyRef,
@@ -98,6 +99,7 @@ export function actions(r: Resource): Action[] {
 @Component({
   selector: "cedar-workspace-page",
   imports: [
+    Toast,
     FormsModule,
     DatePipe,
     RouterLink,

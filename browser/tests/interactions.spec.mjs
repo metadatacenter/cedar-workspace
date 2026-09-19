@@ -79,11 +79,20 @@ test("failed save retains input, sends its revision, and blocks duplicate submis
   expect(api.requests.find((r) => r.method === "POST").revision).toBe(
     '"fixture-revision"',
   );
-  page.once("dialog", (dialog) => dialog.dismiss());
   await page.keyboard.press("Escape");
+  await expect(page.locator(".confirmation-dialog")).toContainText(
+    "Discard unsaved changes?",
+  );
+  await page
+    .locator(".confirmation-dialog")
+    .getByRole("button", { name: "Cancel" })
+    .click();
   await expect(page.locator("dialog[open]")).toBeVisible();
-  page.once("dialog", (dialog) => dialog.accept());
   await page.keyboard.press("Escape");
+  await page
+    .locator(".confirmation-dialog")
+    .getByRole("button", { name: "OK", exact: true })
+    .click();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
 });
 
@@ -131,8 +140,11 @@ test("unsaved metadata cannot be lost by leaving, and read-only mode cannot save
   await expect(page.locator(".metadata-toolbar")).toContainText(
     "Unsaved changes",
   );
-  page.once("dialog", (dialog) => dialog.dismiss());
   await page.getByRole("button", { name: "Workspace", exact: true }).click();
+  await page
+    .locator(".confirmation-dialog")
+    .getByRole("button", { name: "Cancel" })
+    .click();
   await expect(input).toHaveValue("Working record");
   await input.fill("Study record");
   await expect(page.locator(".metadata-toolbar")).toContainText("Saved");
@@ -164,13 +176,18 @@ test("ownership confirmation identifies recipient and cancellation preserves per
 }) => {
   await dashboard(page);
   await action(page, "Permissions…");
-  page.once("dialog", async (dialog) => {
-    expect(dialog.message()).toContain("Sam Curator");
-    expect(dialog.message()).toContain("Study metadata");
-    await dialog.dismiss();
-  });
   await page
     .getByRole("checkbox", { name: "Make Sam Curator the owner" })
+    .click();
+  await expect(page.locator(".confirmation-dialog")).toContainText(
+    "Sam Curator",
+  );
+  await expect(page.locator(".confirmation-dialog")).toContainText(
+    "Study metadata",
+  );
+  await page
+    .locator(".confirmation-dialog")
+    .getByRole("button", { name: "Cancel" })
     .click();
   expect(api.requests.filter((r) => r.method !== "GET")).toHaveLength(0);
 });
@@ -211,4 +228,73 @@ test("New menu offers only supported creation actions", async ({
     "Template",
   ]);
   await expect(page.locator('input[type="file"]')).toHaveCount(0);
+});
+
+test("group member confirmation cancels safely, restores focus, and toasts successful removal", async ({
+  page,
+  api,
+}) => {
+  page.on("dialog", () => {
+    throw new Error("Unexpected browser popup");
+  });
+  await page.goto("/groups");
+  await page.getByRole("tab", { name: "Create group", exact: true }).click();
+  await page.getByLabel("Group name", { exact: true }).fill("Research team");
+  await page.getByRole("button", { name: "Create group", exact: true }).click();
+  await expect(page.locator(".groups-member-row")).toHaveCount(2);
+  await page.getByRole("button", { name: "Dismiss notification" }).click();
+  const remove = page
+    .locator(".groups-member-row")
+    .filter({ hasText: "Sam Curator" })
+    .getByRole("button");
+  await remove.click();
+  const confirm = page.locator(".confirmation-dialog");
+  await expect(confirm).toContainText("Remove Sam Curator from this group?");
+  await expect(confirm.getByRole("button", { name: "Cancel" })).toBeFocused();
+  if (process.env.WORKSPACE_VISUAL)
+    await expect(confirm).toHaveScreenshot("member-removal-confirmation.png");
+  await page.keyboard.press("Shift+Tab");
+  await expect(
+    confirm.getByRole("button", { name: "OK", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(confirm.getByRole("button", { name: "Cancel" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(confirm).toHaveCount(0);
+  await expect(remove).toBeFocused();
+  expect(api.requests.filter((r) => r.method === "PUT")).toHaveLength(0);
+  await remove.click();
+  await confirm.getByRole("button", { name: "OK", exact: true }).click();
+  await expect(page.locator(".groups-member-row")).toHaveCount(1);
+  await expect(page.getByRole("status")).toHaveText("Group members saved.");
+  expect(api.requests.filter((r) => r.method === "PUT")).toHaveLength(1);
+  if (process.env.WORKSPACE_VISUAL)
+    await expect(page.locator(".toast")).toHaveScreenshot(
+      "group-success-toast.png",
+    );
+  await page.getByRole("button", { name: "Dismiss notification" }).click();
+  await expect(page.locator(".toast")).toHaveCount(0);
+});
+
+test("success toast expires and pauses while hovered without blocking the form", async ({
+  page,
+  api,
+}) => {
+  await page.clock.install();
+  await page.goto("/groups");
+  await page.getByRole("tab", { name: "Create group", exact: true }).click();
+  await page.getByLabel("Group name", { exact: true }).fill("Research team");
+  await page.getByRole("button", { name: "Create group", exact: true }).click();
+  const toast = page.locator(".toast");
+  await expect(toast).toBeVisible();
+  await toast.hover();
+  await page.clock.runFor(7000);
+  await expect(toast).toBeVisible();
+  await page.getByLabel("Name", { exact: true }).click();
+  await page.getByLabel("Name", { exact: true }).fill("Updated group");
+  await page.clock.runFor(6100);
+  await expect(toast).toHaveCount(0);
+  await expect(page.getByLabel("Name", { exact: true })).toHaveValue(
+    "Updated group",
+  );
 });

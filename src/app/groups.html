@@ -58,7 +58,7 @@
       }
     </div>
     } @if(notice()) {
-    <p class="notice" role="status">{{notice()}}</p>
+    <cedar-toast [message]="notice()" />
     } @if(loading() || selecting()) {
     <p role="status">Loading…</p>
     } @if(ready()) {

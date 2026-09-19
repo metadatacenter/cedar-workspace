@@ -1,3 +1,4 @@
+import { Confirmation } from "./confirmation";
 import { TestBed } from "@angular/core/testing";
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { Profile, displayAccountDate } from "./profile";
@@ -31,7 +32,7 @@ describe("Profile", () => {
       ],
     });
     host = TestBed.runInInjectionContext(() => new Profile());
-    vi.spyOn(window, "confirm").mockReturnValue(true);
+    vi.spyOn(TestBed.inject(Confirmation), "confirm").mockResolvedValue(true);
   });
   afterEach(() => vi.restoreAllMocks());
   it("masks keys until explicitly revealed and keeps examples free of secrets", async () => {
@@ -61,7 +62,7 @@ describe("Profile", () => {
     expect(host.revealed().size).toBe(0);
   });
   it("does not regenerate if confirmation is cancelled", async () => {
-    vi.mocked(window.confirm).mockReturnValue(false);
+    vi.mocked(TestBed.inject(Confirmation).confirm).mockResolvedValue(false);
     await host.mutate("regenerate", key);
     expect(request).not.toHaveBeenCalled();
   });

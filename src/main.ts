@@ -1,3 +1,4 @@
+import { ConfirmationOutlet } from "./app/confirmation";
 import { Component } from "@angular/core";
 import { bootstrapApplication } from "@angular/platform-browser";
 import { provideRouter, RouterOutlet } from "@angular/router";
@@ -14,8 +15,8 @@ import {
 } from "./app/metadata-editor";
 @Component({
   selector: "cedar-workspace",
-  imports: [RouterOutlet],
-  template: "<router-outlet />",
+  imports: [RouterOutlet, ConfirmationOutlet],
+  template: "<router-outlet /><cedar-confirmation />",
 })
 class App {}
 bootstrapApplication(App, {

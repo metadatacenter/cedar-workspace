@@ -164,7 +164,7 @@ for (const width of [1440, 375]) {
       "margin-bottom",
       "8px",
     );
-    await expect(page.locator(".notice")).toHaveCSS("padding-top", "8px");
+    await expect(page.locator(".toast")).toHaveCSS("padding-top", "8px");
     await expect(page.locator("#group-name")).toHaveCSS("height", "36px");
     if (width === 1440) {
       for (const row of await page.locator(".groups-member-row").all())

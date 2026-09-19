@@ -1,3 +1,5 @@
+import { Toast } from "./toast";
+import { Confirmation } from "./confirmation";
 import { DialogKeyboard } from "./dialog-keyboard";
 import {
   AfterViewInit,
@@ -44,11 +46,12 @@ export const principalName = (p: Principal) =>
 
 @Component({
   selector: "cedar-permissions-dialog",
-  imports: [DialogKeyboard, FormsModule, GroupPicker, Icon],
+  imports: [Toast, DialogKeyboard, FormsModule, GroupPicker, Icon],
   templateUrl: "./permissions-dialog.html",
   styleUrl: "./permissions-dialog.scss",
 })
 export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
+  readonly confirmation = inject(Confirmation);
   @Input({ required: true }) resource!: Resource;
   @Output() closed = new EventEmitter<string | undefined>();
   @ViewChild("dialog", { static: true }) dialog!: ElementRef<HTMLDialogElement>;
@@ -255,13 +258,13 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
     const permissions = this.permissions();
     const resource = this.resource;
     if (
-      !window.confirm(
+      !(await this.confirmation.confirm(
         "Make " +
           principalName(grant.node) +
           " the owner of “" +
           title(this.resource) +
           "”? You may lose the ability to manage access or transfer ownership.",
-      )
+      ))
     )
       return;
     if (

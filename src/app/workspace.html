@@ -55,12 +55,7 @@
   </button>
 </div>
 } @if(notice()){
-<div class="notice" role="status">
-  {{notice()}}
-  <button (click)="notice.set('')" aria-label="Dismiss notification">
-    <cedar-icon name="close" />
-  </button>
-</div>
+<cedar-toast [message]="notice()" />
 } @if(!ready()){
 <p class="loading" role="status">Connecting to your workspace…</p>
 } @else {

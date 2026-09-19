@@ -1,3 +1,4 @@
+import { Confirmation } from "./confirmation";
 import { TestBed } from "@angular/core/testing";
 import { ElementRef } from "@angular/core";
 import {
@@ -256,18 +257,18 @@ describe("Modern metadata host", () => {
   });
   it("guards dirty navigation and unload, but allows clean navigation", async () => {
     await edit();
-    expect(host.mayLeave()).toBe(true);
+    expect(await host.mayLeave()).toBe(true);
     host.name = "Unsaved";
     host.changed();
-    vi.spyOn(window, "confirm").mockReturnValue(false);
-    expect(host.mayLeave()).toBe(false);
+    vi.spyOn(TestBed.inject(Confirmation), "confirm").mockResolvedValue(false);
+    expect(await host.mayLeave()).toBe(false);
     const event = new Event("beforeunload", { cancelable: true });
     host.beforeUnload(event as BeforeUnloadEvent);
     expect(event.defaultPrevented).toBe(true);
-    vi.mocked(window.confirm).mockReturnValue(true);
-    expect(host.mayLeave()).toBe(true);
+    vi.mocked(TestBed.inject(Confirmation).confirm).mockResolvedValue(true);
+    expect(await host.mayLeave()).toBe(true);
     host.saving.set(true);
-    expect(host.mayLeave()).toBe(false);
+    expect(await host.mayLeave()).toBe(false);
   });
   it("does not configure a destroyed host after asynchronous loading", async () => {
     host.ngOnDestroy();

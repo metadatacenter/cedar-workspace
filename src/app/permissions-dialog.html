@@ -36,7 +36,7 @@
       <button (click)="load()" [disabled]="busy()">Reload permissions</button>
     </div>
     } @if(notice()) {
-    <p role="status" class="notice">{{notice()}}</p>
+    <cedar-toast [message]="notice()" />
     } @if(busy()) {
     <p role="status">Loading…</p>
     } @if(resource.resourceType === 'folder') {
