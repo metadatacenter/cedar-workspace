@@ -2,10 +2,6 @@
   display: block;
   min-width: 0;
 }
-.account-card {
-  padding: var(--cedar-space-4);
-  margin-bottom: var(--cedar-space-2);
-}
 h2 {
   margin: 0 0 var(--cedar-space-3);
 }
@@ -72,4 +68,76 @@ form label {
 form input {
   min-width: 0;
   width: 100%;
+}
+
+// Flat section panels follow the editor's understated heading and divider treatment.
+.account-card {
+  padding: 0;
+  margin-bottom: var(--cedar-space-4);
+  border: 1px solid var(--cedar-border-rule);
+  border-radius: var(--cedar-control-radius-authoring);
+  overflow: hidden;
+}
+.profile-section-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--cedar-space-2);
+  margin: 0;
+  padding: var(--cedar-space-3) var(--cedar-space-4);
+  color: var(--cedar-color-artifact-title);
+  background: var(--cedar-surface-panel);
+  border-bottom: 1px solid var(--cedar-border-rule);
+}
+.profile-section-heading cedar-icon {
+  color: var(--cedar-color-primary);
+}
+.profile-section-heading small {
+  margin-inline-start: auto;
+  font-size: var(--cedar-font-size-small);
+}
+.profile-section-body {
+  padding: var(--cedar-space-3) var(--cedar-space-4);
+}
+.profile-facts dt:last-of-type,
+.profile-facts dd:last-of-type {
+  border-bottom: 0;
+}
+.profile-identifier,
+.profile-example code,
+.account-key code {
+  font-family: var(--cedar-font-family-monospace);
+  font-size: var(--cedar-font-size-small);
+}
+.account-key,
+.profile-example {
+  padding: var(--cedar-space-3);
+  border: 1px solid var(--cedar-border-rule-light);
+  border-radius: var(--cedar-control-radius-authoring);
+  margin-top: var(--cedar-space-3);
+}
+.account-key code {
+  display: block;
+  padding: var(--cedar-space-2);
+  background: var(--cedar-surface-panel);
+}
+.profile-example header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cedar-space-2);
+}
+.profile-example h3 {
+  margin: 0;
+  font-size: var(--cedar-font-size);
+}
+.profile-example button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cedar-space-1);
+  flex: none;
+}
+.profile-example pre {
+  margin: var(--cedar-space-2) 0 0;
+  padding: var(--cedar-space-3);
+  background: var(--cedar-surface-panel);
 }

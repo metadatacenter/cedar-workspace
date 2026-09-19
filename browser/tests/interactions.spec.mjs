@@ -383,3 +383,32 @@ test("folder separators have equal token spacing in navigation, details and dest
     page.locator("dialog .breadcrumbs button").filter({ hasText: "/" }),
   ).toHaveCount(0);
 });
+
+test("profile sections expose labelled copy actions for API examples", async ({
+  page,
+  api,
+}) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      value: {
+        writeText: async (text) => {
+          window.profileCopied = text;
+        },
+      },
+    });
+  });
+  await page.goto("/profile");
+  await expect(page.locator(".profile-section-heading")).toHaveCount(3);
+  await expect(page.locator(".profile-section-heading cedar-icon")).toHaveCount(
+    3,
+  );
+  const example = page.locator(".profile-example").first();
+  const text = await example.locator("code").textContent();
+  await example
+    .getByRole("button", {
+      name: "Copy example: List your home folder contents",
+    })
+    .click();
+  await expect.poll(() => page.evaluate(() => window.profileCopied)).toBe(text);
+  expect(text).toContain("<API_KEY>");
+});
