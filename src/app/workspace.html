@@ -15,30 +15,35 @@
   <details class="header-menu">
     <summary aria-label="User menu"><cedar-icon name="user" /></summary>
     <nav>
-      <a href="/profile">Profile</a><a href="/settings">Settings</a
-      ><a routerLink="/logout">Logout</a>
+      <a href="/profile"><span>Profile</span><cedar-icon name="user" /></a
+      ><a href="/settings"><span>Settings</span><cedar-icon name="tuning" /></a
+      ><a routerLink="/logout"
+        ><span>Logout</span><cedar-icon name="sign-out"
+      /></a>
     </nav>
   </details>
   <details class="header-menu">
     <summary aria-label="More menu"><cedar-icon name="more" /></summary>
     <nav>
-      <a href="/groups">Groups</a><a href="/privacy">Privacy</a>@if(ready() &&
-      api.monitoringAllowed){<a
+      <a href="/groups"><span>Groups</span><cedar-icon name="groups" /></a
+      ><a href="/privacy"
+        ><span>Privacy</span><cedar-icon name="permissions" /></a
+      >@if(ready() && api.monitoringAllowed){<a
         [href]="api.config.monitoringFrontend"
         target="_blank"
         rel="noopener"
-        >Monitoring</a
+        ><span>Monitoring</span><cedar-icon name="activity" /></a
       >}<a
         href="https://metadatacenter.org/help/#subscribe"
         target="_blank"
         rel="noopener"
-        >Help</a
+        ><span>Help</span><cedar-icon name="external" /></a
       ><a
         href="https://metadatacenter.org/#about"
         target="_blank"
         rel="noopener"
-        >About</a
-      >
+        ><span>About</span><cedar-icon name="external"
+      /></a>
     </nav>
   </details>
 </header>

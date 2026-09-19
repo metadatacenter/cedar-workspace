@@ -192,3 +192,55 @@ test("permissions uses compact section gaps and rows", async ({
     expect((await row.boundingBox()).height).toBeLessThanOrEqual(45);
   await expect(dialog.locator("footer")).toHaveCSS("padding-top", "8px");
 });
+
+for (const route of ["dashboard", "groups"]) {
+  for (const menuName of ["User menu", "More menu"]) {
+    test(`${route} ${menuName} has shared icons on every item`, async ({
+      page,
+      api,
+    }) => {
+      api.monitoring = true;
+      if (route === "dashboard") await dashboard(page);
+      else {
+        await page.goto("/groups");
+        await expect(
+          page.getByRole("tab", { name: "Manage groups" }),
+        ).toBeVisible();
+      }
+      const menu = page
+        .locator(".header-menu")
+        .filter({ has: page.locator(`summary[aria-label="${menuName}"]`) });
+      await menu.locator("summary").click();
+      const expected =
+        menuName === "User menu"
+          ? [
+              ["Profile", "user"],
+              ["Settings", "tuning"],
+              ["Logout", "sign-out"],
+            ]
+          : [
+              ["Groups", "groups"],
+              ["Privacy", "permissions"],
+              ...(route === "dashboard" ? [["Monitoring", "activity"]] : []),
+              ["Help", "external"],
+              ["About", "external"],
+            ];
+      await expect(menu.locator("nav a")).toHaveCount(expected.length);
+      for (const [label, icon] of expected) {
+        const link = menu.getByRole("link", { name: label, exact: true });
+        await expect(link.locator("svg")).toHaveAttribute(
+          "data-cedar-icon",
+          icon,
+        );
+        await expect(link.locator("svg")).toHaveAttribute(
+          "aria-hidden",
+          "true",
+        );
+      }
+      if (process.env.WORKSPACE_VISUAL)
+        await expect(menu.locator("nav")).toHaveScreenshot(
+          `${route}-${menuName.replace(" ", "-")}.png`,
+        );
+    });
+  }
+}

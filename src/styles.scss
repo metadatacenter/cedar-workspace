@@ -143,6 +143,17 @@ textarea {
   @include patterns.menu-item;
   width: 100%;
 }
+// Keep menu labels and decorative icons aligned as in the legacy header.
+.header-menu nav a,
+.header-menu nav button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cedar-space-3);
+}
+.header-menu nav cedar-icon {
+  flex-shrink: 0;
+}
 .workspace {
   // CEE compact controls plus one small gutter per side, including in table cells.
   --cedar-table-cell-padding-block: var(--cedar-space-1);

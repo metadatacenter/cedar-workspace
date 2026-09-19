@@ -47,6 +47,7 @@ export const test = base.extend({
     await page.clock.setFixedTime(new Date("2026-01-03T12:00:00Z"));
     const state = {
       readonly: false,
+      monitoring: false,
       fail: false,
       requests: [],
       pending: false,
@@ -136,6 +137,7 @@ export const test = base.extend({
         body = {
           ...owner,
           homeFolderId: "home",
+          permissions: state.monitoring ? ["permission_monitor_read"] : [],
           email: "alex@example.org",
           uiPreferences: { preferredDateFormat: "yyyy-MM-dd" },
         };
