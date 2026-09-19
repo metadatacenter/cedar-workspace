@@ -1,3 +1,4 @@
+import { Icon } from "./icon";
 import { Confirmation } from "./confirmation";
 import { Component, OnInit, inject, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
@@ -22,8 +23,9 @@ export function displayAccountDate(
 }
 @Component({
   selector: "cedar-profile-page",
-  imports: [FormsModule, AccountShell],
+  imports: [FormsModule, AccountShell, Icon],
   templateUrl: "./profile.html",
+  styleUrl: "./profile.scss",
 })
 export class Profile implements OnInit {
   readonly confirmation = inject(Confirmation);

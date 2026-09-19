@@ -244,3 +244,50 @@ for (const route of ["dashboard", "groups"]) {
     });
   }
 }
+
+for (const width of [1440, 375]) {
+  test(`profile facts stay compact and long identifiers wrap at ${width}`, async ({
+    page,
+    api,
+  }) => {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.route("**/api/user/users/owner", (route) =>
+      route.fulfill({
+        json: {
+          "@id":
+            "https://metadatacenter.org/users/0e97ec85-77a9-434c-8549-33f9eae22608",
+          firstName: "Alex",
+          lastName: "Researcher",
+          email: "alex@example.org",
+          homeFolderId:
+            "https://repo.metadatacenter.org/folders/521fd4c9-146d-4498-904b-8ba219d7bfc9",
+        },
+      }),
+    );
+    await page.goto("/profile");
+    const facts = page.locator(".profile-facts");
+    await expect(
+      facts.getByRole("button", { name: "Copy First name", exact: true }),
+    ).toBeVisible();
+    const sizes = await facts.evaluate((node) => {
+      const values = [...node.querySelectorAll("dd")];
+      return {
+        overflow: document.documentElement.scrollWidth > innerWidth,
+        firstHeight: values[0].getBoundingClientRect().height,
+        copyXs: [...node.querySelectorAll("button")].map(
+          (button) => button.getBoundingClientRect().right,
+        ),
+        rowAligned: Math.abs(
+          node.querySelector("dt").getBoundingClientRect().y -
+            values[0].getBoundingClientRect().y,
+        ),
+      };
+    });
+    expect(sizes.overflow).toBe(false);
+    expect(sizes.firstHeight).toBeLessThanOrEqual(46);
+    expect(
+      Math.max(...sizes.copyXs) - Math.min(...sizes.copyXs),
+    ).toBeLessThanOrEqual(1);
+    if (width > 700) expect(sizes.rowAligned).toBeLessThanOrEqual(1);
+  });
+}

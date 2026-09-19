@@ -7,13 +7,18 @@
   @if(profile){
   <section class="account-card">
     <h2>Account</h2>
-    <dl>
+    <dl class="profile-facts">
       @for(field of fields;track field[0]){
       <dt>{{field[0]}}</dt>
       <dd>
-        {{field[1]}}
-        <button [attr.aria-label]="'Copy '+field[0]" (click)="copy(field[1])">
-          Copy
+        <span class="profile-value">{{field[1] || '—'}}</span>
+        <button
+          class="profile-copy"
+          [attr.aria-label]="'Copy '+field[0]"
+          [title]="'Copy '+field[0]"
+          (click)="copy(field[1])"
+        >
+          <cedar-icon name="copy" />
         </button>
       </dd>
       }@if(memberSince()){
