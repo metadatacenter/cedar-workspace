@@ -76,6 +76,13 @@ test("artifact menu and resource dialog", async ({ page, api }) => {
   await expect(page.getByLabel("Name", { exact: true })).toHaveValue(
     "Study metadata",
   );
+  await expect(
+    page.locator('#dialog-title cedar-icon[name="edit"] svg'),
+  ).toBeVisible();
+  await expect(page.getByLabel("Description", { exact: true })).toHaveCSS(
+    "resize",
+    "none",
+  );
   if (process.env.WORKSPACE_VISUAL)
     await expect(page.locator("dialog[open]")).toHaveScreenshot(
       "rename-dialog.png",

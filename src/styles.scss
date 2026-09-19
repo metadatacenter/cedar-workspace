@@ -62,7 +62,7 @@ textarea {
   background: var(--cedar-color-on-primary);
 }
 textarea {
-  resize: vertical;
+  resize: none;
 }
 .topbar {
   min-height: 80px;
@@ -463,6 +463,11 @@ dialog footer {
 dialog h2 {
   @include patterns.artifact-title;
   margin: 0;
+}
+.resource-dialog-title {
+  display: flex;
+  align-items: center;
+  gap: var(--cedar-space-2);
 }
 dialog footer {
   justify-content: flex-end;
