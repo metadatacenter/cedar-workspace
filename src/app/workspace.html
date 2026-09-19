@@ -319,15 +319,16 @@
         [attr.aria-selected]="tab==='info'"
         (click)="tab='info'"
       >
-        Info</button
-      ><button
+        Info</button>
+      @if(r.resourceType === "template" || r.resourceType === "element" || r.resourceType === "field"){
+      <button
         role="tab"
         [attr.aria-selected]="tab==='version'"
-        [disabled]="r.resourceType==='folder'"
         (click)="tab='version'"
       >
         Version
       </button>
+      }
     </div>
     @if(tab==='info'){
     <dl>

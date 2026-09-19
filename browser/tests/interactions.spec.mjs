@@ -337,7 +337,7 @@ for (const [label, field] of [
   });
 }
 
-test("folder separators have equal token spacing in navigation, details and destinations", async ({
+test("folder separators have no surrounding spacing in navigation, details and destinations", async ({
   page,
   api,
 }) => {
@@ -347,30 +347,26 @@ test("folder separators have equal token spacing in navigation, details and dest
     { "@id": "home", "schema:name": "My workspace" },
   ];
   await dashboard(page);
-  async function spaced(locator, count) {
+  async function unspaced(locator, count) {
     await expect(locator).toHaveCount(count);
     for (const separator of await locator.all()) {
       expect(
         await separator.evaluate((node) => {
           const style = getComputedStyle(node);
-          const token = getComputedStyle(node)
-            .getPropertyValue("--cedar-space-2")
-            .trim();
           return {
             start: style.marginInlineStart,
             end: style.marginInlineEnd,
-            token,
           };
         }),
-      ).toEqual({ start: "8px", end: "8px", token: "8px" });
+      ).toEqual({ start: "0px", end: "0px" });
       await expect(separator).toHaveAttribute("aria-hidden", "true");
     }
   }
-  await spaced(page.locator(".breadcrumbs .breadcrumb-separator"), 2);
+  await unspaced(page.locator(".breadcrumbs .breadcrumb-separator"), 2);
   await page
     .getByRole("button", { name: "Show information", exact: true })
     .click();
-  await spaced(page.locator(".information .breadcrumb-separator"), 2);
+  await unspaced(page.locator(".information .breadcrumb-separator"), 2);
   await page
     .getByRole("button", { name: "Actions for Study metadata" })
     .click();
@@ -378,7 +374,7 @@ test("folder separators have equal token spacing in navigation, details and dest
     .locator(".resource-menu")
     .getByRole("button", { name: "Move", exact: true })
     .click();
-  await spaced(page.locator("dialog .breadcrumbs .breadcrumb-separator"), 3);
+  await unspaced(page.locator("dialog .breadcrumbs .breadcrumb-separator"), 3);
   await expect(
     page.locator("dialog .breadcrumbs button").filter({ hasText: "/" }),
   ).toHaveCount(0);

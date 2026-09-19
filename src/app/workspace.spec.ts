@@ -67,18 +67,42 @@ describe("Angular Workspace", () => {
     f.detectChanges();
     return f;
   }
-  it("renders only a table, Info/Version tabs, and the four workspace destinations", async () => {
+  it("renders only a table, Info tab, and the four workspace destinations", async () => {
     const f = await render();
     const el = f.nativeElement as HTMLElement;
     expect(el.querySelectorAll("table").length).toBe(1);
     expect(el.querySelectorAll(".destinations a").length).toBe(4);
     expect(
       [...el.querySelectorAll("[role=tab]")].map((e) => e.textContent?.trim()),
-    ).toEqual(["Info", "Version"]);
+    ).toEqual(["Info"]);
     expect(el.textContent).not.toMatch(
       /Categories|Latest|Tile view|Filter by type/,
     );
   });
+  it.each(["folder", "instance", "template", "element", "field"] as const)(
+    "shows Version only for versioned schema resources: %s",
+    async (resourceType) => {
+      const f = await render();
+      const r: Resource = { ...template, resourceType };
+      api.report.mockResolvedValue({ data: r });
+      // Selecting another resource must also leave any previous Version view.
+      f.componentInstance.tab = "version";
+      await f.componentInstance.select(r);
+      f.detectChanges();
+      const tabs = [...f.nativeElement.querySelectorAll('[role="tab"]')] as HTMLElement[];
+      expect(tabs.map((tab) => tab.textContent?.trim())).toEqual(
+        resourceType === "folder" || resourceType === "instance"
+          ? ["Info"]
+          : ["Info", "Version"],
+      );
+      expect(tabs[0].getAttribute("aria-selected")).toBe("true");
+      if (tabs.length === 2) {
+        tabs[1].click();
+        f.detectChanges();
+        expect(tabs[1].getAttribute("aria-selected")).toBe("true");
+      }
+    },
+  );
   it("hydrates Populate from the report even when listings omit available actions", async () => {
     const f = await render();
     expect(
