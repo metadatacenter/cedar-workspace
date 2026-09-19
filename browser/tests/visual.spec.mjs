@@ -133,3 +133,62 @@ test("workspace follows CEE compact density", async ({ page, api }) => {
   expect(sizes.tabsGap).toBe("8px");
   expect(sizes.action).toBeGreaterThanOrEqual(36);
 });
+
+for (const width of [1440, 375]) {
+  test(`group creation and populated members stay compact at ${width}`, async ({
+    page,
+    api,
+  }) => {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto("/groups");
+    await page.getByRole("tab", { name: "Create group", exact: true }).click();
+    await page.getByLabel("Group name", { exact: true }).fill("Research team");
+    await page
+      .getByRole("button", { name: "Create group", exact: true })
+      .click();
+    await expect(page.locator(".groups-member-row")).toHaveCount(2);
+    await expect(page.getByRole("status")).toHaveText("Group created.");
+    await expect(page.locator(".groups-create-card")).toHaveCSS(
+      "padding-top",
+      "8px",
+    );
+    await expect(page.locator(".groups-created-group")).toHaveCSS(
+      "padding-bottom",
+      "8px",
+    );
+    await expect(page.locator(".groups-details-form")).toHaveCSS(
+      "margin-bottom",
+      "8px",
+    );
+    await expect(page.locator(".groups-tabs")).toHaveCSS(
+      "margin-bottom",
+      "8px",
+    );
+    await expect(page.locator(".notice")).toHaveCSS("padding-top", "8px");
+    await expect(page.locator("#group-name")).toHaveCSS("height", "36px");
+    if (width === 1440) {
+      for (const row of await page.locator(".groups-member-row").all())
+        expect((await row.boundingBox()).height).toBeLessThanOrEqual(45);
+    }
+    if (process.env.WORKSPACE_VISUAL)
+      await expect(page).toHaveScreenshot(`groups-created-${width}.png`, {
+        fullPage: true,
+      });
+  });
+}
+
+test("permissions uses compact section gaps and rows", async ({
+  page,
+  api,
+}) => {
+  await dashboard(page);
+  await action(page, "Permissions…");
+  const dialog = page.locator("dialog[open]");
+  for (const panel of await dialog.locator(".access-panel").all()) {
+    await expect(panel).toHaveCSS("padding-top", "8px");
+    await expect(panel).toHaveCSS("padding-bottom", "8px");
+  }
+  for (const row of await dialog.locator(".access-row").all())
+    expect((await row.boundingBox()).height).toBeLessThanOrEqual(45);
+  await expect(dialog.locator("footer")).toHaveCSS("padding-top", "8px");
+});

@@ -152,8 +152,16 @@ export const test = base.extend({
             { user: collaborator, administrator: false, member: true },
           ],
         };
+      else if (path.endsWith("/groups/team/users"))
+        body = {
+          users: [
+            { user: owner, administrator: true, member: true },
+            { user: collaborator, administrator: false, member: true },
+          ],
+        };
       else if (path.endsWith("/groups/team")) body = group;
-      else if (path.endsWith("/groups")) body = { groups: [group] };
+      else if (path.endsWith("/groups"))
+        body = request.method() === "POST" ? group : { groups: [group] };
       else if (path.endsWith("/users")) body = { users: [owner, collaborator] };
       else if (path.endsWith("/contents") || path.endsWith("/search"))
         body = {

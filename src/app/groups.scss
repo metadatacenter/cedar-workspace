@@ -1,6 +1,10 @@
 @use "@org.metadatacenter/cedar-design-tokens/patterns";
 @use "@org.metadatacenter/cedar-design-tokens/controls";
 #groups-page {
+  --cedar-table-cell-padding-block: var(--cedar-space-1);
+  --cedar-table-row-height: calc(
+    var(--cedar-control-height-default) + 2 * var(--cedar-space-1)
+  );
   min-height: 100vh;
   background: var(--cedar-color-on-primary);
 
@@ -25,11 +29,11 @@
     width: calc(100% - 32px);
     max-width: 900px;
     margin: 0 auto;
-    padding: 36px 0 64px;
+    padding: var(--cedar-space-4) 0 var(--cedar-space-6);
   }
 
   .groups-page-header {
-    margin-bottom: var(--cedar-space-6);
+    margin-bottom: var(--cedar-space-3);
 
     h1 {
       @include patterns.artifact-title;
@@ -43,15 +47,21 @@
     }
   }
 
+  .notice,
+  .alert {
+    padding: var(--cedar-space-2) var(--cedar-space-3);
+  }
+
   .groups-tabs {
     display: flex;
-    margin-bottom: 20px;
+    margin-bottom: var(--cedar-space-2);
     border-bottom: 1px solid var(--cedar-control-border-authoring);
   }
 
   .groups-tab {
     margin: 0 22px -1px 0;
-    padding: 11px 2px 10px;
+    padding: var(--cedar-space-1) 0;
+    min-height: var(--cedar-control-height-default);
     border: 0;
     border-bottom: 3px solid transparent;
     background: transparent;
@@ -72,8 +82,8 @@
   }
 
   .groups-card {
-    margin-bottom: 20px;
-    padding: var(--cedar-space-6);
+    margin-bottom: var(--cedar-space-2);
+    padding: var(--cedar-space-2) var(--cedar-space-3);
     border-bottom: 1px solid var(--cedar-border-rule);
     background: var(--cedar-color-on-primary);
 
@@ -124,7 +134,7 @@
 
   .groups-create-card {
     justify-content: space-between;
-    gap: 28px;
+    gap: var(--cedar-space-4);
   }
 
   .groups-create-card > div,
@@ -153,7 +163,7 @@
   }
 
   .groups-created-group {
-    padding-top: 14px;
+    padding-top: var(--cedar-space-2);
   }
 
   .groups-selector {
@@ -162,7 +172,7 @@
 
   .groups-empty-state {
     margin-top: var(--cedar-space-6);
-    padding: 42px 20px;
+    padding: var(--cedar-space-4);
     border: 1px dashed var(--cedar-control-border-authoring);
     color: var(--cedar-text-muted);
     text-align: center;
@@ -188,7 +198,7 @@
   }
 
   .groups-selected-message {
-    margin-bottom: 20px;
+    margin-bottom: var(--cedar-space-2);
 
     p {
       margin: 0;
@@ -201,19 +211,18 @@
   }
 
   .groups-delete-button {
-    height: 22px;
+    height: var(--cedar-control-height-default);
     padding: 0;
     display: inline-flex;
     align-items: center;
-    transform: translateY(-8px);
   }
 
   .groups-details-form {
     display: grid;
-    grid-template-columns: 1fr 1fr 140px;
-    gap: var(--cedar-form-field-gap);
+    grid-template-columns: 1fr 1fr auto;
+    gap: var(--cedar-space-2);
     align-items: start;
-    margin: 0 0 18px;
+    margin: 0 0 var(--cedar-space-2);
 
     textarea.form-control {
       height: var(--cedar-control-height-default);
@@ -224,14 +233,14 @@
 
   .groups-details-actions {
     display: flex;
-    height: 59px;
+    align-self: end;
+    gap: var(--cedar-space-1);
     align-items: flex-end;
-    flex-direction: column;
-    justify-content: space-between;
+    flex-direction: row;
   }
 
   .groups-members-section {
-    padding-top: 14px;
+    padding-top: var(--cedar-space-2);
     border-top: 1px solid var(--cedar-control-border-authoring);
   }
 
@@ -247,7 +256,7 @@
     align-items: flex-end;
     gap: var(--cedar-form-label-gap);
     width: 100%;
-    margin: 6px 0 10px;
+    margin: var(--cedar-space-2) 0;
   }
 
   .groups-add-member > div {
@@ -335,7 +344,7 @@
   }
 
   .groups-empty-members {
-    padding: 28px;
+    padding: var(--cedar-space-4);
     color: var(--cedar-text-muted);
     text-align: center;
   }
@@ -387,7 +396,7 @@
 #groups-page {
   min-height: calc(100vh - 65px);
   p {
-    margin: 0 0 10px;
+    margin: 0 0 var(--cedar-space-1);
   }
   button {
     min-height: 0;
@@ -433,7 +442,7 @@
     border-color: var(--cedar-action-primary-hover-surface);
   }
   .groups-delete-button {
-    min-height: 22px;
+    min-height: var(--cedar-control-height-default);
     padding: 0;
   }
   .groups-remove-member {
@@ -455,15 +464,26 @@
     margin: 0;
   }
   .groups-card h2 {
-    margin-bottom: 10px;
+    margin-bottom: var(--cedar-space-1);
   }
   .groups-tab:focus-visible {
     @include controls.focus-ring;
   }
 }
 @media (max-width: 600px) {
-  #groups-page .groups-member-row .groups-admin-control {
-    flex-basis: 130px;
-    margin-left: 0;
+  #groups-page {
+    .groups-member-row {
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr) 40px 34px;
+      align-items: center;
+      gap: var(--cedar-space-1);
+    }
+    .groups-member-avatar {
+      margin-right: 0;
+    }
+    .groups-member-row .groups-admin-control {
+      width: auto;
+      margin: 0;
+    }
   }
 }
