@@ -99,3 +99,37 @@ for (const readonly of [false, true]) {
       );
   });
 }
+
+// Geometry assertions prevent a baseline refresh from silently approving looser density.
+test("workspace follows CEE compact density", async ({ page, api }) => {
+  await dashboard(page);
+  const sizes = await page.evaluate(() => {
+    const height = (selector) =>
+      document.querySelector(selector).getBoundingClientRect().height;
+    const style = (selector) =>
+      getComputedStyle(document.querySelector(selector));
+    return {
+      rows: [...document.querySelectorAll("tbody tr")].map(
+        (row) => row.getBoundingClientRect().height,
+      ),
+      toolbar: height(".table-toolbar"),
+      paginationGap:
+        document.querySelector(".paging").getBoundingClientRect().top -
+        document.querySelector("table").getBoundingClientRect().bottom,
+      navigation: height(".destinations a"),
+      navigationGap: style(".destinations").rowGap,
+      detailsPadding: style(".information dd").paddingBlockStart,
+      tabsGap: style(".information .tabs").marginTop,
+      action: height(".row-actions button"),
+    };
+  });
+  expect(sizes.rows.length).toBeGreaterThan(0);
+  for (const height of sizes.rows) expect(height).toBeLessThanOrEqual(45);
+  expect(sizes.toolbar).toBeLessThanOrEqual(36);
+  expect(sizes.paginationGap).toBeLessThanOrEqual(8);
+  expect(sizes.navigation).toBeLessThanOrEqual(36);
+  expect(sizes.navigationGap).toBe("0px");
+  expect(sizes.detailsPadding).toBe("8px");
+  expect(sizes.tabsGap).toBe("8px");
+  expect(sizes.action).toBeGreaterThanOrEqual(36);
+});

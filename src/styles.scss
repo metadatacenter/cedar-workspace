@@ -144,6 +144,11 @@ textarea {
   width: 100%;
 }
 .workspace {
+  // CEE compact controls plus one small gutter per side, including in table cells.
+  --cedar-table-cell-padding-block: var(--cedar-space-1);
+  --cedar-table-row-height: calc(
+    var(--cedar-control-height-default) + 2 * var(--cedar-space-1)
+  );
   display: grid;
   grid-template-columns: 250px minmax(0, 1fr) 340px;
   min-height: calc(100vh - 80px);
@@ -159,7 +164,7 @@ textarea {
 }
 .navigation {
   position: relative;
-  padding: var(--cedar-space-6);
+  padding: var(--cedar-space-4);
   border-right: 1px solid var(--cedar-border-rule-light);
 }
 .collapse {
@@ -189,24 +194,27 @@ textarea {
   padding-left: var(--cedar-space-3);
 }
 .destinations {
-  margin-top: calc(2 * var(--cedar-space-4));
+  margin-top: var(--cedar-space-3);
   display: flex;
   flex-direction: column;
-  gap: var(--cedar-space-2);
+  gap: 0;
 }
 .destinations a {
   padding: var(--cedar-space-2) 0;
-  font-size: var(--cedar-font-size-lead);
+  font-size: var(--cedar-font-size);
 }
 main {
   min-width: 0;
   padding: var(--cedar-space-6);
 }
+.workspace > main {
+  padding: var(--cedar-space-4);
+}
 .table-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 52px;
+  min-height: var(--cedar-control-height-default);
 }
 .breadcrumbs {
   display: flex;
@@ -217,8 +225,7 @@ main {
 .table-scroll {
   position: relative;
   overflow: auto;
-  min-height: 360px;
-  padding-bottom: var(--cedar-space-6);
+  padding-bottom: var(--cedar-space-2);
 }
 table {
   width: 100%;
@@ -252,7 +259,7 @@ th:first-child {
   width: 62%;
 }
 th button {
-  padding: var(--cedar-space-4);
+  padding: var(--cedar-space-1) var(--cedar-table-cell-padding-inline);
 }
 td {
   @include patterns.table-cell;
@@ -323,13 +330,13 @@ tr.selected:hover {
   position: relative;
   background: var(--cedar-color-on-primary);
   border-left: 1px solid var(--cedar-border-rule);
-  padding: calc(2 * var(--cedar-space-6)) var(--cedar-space-6)
-    var(--cedar-space-6);
+  padding: var(--cedar-control-height-default) var(--cedar-space-4)
+    var(--cedar-space-4);
   overflow-wrap: anywhere;
 }
 .information h1 {
   @include patterns.artifact-title;
-  margin: 0 0 var(--cedar-space-3);
+  margin: 0 0 var(--cedar-space-1);
 }
 .badge {
   font-size: var(--cedar-font-size-small);
@@ -338,7 +345,7 @@ tr.selected:hover {
 }
 .tabs {
   display: flex;
-  margin-top: var(--cedar-space-6);
+  margin-top: var(--cedar-space-2);
   border-bottom: 1px solid var(--cedar-border-rule);
 }
 .tabs button {
@@ -360,6 +367,17 @@ dd {
   padding: var(--cedar-space-4) 0;
   border-bottom: 1px solid var(--cedar-border-rule-light);
 }
+.information dl {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  margin: var(--cedar-space-2) 0;
+}
+.information dt,
+.information dd {
+  margin: 0;
+  padding: var(--cedar-space-2) 0;
+  border-bottom: 1px solid var(--cedar-border-rule-light);
+}
 dt {
   color: var(--cedar-text-muted);
   font-size: var(--cedar-font-size-small);
@@ -377,14 +395,15 @@ dd small {
 }
 .description {
   white-space: pre-wrap;
-  line-height: 1.7;
+  line-height: var(--cedar-control-line-height-default);
+  margin: var(--cedar-space-1) 0;
 }
 .identifiers {
-  margin-top: var(--cedar-space-6);
+  margin-top: var(--cedar-space-2);
   font-size: var(--cedar-font-size-small);
 }
 .version {
-  padding: var(--cedar-space-4) 0;
+  padding: var(--cedar-space-2) 0;
   border-bottom: 1px solid var(--cedar-border-rule);
 }
 .alert,
