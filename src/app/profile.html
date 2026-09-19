@@ -45,6 +45,7 @@
       <form (ngSubmit)="mutate('create')">
         <label for="key-description">New key description (optional)</label
         ><input
+          spellcheck="false"
           id="key-description"
           name="description"
           [(ngModel)]="description"

@@ -26,6 +26,7 @@
   } @if(!loading()) {
   <label for="instance-name">Metadata name</label>
   <input
+    spellcheck="false"
     id="instance-name"
     [(ngModel)]="name"
     (ngModelChange)="changed()"

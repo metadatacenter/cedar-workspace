@@ -3,7 +3,12 @@
     ><img src="/img/cedar-mark.png" alt="" /><span>Workspace</span></a
   >
   <form class="search" action="/dashboard">
-    <input aria-label="Search workspace" name="search" placeholder="Search" />
+    <input
+      spellcheck="false"
+      aria-label="Search workspace"
+      name="search"
+      placeholder="Search"
+    />
     <button aria-label="Search" type="submit">
       <cedar-icon name="search" />
     </button>
@@ -105,6 +110,7 @@
           <label for="new-group-name">Group name</label>
           <div class="groups-inline-controls">
             <input
+              spellcheck="false"
               id="new-group-name"
               class="form-control"
               name="newName"
@@ -171,6 +177,7 @@
       <div class="groups-field">
         <label for="group-name">Name</label>
         <input
+          spellcheck="false"
           id="group-name"
           class="form-control"
           name="editName"
@@ -182,6 +189,7 @@
       <div class="groups-field">
         <label for="group-description">Description</label>
         <textarea
+          spellcheck="false"
           id="group-description"
           class="form-control"
           rows="1"
@@ -265,6 +273,7 @@
             [title]="onlyAdmin(m) ? 'A group must have at least one Group Administrator.' : ''"
           >
             <input
+              spellcheck="false"
               type="checkbox"
               [checked]="m.administrator"
               (click)="$event.preventDefault(); toggleAdmin(m)"

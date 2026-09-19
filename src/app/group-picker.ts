@@ -14,6 +14,7 @@ import { FormsModule } from "@angular/forms";
   template: `
     <label [for]="id + '-input'">{{ label }}</label>
     <input
+      spellcheck="false"
       [id]="id + '-input'"
       type="text"
       role="combobox"

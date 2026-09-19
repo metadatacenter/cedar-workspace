@@ -129,6 +129,7 @@
             role="cell"
             title="The owner can manage access and transfer ownership."
             ><input
+              spellcheck="false"
               type="checkbox"
               checked
               disabled
@@ -178,6 +179,7 @@
             [title]="g.kind === 'group' ? 'A group cannot own a resource.' : 'Make this user the owner'"
           >
             <input
+              spellcheck="false"
               type="checkbox"
               [checked]="false"
               (click)="$event.preventDefault(); transfer(g)"

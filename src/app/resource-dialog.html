@@ -7,8 +7,7 @@
   <form (ngSubmit)="submit()">
     <header>
       <h2 id="dialog-title" class="resource-dialog-title">
-        @if(action === "rename"){<cedar-icon name="edit" />}
-        {{heading}}
+        @if(action === "rename"){<cedar-icon name="edit" />} {{heading}}
       </h2>
       <button
         type="button"
@@ -27,6 +26,7 @@
     <fieldset [disabled]="busy()">
       @if(['new-folder','rename','copy'].includes(action)){<label
         >Name<input
+          spellcheck="false"
           [attr.aria-invalid]="submitted && nameError ? true : null"
           [attr.aria-describedby]="submitted && nameError ? 'name-error' : null"
           name="name"
@@ -39,12 +39,14 @@
       <p id="name-error" class="field-error" role="alert">{{nameError}}</p>
       } } @if(['new-folder','rename'].includes(action)){<label
         >Description<textarea
+          spellcheck="false"
           name="description"
           [(ngModel)]="description"
           rows="3"
         ></textarea></label
       >} @if(['publish','draft'].includes(action)){<label
         >Version<input
+          spellcheck="false"
           [attr.aria-invalid]="submitted && versionError ? true : null"
           [attr.aria-describedby]="submitted && versionError ? 'version-error' : null"
           name="version"
@@ -57,10 +59,15 @@
         {{versionError}}
       </p>
       } } @if(action==='draft'){<label class="check"
-        ><input type="checkbox" name="propagate" [(ngModel)]="propagate" />Keep
-        sharing permissions</label
+        ><input
+          spellcheck="false"
+          type="checkbox"
+          name="propagate"
+          [(ngModel)]="propagate"
+        />Keep sharing permissions</label
       ><label
         >New folder name (optional)<input
+          spellcheck="false"
           name="newFolderName"
           [(ngModel)]="newFolderName" /></label
       >} @if(choosesFolder){

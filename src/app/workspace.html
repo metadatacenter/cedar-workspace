@@ -4,6 +4,7 @@
   >
   <form class="search" (ngSubmit)="submitSearch()">
     <input
+      spellcheck="false"
       aria-label="Search workspace"
       name="search"
       [(ngModel)]="search"
@@ -319,8 +320,10 @@
         [attr.aria-selected]="tab==='info'"
         (click)="tab='info'"
       >
-        Info</button>
-      @if(r.resourceType === "template" || r.resourceType === "element" || r.resourceType === "field"){
+        Info
+      </button>
+      @if(r.resourceType === "template" || r.resourceType === "element" ||
+      r.resourceType === "field"){
       <button
         role="tab"
         [attr.aria-selected]="tab==='version'"
