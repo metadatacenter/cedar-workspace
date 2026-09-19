@@ -5,7 +5,6 @@ const config = {
   resourceRestAPI: "https://resource.example",
   userRestAPI: "https://user.example",
   groupRestAPI: "https://group.example",
-  impexRestAPI: "https://impex.example",
 } as Config;
 describe("Authorized backend", () => {
   let api: Backend;

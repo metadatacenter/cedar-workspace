@@ -62,8 +62,8 @@ AngularJS `npm run smoke` remains unchanged for `cedar.metadatacenter.*`.
 Resource reports supply lifecycle actions missing from listing summaries. Template
 reports are fetched in bounded batches; other reports are fetched when their menus
 or information panels open. Rename, move, delete, open-state and permission updates
-use read-time ETags and preserve the dialog input on conflict. Import retains the
-existing caDSR XML upload/status protocol.
+use read-time ETags and preserve the dialog input on conflict. The New menu offers
+Folder, Field, Element and Template; Workspace does not provide an import flow.
 
 ## Publication and native server deployment
 

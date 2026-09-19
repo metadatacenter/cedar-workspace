@@ -98,12 +98,6 @@
         >
         } @else {<button disabled>Field</button><button disabled>Element</button
         ><button disabled>Template</button>}
-        <button
-          (click)="openNew('import')"
-          [disabled]="!can(currentFolder(),'createInFolder')"
-        >
-          Import
-        </button>
       </nav>
     </details>
     <nav class="destinations">

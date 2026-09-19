@@ -195,3 +195,20 @@ test("no-match feedback is announced and clearing recovers the picker", async ({
     page.getByRole("button", { name: "Add", exact: true }),
   ).toBeEnabled();
 });
+
+test("New menu offers only supported creation actions", async ({
+  page,
+  api,
+}) => {
+  await dashboard(page);
+  await page.getByRole("button", { name: "New", exact: true }).click();
+  const menu = page.locator(".new-menu nav");
+  await expect(menu).toBeVisible();
+  await expect(menu.locator("a, button")).toHaveText([
+    "Folder",
+    "Field",
+    "Element",
+    "Template",
+  ]);
+  await expect(page.locator('input[type="file"]')).toHaveCount(0);
+});

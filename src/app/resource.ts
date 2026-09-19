@@ -38,7 +38,6 @@ export interface Config {
   resourceRestAPI: string;
   userRestAPI: string;
   groupRestAPI: string;
-  impexRestAPI: string;
   workspaceFrontend: string;
   templateDesignerFrontend: string;
   openViewBase: string;

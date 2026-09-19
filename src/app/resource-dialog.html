@@ -110,17 +110,8 @@
       <p>This item will be available through OpenView.</p>
       } @if(action==='make-not-open'){
       <p>This item will no longer be available through OpenView.</p>
-      } @if(action==='import'){<label
-        >caDSR XML files<input
-          type="file"
-          accept=".xml"
-          multiple
-          (change)="chooseFiles($event)" /></label
-      >}
+      }
     </fieldset>
-    @if(status()){
-    <p class="description" role="status">{{status()}}</p>
-    }
     <footer>
       <button type="button" (click)="close()" [disabled]="busy()">Cancel</button
       ><button

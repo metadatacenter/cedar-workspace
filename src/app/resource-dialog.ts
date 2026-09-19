@@ -35,7 +35,6 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   readonly error = signal("");
   readonly folders = signal<Resource[]>([]);
   readonly path = signal<Resource[]>([]);
-  readonly status = signal("");
   submitted = false;
   name = "";
   description = "";
@@ -46,7 +45,6 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   targetTotal = 0;
   propagate = true;
   newFolderName = "";
-  files: File[] = [];
   private initialValues: string | null = null;
   private etag: string | null = null;
   private alive = true;
@@ -64,7 +62,6 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
           draft: "Create Draft",
           "make-open": "Make Open",
           "make-not-open": "Make Not Open",
-          import: "Import caDSR forms",
         } as Record<string, string>
       )[this.action] || this.action
     );
@@ -90,7 +87,6 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
       this.target,
       this.propagate,
       this.newFolderName,
-      this.files.map((f) => f.name),
     ]);
   }
   close() {
@@ -169,9 +165,6 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
         ) &&
         this.target !== this.resource?.["@id"])
     );
-  }
-  chooseFiles(event: Event) {
-    this.files = Array.from((event.target as HTMLInputElement).files || []);
   }
   get nameError() {
     return ["new-folder", "rename", "copy"].includes(this.action) &&
@@ -274,9 +267,6 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
             this.etag,
           );
           break;
-        case "import":
-          await this.importFiles();
-          break;
         default:
           throw new Error("Unknown action.");
       }
@@ -285,73 +275,6 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
       this.fail(e);
     } finally {
       this.busy.set(false);
-    }
-  }
-  private async importFiles() {
-    if (!this.files.length)
-      throw new Error("Choose at least one caDSR XML file.");
-    const uploadId = crypto.randomUUID();
-    for (const file of this.files) {
-      const chunkSize = 1024 * 1024;
-      const chunks = Math.max(1, Math.ceil(file.size / chunkSize));
-      const identifier = crypto.randomUUID();
-      for (let i = 0; i < chunks; i++) {
-        if (!this.alive) return;
-        this.status.set(
-          "Uploading " + file.name + " (" + (i + 1) + "/" + chunks + ")",
-        );
-        const chunk = file.slice(i * chunkSize, (i + 1) * chunkSize);
-        const data = new FormData();
-        const fields = {
-          uploadId,
-          numberOfFiles: this.files.length,
-          flowChunkNumber: i + 1,
-          flowChunkSize: chunkSize,
-          flowCurrentChunkSize: chunk.size,
-          flowTotalSize: file.size,
-          flowIdentifier: identifier,
-          flowFilename: file.name,
-          flowRelativePath: file.name,
-          flowTotalChunks: chunks,
-        };
-        Object.entries(fields).forEach(([key, value]) =>
-          data.append(key, String(value)),
-        );
-        data.append("file", chunk, file.name);
-        await this.api.raw(
-          this.api.config.impexRestAPI +
-            "/command/import-cadsr-forms?folderId=" +
-            encodeURIComponent(this.folder),
-          "POST",
-          data,
-        );
-      }
-    }
-    while (this.alive) {
-      const { data } = await this.api.request<{
-        filesImportStatus: Record<
-          string,
-          { importStatus: string; report: unknown }
-        >;
-      }>(
-        this.api.config.impexRestAPI +
-          "/command/import-cadsr-forms-status?uploadId=" +
-          encodeURIComponent(uploadId),
-      );
-      const entries = Object.entries(data.filesImportStatus || {});
-      this.status.set(
-        entries
-          .map(([name, item]) => name + ": " + item.importStatus)
-          .join("\n"),
-      );
-      if (entries.some(([, item]) => item.importStatus === "ERROR"))
-        throw new Error("An import failed. " + this.status());
-      if (
-        entries.length === this.files.length &&
-        entries.every(([, item]) => item.importStatus === "COMPLETE")
-      )
-        return;
-      await new Promise((resolve) => setTimeout(resolve, 2000));
     }
   }
 }

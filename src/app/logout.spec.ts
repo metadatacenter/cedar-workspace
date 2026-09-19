@@ -36,7 +36,6 @@ describe("Logout", () => {
             userRestAPI: "https://user.example",
             resourceRestAPI: "https://resource.example",
             groupRestAPI: "https://group.example",
-            impexRestAPI: "https://impex.example",
           }),
         ),
       );
@@ -67,7 +66,6 @@ describe("Logout", () => {
             userRestAPI: "https://user.example",
             resourceRestAPI: "https://resource.example",
             groupRestAPI: "https://group.example",
-            impexRestAPI: "https://impex.example",
           }),
         ),
       )

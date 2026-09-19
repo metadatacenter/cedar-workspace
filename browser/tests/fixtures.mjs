@@ -98,7 +98,6 @@ export const test = base.extend({
           resourceRestAPI: baseURL + "/api/resource",
           userRestAPI: baseURL + "/api/user",
           groupRestAPI: baseURL + "/api/group",
-          impexRestAPI: baseURL + "/api/impex",
           workspaceFrontend: baseURL,
           templateDesignerFrontend: baseURL,
           openViewBase: baseURL,
