@@ -13,7 +13,7 @@
     id="button-save-metadata"
     class="primary"
     (click)="save()"
-    [disabled]="loading() || saving()"
+    [disabled]="loading() || saving() || validationErrors.length > 0"
   >
     Save</button
   >}
@@ -34,26 +34,50 @@
   />
   @if(!writable()){
   <p role="status">You have read-only access to this metadata.</p>
-  } }
+  } } @if(validationErrors.length){
+  <details class="metadata-quality" aria-label="Metadata errors">
+    <summary>
+      <cedar-icon
+        size="small"
+        name="chevron-down"
+        class="validation-disclosure"
+      /><cedar-icon size="small" name="warning" />
+      <span
+        >{{validationErrors.length}} {{validationErrors.length === 1 ? 'error' :
+        'errors'}} — review before saving</span
+      >
+    </summary>
+    <ul>
+      @for(issue of validationErrors; track $index){
+      <li>{{issue.label}}: {{issue.message}}</li>
+      }
+    </ul>
+  </details>
+  } @if(validationWarnings.length){
+  <details
+    class="metadata-quality validation-summary--warning"
+    aria-label="Metadata warnings"
+  >
+    <summary>
+      <cedar-icon
+        size="small"
+        name="chevron-down"
+        class="validation-disclosure"
+      /><cedar-icon size="small" name="warning" />
+      <span
+        >{{validationWarnings.length}} {{validationWarnings.length === 1 ?
+        'warning' : 'warnings'}} — metadata can still be saved</span
+      >
+    </summary>
+    <ul>
+      @for(issue of validationWarnings; track $index){
+      <li>{{issue.label}}: {{issue.message}}</li>
+      }
+    </ul>
+  </details>
+  }
   <cedar-embeddable-editor
     #editor
     [hidden]="loading()"
   ></cedar-embeddable-editor>
-  @if(quality()?.isValid === false){
-  <section class="metadata-quality" aria-label="Metadata quality issues">
-    <strong>Metadata quality issues</strong>
-    <p>This metadata can still be saved.</p>
-    @if(missingRequired){
-    <p>{{missingRequired}} required fields are missing.</p>
-    }
-    <ul>
-      @for(problem of quality()?.problems || []; track $index){
-      <li>
-        {{problem.path.join(' / ') || problem.field || 'Metadata'}}:
-        {{problem.message || problem.code}}
-      </li>
-      }
-    </ul>
-  </section>
-  }
 </main>

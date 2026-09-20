@@ -87,7 +87,8 @@ test("failed save retains input, sends its revision, and blocks duplicate submis
     .locator(".confirmation-dialog")
     .getByRole("button", { name: "Cancel" })
     .click();
-  await expect(page.locator("dialog[open]")).toBeVisible();
+  await expect(page.locator(".confirmation-dialog")).toHaveCount(0);
+  await input.focus();
   await page.keyboard.press("Escape");
   await page
     .locator(".confirmation-dialog")
@@ -436,3 +437,47 @@ for (const route of ["settings", "privacy", "profile"]) {
     }
   });
 }
+
+test("metadata errors and nonblocking warnings share centered, expandable summaries", async ({
+  page,
+  api,
+}) => {
+  await page.goto("/instances/edit/instance");
+  await expect(page.getByLabel("Metadata name")).toHaveValue("Study record");
+  await page.evaluate(() => {
+    const cee = document.querySelector("cedar-embeddable-editor");
+    cee.dataQualityReport = {
+      isValid: false,
+      problems: [
+        { path: ["Title"], code: "required", message: "A value is required." },
+        { path: ["Email"], code: "email", message: "Enter a valid email." },
+      ],
+    };
+    cee.dispatchEvent(new CustomEvent("change"));
+  });
+  const errors = page.getByLabel("Metadata errors");
+  const warnings = page.getByLabel("Metadata warnings");
+  expect(api.requests.some((r) => r.method !== "GET")).toBe(false);
+  await expect(errors.locator("summary")).toContainText("1 error");
+  await expect(warnings.locator("summary")).toContainText("1 warning");
+  await expect(
+    page.getByRole("button", { name: "Save", exact: true }),
+  ).toBeDisabled();
+  await errors.locator("summary").click();
+  await expect(errors.locator("li")).toBeVisible();
+  await warnings.locator("summary").click();
+  await expect(warnings.locator("li")).toBeVisible();
+  await page
+    .locator(".metadata-content")
+    .screenshot({ path: "/tmp/metadata-validation-summaries.png" });
+  await expect(warnings).toHaveCSS("color", "rgb(180, 83, 9)");
+  await page.evaluate(() => {
+    const cee = document.querySelector("cedar-embeddable-editor");
+    cee.dataQualityReport.problems.pop();
+    cee.dispatchEvent(new CustomEvent("change"));
+  });
+  await expect(errors).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Save", exact: true }),
+  ).toBeEnabled();
+});

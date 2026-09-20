@@ -656,9 +656,9 @@ td:first-child a {
   }
 }
 .metadata-quality {
-  padding: var(--cedar-space-4);
-  border: 1px solid var(--cedar-border-rule);
+  @include patterns.validation-summary;
 }
+
 @media (max-width: 600px) {
   .metadata-toolbar {
     flex-wrap: wrap;

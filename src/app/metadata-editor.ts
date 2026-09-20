@@ -184,16 +184,21 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       this.baseline = metadataKey(this.cee.currentMetadata);
       this.baselineName = this.chosenName();
       this.cee.addEventListener("change", this.changed);
-      this.quality.set(this.cee.dataQualityReport);
+      this.refreshQuality();
       this.loading.set(false);
     } catch (e) {
       if (this.alive)
         this.error.set(e instanceof Error ? e.message : String(e));
     }
   }
+  private refreshQuality() {
+    const report = this.cee.dataQualityReport;
+    // Snapshot event data: a component may update an existing report object.
+    this.quality.set({ ...report, problems: [...(report.problems || [])] });
+  }
   readonly changed = () => {
     if (this.loading() || !this.alive) return;
-    this.quality.set(this.cee.dataQualityReport);
+    this.refreshQuality();
     this.dirty.set(
       metadataKey(this.cee.currentMetadata) !== this.baseline ||
         this.chosenName() !== this.baselineName,
@@ -208,8 +213,47 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         (q?.nonNullRequiredFieldValueCount || 0),
     );
   }
+  get validationWarnings() {
+    const q = this.quality();
+    const problems = (q?.problems || []).filter((p) =>
+      ["required", "missingProperty", "minItems"].includes(p.code),
+    );
+    const items = problems.map((p) => ({
+      label: p.path.join(" / ") || p.field || "Metadata",
+      message: p.message || p.code,
+    }));
+    if (this.missingRequired && !problems.some((p) => p.code === "required"))
+      items.push({
+        label: "Metadata",
+        message: `${this.missingRequired} required fields are missing.`,
+      });
+    return items;
+  }
+  get validationErrors() {
+    const q = this.quality();
+    const items = (q?.problems || [])
+      .filter(
+        (p) => !["required", "missingProperty", "minItems"].includes(p.code),
+      )
+      .map((p) => ({
+        label: p.path.join(" / ") || p.field || "Metadata",
+        message: p.message || p.code,
+      }));
+    if (
+      q?.isValid === false &&
+      !items.length &&
+      !this.validationWarnings.length
+    )
+      items.push({
+        label: "Metadata",
+        message: "Review invalid metadata before saving.",
+      });
+    return items;
+  }
   async save() {
     if (this.loading() || this.saving() || !this.writable()) return;
+    this.refreshQuality();
+    if (this.validationErrors.length) return;
     this.saving.set(true);
     this.error.set("");
     this.notice.set("");

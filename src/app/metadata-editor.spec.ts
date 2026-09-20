@@ -255,6 +255,41 @@ describe("Modern metadata host", () => {
     await host.save();
     expect(host.notice()).toBe("Saved.");
   });
+  it("blocks invalid values but permits warnings once errors are corrected", async () => {
+    await edit();
+    Object.assign(cee.dataQualityReport, {
+      isValid: false,
+      problems: [
+        {
+          path: ["Title"],
+          field: "Title",
+          code: "required",
+          message: "A value is required.",
+        },
+        {
+          path: ["Email"],
+          field: "Email",
+          code: "email",
+          message: "Enter a valid email.",
+        },
+      ],
+    });
+    host.changed();
+    expect(host.validationWarnings).toHaveLength(1);
+    expect(host.validationErrors).toHaveLength(1);
+    api.request.mockClear();
+    await host.save();
+    expect(api.request).not.toHaveBeenCalled();
+    cee.dataQualityReport.problems.pop();
+    host.changed();
+    expect(host.validationErrors).toHaveLength(0);
+    api.request.mockResolvedValue({
+      data: { "@id": "instance-id" },
+      etag: '"i2"',
+    });
+    await host.save();
+    expect(host.notice()).toBe("Saved.");
+  });
   it("guards dirty navigation and unload, but allows clean navigation", async () => {
     await edit();
     expect(await host.mayLeave()).toBe(true);

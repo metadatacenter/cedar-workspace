@@ -10,8 +10,8 @@ import {
   standalone: true,
   template: `<svg
     [attr.viewBox]="style.viewBox"
-    [attr.width]="style.default"
-    [attr.height]="style.default"
+    [attr.width]="style[size]"
+    [attr.height]="style[size]"
     fill="none"
     stroke="currentColor"
     [attr.stroke-width]="style.strokeWidth"
@@ -28,6 +28,7 @@ import {
 })
 export class Icon {
   @Input() name = "artifact-field";
+  @Input() size: "small" | "default" | "large" = "default";
 
   readonly style = iconStyle;
   private readonly sanitizer = inject(DomSanitizer);
