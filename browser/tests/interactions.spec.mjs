@@ -119,7 +119,7 @@ test("URL retains search, ordering and page through reload and Back", async ({
     "descending",
   );
   expect(api.requests.some((r) => r.path.endsWith("/search"))).toBe(true);
-  await page.getByRole("button", { name: "Title", exact: false }).click();
+  await page.getByRole("button", { name: "Name", exact: false }).click();
   await expect(page).toHaveURL(/sort=name/);
   await page.reload();
   await expect(page.locator("th").first()).toHaveAttribute(
@@ -301,8 +301,7 @@ test("success toast expires and pauses while hovered without blocking the form",
 });
 
 for (const [label, field] of [
-  ["Created", "createdOnTS"],
-  ["Modified", "lastUpdatedOnTS"],
+  ["Last modified", "lastUpdatedOnTS"],
 ]) {
   test(`${label} sorting shows direction and survives reload`, async ({
     page,
@@ -333,7 +332,7 @@ for (const [label, field] of [
       heading.locator('[data-cedar-icon="chevron-down"]'),
     ).toBeVisible();
     await expect(
-      page.getByRole("columnheader", { name: "Title" }),
+      page.getByRole("columnheader", { name: "Name" }),
     ).toHaveAttribute("aria-sort", "none");
   });
 }

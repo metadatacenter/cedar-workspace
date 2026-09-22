@@ -9,8 +9,7 @@ import {
   ElementRef,
   Injector,
 } from "@angular/core";
-import { dateFormat } from "./date-format";
-import { DatePipe } from "@angular/common";
+import { FriendlyDatePipe } from "./friendly-date";
 import { FormsModule } from "@angular/forms";
 import { ActivatedRoute, Router, RouterLink } from "@angular/router";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
@@ -101,7 +100,7 @@ export function actions(r: Resource): Action[] {
   imports: [
     Toast,
     FormsModule,
-    DatePipe,
+    FriendlyDatePipe,
     RouterLink,
     ResourceDialog,
     PermissionsDialog,
@@ -111,9 +110,6 @@ export function actions(r: Resource): Action[] {
 })
 export class Workspace {
   readonly cedarVersion = window.cedarVersion || "unknown";
-  get preferredDateFormat() {
-    return dateFormat(this.api.profile?.uiPreferences?.preferredDateFormat);
-  }
   readonly api = inject(Backend);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
@@ -123,6 +119,7 @@ export class Workspace {
   readonly title = title;
   readonly can = can;
   readonly actions = actions;
+  readonly now = signal(Date.now());
   readonly ready = signal(false);
   readonly loading = signal(false);
   readonly error = signal("");
@@ -149,8 +146,10 @@ export class Workspace {
   private listRead = 0;
   private detailRead = 0;
   constructor() {
+    const clock = setInterval(() => this.now.set(Date.now()), 60_000);
     void this.start();
     this.destroy.onDestroy(() => {
+      clearInterval(clock);
       this.listRead++;
       this.detailRead++;
     });

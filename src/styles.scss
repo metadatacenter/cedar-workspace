@@ -355,6 +355,10 @@ tr.selected:hover {
   @include patterns.artifact-title;
   margin: 0 0 var(--cedar-space-1);
 }
+.information > .collapse {
+  left: var(--cedar-space-1);
+  right: auto;
+}
 .badge {
   font-size: var(--cedar-font-size-small);
   color: var(--cedar-text-muted);
@@ -594,9 +598,8 @@ table {
 th:first-child {
   width: auto;
 }
-th:nth-child(2),
-th:nth-child(3) {
-  width: 110px;
+th:nth-child(2) {
+  width: 150px;
 }
 th:last-child {
   width: 130px;

@@ -1,5 +1,5 @@
 import { TestBed } from "@angular/core/testing";
-import { provideRouter } from "@angular/router";
+import { provideRouter, Router } from "@angular/router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Workspace, actions } from "./workspace";
 import { Backend } from "./backend.service";
@@ -67,6 +67,30 @@ describe("Angular Workspace", () => {
     f.detectChanges();
     return f;
   }
+  it("shows one friendly modified column and retains its timestamp for hover", async () => {
+    const f = await render();
+    const stamp = new Date(f.componentInstance.now() - 180_000).toISOString();
+    f.componentInstance.rows.set([{ ...template, "pav:lastUpdatedOn": stamp }]);
+    f.detectChanges();
+    const table: HTMLTableElement = f.nativeElement.querySelector("table");
+    expect(
+      [...table.querySelectorAll("th")].map((th) => th.textContent?.trim()),
+    ).toEqual(["Name", "Last modified", "Actions"]);
+    const time = table.querySelector("time")!;
+    expect(time.textContent?.trim()).toBe("3 minutes ago");
+    expect(time.getAttribute("datetime")).toBe(stamp);
+    expect(time.getAttribute("title")).toBe(stamp);
+    const navigate = vi.spyOn(TestBed.inject(Router), "navigate");
+    table
+      .querySelectorAll("th button")[1]
+      .dispatchEvent(new MouseEvent("click"));
+    expect(navigate).toHaveBeenCalledWith(
+      [],
+      expect.objectContaining({
+        queryParams: expect.objectContaining({ sort: "lastUpdatedOnTS" }),
+      }),
+    );
+  });
   it("renders only a table, Info tab, and the four workspace destinations", async () => {
     const f = await render();
     const el = f.nativeElement as HTMLElement;
@@ -89,7 +113,9 @@ describe("Angular Workspace", () => {
       f.componentInstance.tab = "version";
       await f.componentInstance.select(r);
       f.detectChanges();
-      const tabs = [...f.nativeElement.querySelectorAll('[role="tab"]')] as HTMLElement[];
+      const tabs = [
+        ...f.nativeElement.querySelectorAll('[role="tab"]'),
+      ] as HTMLElement[];
       expect(tabs.map((tab) => tab.textContent?.trim())).toEqual(
         resourceType === "folder" || resourceType === "instance"
           ? ["Info"]

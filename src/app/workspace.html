@@ -167,20 +167,9 @@
               [attr.aria-sort]="sort==='name'?'ascending':sort==='-name'?'descending':'none'"
             >
               <button (click)="changeSort('name')">
-                Title @if(sort === "name" || sort === "-name") {
+                Name @if(sort === "name" || sort === "-name") {
                 <cedar-icon
                   [name]="sort === 'name' ? 'chevron-up' : 'chevron-down'"
-                />
-                }
-              </button>
-            </th>
-            <th
-              [attr.aria-sort]="sort==='createdOnTS'?'ascending':sort==='-createdOnTS'?'descending':'none'"
-            >
-              <button (click)="changeSort('createdOnTS')">
-                Created @if(sort === "createdOnTS" || sort === "-createdOnTS") {
-                <cedar-icon
-                  [name]="sort === 'createdOnTS' ? 'chevron-up' : 'chevron-down'"
                 />
                 }
               </button>
@@ -189,7 +178,7 @@
               [attr.aria-sort]="sort==='lastUpdatedOnTS'?'ascending':sort==='-lastUpdatedOnTS'?'descending':'none'"
             >
               <button (click)="changeSort('lastUpdatedOnTS')">
-                Modified @if(sort === "lastUpdatedOnTS" || sort ===
+                Last modified @if(sort === "lastUpdatedOnTS" || sort ===
                 "-lastUpdatedOnTS") {
                 <cedar-icon
                   [name]="sort === 'lastUpdatedOnTS' ? 'chevron-up' : 'chevron-down'"
@@ -230,8 +219,13 @@
               >
               }
             </td>
-            <td>{{r['pav:createdOn'] | date:preferredDateFormat}}</td>
-            <td>{{r['pav:lastUpdatedOn'] | date:preferredDateFormat}}</td>
+            <td>
+              <time
+                [attr.datetime]="r['pav:lastUpdatedOn'] || null"
+                [attr.title]="r['pav:lastUpdatedOn'] || null"
+                >{{r['pav:lastUpdatedOn'] | friendlyDate:now()}}</time
+              >
+            </td>
             <td class="row-actions" (click)="$event.stopPropagation()">
               @if(r.isOpen){<a
                 [href]="openView(r)"
@@ -312,10 +306,6 @@
     </button>
     @if(right()){ @if(selected();as r){
     <h1>{{title(r)}}</h1>
-    <span class="badge">{{r.resourceType}}</span> @if(r['pav:version']){<span
-      class="badge"
-      >v {{r['pav:version']}}</span
-    >}
     <div class="tabs" role="tablist" aria-label="Resource details">
       <button
         role="tab"
@@ -337,6 +327,8 @@
     </div>
     @if(tab==='info'){
     <dl>
+      <dt>Type</dt>
+      <dd>{{r.resourceType}}</dd>
       <dt>Location</dt>
       <dd>
         @for(p of r.pathInfo;track p['@id'];let last=$last){@if(!last){<a
@@ -349,13 +341,19 @@
       <dd>{{r.ownedByUserName || '—'}}</dd>
       <dt>Created</dt>
       <dd>
-        {{r['pav:createdOn']|date:preferredDateFormat}}<small
-          >{{r.createdByUserName?'by '+r.createdByUserName:''}}</small
-        >
+        <time
+          [attr.datetime]="r['pav:createdOn'] || null"
+          [attr.title]="r['pav:createdOn'] || null"
+          >{{r['pav:createdOn']|friendlyDate:now()}}</time
+        ><small>{{r.createdByUserName?'by '+r.createdByUserName:''}}</small>
       </dd>
-      <dt>Modified</dt>
+      <dt>Last modified</dt>
       <dd>
-        {{r['pav:lastUpdatedOn']|date:preferredDateFormat}}<small
+        <time
+          [attr.datetime]="r['pav:lastUpdatedOn'] || null"
+          [attr.title]="r['pav:lastUpdatedOn'] || null"
+          >{{r['pav:lastUpdatedOn']|friendlyDate:now()}}</time
+        ><small
           >{{r.lastUpdatedByUserName?'by '+r.lastUpdatedByUserName:''}}</small
         >
       </dd>
@@ -380,7 +378,11 @@
       <a [href]="link(derived)">{{title(derived)}}</a
       ><small
         >Modified
-        {{derived['pav:lastUpdatedOn']|date:preferredDateFormat}}</small
+        <time
+          [attr.datetime]="derived['pav:lastUpdatedOn'] || null"
+          [attr.title]="derived['pav:lastUpdatedOn'] || null"
+          >{{derived['pav:lastUpdatedOn']|friendlyDate:now()}}</time
+        ></small
       >
     </section>
     } @if(r.isBasedOn;as based){
@@ -424,7 +426,12 @@
         >
         <p>{{v['bibo:status']}}</p>
         <small
-          >Modified {{v['pav:lastUpdatedOn']|date:preferredDateFormat}}</small
+          >Modified
+          <time
+            [attr.datetime]="v['pav:lastUpdatedOn'] || null"
+            [attr.title]="v['pav:lastUpdatedOn'] || null"
+            >{{v['pav:lastUpdatedOn']|friendlyDate:now()}}</time
+          ></small
         >
       </article>
       }
