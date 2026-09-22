@@ -211,6 +211,9 @@ textarea {
   gap: 0;
 }
 .destinations a {
+  display: flex;
+  align-items: center;
+  gap: var(--cedar-space-2);
   padding: var(--cedar-space-2) 0;
   font-size: var(--cedar-font-size);
 }
@@ -353,7 +356,19 @@ tr.selected:hover {
 }
 .information h1 {
   @include patterns.artifact-title;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--cedar-space-2);
   margin: 0 0 var(--cedar-space-1);
+}
+.information h1 cedar-icon {
+  flex: none;
+  margin-top: var(--cedar-space-1);
+}
+.information dt,
+.information small,
+.information .identifiers {
+  font-size: var(--cedar-font-size);
 }
 .information > .collapse {
   left: var(--cedar-space-1);
@@ -390,7 +405,7 @@ dd {
 }
 .information dl {
   display: grid;
-  grid-template-columns: 90px 1fr;
+  grid-template-columns: max-content minmax(0, 1fr);
   margin: var(--cedar-space-2) 0;
 }
 .information dt,
@@ -398,6 +413,9 @@ dd {
   margin: 0;
   padding: var(--cedar-space-2) 0;
   border-bottom: 1px solid var(--cedar-border-rule-light);
+}
+.information dt {
+  padding-right: var(--cedar-space-4);
 }
 dt {
   color: var(--cedar-text-muted);

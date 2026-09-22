@@ -363,9 +363,8 @@ test("folder separators have no surrounding spacing in navigation, details and d
     }
   }
   await unspaced(page.locator(".breadcrumbs .breadcrumb-separator"), 2);
-  await page
-    .getByRole("button", { name: "Show information", exact: true })
-    .click();
+  await page.locator("tbody tr").first().focus();
+  await page.keyboard.press("Enter");
   await unspaced(page.locator(".information .breadcrumb-separator"), 2);
   await page
     .getByRole("button", { name: "Actions for Study metadata" })

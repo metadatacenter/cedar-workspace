@@ -107,25 +107,25 @@
       <a
         routerLink="/dashboard"
         [class.active]="!params.has('sharing')&&!params.has('search')&&!params.has('viewMode')"
-        >Workspace</a
+        ><cedar-icon name="home" />Home</a
       >
       <a
         routerLink="/dashboard"
         [queryParams]="{sharing:'shared-with-me'}"
         [class.active]="params.get('sharing')==='shared-with-me'"
-        >Shared with Me</a
+        ><cedar-icon name="groups" />Shared with Me</a
       >
       <a
         routerLink="/dashboard"
         [queryParams]="{sharing:'shared-with-everybody'}"
         [class.active]="params.get('sharing')==='shared-with-everybody'"
-        >Shared with Everyone</a
+        ><cedar-icon name="groups" />Shared with Everyone</a
       >
       <a
         routerLink="/dashboard"
         [queryParams]="{viewMode:'view-special-folders'}"
         [class.active]="params.has('viewMode')"
-        >Community Folders</a
+        ><cedar-icon name="groups" />Community Folders</a
       >
     </nav>
     }
@@ -198,6 +198,8 @@
           <tr
             [class.selected]="selected()?.['@id']===r['@id']"
             (click)="select(r)"
+            tabindex="0"
+            (keydown.enter)="$event.target === $event.currentTarget ? select(r) : null"
           >
             <td>
               <span
@@ -244,13 +246,6 @@
                 title="Populate template"
                 ><cedar-icon name="populate" /></a
               >}
-              <button
-                (click)="select(r)"
-                aria-label="Show information"
-                title="Show information"
-              >
-                <cedar-icon name="info" />
-              </button>
               <button
                 (click)="toggleMenu(r, $event)"
                 [attr.aria-expanded]="menu()===r['@id']"
@@ -309,7 +304,11 @@
       <cedar-icon [name]="right()?'right':'left'" />
     </button>
     @if(right()){ @if(selected();as r){
-    <h1>{{title(r)}}</h1>
+    <h1>
+      <cedar-icon [name]="r.resourceType" size="large" /><span
+        >{{title(r)}}</span
+      >
+    </h1>
     <div class="tabs" role="tablist" aria-label="Resource details">
       <button
         role="tab"
@@ -332,7 +331,7 @@
     @if(tab==='info'){
     <dl>
       <dt>Type</dt>
-      <dd>{{r.resourceType}}</dd>
+      <dd>{{r.resourceType | titlecase}}</dd>
       <dt>Location</dt>
       <dd>
         @for(p of r.pathInfo;track p['@id'];let last=$last){@if(!last){<a
@@ -367,14 +366,7 @@
         || '—'}}
       </dd>
     </dl>
-    <div class="description-heading">
-      Description @if(can(r,'updateResource')){<button
-        (click)="dialog.set({action:'rename',resource:r})"
-        aria-label="Edit description"
-      >
-        <cedar-icon name="edit" /></button
-      >}
-    </div>
+    <div class="description-heading">Description</div>
     <p class="description">{{r['schema:description']||'No description'}}</p>
     @if(r.derivedFrom;as derived){
     <section class="version">

@@ -16,6 +16,7 @@ import {
   Injector,
 } from "@angular/core";
 import { FriendlyDatePipe } from "./friendly-date";
+import { TitleCasePipe } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { ActivatedRoute, Router, RouterLink } from "@angular/router";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
@@ -108,6 +109,7 @@ export function actions(r: Resource): Action[] {
     ResourceFilters,
     FormsModule,
     FriendlyDatePipe,
+    TitleCasePipe,
     RouterLink,
     ResourceDialog,
     PermissionsDialog,
