@@ -222,8 +222,7 @@ export class Workspace {
       this.rows.set(data.resources);
       this.total.set(data.totalCount);
       this.path.set(data.pathInfo || []);
-      const detailRead = this.detailRead;
-      void this.loadFolder(read, detailRead);
+      void this.loadFolder(read);
       // Listings omit lifecycle actions. Enrich template links without blocking the table.
       void this.loadTemplateActions(data.resources, read);
     } catch (e) {
@@ -235,20 +234,13 @@ export class Workspace {
       if (read === this.listRead) this.loading.set(false);
     }
   }
-  private async loadFolder(read: number, detailRead: number) {
+  private async loadFolder(read: number) {
     try {
       const { data } = await this.api.request<Resource>(
         "/folders/" + encodeURIComponent(this.folder),
       );
       if (read !== this.listRead) return;
       this.currentFolder.set(data);
-      if (
-        detailRead === this.detailRead &&
-        !this.params.has("search") &&
-        !this.params.has("sharing") &&
-        !this.params.has("viewMode")
-      )
-        this.selected.set(data);
     } catch (e) {
       if (read === this.listRead) this.fail(e);
     }

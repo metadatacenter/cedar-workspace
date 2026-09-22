@@ -91,14 +91,24 @@ describe("Angular Workspace", () => {
       }),
     );
   });
-  it("renders only a table, Info tab, and the four workspace destinations", async () => {
+  it("renders the table and destinations with empty information until selection", async () => {
     const f = await render();
     const el = f.nativeElement as HTMLElement;
     expect(el.querySelectorAll("table").length).toBe(1);
     expect(el.querySelectorAll(".destinations a").length).toBe(4);
     expect(
       [...el.querySelectorAll("[role=tab]")].map((e) => e.textContent?.trim()),
-    ).toEqual(["Info"]);
+    ).toEqual([]);
+    expect(f.componentInstance.selected()).toBeUndefined();
+    expect(el.querySelector(".information")?.textContent).toContain(
+      "Select an item to see the details",
+    );
+    await f.componentInstance.select(template);
+    await f.componentInstance.load();
+    await f.whenStable();
+    f.detectChanges();
+    expect(f.componentInstance.selected()).toBeUndefined();
+    expect(el.querySelector(".information h1")).toBeNull();
     expect(el.textContent).not.toMatch(
       /Categories|Latest|Tile view|Filter by type/,
     );

@@ -19,7 +19,11 @@
       </button>
     </header>
     @if(resource){
-    <p>{{title(resource)}}</p>
+    <p class="resource-dialog-resource">
+      <cedar-icon [name]="resource.resourceType" /><span
+        >{{title(resource)}}</span
+      >
+    </p>
     } @if(error()){
     <p class="alert" role="alert">{{error()}}</p>
     }
@@ -130,7 +134,7 @@
         type="submit"
         [disabled]="busy()||!destinationAllowed"
       >
-        {{busy()?'Working…':action==='delete'?'Delete':'Save'}}
+        {{busy()?'Working…':action==='delete'?'Delete':['make-open','make-not-open'].includes(action)?'Ok':'Save'}}
       </button>
     </footer>
   </form>

@@ -87,6 +87,17 @@ test("artifact menu and resource dialog", async ({ page, api }) => {
     await expect(page.locator("dialog[open]")).toHaveScreenshot(
       "rename-dialog.png",
     );
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await action(page, "Make Open");
+  const openDialog = page.locator("dialog[open]");
+  await expect(
+    openDialog.getByRole("button", { name: "Ok", exact: true }),
+  ).toBeEnabled();
+  await expect(
+    openDialog.locator('.resource-dialog-resource svg[data-cedar-icon="artifact-template"]'),
+  ).toBeVisible();
+  if (process.env.WORKSPACE_VISUAL)
+    await expect(openDialog).toHaveScreenshot("make-open-dialog.png");
 });
 
 for (const readonly of [false, true]) {
@@ -110,6 +121,9 @@ for (const readonly of [false, true]) {
 // Geometry assertions prevent a baseline refresh from silently approving looser density.
 test("workspace follows CEE compact density", async ({ page, api }) => {
   await dashboard(page);
+  await page.locator("tbody tr").first().focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".information dd").first()).toBeVisible();
   const sizes = await page.evaluate(() => {
     const height = (selector) =>
       document.querySelector(selector).getBoundingClientRect().height;
