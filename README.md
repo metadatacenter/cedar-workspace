@@ -3,8 +3,8 @@
 CEDAR's split Workspace frontend. `/` and `/dashboard` run a standalone Angular
 22 application with Angular routing, signals, forms and shared CEDAR design tokens.
 The initial workspace provides a table, search, folder navigation, collapsible side
-panels, Info/Version tabs, and resource action dialogs. It deliberately has no
-categories, latest-version filter, type filters or tile view.
+panels, Info/Version tabs, Type and Last modified filters, and resource action dialogs. It deliberately has no
+categories, a latest-version filter or a tile view.
 
 Template, element and field authoring opens the configured CED/CEFD Designer host;
 metadata creation/editing opens the standalone Angular CEE host at
@@ -20,6 +20,25 @@ All routes now use the Angular application. The AngularJS shell, Bower vendors, 
 icon fonts, RequireJS and obsolete build/test packages are removed. The retained
 Keycloak adapter and bundle are plain JavaScript used by Angular.
 The combined `cedar-template-editor` application is unchanged.
+
+## Listing filters
+
+`ResourceFilters` is a standalone, router-independent toolbar; its `value` input and
+`change` output use `ListingFilters`. `FilterChip` provides the reusable selected
+chip and clear action. Both use the shared design tokens and icon registry.
+Type accepts any combination of Folder, Element, Template, Field and Instance.
+Each popover edits a draft until Apply; Cancel, Escape and clicking outside discard it.
+
+Workspace stores applied filters in URL query parameters and resets the page when
+filters change. The date presets count local calendar days (Last 7 days includes
+today and the preceding six days). Custom After and Before dates are inclusive;
+either may be blank. The range controls use native date inputs and do not load CEE.
+
+`listing-filters.ts` translates dates to `modified_after` (inclusive) and
+`modified_before` (exclusive) epoch-millisecond bounds. The Resource Server applies
+them together with `resource_types` before counting and paginating folder, shared,
+community and indexed search results. It requires the matching server/library changes;
+an older Resource Server does not implement these date parameters.
 
 ## Local development
 

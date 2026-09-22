@@ -1,3 +1,4 @@
+import { applyListingFilters } from "./listing-filters";
 export type ResourceType =
   "folder" | "template" | "element" | "field" | "instance";
 export interface Resource {
@@ -69,6 +70,7 @@ export function listingPath(
     limit: "50",
     offset: String(offset),
   });
+  applyListingFilters(query, params);
   let path: string;
   if (
     params.has("search") ||

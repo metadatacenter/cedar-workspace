@@ -156,6 +156,10 @@
         <cedar-icon name="refresh" />
       </button>
     </div>
+    <cedar-resource-filters
+      [value]="filters"
+      (change)="changeFilters($event)"
+    />
     <div class="table-scroll" [attr.aria-busy]="loading()">
       <table>
         <caption class="sr-only">

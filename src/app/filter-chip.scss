@@ -1,0 +1,24 @@
+.chip {
+  display: inline-flex;
+  border: 1px solid var(--cedar-control-border-default);
+  border-radius: var(--cedar-menu-radius);
+  overflow: hidden;
+}
+button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cedar-space-3);
+  color: var(--cedar-text-primary);
+  border-radius: 0;
+}
+.active {
+  background: var(--cedar-surface-selected);
+  border-color: var(--cedar-color-primary);
+}
+.active button {
+  color: var(--cedar-color-primary);
+}
+.clear {
+  border-left: 1px solid var(--cedar-border-rule);
+  padding-inline: var(--cedar-space-2);
+}

@@ -1,3 +1,9 @@
+import { ResourceFilters } from "./resource-filters";
+import {
+  ListingFilters,
+  filtersFromParams,
+  filterQuery,
+} from "./listing-filters";
 import { Toast } from "./toast";
 import {
   Component,
@@ -99,6 +105,7 @@ export function actions(r: Resource): Action[] {
   selector: "cedar-workspace-page",
   imports: [
     Toast,
+    ResourceFilters,
     FormsModule,
     FriendlyDatePipe,
     RouterLink,
@@ -403,6 +410,16 @@ export class Workspace {
       queryParams: this.search.trim()
         ? { search: this.search.trim() }
         : { folderId: this.folder },
+    });
+  }
+  get filters(): ListingFilters {
+    return filtersFromParams(this.params);
+  }
+  changeFilters(filters: ListingFilters) {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParamsHandling: "merge",
+      queryParams: filterQuery(filters),
     });
   }
   changeSort(field: string) {
