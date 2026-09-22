@@ -15,7 +15,7 @@
   position: absolute;
   top: calc(100% + var(--cedar-space-2));
   left: 0;
-  z-index: 20;
+  z-index: var(--cedar-layer-menu);
   min-width: 280px;
   max-width: 100%;
   background: var(--cedar-color-on-primary);
@@ -43,8 +43,8 @@
 input[type="checkbox"] {
   accent-color: var(--cedar-color-primary);
   min-height: 0;
-  width: 18px;
-  height: 18px;
+  width: var(--cedar-icon-size-small);
+  height: var(--cedar-icon-size-small);
 }
 .date-body {
   display: grid;

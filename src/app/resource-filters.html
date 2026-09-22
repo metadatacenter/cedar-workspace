@@ -34,6 +34,7 @@
     <label
       ><input
         type="checkbox"
+        spellcheck="false"
         [checked]="draft().types.includes(type.value)"
         (change)="selectType(type.value)"
       />
@@ -64,6 +65,7 @@
       <label
         >After<input
           type="date"
+          spellcheck="false"
           aria-label="After"
           [ngModel]="draft().after || ''"
           (ngModelChange)="editDate('after', $event)"
@@ -71,6 +73,7 @@
       <label
         >Before<input
           type="date"
+          spellcheck="false"
           aria-label="Before"
           [ngModel]="draft().before || ''"
           (ngModelChange)="editDate('before', $event)"
