@@ -66,7 +66,7 @@ export function listingPath(
   offset: number,
 ): string {
   const query = new URLSearchParams({
-    sort,
+    sort: params.get("folders") === "first" ? "foldersFirst," + sort : sort,
     limit: "50",
     offset: String(offset),
   });

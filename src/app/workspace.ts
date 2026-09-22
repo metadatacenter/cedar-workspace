@@ -1,3 +1,4 @@
+import { SortMenu } from "./sort-menu";
 import { ResourceFilters } from "./resource-filters";
 import {
   ListingFilters,
@@ -107,6 +108,7 @@ export function actions(r: Resource): Action[] {
   imports: [
     Toast,
     ResourceFilters,
+    SortMenu,
     FormsModule,
     FriendlyDatePipe,
     TitleCasePipe,
@@ -417,11 +419,21 @@ export class Workspace {
     });
   }
   changeSort(field: string) {
+    this.setSort(this.sort === field ? "-" + field : field);
+  }
+  setFoldersFirst(first: boolean) {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParamsHandling: "merge",
+      queryParams: { folders: first ? "first" : null, offset: null },
+    });
+  }
+  setSort(sort: string) {
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParamsHandling: "merge",
       queryParams: {
-        sort: this.sort === field ? "-" + field : field,
+        sort,
         offset: null,
       },
     });

@@ -190,7 +190,15 @@
                 }
               </button>
             </th>
-            <th><span class="sr-only">Actions</span></th>
+            <th class="sort-column">
+              <span class="sr-only">Actions</span>
+              <cedar-sort-menu
+                [sort]="sort"
+                [foldersFirst]="params.get('folders') === 'first'"
+                (sortChange)="setSort($event)"
+                (foldersFirstChange)="setFoldersFirst($event)"
+              />
+            </th>
           </tr>
         </thead>
         <tbody>

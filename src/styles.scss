@@ -317,6 +317,10 @@ tr.selected:hover {
 .resource-icon[data-type="folder"] {
   color: var(--cedar-color-component-title);
 }
+.sort-column {
+  text-align: right;
+  padding: var(--cedar-space-1);
+}
 .row-actions {
   position: relative;
   padding: var(--cedar-space-1);

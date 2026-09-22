@@ -40,6 +40,13 @@ them together with `resource_types` before counting and paginating folder, share
 community and indexed search results. It requires the matching server/library changes;
 an older Resource Server does not implement these date parameters.
 
+The sort menu above the row actions offers Name, Last modified and Date created,
+with ascending/descending order and optional folders on top. Its state is shared
+with the column headers and stored in the URL; changing it resets pagination.
+Folders remain mixed by default. Folder grouping uses the server's compound
+`sort=foldersFirst,<field>` order before pagination, including search and shared
+views, and requires the corresponding microservice-library support.
+
 ## Local development
 
 Use Node 24.19.0. Start the managed app with `cedarcli native start frontend workspace`.
