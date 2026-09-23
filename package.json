@@ -1,6 +1,6 @@
 {
   "name": "cedar-workspace",
-  "version": "2.9.18-SNAPSHOT",
+  "version": "2.9.18",
   "publishConfig": {
     "registry": "https://nexus.bmir.stanford.edu/repository/npm-cedar/"
   },
@@ -41,8 +41,8 @@
     "@angular/forms": "22.1.7",
     "@angular/platform-browser": "22.1.7",
     "@angular/router": "22.1.7",
-    "@org.metadatacenter/cedar-design-tokens": "0.1.0-dev.20260923.02b85637",
-    "cedar-embeddable-editor": "2.0.16",
+    "@org.metadatacenter/cedar-design-tokens": "0.1.0-dev.20260923.gafb9139c70a8.t0622",
+    "cedar-embeddable-editor": "2.0.17",
     "rxjs": "~7.8.2",
     "tslib": "^2.8.1"
   },
