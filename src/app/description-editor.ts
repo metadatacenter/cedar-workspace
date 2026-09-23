@@ -51,37 +51,7 @@ import { Resource, can, title } from "./resource";
       }
     }
   `,
-  styles: `
-    @use "@org.metadatacenter/cedar-design-tokens/controls";
-    :host {
-      display: block;
-    }
-    label,
-    .heading {
-      margin: 0 0 var(--cedar-space-1);
-      color: var(--cedar-text-muted);
-    }
-    textarea {
-      display: block;
-      width: 100%;
-    }
-    p {
-      white-space: pre-wrap;
-      margin: var(--cedar-space-1) 0 0;
-    }
-    .actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: var(--cedar-space-2);
-      margin-top: var(--cedar-space-1);
-    }
-    .primary {
-      @include controls.primary-action;
-    }
-    [role="alert"] {
-      color: var(--cedar-color-error);
-    }
-  `,
+  styleUrl: "./description-editor.scss",
 })
 export class DescriptionEditor {
   readonly resource = input.required<Resource>();

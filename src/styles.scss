@@ -434,6 +434,8 @@ dd {
   border-bottom: 1px solid var(--cedar-border-rule-light);
 }
 .information dt {
+  @include patterns.field-label($size: body);
+  margin: 0;
   padding-right: var(--cedar-space-4);
 }
 dt {
@@ -462,8 +464,8 @@ dd small {
   border-bottom: 1px solid var(--cedar-border-rule-light);
 }
 .info-section .description-heading {
+  @include patterns.field-label($size: body);
   margin-bottom: var(--cedar-space-1);
-  font-weight: var(--cedar-font-weight-regular);
 }
 .info-section small {
   display: block;
