@@ -77,6 +77,14 @@ export class Groups implements OnInit {
   }
   async selectTab(tab: "manage" | "create") {
     if (this.busy() || this.selecting()) return;
+    if (
+      tab === "create" &&
+      this.createdGroup &&
+      this.selected()?.["@id"] !== this.createdGroup["@id"]
+    ) {
+      await this.load(this.createdGroup, true);
+      return;
+    }
     this.activeTab = tab;
     if (
       tab === "manage" &&
@@ -85,13 +93,6 @@ export class Groups implements OnInit {
       this.selected.set(null);
       this.members.set(null);
       this.newMember = "";
-    }
-    if (
-      tab === "create" &&
-      this.createdGroup &&
-      this.selected()?.["@id"] !== this.createdGroup["@id"]
-    ) {
-      await this.select(this.createdGroup);
     }
   }
   newName = "";
@@ -166,21 +167,46 @@ export class Groups implements OnInit {
     if (this.busy()) return;
     await this.load(g);
   }
-  private async load(g: Group) {
+  private async load(g: Group, returningToCreate = false) {
     const generation = ++this.generation;
-    this.selected.set(null);
-    this.members.set(null);
-    this.stale.set(false);
-    this.restricted.set(false);
-    this.selecting.set(true);
-    this.groupEtag = this.memberEtag = null;
+    // Keep the current panel intact until both reads complete when changing tabs.
+    if (returningToCreate) this.busy.set(true);
+    else {
+      this.selected.set(null);
+      this.members.set(null);
+      this.stale.set(false);
+      this.restricted.set(false);
+      this.selecting.set(true);
+      this.groupEtag = this.memberEtag = null;
+    }
     this.error.set("");
     this.recoveryGroup.set(null);
     this.newMember = "";
     try {
       const detail = await this.api.request<Group>(this.path(g));
       if (generation !== this.generation) return;
+      let members: Member[] | null = null;
+      let memberEtag: string | null = null;
+      let restricted = !!detail.data.specialGroup;
+      if (!restricted) {
+        try {
+          const roster = await this.api.request<{ users: Member[] }>(
+            this.path(g) + "/users",
+          );
+          if (generation !== this.generation) return;
+          memberEtag = roster.etag;
+          members = roster.data.users || [];
+        } catch (e) {
+          if (generation !== this.generation) return;
+          if (e instanceof HttpError && e.status === 403) restricted = true;
+          else this.fail(e, g);
+        }
+      }
       this.selected.set(detail.data);
+      this.members.set(members);
+      this.memberEtag = memberEtag;
+      this.restricted.set(restricted);
+      if (!this.error()) this.stale.set(false);
       this.groups.update((groups) =>
         groups.map((value) =>
           value["@id"] === g["@id"] ? detail.data : value,
@@ -189,27 +215,14 @@ export class Groups implements OnInit {
       this.groupEtag = detail.etag;
       this.editName = groupName(detail.data);
       this.editDescription = detail.data["schema:description"] || "";
-      if (detail.data.specialGroup) {
-        this.restricted.set(true);
-        return;
-      }
-      try {
-        const roster = await this.api.request<{ users: Member[] }>(
-          this.path(g) + "/users",
-        );
-        if (generation !== this.generation) return;
-        this.memberEtag = roster.etag;
-        this.members.set(roster.data.users || []);
-      } catch (e) {
-        if (generation !== this.generation) return;
-        if (e instanceof HttpError && e.status === 403)
-          this.restricted.set(true);
-        else this.fail(e, g);
-      }
+      if (returningToCreate) this.activeTab = "create";
     } catch (e) {
       if (generation === this.generation) this.fail(e, g);
     } finally {
-      if (generation === this.generation) this.selecting.set(false);
+      if (generation === this.generation) {
+        if (returningToCreate) this.busy.set(false);
+        else this.selecting.set(false);
+      }
     }
   }
   private requireEtag(value: string | null) {

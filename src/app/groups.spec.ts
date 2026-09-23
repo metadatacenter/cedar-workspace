@@ -285,6 +285,46 @@ describe("Groups", () => {
     expect(host.selected()).toEqual(created);
     expect(host.canAdmin).toBe(true);
   });
+  it("keeps Manage intact until the returning Create group and roster are both ready", async () => {
+    const created = { ...g, "@id": "created", "schema:name": "New" };
+    host.createdGroup = created;
+    let resolveRoster!: (value: unknown) => void;
+    request
+      .mockResolvedValueOnce({ data: created, etag: '"g2"' })
+      .mockImplementationOnce(
+        () => new Promise((resolve) => (resolveRoster = resolve)),
+      );
+    const pending = host.selectTab("create");
+    await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(2));
+    expect(host.activeTab).toBe("manage");
+    expect(host.selected()).toEqual(g);
+    expect(host.members()).toEqual([me]);
+    expect(host.busy()).toBe(true);
+    expect(host.selecting()).toBe(false);
+    await host.save();
+    expect(request).toHaveBeenCalledTimes(2);
+    resolveRoster({ data: { users: [me, other] }, etag: '"m2"' });
+    await pending;
+    expect(host.activeTab).toBe("create");
+    expect(host.selected()).toEqual(created);
+    expect(host.members()).toEqual([me, other]);
+    expect(host.groupEtag).toBe('"g2"');
+    expect(host.memberEtag).toBe('"m2"');
+    expect(host.busy()).toBe(false);
+  });
+  it("keeps the current tab and its revision state if returning to Create fails", async () => {
+    host.createdGroup = { ...g, "@id": "created" };
+    host.stale.set(true);
+    request.mockRejectedValueOnce(new HttpError(503, "Unavailable"));
+    await host.selectTab("create");
+    expect(host.activeTab).toBe("manage");
+    expect(host.selected()).toEqual(g);
+    expect(host.groupEtag).toBe('"group1"');
+    expect(host.memberEtag).toBe('"members1"');
+    expect(host.stale()).toBe(true);
+    expect(host.recoveryGroup()).toEqual(host.createdGroup);
+    expect(host.busy()).toBe(false);
+  });
   it("reports roster failures other than forbidden and does not call them an empty roster", async () => {
     request
       .mockResolvedValueOnce({ data: g, etag: '"g"' })
