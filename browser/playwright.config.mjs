@@ -5,7 +5,7 @@ export default defineConfig({
   fullyParallel: true,
   projects: [
     { name: "", use: { browserName: "chromium" } },
-    { name: "webkit", testMatch: "sorting.spec.mjs", use: { browserName: "webkit" } },
+    { name: "webkit", testMatch: ["sorting.spec.mjs", "permissions.spec.mjs"], use: { browserName: "webkit" } },
   ],
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,

@@ -51,6 +51,7 @@ import { FormsModule } from "@angular/forms";
             [id]="id + '-option-' + i"
             [attr.aria-selected]="i === active"
             [class.active]="i === active"
+            (pointermove)="active = i"
             (mousedown)="$event.preventDefault()"
             (click)="choose(option)"
           >
@@ -92,11 +93,12 @@ import { FormsModule } from "@angular/forms";
         top: 100%;
         left: 0;
         min-width: 160px;
+        width: 100%;
         max-width: 100%;
         padding: var(--cedar-space-1) 0;
-        background: var(--cedar-color-on-primary);
-        border: 1px solid var(--cedar-border-rule);
-        border-radius: var(--cedar-control-radius-default);
+        background: var(--cedar-overlay-surface);
+        border: 1px solid var(--cedar-overlay-border);
+        border-radius: var(--cedar-menu-radius);
         box-shadow: var(--cedar-menu-shadow);
       }
       button {
@@ -109,10 +111,14 @@ import { FormsModule } from "@angular/forms";
         text-align: left;
         color: var(--cedar-text-primary);
       }
+      button:hover:not(:disabled):not([aria-disabled='true']) {
+        color: var(--cedar-text-primary);
+        background: transparent;
+      }
       button.active,
-      button:hover {
-        color: var(--cedar-color-on-primary);
-        background: var(--cedar-color-primary);
+      button.active:hover:not(:disabled):not([aria-disabled='true']) {
+        color: var(--cedar-text-selected);
+        background: var(--cedar-surface-selected);
       }
     `,
   ],

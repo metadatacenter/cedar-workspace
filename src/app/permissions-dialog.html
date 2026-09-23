@@ -37,7 +37,9 @@
     } @if(notice()) {
     <cedar-toast [message]="notice()" />
     } @if(busy()) {
-    <p role="status">Loading…</p>
+    <p role="status" [class.sr-only]="permissions()">
+      {{permissions() ? 'Saving permissions…' : 'Loading…'}}
+    </p>
     } @if(resource.resourceType === 'folder') {
     <div class="folder-notice">
       <cedar-icon name="folder" /><span

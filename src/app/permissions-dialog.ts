@@ -305,11 +305,14 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
       this.etag = reply.etag;
       saved = true;
       this.notice.set("Permissions saved.");
-      // A self-demotion or ownership transfer can remove the caller's privileges.
-      this.current.set(null);
+      // Keep the existing layout while all mutation controls remain disabled.
+      // Apply refreshed privileges atomically, including a genuine self-demotion.
       const report = await this.api.report(this.resource);
       if (this.alive) this.current.set(report.data);
     } catch (e) {
+      // A completed write may have revoked access. Never enable stale privileges
+      // if their refresh fails; require an explicit permissions reload instead.
+      if (saved && this.alive) this.current.set(null);
       this.fail(e);
       if (!saved && this.alive) this.failedChange.set(description);
     } finally {
