@@ -1,0 +1,20 @@
+@use "@org.metadatacenter/cedar-design-tokens/patterns";
+
+:host {
+  display: inline-flex;
+  position: relative;
+  flex: none;
+}
+[role="tooltip"] {
+  @include patterns.menu-surface;
+  position: absolute;
+  z-index: var(--cedar-layer-tooltip);
+  right: 0;
+  bottom: 100%;
+  width: max-content;
+  max-width: calc(100vw - 2 * var(--cedar-space-6));
+  padding: var(--cedar-space-2) var(--cedar-space-3);
+  font-size: var(--cedar-font-size);
+  font-weight: var(--cedar-font-weight-regular);
+  color: var(--cedar-text-primary);
+}

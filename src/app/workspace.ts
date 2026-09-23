@@ -1,3 +1,4 @@
+import { CopyButton } from "./copy-button";
 import { DescriptionEditor } from "./description-editor";
 import { SortMenu } from "./sort-menu";
 import { ResourceFilters } from "./resource-filters";
@@ -111,6 +112,7 @@ export function actions(r: Resource): Action[] {
     ResourceFilters,
     SortMenu,
     DescriptionEditor,
+    CopyButton,
     FormsModule,
     FriendlyDatePipe,
     TitleCasePipe,

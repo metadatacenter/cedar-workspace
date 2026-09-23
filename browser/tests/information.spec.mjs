@@ -47,8 +47,24 @@ for (const readonly of [false, true]) {
     await expect(
       info.getByRole("link", { name: "Source template", exact: true }),
     ).toHaveAttribute("href", /source-template/);
+    const folderCopy = info.getByRole("button", {
+      name: "Copy folder identifier", exact: true,
+    });
+    await folderCopy.hover();
+    const help = info.getByRole("tooltip");
+    await expect(help).toHaveText("Copy folder identifier");
+    await help.hover();
+    await expect(help).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(help).toHaveCount(0);
+    await info.locator("h1").hover();
+    await page.keyboard.press("Tab");
+    await folderCopy.focus();
+    await expect(help).toHaveText("Copy folder identifier");
+    await page.keyboard.press("Escape");
+    await expect(help).toHaveCount(0);
     await info
-      .getByRole("button", { name: "Copy folder location", exact: true })
+      .getByRole("button", { name: "Copy folder identifier", exact: true })
       .click();
     await expect.poll(() => page.evaluate(() => window.copiedId)).toBe("home");
     await info
@@ -79,6 +95,7 @@ for (const readonly of [false, true]) {
       });
     });
     expect(Math.abs(locationCenters[0] - locationCenters[1])).toBeLessThan(2);
+    await info.locator("h1").hover();
     if (process.env.WORKSPACE_VISUAL && !readonly)
       await expect(info).toHaveScreenshot("information-details.png");
     const edit = info.getByRole("textbox", {

@@ -358,14 +358,10 @@
           >}}</span
         >
         @if(parentId(r); as id){
-        <button
-          class="copy-icon"
-          (click)="copyId(id)"
-          aria-label="Copy folder location"
-          title="Copy folder location"
-        >
-          <cedar-icon name="copy" />
-        </button>
+        <cedar-copy-button
+          label="Copy folder identifier"
+          (copied)="copyId(id)"
+        />
         }
       </dd>
       <dt>Owner</dt>
@@ -420,14 +416,10 @@
       <div class="description-heading">Template</div>
       <div class="detail-with-copy">
         <a [href]="link(based)">{{title(based)}}</a>
-        <button
-          class="copy-icon"
-          (click)="copyId(based['@id'])"
-          aria-label="Copy template identifier"
-          title="Copy template identifier"
-        >
-          <cedar-icon name="copy" />
-        </button>
+        <cedar-copy-button
+          label="Copy template identifier"
+          (copied)="copyId(based['@id'])"
+        />
       </div>
     </section>
     } @if(r.trustedBy){
@@ -453,14 +445,11 @@
         @for(instance of instances();track instance['@id']){
         <div class="detail-with-copy">
           <a [href]="link(instance)">{{title(instance)}}</a>
-          <button
-            class="copy-icon"
-            (click)="copyId(instance['@id'])"
-            [attr.aria-label]="'Copy identifier for ' + title(instance)"
-            title="Copy instance identifier"
-          >
-            <cedar-icon name="copy" />
-          </button>
+          <cedar-copy-button
+            [label]="'Copy identifier for ' + title(instance)"
+            help="Copy instance identifier"
+            (copied)="copyId(instance['@id'])"
+          />
         </div>
         }
       </div>
@@ -472,14 +461,10 @@
       <div class="description-heading">Identifier</div>
       <div class="detail-with-copy">
         <a [href]="link(r)">{{r['@id']}}</a>
-        <button
-          class="copy-icon"
-          (click)="copyId(r['@id'])"
-          aria-label="Copy identifier"
-          title="Copy identifier"
-        >
-          <cedar-icon name="copy" />
-        </button>
+        <cedar-copy-button
+          label="Copy identifier"
+          (copied)="copyId(r['@id'])"
+        />
       </div>
     </section>
     } @else {
