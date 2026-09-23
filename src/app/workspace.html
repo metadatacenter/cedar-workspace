@@ -152,7 +152,7 @@
         >}} }
       </nav>
       <button
-        (click)="load()"
+        (click)="load(true)"
         aria-label="Refresh workspace"
         [disabled]="loading()"
       >
@@ -289,7 +289,10 @@
           }
         </tbody>
       </table>
-      @if(loading()){
+      @if(refreshing()){
+      <span class="sr-only" role="status">Refreshing…</span>
+      }
+      @if(loading()&&!refreshing()){
       <p class="empty" role="status">Loading…</p>
       } @else if(!rows().length){
       <p class="empty">No items found.</p>

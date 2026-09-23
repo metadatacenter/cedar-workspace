@@ -137,6 +137,7 @@ export class Workspace {
   readonly now = signal(Date.now());
   readonly ready = signal(false);
   readonly loading = signal(false);
+  readonly refreshing = signal(false);
   readonly error = signal("");
   readonly notice = signal("");
   readonly rows = signal<Resource[]>([]);
@@ -206,14 +207,17 @@ export class Workspace {
   fail(e: unknown) {
     this.error.set(e instanceof Error ? e.message : String(e));
   }
-  async load() {
+  async load(refresh = false) {
     const read = ++this.listRead;
     this.detailRead++;
     this.loading.set(true);
+    this.refreshing.set(refresh);
     this.error.set("");
     this.selected.set(undefined);
-    this.currentFolder.set(undefined);
-    this.path.set([]);
+    if (!refresh) {
+      this.currentFolder.set(undefined);
+      this.path.set([]);
+    }
     this.menu.set(null);
     try {
       const { data } = await this.api.request<Listing>(
@@ -233,11 +237,14 @@ export class Workspace {
       void this.loadTemplateActions(data.resources, read);
     } catch (e) {
       if (read === this.listRead) {
-        this.rows.set([]);
+        if (!refresh) this.rows.set([]);
         this.fail(e);
       }
     } finally {
-      if (read === this.listRead) this.loading.set(false);
+      if (read === this.listRead) {
+        this.loading.set(false);
+        this.refreshing.set(false);
+      }
     }
   }
   private async loadFolder(read: number) {
