@@ -98,6 +98,16 @@ textarea {
   border: 1px solid var(--cedar-control-border-default);
   border-radius: calc(var(--cedar-control-radius-default) * 4);
 }
+.search:focus-within {
+  @include controls.focus-ring;
+}
+.search input:focus-visible,
+.search button:focus-visible {
+  outline: none;
+}
+.search button:focus-visible {
+  background: var(--cedar-surface-selected);
+}
 .search input {
   background: transparent;
   color: inherit;
@@ -110,6 +120,8 @@ textarea {
   color: var(--cedar-text-muted);
 }
 .search button {
+  border-radius: 0 calc(var(--cedar-control-radius-default) * 4)
+    calc(var(--cedar-control-radius-default) * 4) 0;
   color: inherit;
   font-size: var(--cedar-font-size-heading);
 }
@@ -470,8 +482,9 @@ dd small {
   flex: none;
   padding: 0 var(--cedar-space-1);
 }
-.identifiers[open] > summary {
-  margin-bottom: var(--cedar-space-2);
+.information .location-label {
+  display: flex;
+  align-items: center;
 }
 .version {
   padding: var(--cedar-space-2) 0;

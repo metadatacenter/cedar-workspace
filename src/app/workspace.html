@@ -340,7 +340,7 @@
     <dl>
       <dt>Type</dt>
       <dd>{{r.resourceType | titlecase}}</dd>
-      <dt>Location</dt>
+      <dt class="location-label">Location</dt>
       <dd class="detail-with-copy">
         <span
           >@for(p of r.pathInfo;track p['@id'];let last=$last){@if(!last){<a
@@ -457,8 +457,8 @@
       }
     </section>
     }
-    <details class="identifiers info-section">
-      <summary>Identifier</summary>
+    <section class="identifiers info-section">
+      <div class="description-heading">Identifier</div>
       <div class="detail-with-copy">
         <span>{{r['@id']}}</span>
         <button
@@ -470,7 +470,7 @@
           <cedar-icon name="copy" />
         </button>
       </div>
-    </details>
+    </section>
     } @else {
     <div role="tabpanel">
       @for(v of r.versions?.length?r.versions:[r];track v['@id']){

@@ -57,13 +57,26 @@ for (const readonly of [false, true]) {
     await expect
       .poll(() => page.evaluate(() => window.copiedId))
       .toBe("source-template");
-    await info.locator(".identifiers summary").click();
+    await expect(
+      info.locator(".identifiers details, .identifiers summary"),
+    ).toHaveCount(0);
     await info
       .getByRole("button", { name: "Copy identifier", exact: true })
       .click();
     await expect
       .poll(() => page.evaluate(() => window.copiedId))
       .toBe("template");
+    const locationCenters = await info.evaluate((panel) => {
+      const label = panel.querySelector(".location-label");
+      const value = label.nextElementSibling.querySelector("span");
+      return [label, value].map((node) => {
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        const bounds = range.getBoundingClientRect();
+        return bounds.y + bounds.height / 2;
+      });
+    });
+    expect(Math.abs(locationCenters[0] - locationCenters[1])).toBeLessThan(2);
     if (process.env.WORKSPACE_VISUAL && !readonly)
       await expect(info).toHaveScreenshot("information-details.png");
     const edit = info.getByRole("button", {
