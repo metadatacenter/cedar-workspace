@@ -19,6 +19,7 @@
   />
   <label class="version-filter"
     ><span>Version</span>
+    <span class="version-choice">
     <select
       aria-label="Version"
       [ngModel]="version()"
@@ -27,6 +28,8 @@
       <option value="latest">Latest</option>
       <option value="all">All</option>
     </select>
+    <cedar-icon name="chevron-down" size="small" />
+    </span>
   </label>
   @if(value().types.length || value().modified) {
   <button type="button" (click)="clear()">Clear filters</button> }
