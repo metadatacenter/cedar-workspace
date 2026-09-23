@@ -152,6 +152,8 @@ test("version details and instances have concise labels and identifier copy cont
   await info.getByRole('button', {name:'Copy identifier for Study metadata', exact:true}).click();
   await expect.poll(() => page.evaluate(() => window.copiedId)).toBe('instance-id');
   await info.getByRole('tab', {name:'Version', exact:true}).click();
-  await expect(info.locator('.version dd')).toHaveText(['1.2.0', 'Published']);
+  await expect(info.locator('.version dt')).toHaveText(['Type', 'Version', 'Status']);
+  await expect(info.locator('.version dd')).toHaveText(['Template', '1.2.0', 'Published']);
+  await expect(info.locator('.version a')).toHaveCount(0);
   await expect(info.locator('.version')).not.toContainText('Modified');
 });

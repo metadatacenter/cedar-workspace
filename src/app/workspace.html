@@ -472,8 +472,12 @@
       @for(v of r.versions?.length?r.versions:[r];track v['@id']){
       <article class="version">
         <dl>
+          @if($first){
+          <dt>Type</dt>
+          <dd>{{r.resourceType | titlecase}}</dd>
+          }
           <dt>Version</dt>
-          <dd><a [href]="link(v)">{{v['pav:version'] || 'Unversioned'}}</a></dd>
+          <dd>{{v['pav:version'] || 'Unversioned'}}</dd>
           <dt>Status</dt>
           <dd>
             {{(v['bibo:status']?.replace('bibo:', '') || '—') | titlecase}}
