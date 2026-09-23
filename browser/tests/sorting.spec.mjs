@@ -1,4 +1,4 @@
-import { test, expect, dashboard } from "./fixtures.mjs";
+import { test, expect, dashboard, resource } from "./fixtures.mjs";
 import AxeBuilder from "@axe-core/playwright";
 
 test("sort menu, column arrows, folder grouping and URL stay synchronized", async ({ page, api }) => {
@@ -68,12 +68,16 @@ test("sort menu supports keyboard selection, dismissal and accessible groups", a
   await expect(menu).toHaveCount(0);
   await expect(trigger).toBeFocused();
   await trigger.click();
+  await menu.getByRole("menuitemradio", { name: "All", exact: true }).focus();
+  await page.keyboard.press("Tab");
+  await expect(menu).toHaveCount(0);
+  await trigger.click();
   await page.getByRole("link", { name: "Home", exact: true }).click();
   await expect(menu).toHaveCount(0);
 });
 
 for (const width of [1440, 375]) {
-  test(`sort options at ${width}`, async ({ page, api }) => {
+  test(`sort options at ${width}`, async ({ page, api, browserName }) => {
     await page.setViewportSize({ width, height: 1000 });
     await dashboard(page);
     const trigger = page.getByRole("button", { name: "Sort options", exact: true });
@@ -83,10 +87,48 @@ for (const width of [1440, 375]) {
     const sort = await trigger.boundingBox();
     const dots = await page.getByRole("button", { name: "Actions for Study metadata" }).boundingBox();
     expect(Math.abs(sort.x + sort.width / 2 - dots.x - dots.width / 2)).toBeLessThan(2);
-    if (process.env.WORKSPACE_VISUAL)
+    if (process.env.WORKSPACE_VISUAL && browserName === "chromium")
       await expect(menu).toHaveScreenshot(`sort-menu-${width}.png`);
   });
 }
+
+test("pointer selections update visible order, folder grouping and version results", async ({ page, api }) => {
+  const alpha = { ...resource, "@id": "alpha", "schema:name": "Alpha" };
+  const historical = { ...resource, "@id": "old", "schema:name": "Alpha historical", "pav:version": "0.9.0" };
+  const folder = { ...resource, "@id": "museum", "schema:name": "Museum", resourceType: "folder" };
+  const zulu = { ...resource, "@id": "zulu", "schema:name": "Zulu" };
+  await page.route("**/api/resource/templates/*/report", route => {
+    const id = new URL(route.request().url()).pathname.split("/").at(-2);
+    return route.fulfill({ json: [alpha, historical, zulu].find(item => item["@id"] === id) });
+  });
+  await page.route("**/api/resource/folders/home/contents?**", route => {
+    const params = new URL(route.request().url()).searchParams;
+    const orders = {
+      name: [alpha, historical, folder, zulu],
+      "-name": [zulu, folder, historical, alpha],
+      "foldersFirst,-name": [folder, zulu, historical, alpha],
+    };
+    const resources = orders[params.get("sort")].filter(item => params.get("version") !== "latest" || item !== historical);
+    return route.fulfill({ json: { resources, totalCount: resources.length } });
+  });
+  await page.goto("/dashboard");
+  const rows = page.locator("tbody td:first-child");
+  await expect(rows).toHaveText(["Alpha", "Alpha historical", "Museum", "Zulu"]);
+  const select = async name => {
+    await page.getByRole("button", { name: "Sort options", exact: true }).click();
+    await page.getByRole("menuitemradio", { name, exact: true }).click();
+  };
+  await select("Z to A");
+  await expect(rows).toHaveText(["Zulu", "Museum", "Alpha historical", "Alpha"]);
+  await select("On top");
+  await expect(rows).toHaveText(["Museum", "Zulu", "Alpha historical", "Alpha"]);
+  await select("Latest");
+  await expect(rows).toHaveText(["Museum", "Zulu", "Alpha"]);
+  await select("All");
+  await expect(rows).toHaveText(["Museum", "Zulu", "Alpha historical", "Alpha"]);
+  await select("Mixed with files");
+  await expect(rows).toHaveText(["Zulu", "Museum", "Alpha historical", "Alpha"]);
+});
 
 test('Version selector and menu share persisted server filtering', async ({page, api}) => {
   const requests = [];

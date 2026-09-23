@@ -110,12 +110,16 @@ export class SortMenu {
     if (!this.host.nativeElement.contains(event.target as Node))
       this.close(false);
   }
-  @HostListener("focusout")
-  focusOut() {
-    queueMicrotask(() => {
-      if (!this.host.nativeElement.contains(document.activeElement))
-        this.close(false);
-    });
+  @HostListener("focusout", ["$event"])
+  focusOut(event: FocusEvent) {
+    // Safari blurs the focused item on pointer-down without focusing the
+    // clicked button. Keep the menu mounted until that click can select it.
+    // Explicit focus transfers (including Tab) and outside clicks still dismiss.
+    if (
+      event.relatedTarget instanceof Node &&
+      !this.host.nativeElement.contains(event.relatedTarget)
+    )
+      this.close(false);
   }
   @HostListener("window:resize")
   resized() {

@@ -3,6 +3,10 @@ const port = Number(process.env.PORT || 4797);
 export default defineConfig({
   testDir: "./tests",
   fullyParallel: true,
+  projects: [
+    { name: "", use: { browserName: "chromium" } },
+    { name: "webkit", testMatch: "sorting.spec.mjs", use: { browserName: "webkit" } },
+  ],
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   expect: { toHaveScreenshot: { maxDiffPixels: 0, animations: "disabled" } },
