@@ -359,14 +359,12 @@ describe("Groups", () => {
     await host.addMember();
     expect(request).not.toHaveBeenCalled();
   });
-  it("confirms member removal, updates the roster, and restores that user to the picker", async () => {
+  it("removes members immediately, updates the roster, and restores that user to the picker", async () => {
     host.users.set([me.user, other.user]);
     host.members.set([me, other]);
     request.mockResolvedValue({ data: { users: [me] }, etag: '"m2"' });
     await host.removeMember(other);
-    expect(TestBed.inject(Confirmation).confirm).toHaveBeenCalledWith(
-      "Remove Other from this group?",
-    );
+    expect(TestBed.inject(Confirmation).confirm).not.toHaveBeenCalled();
     expect(host.members()).toEqual([me]);
     expect(host.availableUsers).toEqual([other.user]);
     expect(host.notice()).toBe("Group members saved.");

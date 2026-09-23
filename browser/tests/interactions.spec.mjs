@@ -235,7 +235,7 @@ test("New menu offers only supported creation actions", async ({
   await expect(page.locator('input[type="file"]')).toHaveCount(0);
 });
 
-test("group member confirmation cancels safely, restores focus, and toasts successful removal", async ({
+test("group members are removed immediately without confirmation and show a success notice", async ({
   page,
   api,
 }) => {
@@ -253,23 +253,7 @@ test("group member confirmation cancels safely, restores focus, and toasts succe
     .filter({ hasText: "Sam Curator" })
     .getByRole("button");
   await remove.click();
-  const confirm = page.locator(".confirmation-dialog");
-  await expect(confirm).toContainText("Remove Sam Curator from this group?");
-  await expect(confirm.getByRole("button", { name: "Cancel" })).toBeFocused();
-  if (process.env.WORKSPACE_VISUAL)
-    await expect(confirm).toHaveScreenshot("member-removal-confirmation.png");
-  await page.keyboard.press("Shift+Tab");
-  await expect(
-    confirm.getByRole("button", { name: "OK", exact: true }),
-  ).toBeFocused();
-  await page.keyboard.press("Tab");
-  await expect(confirm.getByRole("button", { name: "Cancel" })).toBeFocused();
-  await page.keyboard.press("Escape");
-  await expect(confirm).toHaveCount(0);
-  await expect(remove).toBeFocused();
-  expect(api.requests.filter((r) => r.method === "PUT")).toHaveLength(0);
-  await remove.click();
-  await confirm.getByRole("button", { name: "OK", exact: true }).click();
+  await expect(page.locator(".confirmation-dialog")).toHaveCount(0);
   await expect(page.locator(".groups-member-row")).toHaveCount(1);
   await expect(page.getByRole("status")).toHaveText("Group members saved.");
   expect(api.requests.filter((r) => r.method === "PUT")).toHaveLength(1);

@@ -323,13 +323,9 @@ export class Groups implements OnInit {
       !this.canAdmin ||
       this.onlyAdmin(m) ||
       !this.members()?.includes(m) ||
-      this.busy() ||
-      !(await this.confirmation.confirm(
-        "Remove " + userName(m.user) + " from this group?",
-      ))
+      this.busy()
     )
       return;
-    if (!this.members()?.includes(m) || this.onlyAdmin(m)) return;
     await this.saveMembers(this.members()!.filter((v) => v !== m));
   }
   async toggleAdmin(m: Member) {
