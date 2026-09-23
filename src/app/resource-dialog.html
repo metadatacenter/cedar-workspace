@@ -119,7 +119,7 @@
       </section>
       } @if(action==='delete'){
       <p>
-        This will delete this {{resource?.resourceType}}. Confirm to continue.
+        Are you sure you want to delete the selected {{resource?.resourceType}}?
       </p>
       } @if(action==='make-open'){
       <p>This item will be available through OpenView.</p>
@@ -134,7 +134,7 @@
         type="submit"
         [disabled]="busy()||!destinationAllowed"
       >
-        {{busy()?'Working…':action==='delete'?'Delete':['make-open','make-not-open'].includes(action)?'Ok':'Save'}}
+        {{busy()?'Working…':action==='delete'?'Yes, delete it!':['make-open','make-not-open'].includes(action)?'Ok':'Save'}}
       </button>
     </footer>
   </form>

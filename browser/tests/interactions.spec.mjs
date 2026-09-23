@@ -104,7 +104,12 @@ test("delete names its target and cancellation makes no request", async ({
   await dashboard(page);
   await action(page, "Delete");
   await expect(page.locator("dialog")).toContainText("Study metadata");
-  await expect(page.locator("dialog")).toContainText("This will delete");
+  await expect(page.locator("dialog")).toContainText(
+    "Are you sure you want to delete the selected template?",
+  );
+  await expect(page.locator("dialog").getByRole("button", {
+    name: "Yes, delete it!", exact: true,
+  })).toBeVisible();
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   expect(api.requests.filter((r) => r.method !== "GET")).toHaveLength(0);
 });
