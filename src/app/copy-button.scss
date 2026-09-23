@@ -7,10 +7,9 @@
 }
 [role="tooltip"] {
   @include patterns.menu-surface;
-  position: absolute;
+  position: fixed;
   z-index: var(--cedar-layer-tooltip);
-  right: 0;
-  bottom: 100%;
+  visibility: hidden;
   width: max-content;
   max-width: calc(100vw - 2 * var(--cedar-space-6));
   padding: var(--cedar-space-2) var(--cedar-space-3);

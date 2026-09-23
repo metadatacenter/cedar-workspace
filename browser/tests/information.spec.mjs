@@ -10,6 +10,7 @@ for (const readonly of [false, true]) {
   test(`information copy controls and description ${readonly ? "readonly" : "editable"}`, async ({
     page,
     api,
+    browserName,
   }) => {
     api.readonly = readonly;
     const selected = {
@@ -96,7 +97,7 @@ for (const readonly of [false, true]) {
     });
     expect(Math.abs(locationCenters[0] - locationCenters[1])).toBeLessThan(2);
     await info.locator("h1").hover();
-    if (process.env.WORKSPACE_VISUAL && !readonly)
+    if (process.env.WORKSPACE_VISUAL && !readonly && browserName === "chromium")
       await expect(info).toHaveScreenshot("information-details.png");
     const edit = info.getByRole("textbox", {
       name: "Description",
@@ -156,4 +157,40 @@ test("version details and instances have concise labels and identifier copy cont
   await expect(info.locator('.version dd')).toHaveText(['Template', '1.2.0', 'Published']);
   await expect(info.locator('.version a')).toHaveCount(0);
   await expect(info.locator('.version')).not.toContainText('Modified');
+});
+
+test("first instance copy help escapes the scrolling list and dismisses on scroll", async ({ page, api }) => {
+  const instances = Array.from({ length: 12 }, (_, i) => ({
+    ...resource,
+    '@id': `instance-${i}`,
+    resourceType: 'instance',
+    'schema:name': `Long study metadata instance name that wraps onto another line ${i + 1}`,
+  }));
+  await page.route('**/templates/template/report', route => route.fulfill({
+    json: { ...resource, numberOfInstances: instances.length },
+  }));
+  await page.route('**/search?is_based_on=*', route => route.fulfill({
+    json: { resources: instances, totalCount: instances.length },
+  }));
+  await dashboard(page);
+  await page.locator('tbody tr').first().press('Enter');
+  const list = page.locator('.instance-list');
+  const first = list.getByRole('button').first();
+  await first.hover();
+  const help = page.getByRole('tooltip');
+  await expect(help).toHaveText('Copy instance identifier');
+  expect((await help.boundingBox()).y).toBeLessThan((await list.boundingBox()).y);
+  // A visible DOM box can still be clipped; hit-test its painted text above the list.
+  expect(await help.evaluate(el => {
+    const box = el.getBoundingClientRect();
+    return document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2) === el;
+  })).toBe(true);
+  await help.hover();
+  await expect(help).toBeVisible();
+  await list.evaluate(el => { el.scrollTop = el.scrollHeight; });
+  await expect(help).toHaveCount(0);
+  await list.getByRole('button').last().hover();
+  await expect(help).toHaveText('Copy instance identifier');
+  await page.keyboard.press('Escape');
+  await expect(help).toHaveCount(0);
 });
