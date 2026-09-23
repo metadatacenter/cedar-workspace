@@ -12,12 +12,15 @@ import { FormsModule } from "@angular/forms";
   selector: "cedar-group-picker",
   imports: [FormsModule],
   template: `
-    <label [for]="id + '-input'">{{ label }}</label>
+    @if (!labelledBy) {
+      <label [for]="id + '-input'">{{ label }}</label>
+    }
     <input
       spellcheck="false"
       [id]="id + '-input'"
       type="text"
       role="combobox"
+      [attr.aria-labelledby]="labelledBy || null"
       autocomplete="off"
       [attr.aria-expanded]="open && matches.length > 0"
       [attr.aria-controls]="open && matches.length ? id + '-options' : null"
@@ -117,6 +120,7 @@ import { FormsModule } from "@angular/forms";
 export class GroupPicker implements OnChanges {
   @Input() id = "";
   @Input() label = "";
+  @Input() labelledBy = "";
   @Input() placeholder = "";
   @Input() options: { id: string; label: string }[] = [];
   @Input() value = "";

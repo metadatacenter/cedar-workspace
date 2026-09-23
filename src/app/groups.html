@@ -143,10 +143,12 @@
       role="tabpanel"
       aria-labelledby="manage-groups-tab"
     >
+      <h2 id="group-search-heading">Find a group</h2>
       <cedar-group-picker
         class="groups-selector"
         id="group-search-picker"
         label="Find a group"
+        labelledBy="group-search-heading"
         placeholder="Search for a group"
         [options]="groupOptions"
         [clearOnPick]="true"
