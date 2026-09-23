@@ -40,6 +40,7 @@ export class Groups implements OnInit {
   readonly ready = signal(false);
   readonly busy = signal(false);
   readonly error = signal("");
+  readonly recoveryGroup = signal<Group | null>(null);
   readonly stale = signal(false);
   readonly notice = signal("");
   readonly groups = signal<Group[]>([]);
@@ -156,8 +157,9 @@ export class Groups implements OnInit {
       this.loading.set(false);
     }
   }
-  private fail(e: unknown) {
+  private fail(e: unknown, recoveryGroup: Group | null = null) {
     this.error.set(e instanceof Error ? e.message : String(e));
+    this.recoveryGroup.set(recoveryGroup);
     if (e instanceof HttpError && e.status === 412) this.stale.set(true);
   }
   async select(g: Group) {
@@ -173,6 +175,7 @@ export class Groups implements OnInit {
     this.selecting.set(true);
     this.groupEtag = this.memberEtag = null;
     this.error.set("");
+    this.recoveryGroup.set(null);
     this.newMember = "";
     try {
       const detail = await this.api.request<Group>(this.path(g));
@@ -201,19 +204,21 @@ export class Groups implements OnInit {
         if (generation !== this.generation) return;
         if (e instanceof HttpError && e.status === 403)
           this.restricted.set(true);
-        else this.fail(e);
+        else this.fail(e, g);
       }
     } catch (e) {
-      if (generation === this.generation) this.fail(e);
+      if (generation === this.generation) this.fail(e, g);
     } finally {
       if (generation === this.generation) this.selecting.set(false);
     }
   }
   private requireEtag(value: string | null) {
-    if (!value)
+    if (!value) {
+      this.stale.set(true);
       throw new Error(
         "The server did not return a revision. Reload this group before making changes.",
       );
+    }
     return value;
   }
   private async write(
@@ -225,12 +230,16 @@ export class Groups implements OnInit {
       return;
     this.busy.set(true);
     this.error.set("");
+    this.recoveryGroup.set(null);
     this.notice.set("");
     try {
       await action();
       this.notice.set(message);
     } catch (e) {
-      this.fail(e);
+      const needsReload =
+        needsRevision &&
+        (this.stale() || (e instanceof HttpError && e.status === 412));
+      this.fail(e, needsReload ? this.selected() : null);
     } finally {
       this.busy.set(false);
     }

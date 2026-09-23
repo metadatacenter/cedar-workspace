@@ -67,6 +67,23 @@ describe("Groups", () => {
     expect(host.editName).toBe("Local edit");
     expect(host.groups()[0]["schema:name"]).toBe("Team");
     expect(host.error()).toBe("changed");
+    expect(host.recoveryGroup()).toEqual(g);
+  });
+  it("does not offer an older selected group as recovery for a duplicate creation name", async () => {
+    await host.selectTab("create");
+    host.newName = "Existing name";
+    request.mockRejectedValue(new HttpError(409, "Group names must be unique"));
+    await host.create();
+    expect(host.error()).toBe("Group names must be unique");
+    expect(host.newName).toBe("Existing name");
+    expect(host.selected()).toEqual(g);
+    expect(host.recoveryGroup()).toBeNull();
+  });
+  it("offers the failed read's group for recovery even before it can be selected", async () => {
+    request.mockRejectedValue(new HttpError(503, "Temporarily unavailable"));
+    await host.select(g);
+    expect(host.selected()).toBeNull();
+    expect(host.recoveryGroup()).toEqual(g);
   });
   it("sends identifiers only and the membership revision", async () => {
     host.users.set([other.user]);

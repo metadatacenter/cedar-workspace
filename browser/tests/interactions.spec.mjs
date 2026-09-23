@@ -281,6 +281,34 @@ test("group member confirmation cancels safely, restores focus, and toasts succe
   await expect(page.locator(".toast")).toHaveCount(0);
 });
 
+test("group creation errors do not offer unrelated reloads, but stale edits can recover", async ({ page, api }) => {
+  await page.goto("/groups");
+  const search = page.getByRole("combobox", { name: "Find a group", exact: true });
+  await search.fill("Research");
+  await search.press("Enter");
+  await expect(page.getByLabel("Name", { exact: true })).toHaveValue("Research team");
+  await page.getByRole("tab", { name: "Create group", exact: true }).click();
+  await page.route("**/api/group/groups", route => route.request().method() === "POST"
+    ? route.fulfill({ status: 409, json: { message: "Group names must be unique" } })
+    : route.fallback());
+  const name = page.getByLabel("Group name", { exact: true });
+  await name.fill("Research team");
+  await page.getByRole("button", { name: "Create group", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("Group names must be unique");
+  await expect(name).toHaveValue("Research team");
+  await expect(page.getByRole("button", { name: "Reload group" })).toHaveCount(0);
+  await page.getByRole("tab", { name: "Manage groups", exact: true }).click();
+  api.fail = true;
+  await page.getByLabel("Name", { exact: true }).fill("My edit");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Reload group" })).toBeVisible();
+  await expect(page.getByLabel("Name", { exact: true })).toHaveValue("My edit");
+  api.fail = false;
+  await page.getByRole("button", { name: "Reload group" }).click();
+  await expect(page.getByLabel("Name", { exact: true })).toHaveValue("Research team");
+  await expect(page.getByRole("alert")).toHaveCount(0);
+});
+
 test("success toast expires and pauses while hovered without blocking the form", async ({
   page,
   api,

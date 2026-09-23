@@ -58,8 +58,8 @@
     </header>
     @if(error()) {
     <div class="alert" role="alert">
-      {{error()}} @if(selected()) {
-      <button (click)="select(selected()!)" [disabled]="busy() || selecting()">
+      {{error()}} @if(recoveryGroup(); as group) {
+      <button (click)="select(group)" [disabled]="busy() || selecting()">
         Reload group
       </button>
       }

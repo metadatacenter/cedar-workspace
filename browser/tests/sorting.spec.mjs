@@ -68,6 +68,8 @@ test("sort menu supports keyboard selection, dismissal and accessible groups", a
   await expect(menu).toHaveCount(0);
   await expect(trigger).toBeFocused();
   await trigger.click();
+  // Opening focuses the selected item on the next animation frame.
+  await expect(menu.locator('[aria-checked="true"]').first()).toBeFocused();
   await menu.getByRole("menuitemradio", { name: "All", exact: true }).focus();
   await page.keyboard.press("Tab");
   await expect(menu).toHaveCount(0);
