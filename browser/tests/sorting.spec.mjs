@@ -63,14 +63,14 @@ test("sort menu supports keyboard selection, dismissal and accessible groups", a
   await trigger.click();
   expect((await new AxeBuilder({ page }).include("cedar-sort-menu").analyze()).violations).toEqual([]);
   await page.keyboard.press("End");
-  await expect(menu.getByRole("menuitemradio", { name: "All", exact: true })).toBeFocused();
+  await expect(menu.getByRole("menuitemradio", { name: "All versions", exact: true })).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(menu).toHaveCount(0);
   await expect(trigger).toBeFocused();
   await trigger.click();
   // Opening focuses the selected item on the next animation frame.
   await expect(menu.locator('[aria-checked="true"]').first()).toBeFocused();
-  await menu.getByRole("menuitemradio", { name: "All", exact: true }).focus();
+  await menu.getByRole("menuitemradio", { name: "All versions", exact: true }).focus();
   await page.keyboard.press("Tab");
   await expect(menu).toHaveCount(0);
   await trigger.click();
@@ -124,9 +124,9 @@ test("pointer selections update visible order, folder grouping and version resul
   await expect(rows).toHaveText(["Zulu", "Museum", "Alpha historical", "Alpha"]);
   await select("On top");
   await expect(rows).toHaveText(["Museum", "Zulu", "Alpha historical", "Alpha"]);
-  await select("Latest");
+  await select("Latest version");
   await expect(rows).toHaveText(["Museum", "Zulu", "Alpha"]);
-  await select("All");
+  await select("All versions");
   await expect(rows).toHaveText(["Museum", "Zulu", "Alpha historical", "Alpha"]);
   await select("Mixed with files");
   await expect(rows).toHaveText(["Zulu", "Museum", "Alpha historical", "Alpha"]);
@@ -144,8 +144,8 @@ test('Version selector and menu share persisted server filtering', async ({page,
   await expect(version).toHaveValue('latest');
   await page.getByRole('button', {name:'Sort options', exact:true}).click();
   const group = page.getByRole('menu').getByRole('group', {name:'Version', exact:true});
-  await expect(group.getByRole('menuitemradio', {name:'Latest',exact:true})).toHaveAttribute('aria-checked','true');
-  await group.getByRole('menuitemradio', {name:'All',exact:true}).click();
+  await expect(group.getByRole('menuitemradio', {name:'Latest version',exact:true})).toHaveAttribute('aria-checked','true');
+  await group.getByRole('menuitemradio', {name:'All versions',exact:true}).click();
   await expect(version).toHaveValue('all');
   await expect.poll(() => requests.at(-1)?.searchParams.has('version')).toBe(false);
   await expect(page).not.toHaveURL(/version=latest/);

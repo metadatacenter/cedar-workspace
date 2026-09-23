@@ -83,7 +83,7 @@
       (click)="versionChange.emit(value); close()"
     >
       <cedar-icon name="check" [class.unchecked]="version() !== value" />{{value
-      === 'latest' ? 'Latest' : 'All'}}
+      === 'latest' ? 'Latest version' : 'All versions'}}
     </button>
     }
   </div>
