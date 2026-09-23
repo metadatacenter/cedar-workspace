@@ -49,11 +49,12 @@ export class ResourceFilters {
     ];
   }
   get typeLabel(): string {
-    return this.value().types.length === 1
-      ? this.types.find((t) => t.value === this.value().types[0])!.label
-      : this.value().types.length
-        ? `${this.value().types.length} types`
-        : "Type";
+    return (
+      this.types
+        .filter((type) => this.value().types.includes(type.value))
+        .map((type) => type.label)
+        .join(", ") || "Type"
+    );
   }
   get dateLabel(): string {
     const v = this.value();
