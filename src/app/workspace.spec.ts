@@ -101,7 +101,7 @@ describe("Angular Workspace", () => {
     ).toEqual([]);
     expect(f.componentInstance.selected()).toBeUndefined();
     expect(el.querySelector(".information")?.textContent).toContain(
-      "Select an item to see the details",
+      "Select an item to see its details",
     );
     await f.componentInstance.select(template);
     await f.componentInstance.load();

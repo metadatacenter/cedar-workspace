@@ -96,7 +96,7 @@ textarea {
   max-width: 1100px;
   min-width: 0;
   border: 1px solid var(--cedar-control-border-default);
-  border-radius: var(--cedar-control-radius-default);
+  border-radius: calc(var(--cedar-control-radius-default) * 4);
 }
 .search input {
   background: transparent;
@@ -191,7 +191,7 @@ textarea {
   padding: 0;
 }
 .new-menu {
-  margin-top: var(--cedar-space-4);
+  margin-top: 0;
   position: relative;
 }
 .primary {
@@ -413,7 +413,7 @@ dd {
 .information dl {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
-  margin: var(--cedar-space-2) 0;
+  margin: var(--cedar-space-2) 0 0;
 }
 .information dt,
 .information dd {
@@ -444,9 +444,34 @@ dd small {
   line-height: var(--cedar-control-line-height-default);
   margin: var(--cedar-space-1) 0;
 }
-.identifiers {
-  margin-top: var(--cedar-space-2);
-  font-size: var(--cedar-font-size-small);
+.information .info-section {
+  margin: 0;
+  padding: var(--cedar-space-3) 0;
+  border-bottom: 1px solid var(--cedar-border-rule-light);
+}
+.info-section .description-heading {
+  margin-bottom: var(--cedar-space-1);
+  font-weight: var(--cedar-font-weight-regular);
+}
+.info-section small {
+  display: block;
+  color: var(--cedar-text-muted);
+}
+.detail-with-copy {
+  display: flex;
+  align-items: center;
+  gap: var(--cedar-space-2);
+}
+.detail-with-copy > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+.detail-with-copy .copy-icon {
+  flex: none;
+  padding: 0 var(--cedar-space-1);
+}
+.identifiers[open] > summary {
+  margin-bottom: var(--cedar-space-2);
 }
 .version {
   padding: var(--cedar-space-2) 0;
@@ -672,17 +697,29 @@ td:first-child a {
     color: var(--cedar-text-muted);
   }
 }
+.metadata-save-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cedar-space-2);
+  &.is-dirty::before {
+    content: "";
+    flex: 0 0 var(--cedar-space-2);
+    height: var(--cedar-space-2);
+    border-radius: 50%;
+    background: var(--cedar-status-unsaved-dot);
+  }
+}
 .metadata-content {
   max-width: 90rem;
   margin: auto;
-  padding: var(--cedar-space-6);
+  padding: var(--cedar-space-3) var(--cedar-space-6);
   > label {
     display: block;
     margin-bottom: var(--cedar-space-2);
   }
   > input {
     width: 100%;
-    margin-bottom: var(--cedar-space-6);
+    margin-bottom: var(--cedar-space-3);
   }
   cedar-embeddable-editor {
     display: block;

@@ -76,6 +76,30 @@ export function metadataKey(value: unknown): string {
       : v,
   );
 }
+// Resolve each property in its declaring parent, including repeated elements.
+// Use the same label precedence as CEE's rendered field headings.
+export function metadataFieldLabel(
+  template: CeeJsonObject,
+  path: string[],
+): string {
+  let parent = template;
+  return path
+    .map((key) => {
+      const properties = parent["properties"] as CeeJsonObject | undefined;
+      const property = properties?.[key] as CeeJsonObject | undefined;
+      if (!property) return /^\d+$/.test(key) ? `#${Number(key) + 1}` : key;
+      const child =
+        (property["items"] as CeeJsonObject | undefined) || property;
+      const labels = (parent["_ui"] as CeeJsonObject | undefined)?.[
+        "propertyLabels"
+      ] as CeeJsonObject | undefined;
+      const label =
+        labels?.[key] ?? child["skos:prefLabel"] ?? child["schema:name"] ?? key;
+      parent = child;
+      return String(label);
+    })
+    .join(" / ");
+}
 export const leaveMetadata: CanDeactivateFn<MetadataEditor> = (editor) =>
   editor.mayLeave();
 
@@ -219,7 +243,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       ["required", "missingProperty", "minItems"].includes(p.code),
     );
     const items = problems.map((p) => ({
-      label: p.path.join(" / ") || p.field || "Metadata",
+      label: metadataFieldLabel(this.template, p.path) || p.field || "Metadata",
       message: p.message || p.code,
     }));
     if (this.missingRequired && !problems.some((p) => p.code === "required"))
@@ -236,7 +260,8 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         (p) => !["required", "missingProperty", "minItems"].includes(p.code),
       )
       .map((p) => ({
-        label: p.path.join(" / ") || p.field || "Metadata",
+        label:
+          metadataFieldLabel(this.template, p.path) || p.field || "Metadata",
         message: p.message || p.code,
       }));
     if (

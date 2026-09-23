@@ -1,7 +1,7 @@
 .chip {
   display: inline-flex;
   border: 1px solid var(--cedar-control-border-default);
-  border-radius: var(--cedar-menu-radius);
+  border-radius: calc(var(--cedar-control-radius-default) * 3);
   overflow: hidden;
 }
 button {

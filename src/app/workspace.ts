@@ -349,6 +349,9 @@ export class Workspace {
       if (read === this.detailRead) this.fail(e);
     }
   }
+  parentId(r: Resource): string | undefined {
+    return r.pathInfo?.filter((p) => p["@id"] !== r["@id"]).at(-1)?.["@id"];
+  }
   async copyId(value: string) {
     try {
       await navigator.clipboard.writeText(value);

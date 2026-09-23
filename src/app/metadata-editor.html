@@ -5,7 +5,10 @@
   <div>
     <strong>{{name || 'Metadata'}}</strong><small>{{templateName}}</small>
   </div>
-  <span role="status"
+  <span
+    class="metadata-save-status"
+    [class.is-dirty]="dirty() && writable() && !loading() && !saving()"
+    role="status"
     >{{loading() ? 'Loading…' : saving() ? 'Saving…' : !writable() ? 'Read only'
     : dirty() ? 'Unsaved changes' : 'Saved'}}</span
   >
@@ -24,7 +27,7 @@
   } @if(notice()){
   <cedar-toast [message]="notice()" />
   } @if(!loading()) {
-  <label for="instance-name">Metadata name</label>
+  <label for="instance-name">Metadata Name</label>
   <input
     spellcheck="false"
     id="instance-name"

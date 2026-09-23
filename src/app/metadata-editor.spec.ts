@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   MetadataEditor,
   metadataKey,
+  metadataFieldLabel,
   metadataRoute,
   workspaceReturn,
 } from "./metadata-editor";
@@ -338,5 +339,41 @@ describe("Modern metadata host", () => {
     expect(
       metadataRoute([new UrlSegment("groups", {})], {} as never, {} as never),
     ).toBeNull();
+  });
+});
+
+describe("metadata field labels", () => {
+  it("resolves display labels through repeated elements instead of showing internal keys", () => {
+    const schema = {
+      _ui: { propertyLabels: { samples: "Study samples" } },
+      properties: {
+        samples: {
+          type: "array",
+          items: {
+            "schema:name": "Sample",
+            properties: {
+              amount: {
+                "schema:name": "Amount",
+                "skos:prefLabel": "Sample weight",
+              },
+              count: { "schema:name": "Cell count" },
+            },
+          },
+        },
+      },
+    };
+    expect(metadataFieldLabel(schema, ["samples", "0", "amount"])).toBe(
+      "Study samples / #1 / Sample weight",
+    );
+    expect(metadataFieldLabel(schema, ["samples", "count"])).toBe(
+      "Study samples / Cell count",
+    );
+    expect(metadataFieldLabel(schema, ["unknown"])).toBe("unknown");
+    expect(
+      metadataFieldLabel(
+        { properties: { "2026": { "schema:name": "Annual count" } } },
+        ["2026"],
+      ),
+    ).toBe("Annual count");
   });
 });

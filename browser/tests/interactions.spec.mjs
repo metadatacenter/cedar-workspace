@@ -135,9 +135,12 @@ test("unsaved metadata cannot be lost by leaving, and read-only mode cannot save
   api,
 }) => {
   await page.goto("/instances/edit/instance");
-  const input = page.getByLabel("Metadata name");
+  const input = page.getByLabel("Metadata Name", { exact: true });
   await expect(input).toHaveValue("Study record");
   await input.fill("Working record");
+  await expect(page.locator(".metadata-save-status")).toHaveClass(/is-dirty/);
+  expect(await page.locator(".metadata-save-status").evaluate((el) =>
+    getComputedStyle(el, "::before").backgroundColor)).toBe("rgb(234, 179, 8)");
   await expect(page.locator(".metadata-toolbar")).toContainText(
     "Unsaved changes",
   );
@@ -149,6 +152,7 @@ test("unsaved metadata cannot be lost by leaving, and read-only mode cannot save
   await expect(input).toHaveValue("Working record");
   await input.fill("Study record");
   await expect(page.locator(".metadata-toolbar")).toContainText("Saved");
+  await expect(page.locator(".metadata-save-status")).not.toHaveClass(/is-dirty/);
   api.readonly = true;
   await page.reload();
   await expect(input).toHaveAttribute("readonly", "");

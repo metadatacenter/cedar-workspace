@@ -341,12 +341,25 @@
       <dt>Type</dt>
       <dd>{{r.resourceType | titlecase}}</dd>
       <dt>Location</dt>
-      <dd>
-        @for(p of r.pathInfo;track p['@id'];let last=$last){@if(!last){<a
-          routerLink="/dashboard"
-          [queryParams]="{folderId:p['@id']}"
-          >{{title(p)==='/'?'All':title(p)}}</a
-        ><span class="breadcrumb-separator" aria-hidden="true">/</span>}}
+      <dd class="detail-with-copy">
+        <span
+          >@for(p of r.pathInfo;track p['@id'];let last=$last){@if(!last){<a
+            routerLink="/dashboard"
+            [queryParams]="{folderId:p['@id']}"
+            >{{title(p)==='/'?'All':title(p)}}</a
+          ><span class="breadcrumb-separator" aria-hidden="true">/</span
+          >}}</span
+        >
+        @if(parentId(r); as id){
+        <button
+          class="copy-icon"
+          (click)="copyId(id)"
+          aria-label="Copy folder location"
+          title="Copy folder location"
+        >
+          <cedar-icon name="copy" />
+        </button>
+        }
       </dd>
       <dt>Owner</dt>
       <dd>{{r.ownedByUserName || '—'}}</dd>
@@ -374,13 +387,22 @@
         || '—'}}
       </dd>
     </dl>
-    <div class="description-heading">Description</div>
-    <p class="description">{{r['schema:description']||'No description'}}</p>
+    <section class="info-section">
+      <div class="description-heading">
+        Description @if(can(r,'updateResource')){<button
+          (click)="act('rename',r)"
+          aria-label="Edit description"
+        >
+          Edit</button
+        >}
+      </div>
+      <p class="description">{{r['schema:description']||'No description'}}</p>
+    </section>
     @if(r.derivedFrom;as derived){
-    <section class="version">
-      <h3>Derived from</h3>
-      <a [href]="link(derived)">{{title(derived)}}</a
-      ><small
+    <section class="info-section">
+      <div class="description-heading">Derived from</div>
+      <a [href]="link(derived)">{{title(derived)}}</a>
+      <small
         >Modified
         <time
           [attr.datetime]="derived['pav:lastUpdatedOn'] || null"
@@ -390,36 +412,64 @@
       >
     </section>
     } @if(r.isBasedOn;as based){
-    <section class="version">
-      <h3>Based on template</h3>
-      <a [href]="link(based)">{{title(based)}}</a>
+    <section class="info-section">
+      <div class="description-heading">Template</div>
+      <div class="detail-with-copy">
+        <a [href]="link(based)">{{title(based)}}</a>
+        <button
+          class="copy-icon"
+          (click)="copyId(based['@id'])"
+          aria-label="Copy template identifier"
+          title="Copy template identifier"
+        >
+          <cedar-icon name="copy" />
+        </button>
+      </div>
     </section>
     } @if(r.trustedBy){
-    <p>Trusted by: {{r.trustedBy}}</p>
+    <section class="info-section">
+      <div class="description-heading">Trusted by</div>
+      {{r.trustedBy}}
+    </section>
     } @if(r['schema:identifier']){
-    <p>Identifier: {{r['schema:identifier']}}</p>
+    <section class="info-section">
+      <div class="description-heading">Identifier</div>
+      {{r['schema:identifier']}}
+    </section>
     } @if(r.doi){
-    <p>DOI: <a [href]="r.doi" target="_blank" rel="noopener">{{r.doi}}</a></p>
-    } @if(r.numberOfInstances!==undefined){
-    <p>Metadata instances: {{r.numberOfInstances}}</p>
-    } @if(instances().length){
-    <div class="instance-list">
-      @for(instance of instances();track instance['@id']){<a
-        [href]="link(instance)"
-        >{{title(instance)}}</a
-      >}
-    </div>
-    <p>{{instances().length}} of {{instanceTotal()}} accessible instances.</p>
+    <section class="info-section">
+      <div class="description-heading">DOI</div>
+      <a [href]="r.doi" target="_blank" rel="noopener">{{r.doi}}</a>
+    </section>
+    } @if(r.numberOfInstances!==undefined || instances().length){
+    <section class="info-section">
+      <div class="description-heading">
+        Metadata instances: {{r.numberOfInstances ?? instanceTotal()}}
+      </div>
+      @if(instances().length){
+      <div class="instance-list">
+        @for(instance of instances();track instance['@id']){<a
+          [href]="link(instance)"
+          >{{title(instance)}}</a
+        >}
+      </div>
+      <p>{{instances().length}} of {{instanceTotal()}} accessible instances.</p>
+      }
+    </section>
     }
-    <details class="identifiers">
+    <details class="identifiers info-section">
       <summary>Identifier</summary>
-      <p>{{r['@id']}}</p>
-      <button (click)="copyId(r['@id'])">Copy ID</button>
-      <button
-        (click)="act(r.resourceType==='folder'?'folder-id':'parent-id',r)"
-      >
-        Copy {{r.resourceType==='folder'?'folder':'parent folder'}} ID
-      </button>
+      <div class="detail-with-copy">
+        <span>{{r['@id']}}</span>
+        <button
+          class="copy-icon"
+          (click)="copyId(r['@id'])"
+          aria-label="Copy identifier"
+          title="Copy identifier"
+        >
+          <cedar-icon name="copy" />
+        </button>
+      </div>
     </details>
     } @else {
     <div role="tabpanel">
@@ -441,7 +491,7 @@
       }
     </div>
     } }@else{
-    <p class="empty">Select an item to see the details</p>
+    <p class="empty">Select an item to see its details</p>
     } }
   </aside>
 </div>
