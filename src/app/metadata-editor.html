@@ -2,9 +2,6 @@
   <button (click)="back()" [disabled]="saving()">
     <cedar-icon name="back" /> Workspace
   </button>
-  <div>
-    <strong>{{name || 'Metadata'}}</strong><small>{{templateName}}</small>
-  </div>
   <span
     class="metadata-save-status"
     [class.is-dirty]="dirty() && writable() && !loading() && !saving()"
