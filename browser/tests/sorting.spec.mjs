@@ -63,7 +63,7 @@ test("sort menu supports keyboard selection, dismissal and accessible groups", a
   await trigger.click();
   expect((await new AxeBuilder({ page }).include("cedar-sort-menu").analyze()).violations).toEqual([]);
   await page.keyboard.press("End");
-  await expect(menu.getByRole("menuitemradio", { name: "Mixed with files" })).toBeFocused();
+  await expect(menu.getByRole("menuitemradio", { name: "All", exact: true })).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(menu).toHaveCount(0);
   await expect(trigger).toBeFocused();
@@ -87,3 +87,22 @@ for (const width of [1440, 375]) {
       await expect(menu).toHaveScreenshot(`sort-menu-${width}.png`);
   });
 }
+
+test('Version selector and menu share persisted server filtering', async ({page, api}) => {
+  const requests = [];
+  page.on('request', request => { if(request.url().includes('/contents?')) requests.push(new URL(request.url())); });
+  await dashboard(page);
+  const version = page.getByRole('combobox', {name:'Version', exact:true});
+  await expect(version).toHaveValue('all');
+  await version.selectOption('latest');
+  await expect.poll(() => requests.at(-1)?.searchParams.get('version')).toBe('latest');
+  await page.reload();
+  await expect(version).toHaveValue('latest');
+  await page.getByRole('button', {name:'Sort options', exact:true}).click();
+  const group = page.getByRole('menu').getByRole('group', {name:'Version', exact:true});
+  await expect(group.getByRole('menuitemradio', {name:'Latest',exact:true})).toHaveAttribute('aria-checked','true');
+  await group.getByRole('menuitemradio', {name:'All',exact:true}).click();
+  await expect(version).toHaveValue('all');
+  await expect.poll(() => requests.at(-1)?.searchParams.has('version')).toBe(false);
+  await expect(page).not.toHaveURL(/version=latest/);
+});

@@ -30,6 +30,8 @@ export class ResourceFilters {
   readonly id = `resource-filters-${ResourceFilters.nextId++}`;
   readonly value = input.required<ListingFilters>();
   readonly change = output<ListingFilters>();
+  readonly version = input("all");
+  readonly versionChange = output<string>();
   readonly open = signal<"type" | "date" | null>(null);
   readonly types = resourceTypes;
   readonly draft = signal<ListingFilters>(emptyFilters());

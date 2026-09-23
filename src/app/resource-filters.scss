@@ -89,7 +89,7 @@ input[type="checkbox"] {
 }
 .hint {
   color: var(--cedar-text-muted);
-  font-size: var(--cedar-font-size-small);
+  font-size: var(--cedar-font-size);
   margin: 0;
 }
 .error {
@@ -124,4 +124,20 @@ footer span {
     max-height: 70vh;
     overflow-y: auto;
   }
+}
+
+.version-filter {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--cedar-space-2);
+  margin: 0;
+  padding-left: var(--cedar-space-3);
+  border: 1px solid var(--cedar-control-border-default);
+  border-radius: calc(var(--cedar-control-radius-default) * 3);
+  overflow: hidden;
+}
+.version-filter select {
+  border: 0;
+  border-radius: 0;
 }

@@ -9,6 +9,27 @@ const resource: Resource = {
   resourceType: "template",
 };
 describe("Workspace navigation contract", () => {
+  it.each([
+    "",
+    "search=heart",
+    "sharing=shared-with-me",
+    "viewMode=view-special-folders",
+  ])("filters latest versions on the server: %s", (mode) => {
+    const params = new URLSearchParams(mode);
+    params.set("version", "latest");
+    const url = new URL(
+      listingPath(params, "home", "name", 0),
+      "https://api.example",
+    );
+    expect(url.searchParams.get("version")).toBe("latest");
+    params.set("version", "unexpected");
+    expect(
+      new URL(
+        listingPath(params, "home", "name", 0),
+        "https://api.example",
+      ).searchParams.has("version"),
+    ).toBe(false);
+  });
   it("lists every version and type without legacy filters", () => {
     const url = new URL(
       listingPath(

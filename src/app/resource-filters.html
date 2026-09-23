@@ -17,6 +17,17 @@
     (toggle)="toggle('date')"
     (clear)="clear('date')"
   />
+  <label class="version-filter"
+    ><span>Version</span>
+    <select
+      aria-label="Version"
+      [ngModel]="version()"
+      (ngModelChange)="versionChange.emit($event)"
+    >
+      <option value="latest">Latest</option>
+      <option value="all">All</option>
+    </select>
+  </label>
   @if(value().types.length || value().modified) {
   <button type="button" (click)="clear()">Clear filters</button> }
 </div>

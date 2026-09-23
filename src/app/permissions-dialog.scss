@@ -67,7 +67,7 @@ h2 {
 .resource-type {
   text-transform: capitalize;
   color: var(--cedar-text-muted);
-  font-size: var(--cedar-font-size-small);
+  font-size: var(--cedar-font-size);
   margin-top: var(--cedar-space-1);
 }
 .permissions-body {
@@ -99,11 +99,12 @@ h3 {
 p {
   margin: 0 0 var(--cedar-space-2);
   color: var(--cedar-text-muted);
-  font-size: var(--cedar-font-size-small);
+  font-size: var(--cedar-font-size);
   line-height: var(--cedar-control-line-height-authoring);
 }
 label {
   @include patterns.field-label;
+  font-size: var(--cedar-font-size);
 }
 select {
   width: 100%;
@@ -143,7 +144,7 @@ select.readonly-role:disabled {
   gap: var(--cedar-space-2) var(--cedar-space-6);
   margin-top: var(--cedar-form-help-gap);
   color: var(--cedar-text-muted);
-  font-size: var(--cedar-font-size-small);
+  font-size: var(--cedar-font-size);
 }
 .access-list {
   max-height: 280px;
@@ -164,7 +165,7 @@ select.readonly-role:disabled {
 .access-header {
   min-height: var(--cedar-control-height-default);
   color: var(--cedar-text-muted);
-  font-size: var(--cedar-font-size-small);
+  font-size: var(--cedar-font-size);
   font-weight: var(--cedar-font-weight-medium);
 }
 .principal-cell {
@@ -197,7 +198,7 @@ select.readonly-role:disabled {
   flex: 0 0 58px;
   text-align: center;
   color: var(--cedar-text-muted);
-  font-size: var(--cedar-font-size-small);
+  font-size: var(--cedar-font-size);
 }
 .role-cell {
   flex: 0 0 132px;
@@ -305,7 +306,7 @@ footer button {
   .owner-cell::before {
     content: "Owner";
     color: var(--cedar-text-muted);
-    font-size: var(--cedar-font-size-small);
+    font-size: var(--cedar-font-size);
   }
   .resource-name {
     white-space: normal;

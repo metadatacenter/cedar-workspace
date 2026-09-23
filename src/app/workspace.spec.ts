@@ -110,7 +110,7 @@ describe("Angular Workspace", () => {
     expect(f.componentInstance.selected()).toBeUndefined();
     expect(el.querySelector(".information h1")).toBeNull();
     expect(el.textContent).not.toMatch(
-      /Categories|Latest|Tile view|Filter by type/,
+      /Categories|Tile view|Filter by type/,
     );
   });
   it.each(["folder", "instance", "template", "element", "field"] as const)(

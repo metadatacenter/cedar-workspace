@@ -70,6 +70,7 @@ export function listingPath(
     limit: "50",
     offset: String(offset),
   });
+  if (params.get("version") === "latest") query.set("version", "latest");
   applyListingFilters(query, params);
   let path: string;
   if (

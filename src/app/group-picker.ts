@@ -69,7 +69,7 @@ import { FormsModule } from "@angular/forms";
         display: block;
         margin: 0 0 6px;
         color: var(--cedar-text-muted);
-        font-size: var(--cedar-font-size-small);
+        font-size: var(--cedar-font-size);
         font-weight: var(--cedar-font-weight-medium);
       }
       input {

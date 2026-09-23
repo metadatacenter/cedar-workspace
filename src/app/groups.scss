@@ -110,7 +110,7 @@
       display: block;
       margin: 0 0 var(--cedar-form-label-gap);
       color: var(--cedar-text-muted);
-      font-size: var(--cedar-font-size-small);
+      font-size: var(--cedar-font-size);
       font-weight: var(--cedar-font-weight-medium);
     }
 
@@ -274,7 +274,7 @@
     padding: var(--cedar-space-2) 55px var(--cedar-space-2) var(--cedar-space-3);
     border-bottom: 1px solid var(--cedar-control-border-authoring);
     color: var(--cedar-text-muted);
-    font-size: var(--cedar-font-size-small);
+    font-size: var(--cedar-font-size);
     font-weight: var(--cedar-font-weight-medium);
 
     span {

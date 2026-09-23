@@ -73,5 +73,19 @@
       files
     </button>
   </div>
+  <div role="group" aria-label="Version">
+    <div class="section-label">Version</div>
+    @for (value of ['latest', 'all']; track value) {
+    <button
+      type="button"
+      role="menuitemradio"
+      [attr.aria-checked]="version() === value"
+      (click)="versionChange.emit(value); close()"
+    >
+      <cedar-icon name="check" [class.unchecked]="version() !== value" />{{value
+      === 'latest' ? 'Latest' : 'All'}}
+    </button>
+    }
+  </div>
 </div>
 }

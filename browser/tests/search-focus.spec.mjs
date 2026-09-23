@@ -17,6 +17,9 @@ for (const width of [1440, 375]) {
     await expect(input).toHaveCSS("outline-style", "none");
     await expect(search).toHaveCSS("outline-style", "solid");
     await expect(search).toHaveCSS("border-radius", "16px");
+    await expect(search.locator('input')).toHaveAttribute('autocomplete', 'off');
+    await expect(search.locator('input')).toHaveAttribute('autocorrect', 'off');
+    await expect(search.locator('input')).toHaveAttribute('spellcheck', 'false');
     if (process.env.WORKSPACE_VISUAL)
       await expect(page.locator(".topbar")).toHaveScreenshot(
         `search-focused-${width}.png`,

@@ -7,6 +7,9 @@
   <form class="search" (ngSubmit)="submitSearch()">
     <input
       spellcheck="false"
+      autocomplete="off"
+      autocorrect="off"
+      autocapitalize="off"
       aria-label="Search workspace"
       name="search"
       [(ngModel)]="search"
@@ -158,6 +161,8 @@
     </div>
     <cedar-resource-filters
       [value]="filters"
+      [version]="version"
+      (versionChange)="setVersion($event)"
       (change)="changeFilters($event)"
     />
     <div class="table-scroll" [attr.aria-busy]="loading()">
@@ -194,6 +199,8 @@
               <span class="sr-only">Actions</span>
               <cedar-sort-menu
                 [sort]="sort"
+                [version]="version"
+                (versionChange)="setVersion($event)"
                 [foldersFirst]="params.get('folders') === 'first'"
                 (sortChange)="setSort($event)"
                 (foldersFirstChange)="setFoldersFirst($event)"
@@ -388,15 +395,12 @@
       </dd>
     </dl>
     <section class="info-section">
-      <div class="description-heading">
-        Description @if(can(r,'updateResource')){<button
-          (click)="act('rename',r)"
-          aria-label="Edit description"
-        >
-          Edit</button
-        >}
-      </div>
-      <p class="description">{{r['schema:description']||'No description'}}</p>
+      @for (item of [r]; track item['@id']) {
+      <cedar-description-editor
+        [resource]="item"
+        (saved)="descriptionSaved($event)"
+      />
+      }
     </section>
     @if(r.derivedFrom;as derived){
     <section class="info-section">
@@ -443,15 +447,22 @@
     </section>
     } @if(r.numberOfInstances!==undefined || instances().length){
     <section class="info-section">
-      <div class="description-heading">
-        Metadata instances: {{r.numberOfInstances ?? instanceTotal()}}
-      </div>
+      <div class="description-heading">Instances</div>
       @if(instances().length){
       <div class="instance-list">
-        @for(instance of instances();track instance['@id']){<a
-          [href]="link(instance)"
-          >{{title(instance)}}</a
-        >}
+        @for(instance of instances();track instance['@id']){
+        <div class="detail-with-copy">
+          <a [href]="link(instance)">{{title(instance)}}</a>
+          <button
+            class="copy-icon"
+            (click)="copyId(instance['@id'])"
+            [attr.aria-label]="'Copy identifier for ' + title(instance)"
+            title="Copy instance identifier"
+          >
+            <cedar-icon name="copy" />
+          </button>
+        </div>
+        }
       </div>
       <p>{{instances().length}} of {{instanceTotal()}} accessible instances.</p>
       }
@@ -460,7 +471,7 @@
     <section class="identifiers info-section">
       <div class="description-heading">Identifier</div>
       <div class="detail-with-copy">
-        <span>{{r['@id']}}</span>
+        <a [href]="link(r)">{{r['@id']}}</a>
         <button
           class="copy-icon"
           (click)="copyId(r['@id'])"
@@ -475,18 +486,14 @@
     <div role="tabpanel">
       @for(v of r.versions?.length?r.versions:[r];track v['@id']){
       <article class="version">
-        <a [href]="link(v)"
-          >{{v['pav:version']||'Unversioned'}} · {{title(v)}}</a
-        >
-        <p>{{v['bibo:status']}}</p>
-        <small
-          >Modified
-          <time
-            [attr.datetime]="v['pav:lastUpdatedOn'] || null"
-            [attr.title]="v['pav:lastUpdatedOn'] || null"
-            >{{v['pav:lastUpdatedOn']|friendlyDate:now()}}</time
-          ></small
-        >
+        <dl>
+          <dt>Version</dt>
+          <dd><a [href]="link(v)">{{v['pav:version'] || 'Unversioned'}}</a></dd>
+          <dt>Status</dt>
+          <dd>
+            {{(v['bibo:status']?.replace('bibo:', '') || '—') | titlecase}}
+          </dd>
+        </dl>
       </article>
       }
     </div>

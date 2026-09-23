@@ -394,7 +394,7 @@ tr.selected:hover {
   right: auto;
 }
 .badge {
-  font-size: var(--cedar-font-size-small);
+  font-size: var(--cedar-font-size);
   color: var(--cedar-text-muted);
   margin-right: var(--cedar-space-3);
 }
@@ -438,7 +438,7 @@ dd {
 }
 dt {
   color: var(--cedar-text-muted);
-  font-size: var(--cedar-font-size-small);
+  font-size: var(--cedar-font-size);
 }
 dd small {
   display: block;
@@ -458,7 +458,7 @@ dd small {
 }
 .information .info-section {
   margin: 0;
-  padding: var(--cedar-space-3) 0;
+  padding: var(--cedar-space-2) 0;
   border-bottom: 1px solid var(--cedar-border-rule-light);
 }
 .info-section .description-heading {
@@ -479,6 +479,7 @@ dd small {
   min-width: 0;
 }
 .detail-with-copy .copy-icon {
+  min-height: var(--cedar-icon-size-default);
   flex: none;
   padding: 0 var(--cedar-space-1);
 }
@@ -874,6 +875,7 @@ textarea {
 
 .field-error {
   @include patterns.field-error;
+  font-size: var(--cedar-font-size);
 }
 
 // Flat section panels follow the editor's understated heading and divider treatment.
@@ -932,7 +934,7 @@ textarea {
 }
 .brand-version {
   color: var(--cedar-text-muted);
-  font-size: var(--cedar-font-size-small);
+  font-size: var(--cedar-font-size);
   font-weight: var(--cedar-font-weight-regular);
 }
 @media (max-width: 700px) {
@@ -943,4 +945,18 @@ textarea {
     border-bottom: 0;
     min-height: 0;
   }
+}
+
+/* Supporting text and shared table/empty-state recipes use the body size. */
+small,
+th,
+.empty {
+  font-size: var(--cedar-font-size);
+}
+.version {
+  padding: 0;
+  border-bottom: 0;
+}
+.version dl {
+  margin-top: 0;
 }

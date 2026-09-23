@@ -19,6 +19,8 @@ import { Icon } from "./icon";
 export class SortMenu {
   readonly sort = input("name");
   readonly foldersFirst = input(false);
+  readonly version = input("all");
+  readonly versionChange = output<string>();
   readonly sortChange = output<string>();
   readonly foldersFirstChange = output<boolean>();
   readonly open = signal(false);

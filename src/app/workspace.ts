@@ -1,3 +1,4 @@
+import { DescriptionEditor } from "./description-editor";
 import { SortMenu } from "./sort-menu";
 import { ResourceFilters } from "./resource-filters";
 import {
@@ -109,6 +110,7 @@ export function actions(r: Resource): Action[] {
     Toast,
     ResourceFilters,
     SortMenu,
+    DescriptionEditor,
     FormsModule,
     FriendlyDatePipe,
     TitleCasePipe,
@@ -430,6 +432,29 @@ export class Workspace {
       queryParamsHandling: "merge",
       queryParams: { folders: first ? "first" : null, offset: null },
     });
+  }
+  get version() {
+    return this.params.get("version") === "latest" ? "latest" : "all";
+  }
+  setVersion(version: string) {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParamsHandling: "merge",
+      queryParams: {
+        version: version === "latest" ? "latest" : null,
+        offset: null,
+      },
+    });
+  }
+  descriptionSaved(resource: Resource) {
+    if (this.selected()?.["@id"] === resource["@id"])
+      this.selected.update((current) => ({ ...current!, ...resource }));
+    this.rows.update((rows) =>
+      rows.map((row) =>
+        row["@id"] === resource["@id"] ? { ...row, ...resource } : row,
+      ),
+    );
+    this.notice.set("Description saved.");
   }
   setSort(sort: string) {
     void this.router.navigate([], {
