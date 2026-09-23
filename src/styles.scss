@@ -874,8 +874,7 @@ textarea {
 @include motion.reduced-motion;
 
 .field-error {
-  @include patterns.field-error;
-  font-size: var(--cedar-font-size);
+  @include patterns.field-error($size: body);
 }
 
 // Flat section panels follow the editor's understated heading and divider treatment.

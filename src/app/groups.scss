@@ -107,11 +107,7 @@
     }
 
     label {
-      display: block;
-      margin: 0 0 var(--cedar-form-label-gap);
-      color: var(--cedar-text-muted);
-      font-size: var(--cedar-font-size);
-      font-weight: var(--cedar-font-weight-medium);
+      @include patterns.field-label($size: body);
     }
 
     .form-control {

@@ -103,8 +103,7 @@ p {
   line-height: var(--cedar-control-line-height-authoring);
 }
 label {
-  @include patterns.field-label;
-  font-size: var(--cedar-font-size);
+  @include patterns.field-label($size: body);
 }
 select {
   width: 100%;

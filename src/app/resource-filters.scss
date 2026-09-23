@@ -1,4 +1,5 @@
 @use "@org.metadatacenter/cedar-design-tokens/controls";
+@use "@org.metadatacenter/cedar-design-tokens/patterns";
 :host {
   display: block;
   position: relative;
@@ -12,16 +13,12 @@
   align-items: center;
 }
 .popover {
+  @include patterns.menu-surface;
   position: absolute;
   top: calc(100% + var(--cedar-space-2));
   left: 0;
-  z-index: var(--cedar-layer-menu);
   min-width: 280px;
   max-width: 100%;
-  background: var(--cedar-color-on-primary);
-  border: 1px solid var(--cedar-border-rule);
-  border-radius: var(--cedar-menu-radius);
-  box-shadow: var(--cedar-menu-shadow);
   overflow: hidden;
 }
 .date {
@@ -32,12 +29,12 @@
   padding: var(--cedar-space-3);
 }
 .type-options label {
+  @include patterns.menu-item;
   display: flex;
   flex-direction: row;
   margin: 0;
   align-items: center;
   gap: var(--cedar-space-3);
-  padding: var(--cedar-space-2) var(--cedar-space-3);
   cursor: pointer;
 }
 input[type="checkbox"] {
@@ -56,9 +53,9 @@ input[type="checkbox"] {
   border-right: 1px solid var(--cedar-border-rule);
 }
 .presets button {
+  @include patterns.menu-item;
   display: flex;
   align-items: center;
-  text-align: left;
   gap: var(--cedar-space-3);
   color: var(--cedar-text-primary);
   border-radius: 0;
@@ -67,9 +64,9 @@ input[type="checkbox"] {
   display: inline-flex;
   width: 24px;
 }
-.selected {
+.presets button.selected {
   background: var(--cedar-surface-selected);
-  color: var(--cedar-color-primary) !important;
+  color: var(--cedar-text-selected);
 }
 .range {
   padding: var(--cedar-space-4);
@@ -88,12 +85,11 @@ input[type="checkbox"] {
   width: 100%;
 }
 .hint {
-  color: var(--cedar-text-muted);
-  font-size: var(--cedar-font-size);
+  @include patterns.field-help($size: body);
   margin: 0;
 }
 .error {
-  color: var(--cedar-color-error);
+  @include patterns.field-error($size: body);
   margin: 0;
 }
 footer {
