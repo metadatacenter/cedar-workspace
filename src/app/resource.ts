@@ -1,3 +1,4 @@
+import { applyListingFilters } from "./listing-filters";
 export type ResourceType =
   "folder" | "template" | "element" | "field" | "instance";
 export interface Resource {
@@ -38,7 +39,6 @@ export interface Config {
   resourceRestAPI: string;
   userRestAPI: string;
   groupRestAPI: string;
-  impexRestAPI: string;
   workspaceFrontend: string;
   templateDesignerFrontend: string;
   openViewBase: string;
@@ -66,10 +66,11 @@ export function listingPath(
   offset: number,
 ): string {
   const query = new URLSearchParams({
-    sort,
+    sort: params.get("folders") === "first" ? "foldersFirst," + sort : sort,
     limit: "50",
     offset: String(offset),
   });
+  applyListingFilters(query, params);
   let path: string;
   if (
     params.has("search") ||

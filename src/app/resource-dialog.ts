@@ -1,3 +1,6 @@
+import { Confirmation } from "./confirmation";
+import { DialogKeyboard } from "./dialog-keyboard";
+import { Icon } from "./icon";
 import {
   AfterViewInit,
   Component,
@@ -14,30 +17,13 @@ import {
 import { FormsModule } from "@angular/forms";
 import { Backend } from "./backend.service";
 import { Resource, Listing, title, can } from "./resource";
-interface Person {
-  "@id": string;
-  name?: string;
-  "schema:name"?: string;
-  firstName?: string;
-  lastName?: string;
-  resourceType?: string;
-}
-interface Grant {
-  node: Person;
-  role: string;
-  kind: "user" | "group";
-}
-interface Permissions {
-  owner: Person;
-  userPermissions: { user: Person; role: string }[];
-  groupPermissions: { group: Person; role: string }[];
-}
 @Component({
   selector: "cedar-resource-dialog",
-  imports: [FormsModule],
+  imports: [DialogKeyboard, Icon, FormsModule],
   templateUrl: "./resource-dialog.html",
 })
 export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
+  readonly confirmation = inject(Confirmation);
   @Input({ required: true }) action = "";
   @Input() resource?: Resource;
   @Input({ required: true }) folder = "";
@@ -51,9 +37,7 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   readonly error = signal("");
   readonly folders = signal<Resource[]>([]);
   readonly path = signal<Resource[]>([]);
-  readonly people = signal<Person[]>([]);
-  readonly grants = signal<Grant[]>([]);
-  readonly status = signal("");
+  submitted = false;
   name = "";
   description = "";
   version = "";
@@ -63,12 +47,7 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   targetTotal = 0;
   propagate = true;
   newFolderName = "";
-  personId = "";
-  role = "viewer";
-  owner?: Person;
-  newOwner = "";
-  confirmTransfer = false;
-  files: File[] = [];
+  private initialValues: string | null = null;
   private etag: string | null = null;
   private alive = true;
   private originalFocus = document.activeElement as HTMLElement | null;
@@ -78,7 +57,6 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
         {
           "new-folder": "New folder",
           rename: "Rename / description",
-          share: "Share",
           copy: "Copy",
           move: "Move",
           delete: "Delete",
@@ -86,21 +64,12 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
           draft: "Create Draft",
           "make-open": "Make Open",
           "make-not-open": "Make Not Open",
-          import: "Import caDSR forms",
         } as Record<string, string>
       )[this.action] || this.action
     );
   }
   get choosesFolder() {
     return ["copy", "move", "draft"].includes(this.action);
-  }
-  personName(p: Person) {
-    return (
-      p.name ||
-      p["schema:name"] ||
-      [p.firstName, p.lastName].filter(Boolean).join(" ") ||
-      p["@id"]
-    );
   }
   ngAfterViewInit() {
     this.dialog.nativeElement.showModal();
@@ -112,6 +81,26 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   ngOnInit() {
     void this.load();
   }
+  private values() {
+    return JSON.stringify([
+      this.name,
+      this.description,
+      this.version,
+      this.target,
+      this.propagate,
+      this.newFolderName,
+    ]);
+  }
+  async close() {
+    if (this.busy()) return;
+    if (
+      this.initialValues !== null &&
+      this.values() !== this.initialValues &&
+      !(await this.confirmation.confirm("Discard unsaved changes?"))
+    )
+      return;
+    this.closed.emit();
+  }
   async load() {
     try {
       const r = this.resource;
@@ -120,35 +109,7 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
         this.name = title(r);
         this.description = r["schema:description"] || "";
         this.version = r["pav:version"] || "0.0.1";
-        if (this.action === "share") {
-          const reply = await this.api.request<Permissions>(
-            this.api.path(r) + "/permissions",
-          );
-          this.etag = reply.etag;
-          this.owner = reply.data.owner;
-          this.grants.set([
-            ...reply.data.userPermissions.map((p) => ({
-              node: p.user,
-              role: p.role,
-              kind: "user" as const,
-            })),
-            ...reply.data.groupPermissions.map((p) => ({
-              node: p.group,
-              role: p.role,
-              kind: "group" as const,
-            })),
-          ]);
-          const [users, groups] = await Promise.all([
-            this.api.request<{ users: Person[] }>("/users"),
-            this.api.request<{ groups: Person[] }>(
-              this.api.config.groupRestAPI + "/groups",
-            ),
-          ]);
-          this.people.set([
-            ...users.data.users.map((p) => ({ ...p, resourceType: "user" })),
-            ...groups.data.groups.map((p) => ({ ...p, resourceType: "group" })),
-          ]);
-        } else if (
+        if (
           ["rename", "move", "delete", "make-open", "make-not-open"].includes(
             this.action,
           )
@@ -167,6 +128,7 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
       this.fail(e);
     } finally {
       this.busy.set(false);
+      this.initialValues = this.values();
     }
   }
   fail(e: unknown) {
@@ -206,41 +168,31 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
         this.target !== this.resource?.["@id"])
     );
   }
-  addGrant() {
-    const p = this.people().find((p) => p["@id"] === this.personId);
-    if (!p || p["@id"] === this.owner?.["@id"]) return;
-    this.grants.update((list) => [
-      ...list.filter((g) => g.node["@id"] !== p["@id"]),
-      {
-        node: p,
-        role: this.role,
-        kind: p.resourceType === "group" ? "group" : "user",
-      },
-    ]);
-    this.personId = "";
+  get nameError() {
+    return ["new-folder", "rename", "copy"].includes(this.action) &&
+      !this.name.trim()
+      ? "Enter a name."
+      : "";
   }
-  removeGrant(id: string) {
-    this.grants.update((list) => list.filter((g) => g.node["@id"] !== id));
-  }
-  chooseFiles(event: Event) {
-    this.files = Array.from((event.target as HTMLInputElement).files || []);
+  get versionError() {
+    return ["publish", "draft"].includes(this.action) &&
+      !/^\d+\.\d+\.\d+$/.test(this.version)
+      ? "Use a version such as 1.0.0."
+      : "";
   }
   async submit() {
     if (this.busy() || !this.destinationAllowed) return;
+    this.submitted = true;
+    if (this.nameError || this.versionError) return;
     this.busy.set(true);
     this.error.set("");
     const r = this.resource;
     const id = r?.["@id"];
     try {
       if (
-        [
-          "rename",
-          "move",
-          "delete",
-          "make-open",
-          "make-not-open",
-          "share",
-        ].includes(this.action) &&
+        ["rename", "move", "delete", "make-open", "make-not-open"].includes(
+          this.action,
+        ) &&
         !this.etag
       )
         throw new Error(
@@ -317,40 +269,6 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
             this.etag,
           );
           break;
-        case "share":
-          if (this.confirmTransfer && this.newOwner) {
-            await this.api.request(
-              "/command/transfer-resource-ownership",
-              "POST",
-              { "@id": id, newOwnerId: this.newOwner },
-              this.etag,
-            );
-          } else {
-            await this.api.request(
-              this.api.path(r!) + "/permissions",
-              "PUT",
-              {
-                owner: { "@id": this.owner!["@id"] },
-                userPermissions: this.grants()
-                  .filter((g) => g.kind === "user")
-                  .map((g) => ({
-                    user: { "@id": g.node["@id"] },
-                    role: g.role,
-                  })),
-                groupPermissions: this.grants()
-                  .filter((g) => g.kind === "group")
-                  .map((g) => ({
-                    group: { "@id": g.node["@id"] },
-                    role: g.role,
-                  })),
-              },
-              this.etag,
-            );
-          }
-          break;
-        case "import":
-          await this.importFiles();
-          break;
         default:
           throw new Error("Unknown action.");
       }
@@ -359,73 +277,6 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
       this.fail(e);
     } finally {
       this.busy.set(false);
-    }
-  }
-  private async importFiles() {
-    if (!this.files.length)
-      throw new Error("Choose at least one caDSR XML file.");
-    const uploadId = crypto.randomUUID();
-    for (const file of this.files) {
-      const chunkSize = 1024 * 1024;
-      const chunks = Math.max(1, Math.ceil(file.size / chunkSize));
-      const identifier = crypto.randomUUID();
-      for (let i = 0; i < chunks; i++) {
-        if (!this.alive) return;
-        this.status.set(
-          "Uploading " + file.name + " (" + (i + 1) + "/" + chunks + ")",
-        );
-        const chunk = file.slice(i * chunkSize, (i + 1) * chunkSize);
-        const data = new FormData();
-        const fields = {
-          uploadId,
-          numberOfFiles: this.files.length,
-          flowChunkNumber: i + 1,
-          flowChunkSize: chunkSize,
-          flowCurrentChunkSize: chunk.size,
-          flowTotalSize: file.size,
-          flowIdentifier: identifier,
-          flowFilename: file.name,
-          flowRelativePath: file.name,
-          flowTotalChunks: chunks,
-        };
-        Object.entries(fields).forEach(([key, value]) =>
-          data.append(key, String(value)),
-        );
-        data.append("file", chunk, file.name);
-        await this.api.raw(
-          this.api.config.impexRestAPI +
-            "/command/import-cadsr-forms?folderId=" +
-            encodeURIComponent(this.folder),
-          "POST",
-          data,
-        );
-      }
-    }
-    while (this.alive) {
-      const { data } = await this.api.request<{
-        filesImportStatus: Record<
-          string,
-          { importStatus: string; report: unknown }
-        >;
-      }>(
-        this.api.config.impexRestAPI +
-          "/command/import-cadsr-forms-status?uploadId=" +
-          encodeURIComponent(uploadId),
-      );
-      const entries = Object.entries(data.filesImportStatus || {});
-      this.status.set(
-        entries
-          .map(([name, item]) => name + ": " + item.importStatus)
-          .join("\n"),
-      );
-      if (entries.some(([, item]) => item.importStatus === "ERROR"))
-        throw new Error("An import failed. " + this.status());
-      if (
-        entries.length === this.files.length &&
-        entries.every(([, item]) => item.importStatus === "COMPLETE")
-      )
-        return;
-      await new Promise((resolve) => setTimeout(resolve, 2000));
     }
   }
 }

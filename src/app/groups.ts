@@ -1,7 +1,11 @@
+import { Toast } from "./toast";
+import { Confirmation } from "./confirmation";
 import { Component, OnInit, inject, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { Backend, HttpError } from "./backend.service";
-import { AccountShell } from "./account-shell";
+import { NgTemplateOutlet } from "@angular/common";
+import { Icon } from "./icon";
+import { GroupPicker } from "./group-picker";
 export interface Group {
   "@id": string;
   "schema:name": string;
@@ -24,15 +28,19 @@ export const userName = (u: GroupUser) =>
   [u.firstName, u.lastName].filter(Boolean).join(" ") || "Unnamed user";
 @Component({
   selector: "cedar-groups-page",
-  imports: [FormsModule, AccountShell],
+  imports: [Toast, FormsModule, NgTemplateOutlet, Icon, GroupPicker],
+  styleUrl: "./groups.scss",
   templateUrl: "./groups.html",
 })
 export class Groups implements OnInit {
+  readonly cedarVersion = window.cedarVersion || "unknown";
+  readonly confirmation = inject(Confirmation);
   readonly api = inject(Backend);
   readonly loading = signal(true);
   readonly ready = signal(false);
   readonly busy = signal(false);
   readonly error = signal("");
+  readonly stale = signal(false);
   readonly notice = signal("");
   readonly groups = signal<Group[]>([]);
   readonly users = signal<GroupUser[]>([]);
@@ -43,7 +51,48 @@ export class Groups implements OnInit {
   groupEtag: string | null = null;
   memberEtag: string | null = null;
   private generation = 0;
+  activeTab: "manage" | "create" = "manage";
+  createdGroup: Group | null = null;
   search = "";
+  get groupOptions() {
+    return this.filteredGroups.map((g) => ({
+      id: g["@id"],
+      label:
+        groupName(g) +
+        (g["schema:description"]?.trim()
+          ? " - " + g["schema:description"]!.trim()
+          : ""),
+    }));
+  }
+  get memberOptions() {
+    return this.availableUsers.map((u) => ({
+      id: u["@id"],
+      label: userName(u),
+    }));
+  }
+  async chooseGroup(id: string) {
+    const group = this.groups().find((g) => g["@id"] === id);
+    if (group) await this.select(group);
+  }
+  async selectTab(tab: "manage" | "create") {
+    if (this.busy() || this.selecting()) return;
+    this.activeTab = tab;
+    if (
+      tab === "manage" &&
+      this.selected()?.["@id"] === this.createdGroup?.["@id"]
+    ) {
+      this.selected.set(null);
+      this.members.set(null);
+      this.newMember = "";
+    }
+    if (
+      tab === "create" &&
+      this.createdGroup &&
+      this.selected()?.["@id"] !== this.createdGroup["@id"]
+    ) {
+      await this.select(this.createdGroup);
+    }
+  }
   newName = "";
   editName = "";
   editDescription = "";
@@ -109,6 +158,7 @@ export class Groups implements OnInit {
   }
   private fail(e: unknown) {
     this.error.set(e instanceof Error ? e.message : String(e));
+    if (e instanceof HttpError && e.status === 412) this.stale.set(true);
   }
   async select(g: Group) {
     if (this.busy()) return;
@@ -118,6 +168,7 @@ export class Groups implements OnInit {
     const generation = ++this.generation;
     this.selected.set(null);
     this.members.set(null);
+    this.stale.set(false);
     this.restricted.set(false);
     this.selecting.set(true);
     this.groupEtag = this.memberEtag = null;
@@ -165,8 +216,13 @@ export class Groups implements OnInit {
       );
     return value;
   }
-  private async write(action: () => Promise<void>, message: string) {
-    if (this.busy() || this.selecting()) return;
+  private async write(
+    action: () => Promise<void>,
+    message: string,
+    needsRevision = true,
+  ) {
+    if (this.busy() || this.selecting() || (needsRevision && this.stale()))
+      return;
     this.busy.set(true);
     this.error.set("");
     this.notice.set("");
@@ -182,16 +238,21 @@ export class Groups implements OnInit {
   async create() {
     const name = this.newName.trim();
     if (!name) return;
-    await this.write(async () => {
-      const r = await this.api.request<Group>(this.base, "POST", {
-        "schema:name": name,
-        "schema:description": "",
-      });
-      this.groups.update((gs) => [...gs, r.data]);
-      this.newName = "";
-      this.search = "";
-      await this.load(r.data);
-    }, "Group created.");
+    await this.write(
+      async () => {
+        const r = await this.api.request<Group>(this.base, "POST", {
+          "schema:name": name,
+          "schema:description": "",
+        });
+        this.groups.update((gs) => [...gs, r.data]);
+        this.createdGroup = r.data;
+        this.newName = "";
+        this.search = "";
+        await this.load(r.data);
+      },
+      "Group created.",
+      false,
+    );
   }
   async save() {
     const g = this.selected();
@@ -210,6 +271,8 @@ export class Groups implements OnInit {
       this.groupEtag = r.etag;
       const current = { ...g, ...body };
       this.selected.set(current);
+      if (this.createdGroup?.["@id"] === current["@id"])
+        this.createdGroup = current;
       this.groups.update((gs) =>
         gs.map((v) => (v["@id"] === g["@id"] ? current : v)),
       );
@@ -221,9 +284,10 @@ export class Groups implements OnInit {
       !g ||
       !this.canAdmin ||
       this.busy() ||
-      !window.confirm("Delete group “" + groupName(g) + "”?")
+      !(await this.confirmation.confirm("Delete group “" + groupName(g) + "”?"))
     )
       return;
+    if (this.selected() !== g || !this.canAdmin || this.busy()) return;
     await this.write(async () => {
       await this.api.request(
         this.path(g),
@@ -234,6 +298,7 @@ export class Groups implements OnInit {
       this.groups.update((gs) => gs.filter((v) => v["@id"] !== g["@id"]));
       this.selected.set(null);
       this.members.set(null);
+      if (this.createdGroup?.["@id"] === g["@id"]) this.createdGroup = null;
     }, "Group deleted.");
   }
   async addMember() {
@@ -250,9 +315,12 @@ export class Groups implements OnInit {
       this.onlyAdmin(m) ||
       !this.members()?.includes(m) ||
       this.busy() ||
-      !window.confirm("Remove " + userName(m.user) + " from this group?")
+      !(await this.confirmation.confirm(
+        "Remove " + userName(m.user) + " from this group?",
+      ))
     )
       return;
+    if (!this.members()?.includes(m) || this.onlyAdmin(m)) return;
     await this.saveMembers(this.members()!.filter((v) => v !== m));
   }
   async toggleAdmin(m: Member) {
@@ -261,15 +329,16 @@ export class Groups implements OnInit {
       this.onlyAdmin(m) ||
       !this.members()?.includes(m) ||
       this.busy() ||
-      !window.confirm(
+      !(await this.confirmation.confirm(
         (m.administrator
           ? "Remove administrator access for "
           : "Make an administrator: ") +
           userName(m.user) +
           "?",
-      )
+      ))
     )
       return;
+    if (!this.members()?.includes(m) || this.onlyAdmin(m)) return;
     await this.saveMembers(
       this.members()!.map((v) =>
         v === m ? { ...v, administrator: !v.administrator } : v,

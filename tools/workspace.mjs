@@ -69,7 +69,6 @@ export async function configure(base = root, env = process.env) {
     resourceRestAPI: `https://resource.${rest}`,
     userRestAPI: `https://user.${rest}`,
     groupRestAPI: `https://group.${rest}`,
-    impexRestAPI: `https://impex.${rest}`,
     workspaceFrontend:
       env.CEDAR_WORKSPACE_FRONTEND_URL ||
       (target === "local"

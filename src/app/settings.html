@@ -6,35 +6,39 @@
 >
   @if(ready()){
   <section class="account-card">
-    <h2>About CEDAR</h2>
-    <dl>
-      <dt>Version</dt>
-      <dd>{{version}}</dd>
-      @if(modifier){
-      <dt>Version modifier</dt>
-      <dd>{{modifier}} — UI cache version</dd>
-      }
-      <dt>CEE version</dt>
-      <dd>{{ceeVersion()}}</dd>
-    </dl>
+    <h2 class="account-section-heading">About CEDAR</h2>
+    <div class="account-section-body">
+      <dl class="account-facts">
+        <dt>Version</dt>
+        <dd>{{version}}</dd>
+        @if(modifier){
+        <dt>Version modifier</dt>
+        <dd>{{modifier}} — UI cache version</dd>
+        }
+        <dt>CEE version</dt>
+        <dd>{{ceeVersion()}}</dd>
+      </dl>
+    </div>
   </section>
   <section class="account-card">
-    <h2>Preferred date format</h2>
-    <p>
-      How dates are shown in Workspace. Saved to your account and available to
-      CEDAR tools.
-    </p>
-    <label for="date-format">Date format</label>
-    <select
-      id="date-format"
-      [ngModel]="selected"
-      (ngModelChange)="save($event)"
-      [disabled]="busy()"
-    >
-      @for(format of formats;track format.value){
-      <option [value]="format.value">{{format.label}}</option>
-      }
-    </select>
+    <h2 class="account-section-heading">Preferred date format</h2>
+    <div class="account-section-body">
+      <p>
+        How dates are shown in Workspace. Saved to your account and available to
+        CEDAR tools.
+      </p>
+      <label for="date-format">Date format</label>
+      <select
+        id="date-format"
+        [ngModel]="selected"
+        (ngModelChange)="save($event)"
+        [disabled]="busy()"
+      >
+        @for(format of formats;track format.value){
+        <option [value]="format.value">{{format.label}}</option>
+        }
+      </select>
+    </div>
   </section>
   }
 </cedar-account-shell>

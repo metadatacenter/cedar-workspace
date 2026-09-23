@@ -1,0 +1,77 @@
+<button
+  #trigger
+  type="button"
+  class="trigger"
+  aria-label="Sort options"
+  title="Sort options"
+  aria-haspopup="menu"
+  [attr.aria-expanded]="open()"
+  (click)="toggle()"
+  (keydown.arrowdown)="$event.preventDefault(); !open() && toggle()"
+>
+  <cedar-icon name="field-list" />
+</button>
+@if (open()) {
+<div
+  #panel
+  class="sort-menu"
+  role="menu"
+  aria-label="Sort options"
+  [style.top.px]="top()"
+  [style.left.px]="left()"
+  (keydown)="key($event)"
+>
+  <div role="group" aria-label="Sort by">
+    <div class="section-label">Sort by</div>
+    @for (option of fields; track option.value) {
+    <button
+      type="button"
+      role="menuitemradio"
+      [attr.aria-checked]="field === option.value"
+      (click)="chooseField(option.value)"
+    >
+      <cedar-icon
+        name="check"
+        [class.unchecked]="field !== option.value"
+      />{{option.label}}
+    </button>
+    }
+  </div>
+  <div role="group" aria-label="Sort direction">
+    <div class="section-label">Sort direction</div>
+    @for (label of directions; track $index; let index = $index) {
+    <button
+      type="button"
+      role="menuitemradio"
+      [attr.aria-checked]="descending === (index === 1)"
+      (click)="chooseDirection(index === 1)"
+    >
+      <cedar-icon
+        name="check"
+        [class.unchecked]="descending !== (index === 1)"
+      />{{label}}
+    </button>
+    }
+  </div>
+  <div role="group" aria-label="Folders">
+    <div class="section-label">Folders</div>
+    <button
+      type="button"
+      role="menuitemradio"
+      [attr.aria-checked]="foldersFirst()"
+      (click)="chooseFolders(true)"
+    >
+      <cedar-icon name="check" [class.unchecked]="!foldersFirst()" />On top
+    </button>
+    <button
+      type="button"
+      role="menuitemradio"
+      [attr.aria-checked]="!foldersFirst()"
+      (click)="chooseFolders(false)"
+    >
+      <cedar-icon name="check" [class.unchecked]="foldersFirst()" />Mixed with
+      files
+    </button>
+  </div>
+</div>
+}

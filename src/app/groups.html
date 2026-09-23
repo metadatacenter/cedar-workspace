@@ -1,130 +1,317 @@
-<cedar-account-shell
-  title="Groups"
-  [loading]="loading() || selecting()"
-  [error]="error()"
-  [notice]="notice()"
->
-  @if(ready()){
-  <section class="account-card">
-    <h2>Create a group</h2>
-    <form (ngSubmit)="create()">
-      <label for="new-group-name">New group name</label
-      ><input
-        id="new-group-name"
-        name="newName"
-        [(ngModel)]="newName"
+<header class="topbar groups-topbar">
+  <a href="/dashboard" class="brand" aria-label="CEDAR Workspace"
+    ><img src="/img/cedar-mark.png" alt="" /><span class="brand-label"
+      >Workspace<small class="brand-version">{{ cedarVersion }}</small></span
+    ></a
+  >
+  <form class="search" action="/dashboard">
+    <input
+      spellcheck="false"
+      aria-label="Search workspace"
+      name="search"
+      placeholder="Search"
+    />
+    <button aria-label="Search" type="submit">
+      <cedar-icon name="search" />
+    </button>
+  </form>
+  <details class="header-menu">
+    <summary aria-label="User menu"><cedar-icon name="user" /></summary>
+    <nav>
+      <a href="/profile"><span>Profile</span><cedar-icon name="user" /></a
+      ><a href="/settings"><span>Settings</span><cedar-icon name="tuning" /></a
+      ><a href="/logout"><span>Logout</span><cedar-icon name="sign-out" /></a>
+    </nav>
+  </details>
+  <details class="header-menu">
+    <summary aria-label="More menu"><cedar-icon name="more" /></summary>
+    <nav>
+      <a href="/groups"><span>Groups</span><cedar-icon name="groups" /></a
+      ><a href="/privacy"
+        ><span>Privacy</span><cedar-icon name="permissions"
+      /></a>
+      <a
+        href="https://metadatacenter.org/help/#subscribe"
+        target="_blank"
+        rel="noopener"
+        ><span>Help</span><cedar-icon name="external"
+      /></a>
+      <a href="https://metadatacenter.org/#about" target="_blank" rel="noopener"
+        ><span>About</span><cedar-icon name="external"
+      /></a>
+    </nav>
+  </details>
+</header>
+<div id="groups-page">
+  <div class="navbar-back">
+    <a href="/dashboard" aria-label="Back to Workspace"
+      ><cedar-icon name="back" /><span class="document-title">Groups</span></a
+    >
+  </div>
+  <main class="groups-content">
+    <header class="groups-page-header">
+      <h1>Groups</h1>
+      <p>
+        A group is a named collection of users. Group Administrators can change
+        its name, membership and administrators.
+      </p>
+    </header>
+    @if(error()) {
+    <div class="alert" role="alert">
+      {{error()}} @if(selected()) {
+      <button (click)="select(selected()!)" [disabled]="busy() || selecting()">
+        Reload group
+      </button>
+      }
+    </div>
+    } @if(notice()) {
+    <cedar-toast [message]="notice()" />
+    } @if(loading() || selecting()) {
+    <p role="status">Loading…</p>
+    } @if(ready()) {
+    <div class="groups-tabs" role="tablist" aria-label="Group tasks">
+      <button
+        id="manage-groups-tab"
+        class="groups-tab"
+        role="tab"
+        aria-controls="manage-groups-panel"
+        [attr.aria-selected]="activeTab === 'manage'"
+        [class.active]="activeTab === 'manage'"
         [disabled]="busy() || selecting()"
-        required
-      /><button
-        class="primary"
-        [disabled]="busy() || selecting() || !newName.trim()"
+        (click)="selectTab('manage')"
+      >
+        Manage groups
+      </button>
+      <button
+        id="create-group-tab"
+        class="groups-tab"
+        role="tab"
+        aria-controls="create-group-panel"
+        [attr.aria-selected]="activeTab === 'create'"
+        [class.active]="activeTab === 'create'"
+        [disabled]="busy() || selecting()"
+        (click)="selectTab('create')"
       >
         Create group
       </button>
-    </form>
-  </section>
-  <div class="account-groups">
-    <section class="account-card">
-      <h2>Manage groups</h2>
-      <label for="group-search">Search groups</label
-      ><input id="group-search" [(ngModel)]="search" />
-      <ul class="account-group-list">
-        @for(g of filteredGroups;track g['@id']){
-        <li>
-          <button
-            [attr.aria-current]="selected()?.['@id']===g['@id']?'true':null"
-            [disabled]="busy()"
-            (click)="select(g)"
-          >
-            {{groupName(g)}}</button
-          >@if(g['schema:description']){<small>{{g['schema:description']}}</small>}
-        </li>
-        }@empty{
-        <li>No matching groups.</li>
-        }
-      </ul>
-    </section>
-    @if(selected();as g){
-    <section class="account-card">
-      <h2>{{groupName(g)}}</h2>
-      <button [disabled]="busy() || selecting()" (click)="select(g)">
-        Reload group
-      </button>
-      @if(canAdmin){
-      <form (ngSubmit)="save()">
-        <label for="group-name">Group name</label
-        ><input
-          id="group-name"
-          name="editName"
-          [(ngModel)]="editName"
-          [disabled]="busy()"
-          required
-        />
-        <label for="group-description">Description</label
-        ><textarea
-          id="group-description"
-          name="editDescription"
-          [(ngModel)]="editDescription"
-          [disabled]="busy()"
-        ></textarea>
-        <div class="account-actions">
-          <button class="primary" [disabled]="busy() || !editName.trim()">
-            Save details</button
-          ><button type="button" [disabled]="busy()" (click)="remove()">
-            Delete group
-          </button>
+    </div>
+    @if(activeTab === 'create') {
+    <section
+      id="create-group-panel"
+      role="tabpanel"
+      aria-labelledby="create-group-tab"
+    >
+      <div class="groups-card groups-create-card">
+        <div>
+          <h2>Create a group</h2>
+          <p>
+            Create a group before assigning it access to folders or artifacts.
+          </p>
         </div>
-      </form>
-      }@else{
-      <p>{{g['schema:description']}}</p>
-      }
-      <h3>Members</h3>
-      @if(restricted()){
-      <p>Only group administrators can view and manage membership.</p>
-      } @if(members();as roster){
-      <ul class="account-group-list">
-        @for(m of roster;track m.user['@id']){
-        <li class="account-member" [attr.aria-label]="userName(m.user)">
-          <strong>{{userName(m.user)}}</strong> ·
-          {{m.administrator?'Administrator':'Member'}} @if(canAdmin){
-          <div class="account-actions">
+        <form class="groups-create-form" (ngSubmit)="create()">
+          <label for="new-group-name">Group name</label>
+          <div class="groups-inline-controls">
+            <input
+              spellcheck="false"
+              id="new-group-name"
+              class="form-control"
+              name="newName"
+              [(ngModel)]="newName"
+              placeholder="Enter a group name"
+              [disabled]="busy() || selecting()"
+              required
+            />
             <button
-              [disabled]="busy() || onlyAdmin(m)"
-              (click)="toggleAdmin(m)"
+              class="btn btn-primary groups-primary-action"
+              [disabled]="busy() || selecting() || !newName.trim()"
             >
-              {{m.administrator?'Remove administrator':'Make administrator'}}</button
-            ><button
-              [disabled]="busy() || onlyAdmin(m)"
-              (click)="removeMember(m)"
-            >
-              Remove member
+              Create group
             </button>
           </div>
-          }
-        </li>
-        }@empty{
-        <li>No members.</li>
-        }
-      </ul>
-      } @if(canAdmin){
-      <p>The group must retain at least one administrator.</p>
-      <form (ngSubmit)="addMember()">
-        <label for="group-member">Add a member</label
-        ><select
-          id="group-member"
-          name="newMember"
-          [(ngModel)]="newMember"
-          [disabled]="busy()"
-        >
-          <option value="">Select a user</option>
-          @for(u of availableUsers;track u['@id']){
-          <option [value]="u['@id']">{{userName(u)}}</option>
-          }</select
-        ><button [disabled]="busy() || !newMember">Add member</button>
-      </form>
+        </form>
+      </div>
+      @if(createdGroup && selected()?.['@id'] === createdGroup['@id']) {
+      <div class="groups-card groups-created-group">
+        <ng-container *ngTemplateOutlet="details" />
+      </div>
       }
     </section>
+    } @else {
+    <section
+      id="manage-groups-panel"
+      class="groups-card groups-manage-card"
+      role="tabpanel"
+      aria-labelledby="manage-groups-tab"
+    >
+      <cedar-group-picker
+        class="groups-selector"
+        id="group-search-picker"
+        label="Find a group"
+        placeholder="Search for a group"
+        [options]="groupOptions"
+        [clearOnPick]="true"
+        [disabled]="busy() || selecting()"
+        (picked)="chooseGroup($event)"
+      />
+      @if(!selected() && !selecting()) {
+      <div class="groups-empty-state">
+        Select a group to view its details and members.
+      </div>
+      }
+      <ng-container *ngTemplateOutlet="details" />
+    </section>
+    } }
+  </main>
+</div>
+<ng-template #details>
+  @if(selected(); as g) {
+  <div class="groups-selected">
+    @if(g.specialGroup || !canAdmin) {
+    <div class="groups-selected-message">
+      <p>
+        {{g.specialGroup ? 'This built-in group contains every CEDAR user and
+        cannot be changed.' : 'You can view this group, but only a Group
+        Administrator can change it.'}}
+      </p>
+    </div>
     }
+    <form class="groups-details-form" (ngSubmit)="save()">
+      <div class="groups-field">
+        <label for="group-name">Name</label>
+        <input
+          spellcheck="false"
+          id="group-name"
+          class="form-control"
+          name="editName"
+          [(ngModel)]="editName"
+          [disabled]="!canAdmin || busy()"
+          required
+        />
+      </div>
+      <div class="groups-field">
+        <label for="group-description">Description</label>
+        <textarea
+          spellcheck="false"
+          id="group-description"
+          class="form-control"
+          rows="1"
+          name="editDescription"
+          [(ngModel)]="editDescription"
+          [disabled]="!canAdmin || busy()"
+          [placeholder]="canAdmin ? 'Optional description' : ''"
+        ></textarea>
+      </div>
+      @if(canAdmin) {
+      <div class="groups-details-actions">
+        <button
+          type="button"
+          class="btn groups-delete-button"
+          [disabled]="busy()"
+          (click)="remove()"
+          aria-label="Delete group"
+          title="Delete group"
+        >
+          <ng-container *ngTemplateOutlet="trash" />
+        </button>
+        <button
+          class="btn btn-primary groups-primary-action"
+          [disabled]="busy() || !editName.trim()"
+        >
+          Save
+        </button>
+      </div>
+      }
+    </form>
+    <div class="groups-members-section">
+      <div class="groups-members-heading">
+        <div>
+          <h3>Members</h3>
+          <p>
+            The Group Administrator role allows a member to manage this group.
+          </p>
+        </div>
+        @if(!restricted()) {
+        <span class="groups-member-count">{{members()?.length || 0}}</span> }
+      </div>
+      @if(canAdmin) {
+      <form class="groups-add-member" (ngSubmit)="addMember()">
+        <div>
+          <cedar-group-picker
+            id="new-group-member"
+            label="Add a member"
+            placeholder="Search for a user"
+            [options]="memberOptions"
+            [(value)]="newMember"
+            [disabled]="busy()"
+          />
+        </div>
+        <button
+          class="btn btn-primary groups-primary-action"
+          [disabled]="busy() || !newMember"
+        >
+          Add member
+        </button>
+      </form>
+      }
+      <div class="groups-member-list" role="list" aria-label="Group members">
+        @if(members()?.length) {
+        <div class="groups-member-list-header">
+          <span>Group Administrator</span>
+        </div>
+        } @for(m of members(); track m.user['@id']) {
+        <div
+          class="groups-member-row"
+          role="listitem"
+          [attr.aria-label]="userName(m.user)"
+        >
+          <div class="groups-member-avatar" aria-hidden="true">
+            <cedar-icon name="user" />
+          </div>
+          <div class="groups-member-summary">
+            <div class="groups-member-name">{{userName(m.user)}}</div>
+          </div>
+          <label
+            class="groups-admin-control"
+            [title]="onlyAdmin(m) ? 'A group must have at least one Group Administrator.' : ''"
+          >
+            <input
+              spellcheck="false"
+              type="checkbox"
+              [checked]="m.administrator"
+              (click)="$event.preventDefault(); toggleAdmin(m)"
+              [disabled]="!canAdmin || busy() || onlyAdmin(m)"
+              [attr.aria-label]="userName(m.user) + ' is a Group Administrator'"
+            />
+          </label>
+          <span
+            class="groups-remove-member-wrapper"
+            [title]="onlyAdmin(m) ? 'Assign another Group Administrator before removing this member.' : ''"
+          >
+            @if(canAdmin) {
+            <button
+              type="button"
+              class="btn groups-remove-member"
+              [disabled]="busy() || onlyAdmin(m)"
+              (click)="removeMember(m)"
+              [attr.aria-label]="'Remove ' + userName(m.user) + ' from the group'"
+            >
+              <ng-container *ngTemplateOutlet="trash" />
+            </button>
+            }
+          </span>
+        </div>
+        } @empty { @if(restricted()) {
+        <div class="groups-empty-members">
+          Only a Group Administrator can see who is in this group.
+        </div>
+        } @else if(members()) {
+        <div class="groups-empty-members">This group has no members.</div>
+        } }
+      </div>
+    </div>
   </div>
   }
-</cedar-account-shell>
+</ng-template>
+<ng-template #trash>
+  <cedar-icon name="delete" />
+</ng-template>

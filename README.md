@@ -3,8 +3,8 @@
 CEDAR's split Workspace frontend. `/` and `/dashboard` run a standalone Angular
 22 application with Angular routing, signals, forms and shared CEDAR design tokens.
 The initial workspace provides a table, search, folder navigation, collapsible side
-panels, Info/Version tabs, and resource action dialogs. It deliberately has no
-categories, latest-version filter, type filters or tile view.
+panels, Info/Version tabs, Type and Last modified filters, and resource action dialogs. It deliberately has no
+categories, a latest-version filter or a tile view.
 
 Template, element and field authoring opens the configured CED/CEFD Designer host;
 metadata creation/editing opens the standalone Angular CEE host at
@@ -20,6 +20,32 @@ All routes now use the Angular application. The AngularJS shell, Bower vendors, 
 icon fonts, RequireJS and obsolete build/test packages are removed. The retained
 Keycloak adapter and bundle are plain JavaScript used by Angular.
 The combined `cedar-template-editor` application is unchanged.
+
+## Listing filters
+
+`ResourceFilters` is a standalone, router-independent toolbar; its `value` input and
+`change` output use `ListingFilters`. `FilterChip` provides the reusable selected
+chip and clear action. Both use the shared design tokens and icon registry.
+Type accepts any combination of Folder, Element, Template, Field and Instance.
+Each popover edits a draft until Apply; Cancel, Escape and clicking outside discard it.
+
+Workspace stores applied filters in URL query parameters and resets the page when
+filters change. The date presets count local calendar days (Last 7 days includes
+today and the preceding six days). Custom After and Before dates are inclusive;
+either may be blank. The range controls use native date inputs and do not load CEE.
+
+`listing-filters.ts` translates dates to `modified_after` (inclusive) and
+`modified_before` (exclusive) epoch-millisecond bounds. The Resource Server applies
+them together with `resource_types` before counting and paginating folder, shared,
+community and indexed search results. It requires the matching server/library changes;
+an older Resource Server does not implement these date parameters.
+
+The sort menu above the row actions offers Name, Last modified and Date created,
+with ascending/descending order and optional folders on top. Its state is shared
+with the column headers and stored in the URL; changing it resets pagination.
+Folders remain mixed by default. Folder grouping uses the server's compound
+`sort=foldersFirst,<field>` order before pagination, including search and shared
+views, and requires the corresponding microservice-library support.
 
 ## Local development
 
@@ -62,8 +88,8 @@ AngularJS `npm run smoke` remains unchanged for `cedar.metadatacenter.*`.
 Resource reports supply lifecycle actions missing from listing summaries. Template
 reports are fetched in bounded batches; other reports are fetched when their menus
 or information panels open. Rename, move, delete, open-state and permission updates
-use read-time ETags and preserve the dialog input on conflict. Import retains the
-existing caDSR XML upload/status protocol.
+use read-time ETags and preserve the dialog input on conflict. The New menu offers
+Folder, Field, Element and Template; Workspace does not provide an import flow.
 
 ## Publication and native server deployment
 
@@ -123,3 +149,17 @@ deployment and authenticated smokes before accepting the release in an environme
 - Cross-application navigation follows
   [`docs/CROSS_APP_NAVIGATION.md`](docs/CROSS_APP_NAVIGATION.md).
 - New workspace development belongs in `src/`; do not add AngularJS UI.
+
+## Confirmations and success feedback
+
+Use the shared `Confirmation` service for in-app confirmation, awaiting its result
+before writing and rechecking the target and permissions afterward. The root outlet
+provides a styled, labelled modal with Cancel focused, Escape cancellation, focus
+containment and focus restoration; it supports a confirmation above an existing dialog.
+Do not add browser `confirm()` or `alert()` calls. The native `beforeunload` warning
+is retained for browser navigation and tab closing, where custom dialogs are unavailable.
+
+Use `Toast` for successful modifications and copy feedback. It announces politely,
+can be dismissed, expires after six seconds and pauses on hover or focus. Render it
+inside the owning dialog when one is open, so it remains accessible in the modal's
+layer. Errors, stale-write conflicts and actionable recovery messages stay inline.

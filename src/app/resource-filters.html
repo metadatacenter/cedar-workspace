@@ -1,0 +1,105 @@
+<div class="filters" aria-label="Resource filters">
+  <cedar-filter-chip
+    [text]="typeLabel"
+    label="Type"
+    [controls]="id + '-type'"
+    [active]="value().types.length > 0"
+    [expanded]="open() === 'type'"
+    (toggle)="toggle('type')"
+    (clear)="clear('type')"
+  />
+  <cedar-filter-chip
+    [text]="dateLabel"
+    label="Last modified"
+    [controls]="id + '-date'"
+    [active]="!!value().modified"
+    [expanded]="open() === 'date'"
+    (toggle)="toggle('date')"
+    (clear)="clear('date')"
+  />
+  @if(value().types.length || value().modified) {
+  <button type="button" (click)="clear()">Clear filters</button> }
+</div>
+@if(open()) {
+<section
+  class="popover"
+  [class.date]="open() === 'date'"
+  role="dialog"
+  [attr.id]="id + (open() === 'type' ? '-type' : '-date')"
+  [attr.aria-label]="open() === 'type' ? 'Filter by type' : 'Filter by last modified'"
+>
+  @if(open() === 'type') {
+  <div class="type-options">
+    @for(type of types; track type.value) {
+    <label
+      ><input
+        type="checkbox"
+        spellcheck="false"
+        [checked]="draft().types.includes(type.value)"
+        (change)="selectType(type.value)"
+      />
+      <cedar-icon
+        [name]="type.value === 'folder' ? 'folder' : 'artifact-' + type.value"
+      />
+      {{type.label}}</label
+    >
+    }
+  </div>
+  } @else {
+  <div class="date-body">
+    <div class="presets" role="group" aria-label="Date presets">
+      @for(p of presets; track p.value) {
+      <button
+        type="button"
+        [class.selected]="draft().modified === p.value"
+        [attr.aria-pressed]="draft().modified === p.value"
+        (click)="preset(p.value)"
+      >
+        <span class="check"
+          >@if(draft().modified === p.value){<cedar-icon name="check" />}</span
+        >{{p.label}}
+      </button>
+      }
+    </div>
+    <div class="range">
+      <label
+        >After<input
+          type="date"
+          spellcheck="false"
+          aria-label="After"
+          [ngModel]="draft().after || ''"
+          (ngModelChange)="editDate('after', $event)"
+      /></label>
+      <label
+        >Before<input
+          type="date"
+          spellcheck="false"
+          aria-label="Before"
+          [ngModel]="draft().before || ''"
+          (ngModelChange)="editDate('before', $event)"
+          [attr.aria-invalid]="rangeError ? true : null"
+          [attr.aria-describedby]="rangeError ? id + '-error' : null"
+      /></label>
+      @if(rangeError){
+      <p class="error" [id]="id + '-error'" role="alert">{{rangeError}}</p>
+      }
+      <p class="hint">
+        Includes both dates. Leave either date blank for an open range.
+      </p>
+    </div>
+  </div>
+  }
+  <footer>
+    <button type="button" (click)="clearDraft()">Clear all</button><span></span
+    ><button type="button" (click)="close()">Cancel</button
+    ><button
+      type="button"
+      class="primary"
+      [disabled]="!!rangeError && open() === 'date'"
+      (click)="apply()"
+    >
+      Apply
+    </button>
+  </footer>
+</section>
+}

@@ -1,0 +1,314 @@
+@use "@org.metadatacenter/cedar-design-tokens/patterns";
+:host {
+  --cedar-table-cell-padding-block: var(--cedar-space-1);
+  --cedar-table-row-height: calc(
+    var(--cedar-control-height-default) + 2 * var(--cedar-space-1)
+  );
+  font-family: var(--cedar-font-family);
+  font-size: var(--cedar-font-size);
+  color: var(--cedar-text-primary);
+}
+dialog {
+  width: calc(100% - 32px);
+  max-width: 720px;
+  max-height: calc(100vh - 80px);
+  margin: 40px auto;
+  padding: 0;
+  border: 0;
+  border-radius: var(--cedar-dialog-radius);
+  color: var(--cedar-text-primary);
+  background: var(--cedar-color-on-primary);
+  box-shadow: var(--cedar-dialog-shadow);
+}
+dialog::backdrop {
+  background: var(--cedar-dialog-backdrop);
+}
+.permissions-header {
+  display: block;
+  position: relative;
+  padding: var(--cedar-space-3) var(--cedar-space-4);
+  border-bottom: 1px solid var(--cedar-border-rule);
+}
+h2 {
+  margin: 0 var(--cedar-control-height-default) var(--cedar-space-1) 0;
+  @include patterns.artifact-title;
+}
+.close {
+  position: absolute;
+  right: 20px;
+  top: 14px;
+  font-size: var(--cedar-font-size-heading);
+  color: var(--cedar-text-muted);
+}
+.resource-context {
+  display: flex;
+  align-items: center;
+  gap: var(--cedar-space-3);
+}
+.resource-context > div {
+  min-width: 0;
+}
+.resource-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  color: var(--cedar-color-primary);
+  flex-shrink: 0;
+}
+.resource-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--cedar-font-size-lead);
+  font-weight: var(--cedar-font-weight-medium);
+}
+.resource-type {
+  text-transform: capitalize;
+  color: var(--cedar-text-muted);
+  font-size: var(--cedar-font-size-small);
+  margin-top: var(--cedar-space-1);
+}
+.permissions-body {
+  max-height: calc(100vh - 250px);
+  padding: 0 var(--cedar-space-4);
+  overflow-y: auto;
+}
+.folder-notice {
+  display: flex;
+  gap: var(--cedar-space-3);
+  margin: var(--cedar-space-2) 0 var(--cedar-space-1);
+  padding: var(--cedar-space-3);
+  border-left: 3px solid var(--cedar-color-primary);
+  background: var(--cedar-status-info-surface);
+  color: var(--cedar-status-info-text);
+}
+.access-panel {
+  padding: var(--cedar-space-2) 0;
+  border-bottom: 1px solid var(--cedar-border-rule);
+}
+.access-panel:last-child {
+  border-bottom: 0;
+}
+h3 {
+  margin: 0 0 var(--cedar-space-1);
+  font-size: var(--cedar-font-size-element-heading);
+  font-weight: var(--cedar-font-weight-medium);
+}
+p {
+  margin: 0 0 var(--cedar-space-2);
+  color: var(--cedar-text-muted);
+  font-size: var(--cedar-font-size-small);
+  line-height: var(--cedar-control-line-height-authoring);
+}
+label {
+  @include patterns.field-label;
+}
+select {
+  width: 100%;
+  height: var(--cedar-control-height-default);
+  padding: 6px var(--cedar-space-3);
+  border-color: var(--cedar-control-border-default);
+}
+select:disabled {
+  background: var(--cedar-control-readonly-surface);
+  color: var(--cedar-text-readonly);
+}
+// Viewing a role is readable content, even though its native select remains inert.
+select.readonly-role:disabled {
+  opacity: 1;
+  color: var(--cedar-text-readonly);
+  background: var(--cedar-control-readonly-surface);
+}
+.add-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--cedar-space-3);
+}
+.principal-picker {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.role-picker {
+  flex: 0 0 142px;
+}
+.add-button {
+  flex: 0 0 72px;
+}
+.role-help {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--cedar-space-2) var(--cedar-space-6);
+  margin-top: var(--cedar-form-help-gap);
+  color: var(--cedar-text-muted);
+  font-size: var(--cedar-font-size-small);
+}
+.access-list {
+  max-height: 280px;
+  border: 1px solid var(--cedar-border-rule);
+  overflow: auto;
+}
+.access-row {
+  display: flex;
+  align-items: center;
+  min-height: var(--cedar-table-row-height);
+  padding: var(--cedar-table-cell-padding-block)
+    var(--cedar-table-cell-padding-inline);
+  gap: var(--cedar-space-3);
+}
+.access-row + .access-row {
+  border-top: 1px solid var(--cedar-border-rule);
+}
+.access-header {
+  min-height: var(--cedar-control-height-default);
+  color: var(--cedar-text-muted);
+  font-size: var(--cedar-font-size-small);
+  font-weight: var(--cedar-font-weight-medium);
+}
+.principal-cell {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.principal-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.avatar {
+  display: flex;
+  flex: 0 0 34px;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  margin-right: var(--cedar-space-3);
+  border-radius: 50%;
+  background: var(--cedar-surface-panel);
+  color: var(--cedar-text-muted);
+}
+.avatar.group {
+  background: var(--cedar-surface-tinted);
+  color: var(--cedar-color-primary);
+}
+.type-cell {
+  flex: 0 0 58px;
+  text-align: center;
+  color: var(--cedar-text-muted);
+  font-size: var(--cedar-font-size-small);
+}
+.role-cell {
+  flex: 0 0 132px;
+  text-align: center;
+}
+.owner-cell {
+  display: flex;
+  flex: 0 0 58px;
+  align-items: center;
+  justify-content: center;
+}
+.owner-cell input {
+  width: 13px;
+  height: 13px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--cedar-color-primary);
+}
+.action-cell {
+  flex: 0 0 28px;
+}
+.action-cell button {
+  display: flex;
+  justify-content: center;
+  width: 28px;
+  min-height: 32px;
+  padding: var(--cedar-space-1);
+  color: var(--cedar-text-primary);
+}
+footer {
+  margin-top: 0;
+  display: flex;
+  justify-content: center;
+  padding: var(--cedar-space-2) var(--cedar-space-4);
+  border-top: 1px solid var(--cedar-border-rule);
+}
+footer button {
+  min-width: 88px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@media (max-width: 600px) {
+  dialog {
+    width: calc(100% - 16px);
+    max-height: calc(100vh - 16px);
+    margin: 8px auto;
+  }
+  .permissions-header,
+  .permissions-body,
+  footer {
+    padding-left: var(--cedar-space-4);
+    padding-right: var(--cedar-space-4);
+  }
+  .permissions-body {
+    max-height: calc(100vh - 190px);
+  }
+  .add-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .role-picker,
+  .add-button {
+    flex-basis: auto;
+  }
+  .role-help {
+    flex-direction: column;
+    gap: var(--cedar-space-1);
+  }
+  .access-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: var(--cedar-space-2);
+  }
+  .access-header {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .principal-cell {
+    grid-column: 1 / 3;
+  }
+  .principal-name {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .type-cell {
+    grid-column: 3;
+  }
+  .role-cell {
+    grid-column: 1;
+    text-align: left;
+  }
+  .owner-cell {
+    gap: var(--cedar-space-2);
+  }
+  .owner-cell::before {
+    content: "Owner";
+    color: var(--cedar-text-muted);
+    font-size: var(--cedar-font-size-small);
+  }
+  .resource-name {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}

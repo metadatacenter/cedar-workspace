@@ -1,3 +1,4 @@
+import { Confirmation } from "./confirmation";
 import { TestBed } from "@angular/core/testing";
 import { ElementRef } from "@angular/core";
 import {
@@ -10,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   MetadataEditor,
   metadataKey,
+  metadataFieldLabel,
   metadataRoute,
   workspaceReturn,
 } from "./metadata-editor";
@@ -254,20 +256,55 @@ describe("Modern metadata host", () => {
     await host.save();
     expect(host.notice()).toBe("Saved.");
   });
+  it("blocks invalid values but permits warnings once errors are corrected", async () => {
+    await edit();
+    Object.assign(cee.dataQualityReport, {
+      isValid: false,
+      problems: [
+        {
+          path: ["Title"],
+          field: "Title",
+          code: "required",
+          message: "A value is required.",
+        },
+        {
+          path: ["Email"],
+          field: "Email",
+          code: "email",
+          message: "Enter a valid email.",
+        },
+      ],
+    });
+    host.changed();
+    expect(host.validationWarnings).toHaveLength(1);
+    expect(host.validationErrors).toHaveLength(1);
+    api.request.mockClear();
+    await host.save();
+    expect(api.request).not.toHaveBeenCalled();
+    cee.dataQualityReport.problems.pop();
+    host.changed();
+    expect(host.validationErrors).toHaveLength(0);
+    api.request.mockResolvedValue({
+      data: { "@id": "instance-id" },
+      etag: '"i2"',
+    });
+    await host.save();
+    expect(host.notice()).toBe("Saved.");
+  });
   it("guards dirty navigation and unload, but allows clean navigation", async () => {
     await edit();
-    expect(host.mayLeave()).toBe(true);
+    expect(await host.mayLeave()).toBe(true);
     host.name = "Unsaved";
     host.changed();
-    vi.spyOn(window, "confirm").mockReturnValue(false);
-    expect(host.mayLeave()).toBe(false);
+    vi.spyOn(TestBed.inject(Confirmation), "confirm").mockResolvedValue(false);
+    expect(await host.mayLeave()).toBe(false);
     const event = new Event("beforeunload", { cancelable: true });
     host.beforeUnload(event as BeforeUnloadEvent);
     expect(event.defaultPrevented).toBe(true);
-    vi.mocked(window.confirm).mockReturnValue(true);
-    expect(host.mayLeave()).toBe(true);
+    vi.mocked(TestBed.inject(Confirmation).confirm).mockResolvedValue(true);
+    expect(await host.mayLeave()).toBe(true);
     host.saving.set(true);
-    expect(host.mayLeave()).toBe(false);
+    expect(await host.mayLeave()).toBe(false);
   });
   it("does not configure a destroyed host after asynchronous loading", async () => {
     host.ngOnDestroy();
@@ -302,5 +339,41 @@ describe("Modern metadata host", () => {
     expect(
       metadataRoute([new UrlSegment("groups", {})], {} as never, {} as never),
     ).toBeNull();
+  });
+});
+
+describe("metadata field labels", () => {
+  it("resolves display labels through repeated elements instead of showing internal keys", () => {
+    const schema = {
+      _ui: { propertyLabels: { samples: "Study samples" } },
+      properties: {
+        samples: {
+          type: "array",
+          items: {
+            "schema:name": "Sample",
+            properties: {
+              amount: {
+                "schema:name": "Amount",
+                "skos:prefLabel": "Sample weight",
+              },
+              count: { "schema:name": "Cell count" },
+            },
+          },
+        },
+      },
+    };
+    expect(metadataFieldLabel(schema, ["samples", "0", "amount"])).toBe(
+      "Study samples / #1 / Sample weight",
+    );
+    expect(metadataFieldLabel(schema, ["samples", "count"])).toBe(
+      "Study samples / Cell count",
+    );
+    expect(metadataFieldLabel(schema, ["unknown"])).toBe("unknown");
+    expect(
+      metadataFieldLabel(
+        { properties: { "2026": { "schema:name": "Annual count" } } },
+        ["2026"],
+      ),
+    ).toBe("Annual count");
   });
 });

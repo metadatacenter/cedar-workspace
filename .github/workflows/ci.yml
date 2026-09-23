@@ -60,3 +60,22 @@ jobs:
 
       - name: Run Angular, authentication and packaging suites
         run: npm test
+
+  browser:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.19.0
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Visual, keyboard and accessibility contracts
+        run: npm run test:visual
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: workspace-browser-diagnostics
+          path: browser/test-results/

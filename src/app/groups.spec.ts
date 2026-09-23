@@ -1,3 +1,4 @@
+import { Confirmation } from "./confirmation";
 import { TestBed } from "@angular/core/testing";
 import { beforeEach, afterEach, describe, it, expect, vi } from "vitest";
 import { Groups, Group, Member } from "./groups";
@@ -38,7 +39,7 @@ describe("Groups", () => {
     host.groupEtag = '"group1"';
     host.memberEtag = '"members1"';
     host.editName = "Team";
-    vi.spyOn(window, "confirm").mockReturnValue(true);
+    vi.spyOn(TestBed.inject(Confirmation), "confirm").mockResolvedValue(true);
   });
   afterEach(() => vi.restoreAllMocks());
   it("writes narrowed details with the group revision and advances it", async () => {
@@ -101,11 +102,11 @@ describe("Groups", () => {
     await host.removeMember(me);
     await host.toggleAdmin(me);
     expect(request).not.toHaveBeenCalled();
-    expect(window.confirm).not.toHaveBeenCalled();
+    expect(TestBed.inject(Confirmation).confirm).not.toHaveBeenCalled();
   });
   it("honors cancelled administrator and deletion confirmations", async () => {
     host.members.set([me, other]);
-    vi.mocked(window.confirm).mockReturnValue(false);
+    vi.mocked(TestBed.inject(Confirmation).confirm).mockResolvedValue(false);
     await host.toggleAdmin(other);
     await host.remove();
     expect(request).not.toHaveBeenCalled();
@@ -203,5 +204,220 @@ describe("Groups", () => {
     );
     expect(host.selected()).toBeNull();
     expect(host.groups()).toEqual([]);
+  });
+  // Behavioral ports of legacy groups.controller_test.js and group-etag.service_test.js.
+  it("starts in Manage, sorts user names, and calls the built-in group Everyone", async () => {
+    request
+      .mockResolvedValueOnce({
+        data: { groups: [{ ...g, specialGroup: true }] },
+      })
+      .mockResolvedValueOnce({ data: { users: [other.user, me.user] } });
+    await host.ngOnInit();
+    expect(host.activeTab).toBe("manage");
+    expect(host.users().map(host.userName)).toEqual(["Me", "Other"]);
+    expect(host.groupOptions[0].label).toBe("Everyone");
+  });
+  it("adds descriptions to group choices only when they contain text", () => {
+    host.groups.set([{ ...g, "schema:description": " Genomics team " }]);
+    expect(host.groupOptions[0].label).toBe("Team - Genomics team");
+    host.groups.set([{ ...g, "schema:description": "  " }]);
+    expect(host.groupOptions[0].label).toBe("Team");
+  });
+  it("does not expose email addresses as member names", () => {
+    expect(
+      host.userName({
+        "@id": "id",
+        email: "private@example.org",
+      } as Member["user"]),
+    ).toBe("Unnamed user");
+  });
+  it("serializes creation, retains failed input, and permits retry", async () => {
+    let reject!: (e: Error) => void;
+    host.newName = "Researchers";
+    request.mockImplementationOnce(() => new Promise((_, r) => (reject = r)));
+    const pending = host.create();
+    await host.create();
+    expect(request).toHaveBeenCalledTimes(1);
+    reject(new Error("Unavailable"));
+    await pending;
+    expect(host.newName).toBe("Researchers");
+    request.mockRejectedValueOnce(new Error("Still unavailable"));
+    await host.create();
+    expect(request).toHaveBeenCalledTimes(2);
+  });
+  it("stays in Create, clears Manage's selection, and restores the created editor on return", async () => {
+    await host.selectTab("create");
+    host.newName = "New";
+    const created = { ...g, "@id": "created", "schema:name": "New" };
+    request
+      .mockResolvedValueOnce({ data: created })
+      .mockResolvedValueOnce({ data: created, etag: '"g"' })
+      .mockResolvedValueOnce({ data: { users: [me] }, etag: '"m"' });
+    await host.create();
+    expect(host.activeTab).toBe("create");
+    expect(host.createdGroup).toEqual(created);
+    expect(host.selected()).toEqual(created);
+    expect(host.newName).toBe("");
+    await host.selectTab("manage");
+    expect(host.selected()).toBeNull();
+    expect(host.createdGroup).toEqual(created);
+    request
+      .mockResolvedValueOnce({ data: created, etag: '"g2"' })
+      .mockResolvedValueOnce({ data: { users: [me] }, etag: '"m2"' });
+    await host.selectTab("create");
+    expect(host.selected()).toEqual(created);
+    expect(host.canAdmin).toBe(true);
+  });
+  it("reports roster failures other than forbidden and does not call them an empty roster", async () => {
+    request
+      .mockResolvedValueOnce({ data: g, etag: '"g"' })
+      .mockRejectedValueOnce(new HttpError(500, "Roster unavailable"));
+    await host.select(g);
+    expect(host.error()).toBe("Roster unavailable");
+    expect(host.restricted()).toBe(false);
+    expect(host.members()).toBeNull();
+  });
+  it("recognizes administration only for the signed-in CEDAR identifier", () => {
+    host.members.set([{ ...me, user: { ...me.user, "@id": "someone-else" } }]);
+    expect(host.canAdmin).toBe(false);
+    host.members.set([me]);
+    expect(host.canAdmin).toBe(true);
+  });
+  it("keeps administrator state unchanged when confirmation or the save fails", async () => {
+    host.members.set([me, other]);
+    vi.mocked(TestBed.inject(Confirmation).confirm).mockResolvedValueOnce(
+      false,
+    );
+    await host.toggleAdmin(other);
+    expect(host.members()).toEqual([me, other]);
+    request.mockRejectedValueOnce(new Error("Unavailable"));
+    await host.toggleAdmin(other);
+    expect(host.members()).toEqual([me, other]);
+  });
+  it("confirms administrator removal and announces the successful membership update", async () => {
+    const admin = { ...other, administrator: true };
+    host.members.set([me, admin]);
+    request.mockResolvedValue({ data: { users: [me, other] }, etag: '"m2"' });
+    await host.toggleAdmin(admin);
+    expect(TestBed.inject(Confirmation).confirm).toHaveBeenCalledWith(
+      "Remove administrator access for Other?",
+    );
+    expect(host.members()).toEqual([me, other]);
+    expect(host.notice()).toBe("Group members saved.");
+  });
+  it("does not delete another selection if it changes during confirmation", async () => {
+    const next = { ...g, "@id": "next" };
+    vi.mocked(TestBed.inject(Confirmation).confirm).mockImplementation(
+      async () => {
+        host.selected.set(next);
+        return true;
+      },
+    );
+    await host.remove();
+    expect(request).not.toHaveBeenCalled();
+    expect(host.selected()).toEqual(next);
+  });
+  it("removes a separately loaded group by identifier and announces deletion", async () => {
+    const keep = { ...g, "@id": "keep" };
+    host.groups.set([g, keep]);
+    host.selected.set({ ...g });
+    host.createdGroup = g;
+    request.mockResolvedValue({ data: undefined });
+    await host.remove();
+    expect(host.groups()).toEqual([keep]);
+    expect(host.createdGroup).toBeNull();
+    expect(host.notice()).toBe("Group deleted.");
+  });
+  it("keeps the autocomplete entry and selected editor when deletion fails", async () => {
+    request.mockRejectedValue(new HttpError(412, "Changed"));
+    await host.remove();
+    expect(host.groups()).toEqual([g]);
+    expect(host.selected()).toEqual(g);
+    expect(host.error()).toBe("Changed");
+  });
+  it("offers only nonmembers and refuses duplicate member additions", async () => {
+    host.users.set([me.user, other.user]);
+    expect(host.availableUsers).toEqual([other.user]);
+    host.newMember = "me";
+    await host.addMember();
+    expect(request).not.toHaveBeenCalled();
+  });
+  it("confirms member removal, updates the roster, and restores that user to the picker", async () => {
+    host.users.set([me.user, other.user]);
+    host.members.set([me, other]);
+    request.mockResolvedValue({ data: { users: [me] }, etag: '"m2"' });
+    await host.removeMember(other);
+    expect(TestBed.inject(Confirmation).confirm).toHaveBeenCalledWith(
+      "Remove Other from this group?",
+    );
+    expect(host.members()).toEqual([me]);
+    expect(host.availableUsers).toEqual([other.user]);
+    expect(host.notice()).toBe("Group members saved.");
+  });
+  it("serializes membership edits and prevents a tab or selection change while saving", async () => {
+    host.members.set([me, other]);
+    host.users.set([me.user, other.user]);
+    let resolve!: (value: unknown) => void;
+    request.mockImplementationOnce(() => new Promise((r) => (resolve = r)));
+    const pending = host.removeMember(other);
+    await host.toggleAdmin(other);
+    await host.selectTab("create");
+    expect(host.activeTab).toBe("manage");
+    expect(request).toHaveBeenCalledTimes(1);
+    resolve({ data: { users: [me] }, etag: '"m2"' });
+    await pending;
+    host.newMember = "other";
+    request.mockResolvedValue({ data: { users: [me, other] }, etag: '"m3"' });
+    await host.addMember();
+    expect(request).toHaveBeenCalledTimes(2);
+  });
+  it("blocks stale membership writes until the explicit recovery read completes", async () => {
+    host.members.set([me, other]);
+    request.mockRejectedValueOnce(new HttpError(412, "Changed"));
+    await host.removeMember(other);
+    await host.toggleAdmin(other);
+    expect(request).toHaveBeenCalledTimes(1);
+    let resolve!: (value: unknown) => void;
+    request
+      .mockImplementationOnce(() => new Promise((r) => (resolve = r)))
+      .mockResolvedValueOnce({
+        data: { users: [me, other] },
+        etag: '"new-members"',
+      });
+    const reload = host.select(g);
+    await host.toggleAdmin(other);
+    expect(request).toHaveBeenCalledTimes(2);
+    resolve({ data: g, etag: '"new-group"' });
+    await reload;
+    request.mockResolvedValueOnce({
+      data: { users: [me] },
+      etag: '"next-members"',
+    });
+    await host.removeMember(other);
+    expect(request.mock.calls.at(-1)?.[3]).toBe('"new-members"');
+  });
+  it("advances the membership revision on every save without changing the group revision", async () => {
+    host.users.set([me.user, other.user]);
+    for (let revision = 2; revision <= 5; revision++) {
+      if (revision % 2 === 0) {
+        host.newMember = "other";
+        request.mockResolvedValueOnce({
+          data: { users: [me, other] },
+          etag: '"members' + revision + '"',
+        });
+        await host.addMember();
+      } else {
+        request.mockResolvedValueOnce({
+          data: { users: [me] },
+          etag: '"members' + revision + '"',
+        });
+        await host.removeMember(other);
+      }
+      expect(request.mock.calls.at(-1)?.[3]).toBe(
+        '"members' + (revision - 1) + '"',
+      );
+      expect(host.memberEtag).toBe('"members' + revision + '"');
+      expect(host.groupEtag).toBe('"group1"');
+    }
   });
 });

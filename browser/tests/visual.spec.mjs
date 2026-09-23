@@ -1,0 +1,314 @@
+import { test, expect, dashboard, action } from "./fixtures.mjs";
+for (const width of [1440, 375]) {
+  for (const route of [
+    "dashboard",
+    "groups",
+    "profile",
+    "settings",
+    "privacy",
+  ]) {
+    test(`${route} at ${width}`, async ({ page, api }) => {
+      await page.setViewportSize({ width, height: 1000 });
+      if (route === "dashboard") await dashboard(page);
+      else {
+        await page.goto("/" + route);
+        await expect(
+          page.getByRole("heading", {
+            name: route[0].toUpperCase() + route.slice(1),
+            exact: true,
+          }),
+        ).toBeVisible();
+        await expect(page.getByText("Loading…", { exact: true })).toHaveCount(
+          0,
+        );
+      }
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      if (process.env.WORKSPACE_VISUAL)
+        await expect(page).toHaveScreenshot(`${route}-${width}.png`, {
+          fullPage: true,
+        });
+    });
+  }
+  for (const readonly of [false, true]) {
+    test(`permissions ${readonly ? "readonly" : "editable"} at ${width}`, async ({
+      page,
+      api,
+    }) => {
+      api.readonly = readonly;
+      await page.setViewportSize({ width, height: 1000 });
+      await dashboard(page);
+      await action(page, "Permissions…");
+      const dialog = page.locator("dialog[open]");
+      const role = dialog.getByRole("combobox", {
+        name: "Role for Sam Curator",
+      });
+      if (readonly) await expect(role).toBeDisabled();
+      else await expect(role).toBeEnabled();
+      expect(
+        await dialog
+          .locator(".access-list")
+          .evaluate((e) => e.scrollWidth <= e.clientWidth),
+      ).toBe(true);
+      if (process.env.WORKSPACE_VISUAL)
+        await expect(dialog).toHaveScreenshot(
+          `permissions-${readonly}-${width}.png`,
+        );
+    });
+  }
+}
+test("artifact menu and resource dialog", async ({ page, api }) => {
+  await dashboard(page);
+  await page
+    .getByRole("button", { name: "Actions for Study metadata" })
+    .click();
+  if (process.env.WORKSPACE_VISUAL)
+    await expect(page.locator(".resource-menu")).toHaveScreenshot(
+      "artifact-menu.png",
+    );
+  await page
+    .locator(".resource-menu")
+    .getByRole("button", { name: "Rename", exact: true })
+    .click();
+  await expect(page.getByLabel("Name", { exact: true })).toHaveValue(
+    "Study metadata",
+  );
+  await expect(
+    page.locator('#dialog-title cedar-icon[name="edit"] svg'),
+  ).toBeVisible();
+  await expect(page.getByLabel("Description", { exact: true })).toHaveCSS(
+    "resize",
+    "none",
+  );
+  if (process.env.WORKSPACE_VISUAL)
+    await expect(page.locator("dialog[open]")).toHaveScreenshot(
+      "rename-dialog.png",
+    );
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await action(page, "Make Open");
+  const openDialog = page.locator("dialog[open]");
+  await expect(
+    openDialog.getByRole("button", { name: "Ok", exact: true }),
+  ).toBeEnabled();
+  await expect(
+    openDialog.locator('.resource-dialog-resource svg[data-cedar-icon="artifact-template"]'),
+  ).toBeVisible();
+  if (process.env.WORKSPACE_VISUAL)
+    await expect(openDialog).toHaveScreenshot("make-open-dialog.png");
+});
+
+for (const readonly of [false, true]) {
+  test(`metadata host ${readonly ? "readonly" : "editable"}`, async ({
+    page,
+    api,
+  }) => {
+    api.readonly = readonly;
+    await page.goto("/instances/edit/instance");
+    await expect(page.getByLabel("Metadata name")).toHaveValue("Study record");
+    await expect(page.locator(".metadata-toolbar")).toContainText(
+      readonly ? "Read only" : "Saved",
+    );
+    if (process.env.WORKSPACE_VISUAL)
+      await expect(page.locator(".metadata-toolbar")).toHaveScreenshot(
+        `metadata-toolbar-${readonly}.png`,
+      );
+  });
+}
+
+// Geometry assertions prevent a baseline refresh from silently approving looser density.
+test("workspace follows CEE compact density", async ({ page, api }) => {
+  await dashboard(page);
+  await page.locator("tbody tr").first().focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".information dd").first()).toBeVisible();
+  const sizes = await page.evaluate(() => {
+    const height = (selector) =>
+      document.querySelector(selector).getBoundingClientRect().height;
+    const style = (selector) =>
+      getComputedStyle(document.querySelector(selector));
+    return {
+      rows: [...document.querySelectorAll("tbody tr")].map(
+        (row) => row.getBoundingClientRect().height,
+      ),
+      toolbar: height(".table-toolbar"),
+      paginationGap:
+        document.querySelector(".paging").getBoundingClientRect().top -
+        document.querySelector("table").getBoundingClientRect().bottom,
+      navigation: height(".destinations a"),
+      navigationGap: style(".destinations").rowGap,
+      detailsPadding: style(".information dd").paddingBlockStart,
+      tabsGap: style(".information .tabs").marginTop,
+      action: height(".row-actions button"),
+    };
+  });
+  expect(sizes.rows.length).toBeGreaterThan(0);
+  for (const height of sizes.rows) expect(height).toBeLessThanOrEqual(45);
+  expect(sizes.toolbar).toBeLessThanOrEqual(36);
+  expect(sizes.paginationGap).toBeLessThanOrEqual(8);
+  expect(sizes.navigation).toBeLessThanOrEqual(36);
+  expect(sizes.navigationGap).toBe("0px");
+  expect(sizes.detailsPadding).toBe("8px");
+  expect(sizes.tabsGap).toBe("8px");
+  expect(sizes.action).toBeGreaterThanOrEqual(36);
+});
+
+for (const width of [1440, 375]) {
+  test(`group creation and populated members stay compact at ${width}`, async ({
+    page,
+    api,
+  }) => {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto("/groups");
+    await page.getByRole("tab", { name: "Create group", exact: true }).click();
+    await page.getByLabel("Group name", { exact: true }).fill("Research team");
+    await page
+      .getByRole("button", { name: "Create group", exact: true })
+      .click();
+    await expect(page.locator(".groups-member-row")).toHaveCount(2);
+    await expect(page.getByRole("status")).toHaveText("Group created.");
+    await expect(page.locator(".groups-create-card")).toHaveCSS(
+      "padding-top",
+      "8px",
+    );
+    await expect(page.locator(".groups-created-group")).toHaveCSS(
+      "padding-bottom",
+      "8px",
+    );
+    await expect(page.locator(".groups-details-form")).toHaveCSS(
+      "margin-bottom",
+      "8px",
+    );
+    await expect(page.locator(".groups-tabs")).toHaveCSS(
+      "margin-bottom",
+      "8px",
+    );
+    await expect(page.locator(".toast")).toHaveCSS("padding-top", "8px");
+    await expect(page.locator("#group-name")).toHaveCSS("height", "36px");
+    if (width === 1440) {
+      for (const row of await page.locator(".groups-member-row").all())
+        expect((await row.boundingBox()).height).toBeLessThanOrEqual(45);
+    }
+    if (process.env.WORKSPACE_VISUAL)
+      await expect(page).toHaveScreenshot(`groups-created-${width}.png`, {
+        fullPage: true,
+      });
+  });
+}
+
+test("permissions uses compact section gaps and rows", async ({
+  page,
+  api,
+}) => {
+  await dashboard(page);
+  await action(page, "Permissions…");
+  const dialog = page.locator("dialog[open]");
+  for (const panel of await dialog.locator(".access-panel").all()) {
+    await expect(panel).toHaveCSS("padding-top", "8px");
+    await expect(panel).toHaveCSS("padding-bottom", "8px");
+  }
+  for (const row of await dialog.locator(".access-row").all())
+    expect((await row.boundingBox()).height).toBeLessThanOrEqual(45);
+  await expect(dialog.locator("footer")).toHaveCSS("padding-top", "8px");
+});
+
+for (const route of ["dashboard", "groups"]) {
+  for (const menuName of ["User menu", "More menu"]) {
+    test(`${route} ${menuName} has shared icons on every item`, async ({
+      page,
+      api,
+    }) => {
+      api.monitoring = true;
+      if (route === "dashboard") await dashboard(page);
+      else {
+        await page.goto("/groups");
+        await expect(
+          page.getByRole("tab", { name: "Manage groups" }),
+        ).toBeVisible();
+      }
+      const menu = page
+        .locator(".header-menu")
+        .filter({ has: page.locator(`summary[aria-label="${menuName}"]`) });
+      await menu.locator("summary").click();
+      const expected =
+        menuName === "User menu"
+          ? [
+              ["Profile", "user"],
+              ["Settings", "tuning"],
+              ["Logout", "sign-out"],
+            ]
+          : [
+              ["Groups", "groups"],
+              ["Privacy", "permissions"],
+              ...(route === "dashboard" ? [["Monitoring", "activity"]] : []),
+              ["Help", "external"],
+              ["About", "external"],
+            ];
+      await expect(menu.locator("nav a")).toHaveCount(expected.length);
+      for (const [label, icon] of expected) {
+        const link = menu.getByRole("link", { name: label, exact: true });
+        await expect(link.locator("svg")).toHaveAttribute(
+          "data-cedar-icon",
+          icon,
+        );
+        await expect(link.locator("svg")).toHaveAttribute(
+          "aria-hidden",
+          "true",
+        );
+      }
+      if (process.env.WORKSPACE_VISUAL)
+        await expect(menu.locator("nav")).toHaveScreenshot(
+          `${route}-${menuName.replace(" ", "-")}.png`,
+        );
+    });
+  }
+}
+
+for (const width of [1440, 375]) {
+  test(`profile facts stay compact and long identifiers wrap at ${width}`, async ({
+    page,
+    api,
+  }) => {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.route("**/api/user/users/owner", (route) =>
+      route.fulfill({
+        json: {
+          "@id":
+            "https://metadatacenter.org/users/0e97ec85-77a9-434c-8549-33f9eae22608",
+          firstName: "Alex",
+          lastName: "Researcher",
+          email: "alex@example.org",
+          homeFolderId:
+            "https://repo.metadatacenter.org/folders/521fd4c9-146d-4498-904b-8ba219d7bfc9",
+        },
+      }),
+    );
+    await page.goto("/profile");
+    const facts = page.locator(".profile-facts");
+    await expect(
+      facts.getByRole("button", { name: "Copy First name", exact: true }),
+    ).toBeVisible();
+    const sizes = await facts.evaluate((node) => {
+      const values = [...node.querySelectorAll("dd")];
+      return {
+        overflow: document.documentElement.scrollWidth > innerWidth,
+        firstHeight: values[0].getBoundingClientRect().height,
+        copyXs: [...node.querySelectorAll("button")].map(
+          (button) => button.getBoundingClientRect().right,
+        ),
+        rowAligned: Math.abs(
+          node.querySelector("dt").getBoundingClientRect().y -
+            values[0].getBoundingClientRect().y,
+        ),
+      };
+    });
+    expect(sizes.overflow).toBe(false);
+    expect(sizes.firstHeight).toBeLessThanOrEqual(46);
+    expect(
+      Math.max(...sizes.copyXs) - Math.min(...sizes.copyXs),
+    ).toBeLessThanOrEqual(1);
+    if (width > 700) expect(sizes.rowAligned).toBeLessThanOrEqual(1);
+  });
+}

@@ -1,3 +1,6 @@
+@use "@org.metadatacenter/cedar-design-tokens/patterns";
+@use "@org.metadatacenter/cedar-design-tokens/motion";
+@use "@org.metadatacenter/cedar-design-tokens/controls";
 @use "@org.metadatacenter/cedar-design-tokens/fonts/roboto-400";
 @use "@org.metadatacenter/cedar-design-tokens/fonts/roboto-500";
 @import "@org.metadatacenter/cedar-design-tokens/custom-properties.css";
@@ -9,7 +12,7 @@ body {
   font-family: var(--cedar-font-family);
   font-size: var(--cedar-font-size);
   color: var(--cedar-text-primary);
-  background: var(--cedar-surface-authoring);
+  background: var(--cedar-color-on-primary);
 }
 
 button,
@@ -42,16 +45,11 @@ button {
   background: transparent;
   color: var(--cedar-color-primary);
 }
-button:hover:not(:disabled) {
-  background: var(--cedar-surface-tinted);
-}
-button:disabled {
-  opacity: 0.45;
-  cursor: default;
+button {
+  @include controls.action-states;
 }
 :focus-visible {
-  outline: 2px solid var(--cedar-color-primary);
-  outline-offset: 2px;
+  @include controls.focus-ring;
 }
 input,
 select,
@@ -64,7 +62,7 @@ textarea {
   background: var(--cedar-color-on-primary);
 }
 textarea {
-  resize: vertical;
+  resize: none;
 }
 .topbar {
   min-height: 80px;
@@ -72,37 +70,58 @@ textarea {
   align-items: center;
   gap: var(--cedar-space-6);
   padding: var(--cedar-space-3) var(--cedar-space-6);
-  background: var(--cedar-color-component-title);
-  color: var(--cedar-color-on-primary);
+  background: var(--cedar-color-on-primary);
+  color: var(--cedar-text-primary);
+  border-bottom: 1px solid var(--cedar-border-rule);
 }
 .brand {
+  display: flex;
+  align-items: center;
+  gap: var(--cedar-space-3);
   width: 230px;
   flex-shrink: 0;
+  color: var(--cedar-color-artifact-title);
+  font-weight: var(--cedar-font-weight-medium);
 }
 .brand img {
-  width: 175px;
-  max-height: 58px;
+  width: var(--cedar-control-height-default);
+  height: var(--cedar-control-height-default);
   object-fit: contain;
+  background: var(--cedar-color-component-title);
+  border-radius: 50%;
 }
 .search {
   display: flex;
   flex: 1;
   max-width: 1100px;
-  border: 1px solid var(--cedar-primary-300);
-  border-radius: 40px;
-  overflow: hidden;
+  min-width: 0;
+  border: 1px solid var(--cedar-control-border-default);
+  border-radius: calc(var(--cedar-control-radius-default) * 4);
+}
+.search:focus-within {
+  @include controls.focus-ring;
+}
+.search input:focus-visible,
+.search button:focus-visible {
+  outline: none;
+}
+.search button:focus-visible {
+  background: var(--cedar-surface-selected);
 }
 .search input {
   background: transparent;
   color: inherit;
   border: 0;
   width: 100%;
-  padding-left: var(--cedar-space-6);
+  min-width: 0;
+  padding-left: var(--cedar-space-3);
 }
 .search input::placeholder {
-  color: var(--cedar-primary-100);
+  color: var(--cedar-text-muted);
 }
 .search button {
+  border-radius: 0 calc(var(--cedar-control-radius-default) * 4)
+    calc(var(--cedar-control-radius-default) * 4) 0;
   color: inherit;
   font-size: var(--cedar-font-size-heading);
 }
@@ -121,14 +140,8 @@ textarea {
 .new-menu nav,
 .resource-menu {
   position: absolute;
-  z-index: 5;
-  background: var(--cedar-color-on-primary);
-  border: 1px solid var(--cedar-border-rule);
-  border-radius: var(--cedar-control-radius-default);
-  box-shadow: 0 4px 18px
-    color-mix(in srgb, var(--cedar-text-primary) 15%, transparent);
+  @include patterns.menu-surface;
   min-width: 180px;
-  padding: var(--cedar-space-1);
 }
 .header-menu nav {
   right: 0;
@@ -139,11 +152,26 @@ textarea {
 .new-menu button,
 .resource-menu button {
   display: block;
-  text-align: left;
-  padding: var(--cedar-space-2) var(--cedar-space-3);
+  @include patterns.menu-item;
   width: 100%;
 }
+// Keep menu labels and decorative icons aligned as in the legacy header.
+.header-menu nav a,
+.header-menu nav button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cedar-space-3);
+}
+.header-menu nav cedar-icon {
+  flex-shrink: 0;
+}
 .workspace {
+  // CEE compact controls plus one small gutter per side, including in table cells.
+  --cedar-table-cell-padding-block: var(--cedar-space-1);
+  --cedar-table-row-height: calc(
+    var(--cedar-control-height-default) + 2 * var(--cedar-space-1)
+  );
   display: grid;
   grid-template-columns: 250px minmax(0, 1fr) 340px;
   min-height: calc(100vh - 80px);
@@ -159,7 +187,7 @@ textarea {
 }
 .navigation {
   position: relative;
-  padding: var(--cedar-space-6);
+  padding: var(--cedar-space-4);
   border-right: 1px solid var(--cedar-border-rule-light);
 }
 .collapse {
@@ -175,53 +203,64 @@ textarea {
   padding: 0;
 }
 .new-menu {
-  margin-top: var(--cedar-space-4);
+  margin-top: 0;
   position: relative;
 }
 .primary {
-  background: var(--cedar-color-primary);
-  color: var(--cedar-color-on-primary);
+  @include controls.primary-action;
   border-radius: var(--cedar-control-radius-default);
   padding: var(--cedar-space-2) var(--cedar-space-4);
   display: inline-block;
   list-style: none;
 }
-.primary:hover:not(:disabled) {
-  background: var(--cedar-primary-700);
-}
 .new-menu summary span {
   padding-left: var(--cedar-space-3);
 }
 .destinations {
-  margin-top: calc(2 * var(--cedar-space-4));
+  margin-top: var(--cedar-space-3);
   display: flex;
   flex-direction: column;
-  gap: var(--cedar-space-2);
+  gap: 0;
 }
 .destinations a {
+  display: flex;
+  align-items: center;
+  gap: var(--cedar-space-2);
   padding: var(--cedar-space-2) 0;
-  font-size: var(--cedar-font-size-lead);
+  font-size: var(--cedar-font-size);
 }
 main {
   min-width: 0;
   padding: var(--cedar-space-6);
 }
+.workspace > main {
+  padding: var(--cedar-space-2) var(--cedar-space-4) var(--cedar-space-4);
+}
+.table-toolbar .breadcrumbs {
+  font-size: var(--cedar-font-size-element-heading);
+}
 .table-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 52px;
+  min-height: var(--cedar-control-height-default);
 }
 .breadcrumbs {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--cedar-space-2);
+  align-items: center;
+  row-gap: var(--cedar-space-2);
+  color: var(--cedar-text-muted);
+}
+.breadcrumb-separator {
+  display: inline-block;
+  margin-inline: 0;
   color: var(--cedar-text-muted);
 }
 .table-scroll {
+  position: relative;
   overflow: auto;
-  min-height: 360px;
-  padding-bottom: var(--cedar-space-6);
+  padding-bottom: var(--cedar-space-2);
 }
 table {
   width: 100%;
@@ -255,11 +294,12 @@ th:first-child {
   width: 62%;
 }
 th button {
-  padding: var(--cedar-space-4);
+  padding: var(--cedar-space-1) var(--cedar-table-cell-padding-inline);
 }
 td {
-  padding: var(--cedar-space-4);
-  border-bottom: 1px solid var(--cedar-border-rule-light);
+  @include patterns.table-cell;
+  height: var(--cedar-table-row-height);
+  vertical-align: middle;
 }
 td:first-child {
   max-width: 480px;
@@ -271,9 +311,13 @@ td:first-child a {
 td:not(:first-child) {
   white-space: nowrap;
 }
-tbody tr:hover,
-tr.selected {
-  background: var(--cedar-surface-tinted);
+tbody tr:hover {
+  background: var(--cedar-surface-row-hover);
+}
+tr.selected,
+tr.selected:hover {
+  background: var(--cedar-surface-selected);
+  color: var(--cedar-text-selected);
 }
 .resource-icon {
   display: inline-block;
@@ -284,6 +328,10 @@ tr.selected {
 }
 .resource-icon[data-type="folder"] {
   color: var(--cedar-color-component-title);
+}
+.sort-column {
+  text-align: right;
+  padding: var(--cedar-space-1);
 }
 .row-actions {
   position: relative;
@@ -299,8 +347,8 @@ tr.selected {
 }
 .resource-menu {
   position: fixed;
-  width: 220px;
-  max-height: 330px;
+  width: min(220px, calc(100vw - 16px));
+  max-height: calc(100dvh - 16px);
   overflow: auto;
 }
 .resource-menu button {
@@ -315,44 +363,53 @@ tr.selected {
 }
 .empty,
 .loading {
-  padding: calc(2 * var(--cedar-space-6)) var(--cedar-space-6);
-  text-align: center;
-  color: var(--cedar-text-muted);
+  @include patterns.empty-state;
 }
 .information {
   position: relative;
   background: var(--cedar-color-on-primary);
   border-left: 1px solid var(--cedar-border-rule);
-  padding: calc(2 * var(--cedar-space-6)) var(--cedar-space-6)
-    var(--cedar-space-6);
+  padding: var(--cedar-control-height-default) var(--cedar-space-4)
+    var(--cedar-space-4);
   overflow-wrap: anywhere;
 }
 .information h1 {
-  font-size: var(--cedar-font-size-heading);
-  line-height: 1.4;
-  margin: 0 0 var(--cedar-space-3);
+  @include patterns.artifact-title;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--cedar-space-2);
+  margin: 0 0 var(--cedar-space-1);
+}
+.information h1 cedar-icon {
+  flex: none;
+  margin-top: var(--cedar-space-1);
+}
+.information dt,
+.information small,
+.information .identifiers {
+  font-size: var(--cedar-font-size);
+}
+.information > .collapse {
+  left: var(--cedar-space-1);
+  right: auto;
 }
 .badge {
   font-size: var(--cedar-font-size-small);
-  background: var(--cedar-surface-tinted);
-  color: var(--cedar-color-primary);
-  padding: var(--cedar-space-1) var(--cedar-space-2);
-  border-radius: 16px;
-  text-transform: uppercase;
+  color: var(--cedar-text-muted);
+  margin-right: var(--cedar-space-3);
 }
 .tabs {
   display: flex;
-  margin-top: var(--cedar-space-6);
-  border-bottom: 4px solid var(--cedar-border-rule);
+  margin-top: var(--cedar-space-2);
+  border-bottom: 1px solid var(--cedar-border-rule);
 }
 .tabs button {
   flex: 1;
   border-radius: 0;
-  text-transform: uppercase;
 }
 .tabs [aria-selected="true"] {
-  border-bottom: 4px solid var(--cedar-color-primary);
-  margin-bottom: -4px;
+  border-bottom: 2px solid var(--cedar-color-primary);
+  margin-bottom: -1px;
 }
 dl {
   display: grid;
@@ -365,10 +422,23 @@ dd {
   padding: var(--cedar-space-4) 0;
   border-bottom: 1px solid var(--cedar-border-rule-light);
 }
+.information dl {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  margin: var(--cedar-space-2) 0 0;
+}
+.information dt,
+.information dd {
+  margin: 0;
+  padding: var(--cedar-space-2) 0;
+  border-bottom: 1px solid var(--cedar-border-rule-light);
+}
+.information dt {
+  padding-right: var(--cedar-space-4);
+}
 dt {
   color: var(--cedar-text-muted);
   font-size: var(--cedar-font-size-small);
-  text-transform: uppercase;
 }
 dd small {
   display: block;
@@ -383,14 +453,41 @@ dd small {
 }
 .description {
   white-space: pre-wrap;
-  line-height: 1.7;
+  line-height: var(--cedar-control-line-height-default);
+  margin: var(--cedar-space-1) 0;
 }
-.identifiers {
-  margin-top: var(--cedar-space-6);
-  font-size: var(--cedar-font-size-small);
+.information .info-section {
+  margin: 0;
+  padding: var(--cedar-space-3) 0;
+  border-bottom: 1px solid var(--cedar-border-rule-light);
+}
+.info-section .description-heading {
+  margin-bottom: var(--cedar-space-1);
+  font-weight: var(--cedar-font-weight-regular);
+}
+.info-section small {
+  display: block;
+  color: var(--cedar-text-muted);
+}
+.detail-with-copy {
+  display: flex;
+  align-items: center;
+  gap: var(--cedar-space-2);
+}
+.detail-with-copy > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+.detail-with-copy .copy-icon {
+  flex: none;
+  padding: 0 var(--cedar-space-1);
+}
+.information .location-label {
+  display: flex;
+  align-items: center;
 }
 .version {
-  padding: var(--cedar-space-4) 0;
+  padding: var(--cedar-space-2) 0;
   border-bottom: 1px solid var(--cedar-border-rule);
 }
 .alert,
@@ -401,11 +498,12 @@ dd small {
   align-items: center;
 }
 .alert {
-  color: var(--cedar-color-error);
-  background: var(--cedar-surface-advisory);
+  color: var(--cedar-status-error-text);
+  background: var(--cedar-status-error-surface);
 }
 .notice {
-  background: var(--cedar-surface-tinted);
+  color: var(--cedar-status-info-text);
+  background: var(--cedar-status-info-surface);
 }
 .sr-only {
   position: absolute;
@@ -420,28 +518,35 @@ dd small {
 dialog {
   width: min(620px, calc(100vw - 32px));
   max-height: 90vh;
-  border: 1px solid var(--cedar-border-rule);
-  border-radius: var(--cedar-control-radius-default);
-  padding: var(--cedar-space-6);
-  color: var(--cedar-text-primary);
-}
-dialog::backdrop {
-  background: color-mix(in srgb, var(--cedar-text-primary) 45%, transparent);
+  @include patterns.dialog-surface;
 }
 dialog header,
 dialog footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--cedar-space-4);
+  gap: var(--cedar-dialog-action-gap);
 }
 dialog h2 {
-  font-size: var(--cedar-font-size-heading);
+  @include patterns.artifact-title;
   margin: 0;
+}
+.resource-dialog-resource {
+  display: flex;
+  align-items: center;
+  gap: var(--cedar-space-2);
+}
+.resource-dialog-resource cedar-icon {
+  flex: none;
+}
+.resource-dialog-title {
+  display: flex;
+  align-items: center;
+  gap: var(--cedar-space-2);
 }
 dialog footer {
   justify-content: flex-end;
-  margin-top: var(--cedar-space-6);
+  margin-top: var(--cedar-dialog-padding);
 }
 fieldset {
   border: 0;
@@ -451,8 +556,8 @@ fieldset {
 label {
   display: flex;
   flex-direction: column;
-  gap: var(--cedar-space-2);
-  margin: var(--cedar-space-4) 0;
+  gap: var(--cedar-form-label-gap);
+  margin: var(--cedar-form-field-gap) 0;
 }
 .check {
   flex-direction: row;
@@ -498,7 +603,7 @@ label {
     padding: var(--cedar-space-3);
   }
   td {
-    padding: var(--cedar-space-3);
+    padding-inline: var(--cedar-table-cell-padding-inline-authoring);
   }
 }
 @media (max-width: 760px) {
@@ -507,10 +612,10 @@ label {
     padding: var(--cedar-space-2);
   }
   .brand {
-    width: 88px;
+    width: auto;
   }
-  .brand img {
-    width: 88px;
+  .brand span {
+    display: none;
   }
   .workspace {
     display: flex;
@@ -564,9 +669,8 @@ table {
 th:first-child {
   width: auto;
 }
-th:nth-child(2),
-th:nth-child(3) {
-  width: 110px;
+th:nth-child(2) {
+  width: 150px;
 }
 th:last-child {
   width: 130px;
@@ -586,12 +690,12 @@ td:first-child a {
 .metadata-toolbar {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: var(--cedar-layer-sticky);
   display: flex;
   align-items: center;
   gap: var(--cedar-space-4);
   padding: var(--cedar-space-4);
-  background: var(--cedar-surface-panel);
+  background: var(--cedar-color-on-primary);
   border-bottom: 1px solid var(--cedar-border-rule);
   > div {
     flex: 1;
@@ -606,17 +710,29 @@ td:first-child a {
     color: var(--cedar-text-muted);
   }
 }
+.metadata-save-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cedar-space-2);
+  &.is-dirty::before {
+    content: "";
+    flex: 0 0 var(--cedar-space-2);
+    height: var(--cedar-space-2);
+    border-radius: 50%;
+    background: var(--cedar-status-unsaved-dot);
+  }
+}
 .metadata-content {
   max-width: 90rem;
   margin: auto;
-  padding: var(--cedar-space-6);
+  padding: var(--cedar-space-3) var(--cedar-space-6);
   > label {
     display: block;
     margin-bottom: var(--cedar-space-2);
   }
   > input {
     width: 100%;
-    margin-bottom: var(--cedar-space-6);
+    margin-bottom: var(--cedar-space-3);
   }
   cedar-embeddable-editor {
     display: block;
@@ -626,9 +742,9 @@ td:first-child a {
   }
 }
 .metadata-quality {
-  padding: var(--cedar-space-4);
-  border: 1px solid var(--cedar-border-rule);
+  @include patterns.validation-summary;
 }
+
 @media (max-width: 600px) {
   .metadata-toolbar {
     flex-wrap: wrap;
@@ -645,12 +761,12 @@ td:first-child a {
   flex-wrap: wrap;
   gap: var(--cedar-space-4);
   padding: var(--cedar-space-4) var(--cedar-space-6);
-  background: var(--cedar-surface-panel);
+  background: var(--cedar-color-on-primary);
   border-bottom: 1px solid var(--cedar-border-rule);
 }
 .account-header h1 {
   margin: 0;
-  font-size: var(--cedar-font-size-heading);
+  @include patterns.artifact-title;
 }
 .account-content {
   max-width: 70rem;
@@ -659,9 +775,8 @@ td:first-child a {
 .account-card {
   padding: var(--cedar-space-6);
   margin-bottom: var(--cedar-space-4);
-  border: 1px solid var(--cedar-border-rule);
-  border-radius: var(--cedar-control-radius-default);
-  background: var(--cedar-surface-panel);
+  border-bottom: 1px solid var(--cedar-border-rule);
+  background: var(--cedar-color-on-primary);
 }
 .account-card h2 {
   font-size: var(--cedar-font-size-element-heading);
@@ -747,4 +862,85 @@ td:first-child a {
 }
 .account-policy li {
   margin-bottom: var(--cedar-space-3);
+}
+
+input,
+select,
+textarea {
+  @include controls.input-states;
+}
+
+@include motion.reduced-motion;
+
+.field-error {
+  @include patterns.field-error;
+}
+
+// Flat section panels follow the editor's understated heading and divider treatment.
+.account-card {
+  padding: 0;
+  margin-bottom: var(--cedar-space-4);
+  border: 1px solid var(--cedar-border-rule);
+  border-radius: var(--cedar-control-radius-authoring);
+  overflow: hidden;
+}
+.account-section-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--cedar-space-2);
+  margin: 0;
+  padding: var(--cedar-space-3) var(--cedar-space-4);
+  color: var(--cedar-color-artifact-title);
+  background: var(--cedar-surface-panel);
+  border-bottom: 1px solid var(--cedar-border-rule);
+}
+
+.account-section-body {
+  padding: var(--cedar-space-3) var(--cedar-space-4);
+}
+.account-content {
+  width: 100%;
+  min-width: 0;
+  padding: var(--cedar-space-4);
+}
+.account-section-body > :first-child {
+  margin-top: 0;
+}
+.account-section-body > :last-child {
+  margin-bottom: 0;
+}
+.account-facts {
+  margin: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 4fr);
+}
+.account-facts dt,
+.account-facts dd {
+  margin: 0;
+  min-height: var(--cedar-control-height-default);
+  padding-block: var(--cedar-space-1);
+  display: flex;
+  align-items: center;
+}
+.account-facts dt:last-of-type,
+.account-facts dd:last-of-type {
+  border-bottom: 0;
+}
+.brand-label {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.brand-version {
+  color: var(--cedar-text-muted);
+  font-size: var(--cedar-font-size-small);
+  font-weight: var(--cedar-font-weight-regular);
+}
+@media (max-width: 700px) {
+  .account-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .account-facts dt {
+    border-bottom: 0;
+    min-height: 0;
+  }
 }

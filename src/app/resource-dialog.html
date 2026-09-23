@@ -1,50 +1,77 @@
 <dialog
+  cedarDialogKeyboard
   #dialog
   aria-labelledby="dialog-title"
-  (cancel)="$event.preventDefault(); !busy() && closed.emit()"
+  (cancel)="$event.preventDefault(); close()"
 >
   <form (ngSubmit)="submit()">
     <header>
-      <h2 id="dialog-title">{{heading}}</h2>
+      <h2 id="dialog-title" class="resource-dialog-title">
+        @if(action === "rename"){<cedar-icon name="edit" />} {{heading}}
+      </h2>
       <button
         type="button"
-        (click)="closed.emit()"
+        (click)="close()"
         [disabled]="busy()"
         aria-label="Close dialog"
       >
-        ×
+        <cedar-icon name="close" />
       </button>
     </header>
     @if(resource){
-    <p>{{title(resource)}}</p>
+    <p class="resource-dialog-resource">
+      <cedar-icon [name]="resource.resourceType" /><span
+        >{{title(resource)}}</span
+      >
+    </p>
     } @if(error()){
     <p class="alert" role="alert">{{error()}}</p>
     }
     <fieldset [disabled]="busy()">
       @if(['new-folder','rename','copy'].includes(action)){<label
         >Name<input
+          spellcheck="false"
+          [attr.aria-invalid]="submitted && nameError ? true : null"
+          [attr.aria-describedby]="submitted && nameError ? 'name-error' : null"
           name="name"
           [(ngModel)]="name"
           required
           pattern=".*\S.*"
-          autofocus /></label
-      >} @if(['new-folder','rename'].includes(action)){<label
+          autofocus
+      /></label>
+      @if(submitted && nameError){
+      <p id="name-error" class="field-error" role="alert">{{nameError}}</p>
+      } } @if(['new-folder','rename'].includes(action)){<label
         >Description<textarea
+          spellcheck="false"
           name="description"
           [(ngModel)]="description"
           rows="3"
         ></textarea></label
       >} @if(['publish','draft'].includes(action)){<label
         >Version<input
+          spellcheck="false"
+          [attr.aria-invalid]="submitted && versionError ? true : null"
+          [attr.aria-describedby]="submitted && versionError ? 'version-error' : null"
           name="version"
           [(ngModel)]="version"
           required
-          pattern="[0-9]+\.[0-9]+\.[0-9]+" /></label
-      >} @if(action==='draft'){<label class="check"
-        ><input type="checkbox" name="propagate" [(ngModel)]="propagate" />Keep
-        sharing permissions</label
+          pattern="[0-9]+\.[0-9]+\.[0-9]+"
+      /></label>
+      @if(submitted && versionError){
+      <p id="version-error" class="field-error" role="alert">
+        {{versionError}}
+      </p>
+      } } @if(action==='draft'){<label class="check"
+        ><input
+          spellcheck="false"
+          type="checkbox"
+          name="propagate"
+          [(ngModel)]="propagate"
+        />Keep sharing permissions</label
       ><label
         >New folder name (optional)<input
+          spellcheck="false"
           name="newFolderName"
           [(ngModel)]="newFolderName" /></label
       >} @if(choosesFolder){
@@ -53,11 +80,12 @@
         <nav class="breadcrumbs">
           <button type="button" (click)="browse(api.profile.homeFolderId)">
             Home</button
-          >@for(p of path();track p['@id']){<button
-            type="button"
-            (click)="browse(p['@id'])"
-          >
-            {{title(p)}} /</button
+          >@for(p of path();track p['@id']){<span
+            class="breadcrumb-separator"
+            aria-hidden="true"
+            >/</span
+          ><button type="button" (click)="browse(p['@id'])">
+            {{title(p)==='/'?'All':title(p)}}</button
           >}
         </nav>
         <div class="folder-list">
@@ -89,68 +117,7 @@
         <p>You cannot use this folder as the destination.</p>
         }
       </section>
-      } @if(action==='share'){
-      <p>Owner: {{owner?personName(owner):'Loading…'}}</p>
-      @for(g of grants();track g.node['@id']){
-      <div class="grant">
-        <span>{{personName(g.node)}}</span
-        ><select
-          [name]="'role-'+g.node['@id']"
-          [(ngModel)]="g.role"
-          aria-label="Access role"
-        >
-          <option value="viewer">Viewer</option>
-          <option value="editor">Editor</option>
-          <option value="manager">Manager</option></select
-        ><button
-          type="button"
-          (click)="removeGrant(g.node['@id'])"
-          aria-label="Remove access"
-        >
-          ×
-        </button>
-      </div>
-      }
-      <label
-        >Add person or group<select name="person" [(ngModel)]="personId">
-          <option value="">Choose…</option>
-          @for(p of people();track p['@id']){
-          <option [value]="p['@id']">
-            {{personName(p)}} ({{p.resourceType}})
-          </option>
-          }
-        </select></label
-      >
-      <div class="grant">
-        <select name="role" [(ngModel)]="role" aria-label="New access role">
-          <option value="viewer">Viewer</option>
-          <option value="editor">Editor</option>
-          <option value="manager">Manager</option></select
-        ><button type="button" (click)="addGrant()" [disabled]="!personId">
-          Add
-        </button>
-      </div>
-      @if(can(resource,'transferOwnership')){
-      <details>
-        <summary>Transfer ownership</summary>
-        <label
-          >New owner<select name="newOwner" [(ngModel)]="newOwner">
-            <option value="">Choose…</option>
-            @for(p of people();track
-            p['@id']){@if(p.resourceType==='user'&&p['@id']!==owner?.['@id']){
-            <option [value]="p['@id']">{{personName(p)}}</option>
-            }}
-          </select></label
-        ><label class="check"
-          ><input
-            type="checkbox"
-            name="transfer"
-            [(ngModel)]="confirmTransfer"
-          />Transfer ownership instead of saving sharing changes. I may lose
-          access.</label
-        >
-      </details>
-      } } @if(action==='delete'){
+      } @if(action==='delete'){
       <p>
         This will delete this {{resource?.resourceType}}. Confirm to continue.
       </p>
@@ -158,27 +125,16 @@
       <p>This item will be available through OpenView.</p>
       } @if(action==='make-not-open'){
       <p>This item will no longer be available through OpenView.</p>
-      } @if(action==='import'){<label
-        >caDSR XML files<input
-          type="file"
-          accept=".xml"
-          multiple
-          (change)="chooseFiles($event)" /></label
-      >}
+      }
     </fieldset>
-    @if(status()){
-    <p class="description" role="status">{{status()}}</p>
-    }
     <footer>
-      <button type="button" (click)="closed.emit()" [disabled]="busy()">
-        Cancel</button
+      <button type="button" (click)="close()" [disabled]="busy()">Cancel</button
       ><button
         class="primary"
         type="submit"
-        [disabled]="busy()||!destinationAllowed|| (confirmTransfer&&!newOwner)"
+        [disabled]="busy()||!destinationAllowed"
       >
-        {{busy()?'Working…':action==='delete'?'Delete':confirmTransfer?'Transfer
-        ownership':'Save'}}
+        {{busy()?'Working…':action==='delete'?'Delete':['make-open','make-not-open'].includes(action)?'Ok':'Save'}}
       </button>
     </footer>
   </form>

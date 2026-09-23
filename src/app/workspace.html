@@ -1,9 +1,12 @@
 <header class="topbar">
   <a href="/dashboard" class="brand" aria-label="CEDAR Workspace"
-    ><img src="/img/cedar-logo-main.png" alt="CEDAR"
-  /></a>
+    ><img src="/img/cedar-mark.png" alt="" /><span class="brand-label"
+      >Workspace<small class="brand-version">{{ cedarVersion }}</small></span
+    ></a
+  >
   <form class="search" (ngSubmit)="submitSearch()">
     <input
+      spellcheck="false"
       aria-label="Search workspace"
       name="search"
       [(ngModel)]="search"
@@ -15,43 +18,47 @@
   <details class="header-menu">
     <summary aria-label="User menu"><cedar-icon name="user" /></summary>
     <nav>
-      <a href="/profile">Profile</a><a href="/settings">Settings</a
-      ><a routerLink="/logout">Logout</a>
+      <a href="/profile"><span>Profile</span><cedar-icon name="user" /></a
+      ><a href="/settings"><span>Settings</span><cedar-icon name="tuning" /></a
+      ><a routerLink="/logout"
+        ><span>Logout</span><cedar-icon name="sign-out"
+      /></a>
     </nav>
   </details>
   <details class="header-menu">
     <summary aria-label="More menu"><cedar-icon name="more" /></summary>
     <nav>
-      <a href="/groups">Groups</a><a href="/privacy">Privacy</a>@if(ready() &&
-      api.monitoringAllowed){<a
+      <a href="/groups"><span>Groups</span><cedar-icon name="groups" /></a
+      ><a href="/privacy"
+        ><span>Privacy</span><cedar-icon name="permissions" /></a
+      >@if(ready() && api.monitoringAllowed){<a
         [href]="api.config.monitoringFrontend"
         target="_blank"
         rel="noopener"
-        >Monitoring</a
+        ><span>Monitoring</span><cedar-icon name="activity" /></a
       >}<a
         href="https://metadatacenter.org/help/#subscribe"
         target="_blank"
         rel="noopener"
-        >Help</a
+        ><span>Help</span><cedar-icon name="external" /></a
       ><a
         href="https://metadatacenter.org/#about"
         target="_blank"
         rel="noopener"
-        >About</a
-      >
+        ><span>About</span><cedar-icon name="external"
+      /></a>
     </nav>
   </details>
 </header>
 @if(error()){
 <div class="alert" role="alert">
   {{error()}}
-  <button (click)="error.set('')" aria-label="Dismiss error">×</button>
+  <button (click)="error.set('')" aria-label="Dismiss error">
+    <cedar-icon name="close" />
+  </button>
 </div>
 } @if(notice()){
-<div class="notice" role="status">
-  {{notice()}}
-  <button (click)="notice.set('')" aria-label="Dismiss notification">×</button>
-</div>
+<cedar-toast [message]="notice()" />
 } @if(!ready()){
 <p class="loading" role="status">Connecting to your workspace…</p>
 } @else {
@@ -77,7 +84,7 @@
         role="button"
         aria-label="New"
       >
-        New <span>＋</span>
+        New <cedar-icon name="add" />
       </summary>
       <nav>
         <button
@@ -94,37 +101,31 @@
         >
         } @else {<button disabled>Field</button><button disabled>Element</button
         ><button disabled>Template</button>}
-        <button
-          (click)="openNew('import')"
-          [disabled]="!can(currentFolder(),'createInFolder')"
-        >
-          Import
-        </button>
       </nav>
     </details>
     <nav class="destinations">
       <a
         routerLink="/dashboard"
         [class.active]="!params.has('sharing')&&!params.has('search')&&!params.has('viewMode')"
-        >Workspace</a
+        ><cedar-icon name="home" />Home</a
       >
       <a
         routerLink="/dashboard"
         [queryParams]="{sharing:'shared-with-me'}"
         [class.active]="params.get('sharing')==='shared-with-me'"
-        >Shared with Me</a
+        ><cedar-icon name="groups" />Shared with Me</a
       >
       <a
         routerLink="/dashboard"
         [queryParams]="{sharing:'shared-with-everybody'}"
         [class.active]="params.get('sharing')==='shared-with-everybody'"
-        >Shared with Everyone</a
+        ><cedar-icon name="groups" />Shared with Everyone</a
       >
       <a
         routerLink="/dashboard"
         [queryParams]="{viewMode:'view-special-folders'}"
         [class.active]="params.has('viewMode')"
-        >Community Folders</a
+        ><cedar-icon name="groups" />Community Folders</a
       >
     </nav>
     }
@@ -143,7 +144,9 @@
           [queryParams]="{folderId:p['@id']}"
           [attr.aria-current]="last?'page':null"
           >{{title(p)==='/'?'All':title(p)}}</a
-        >@if(!last){<span>/</span>}} }
+        >@if(!last){<span class="breadcrumb-separator" aria-hidden="true"
+          >/</span
+        >}} }
       </nav>
       <button
         (click)="load()"
@@ -153,6 +156,10 @@
         <cedar-icon name="refresh" />
       </button>
     </div>
+    <cedar-resource-filters
+      [value]="filters"
+      (change)="changeFilters($event)"
+    />
     <div class="table-scroll" [attr.aria-busy]="loading()">
       <table>
         <caption class="sr-only">
@@ -164,20 +171,34 @@
               [attr.aria-sort]="sort==='name'?'ascending':sort==='-name'?'descending':'none'"
             >
               <button (click)="changeSort('name')">
-                Title {{sort==='name'?'▴':sort==='-name'?'▾':''}}
+                Name @if(sort === "name" || sort === "-name") {
+                <cedar-icon
+                  [name]="sort === 'name' ? 'chevron-up' : 'chevron-down'"
+                />
+                }
               </button>
-            </th>
-            <th
-              [attr.aria-sort]="sort==='createdOnTS'?'ascending':sort==='-createdOnTS'?'descending':'none'"
-            >
-              <button (click)="changeSort('createdOnTS')">Created</button>
             </th>
             <th
               [attr.aria-sort]="sort==='lastUpdatedOnTS'?'ascending':sort==='-lastUpdatedOnTS'?'descending':'none'"
             >
-              <button (click)="changeSort('lastUpdatedOnTS')">Modified</button>
+              <button (click)="changeSort('lastUpdatedOnTS')">
+                Last modified @if(sort === "lastUpdatedOnTS" || sort ===
+                "-lastUpdatedOnTS") {
+                <cedar-icon
+                  [name]="sort === 'lastUpdatedOnTS' ? 'chevron-up' : 'chevron-down'"
+                />
+                }
+              </button>
             </th>
-            <th><span class="sr-only">Actions</span></th>
+            <th class="sort-column">
+              <span class="sr-only">Actions</span>
+              <cedar-sort-menu
+                [sort]="sort"
+                [foldersFirst]="params.get('folders') === 'first'"
+                (sortChange)="setSort($event)"
+                (foldersFirstChange)="setFoldersFirst($event)"
+              />
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -185,6 +206,8 @@
           <tr
             [class.selected]="selected()?.['@id']===r['@id']"
             (click)="select(r)"
+            tabindex="0"
+            (keydown.enter)="$event.target === $event.currentTarget ? select(r) : null"
           >
             <td>
               <span
@@ -210,8 +233,13 @@
               >
               }
             </td>
-            <td>{{r['pav:createdOn'] | date:preferredDateFormat}}</td>
-            <td>{{r['pav:lastUpdatedOn'] | date:preferredDateFormat}}</td>
+            <td>
+              <time
+                [attr.datetime]="r['pav:lastUpdatedOn'] || null"
+                [attr.title]="r['pav:lastUpdatedOn'] || null"
+                >{{r['pav:lastUpdatedOn'] | friendlyDate:now()}}</time
+              >
+            </td>
             <td class="row-actions" (click)="$event.stopPropagation()">
               @if(r.isOpen){<a
                 [href]="openView(r)"
@@ -224,15 +252,8 @@
                 [href]="link(r,true)"
                 aria-label="Populate template"
                 title="Populate template"
-                ><cedar-icon name="instance" /></a
+                ><cedar-icon name="populate" /></a
               >}
-              <button
-                (click)="select(r)"
-                aria-label="Show information"
-                title="Show information"
-              >
-                <cedar-icon name="info" />
-              </button>
               <button
                 (click)="toggleMenu(r, $event)"
                 [attr.aria-expanded]="menu()===r['@id']"
@@ -243,9 +264,10 @@
               @if(menu()===r['@id']){
               <div
                 class="resource-menu"
-                [style.left.px]="menuLeft"
-                [style.top.px]="menuTop"
-                (keydown.escape)="menu.set(null)"
+                aria-label="Artifact actions"
+                [style.left.px]="menuLeft()"
+                [style.top.px]="menuTop()"
+                (keydown)="menuKey($event)"
               >
                 @for(a of actions(r);track a.id){<button
                   [disabled]="!a.enabled"
@@ -290,48 +312,72 @@
       <cedar-icon [name]="right()?'right':'left'" />
     </button>
     @if(right()){ @if(selected();as r){
-    <h1>{{title(r)}}</h1>
-    <span class="badge">{{r.resourceType}}</span> @if(r['pav:version']){<span
-      class="badge"
-      >v {{r['pav:version']}}</span
-    >}
+    <h1>
+      <cedar-icon [name]="r.resourceType" size="large" /><span
+        >{{title(r)}}</span
+      >
+    </h1>
     <div class="tabs" role="tablist" aria-label="Resource details">
       <button
         role="tab"
         [attr.aria-selected]="tab==='info'"
         (click)="tab='info'"
       >
-        Info</button
-      ><button
+        Info
+      </button>
+      @if(r.resourceType === "template" || r.resourceType === "element" ||
+      r.resourceType === "field"){
+      <button
         role="tab"
         [attr.aria-selected]="tab==='version'"
-        [disabled]="r.resourceType==='folder'"
         (click)="tab='version'"
       >
         Version
       </button>
+      }
     </div>
     @if(tab==='info'){
     <dl>
-      <dt>Location</dt>
-      <dd>
-        @for(p of r.pathInfo;track p['@id'];let last=$last){@if(!last){<a
-          routerLink="/dashboard"
-          [queryParams]="{folderId:p['@id']}"
-          >{{title(p)==='/'?'All':title(p)}} / </a
-        >}}
+      <dt>Type</dt>
+      <dd>{{r.resourceType | titlecase}}</dd>
+      <dt class="location-label">Location</dt>
+      <dd class="detail-with-copy">
+        <span
+          >@for(p of r.pathInfo;track p['@id'];let last=$last){@if(!last){<a
+            routerLink="/dashboard"
+            [queryParams]="{folderId:p['@id']}"
+            >{{title(p)==='/'?'All':title(p)}}</a
+          ><span class="breadcrumb-separator" aria-hidden="true">/</span
+          >}}</span
+        >
+        @if(parentId(r); as id){
+        <button
+          class="copy-icon"
+          (click)="copyId(id)"
+          aria-label="Copy folder location"
+          title="Copy folder location"
+        >
+          <cedar-icon name="copy" />
+        </button>
+        }
       </dd>
       <dt>Owner</dt>
       <dd>{{r.ownedByUserName || '—'}}</dd>
       <dt>Created</dt>
       <dd>
-        {{r['pav:createdOn']|date:preferredDateFormat}}<small
-          >{{r.createdByUserName?'by '+r.createdByUserName:''}}</small
-        >
+        <time
+          [attr.datetime]="r['pav:createdOn'] || null"
+          [attr.title]="r['pav:createdOn'] || null"
+          >{{r['pav:createdOn']|friendlyDate:now()}}</time
+        ><small>{{r.createdByUserName?'by '+r.createdByUserName:''}}</small>
       </dd>
-      <dt>Modified</dt>
+      <dt>Last modified</dt>
       <dd>
-        {{r['pav:lastUpdatedOn']|date:preferredDateFormat}}<small
+        <time
+          [attr.datetime]="r['pav:lastUpdatedOn'] || null"
+          [attr.title]="r['pav:lastUpdatedOn'] || null"
+          >{{r['pav:lastUpdatedOn']|friendlyDate:now()}}</time
+        ><small
           >{{r.lastUpdatedByUserName?'by '+r.lastUpdatedByUserName:''}}</small
         >
       </dd>
@@ -341,56 +387,90 @@
         || '—'}}
       </dd>
     </dl>
-    <div class="description-heading">
-      Description @if(can(r,'updateResource')){<button
-        (click)="dialog.set({action:'rename',resource:r})"
-        aria-label="Edit description"
-      >
-        <cedar-icon name="edit" /></button
-      >}
-    </div>
-    <p class="description">{{r['schema:description']||'No description'}}</p>
+    <section class="info-section">
+      <div class="description-heading">
+        Description @if(can(r,'updateResource')){<button
+          (click)="act('rename',r)"
+          aria-label="Edit description"
+        >
+          Edit</button
+        >}
+      </div>
+      <p class="description">{{r['schema:description']||'No description'}}</p>
+    </section>
     @if(r.derivedFrom;as derived){
-    <section class="version">
-      <h3>Derived from</h3>
-      <a [href]="link(derived)">{{title(derived)}}</a
-      ><small
+    <section class="info-section">
+      <div class="description-heading">Derived from</div>
+      <a [href]="link(derived)">{{title(derived)}}</a>
+      <small
         >Modified
-        {{derived['pav:lastUpdatedOn']|date:preferredDateFormat}}</small
+        <time
+          [attr.datetime]="derived['pav:lastUpdatedOn'] || null"
+          [attr.title]="derived['pav:lastUpdatedOn'] || null"
+          >{{derived['pav:lastUpdatedOn']|friendlyDate:now()}}</time
+        ></small
       >
     </section>
     } @if(r.isBasedOn;as based){
-    <section class="version">
-      <h3>Based on template</h3>
-      <a [href]="link(based)">{{title(based)}}</a>
+    <section class="info-section">
+      <div class="description-heading">Template</div>
+      <div class="detail-with-copy">
+        <a [href]="link(based)">{{title(based)}}</a>
+        <button
+          class="copy-icon"
+          (click)="copyId(based['@id'])"
+          aria-label="Copy template identifier"
+          title="Copy template identifier"
+        >
+          <cedar-icon name="copy" />
+        </button>
+      </div>
     </section>
     } @if(r.trustedBy){
-    <p>Trusted by: {{r.trustedBy}}</p>
+    <section class="info-section">
+      <div class="description-heading">Trusted by</div>
+      {{r.trustedBy}}
+    </section>
     } @if(r['schema:identifier']){
-    <p>Identifier: {{r['schema:identifier']}}</p>
+    <section class="info-section">
+      <div class="description-heading">Identifier</div>
+      {{r['schema:identifier']}}
+    </section>
     } @if(r.doi){
-    <p>DOI: <a [href]="r.doi" target="_blank" rel="noopener">{{r.doi}}</a></p>
-    } @if(r.numberOfInstances!==undefined){
-    <p>Metadata instances: {{r.numberOfInstances}}</p>
-    } @if(instances().length){
-    <div class="instance-list">
-      @for(instance of instances();track instance['@id']){<a
-        [href]="link(instance)"
-        >{{title(instance)}}</a
-      >}
-    </div>
-    <p>{{instances().length}} of {{instanceTotal()}} accessible instances.</p>
+    <section class="info-section">
+      <div class="description-heading">DOI</div>
+      <a [href]="r.doi" target="_blank" rel="noopener">{{r.doi}}</a>
+    </section>
+    } @if(r.numberOfInstances!==undefined || instances().length){
+    <section class="info-section">
+      <div class="description-heading">
+        Metadata instances: {{r.numberOfInstances ?? instanceTotal()}}
+      </div>
+      @if(instances().length){
+      <div class="instance-list">
+        @for(instance of instances();track instance['@id']){<a
+          [href]="link(instance)"
+          >{{title(instance)}}</a
+        >}
+      </div>
+      <p>{{instances().length}} of {{instanceTotal()}} accessible instances.</p>
+      }
+    </section>
     }
-    <details class="identifiers">
-      <summary>Identifier</summary>
-      <p>{{r['@id']}}</p>
-      <button (click)="copyId(r['@id'])">Copy ID</button>
-      <button
-        (click)="act(r.resourceType==='folder'?'folder-id':'parent-id',r)"
-      >
-        Copy {{r.resourceType==='folder'?'folder':'parent folder'}} ID
-      </button>
-    </details>
+    <section class="identifiers info-section">
+      <div class="description-heading">Identifier</div>
+      <div class="detail-with-copy">
+        <span>{{r['@id']}}</span>
+        <button
+          class="copy-icon"
+          (click)="copyId(r['@id'])"
+          aria-label="Copy identifier"
+          title="Copy identifier"
+        >
+          <cedar-icon name="copy" />
+        </button>
+      </div>
+    </section>
     } @else {
     <div role="tabpanel">
       @for(v of r.versions?.length?r.versions:[r];track v['@id']){
@@ -400,20 +480,30 @@
         >
         <p>{{v['bibo:status']}}</p>
         <small
-          >Modified {{v['pav:lastUpdatedOn']|date:preferredDateFormat}}</small
+          >Modified
+          <time
+            [attr.datetime]="v['pav:lastUpdatedOn'] || null"
+            [attr.title]="v['pav:lastUpdatedOn'] || null"
+            >{{v['pav:lastUpdatedOn']|friendlyDate:now()}}</time
+          ></small
         >
       </article>
       }
     </div>
     } }@else{
-    <p class="empty">Select an item to see its information.</p>
+    <p class="empty">Select an item to see its details</p>
     } }
   </aside>
 </div>
-@if(dialog();as d){<cedar-resource-dialog
+@if(dialog();as d){ @if(d.action === 'permissions' && d.resource) {
+<cedar-permissions-dialog
+  [resource]="d.resource"
+  (closed)="permissionsClosed($event)"
+/>
+} @else {<cedar-resource-dialog
   [action]="d.action"
   [resource]="d.resource"
   [folder]="folder"
   (closed)="dialog.set(null)"
   (saved)="saved()"
-/>} }
+/>} } }

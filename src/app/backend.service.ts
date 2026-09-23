@@ -121,7 +121,6 @@ export class Backend {
       this.config.resourceRestAPI,
       this.config.userRestAPI,
       this.config.groupRestAPI,
-      this.config.impexRestAPI,
     ].map((base) => new URL(base).origin);
     if (!allowed.includes(new URL(url).origin))
       throw new Error("Untrusted API destination.");
@@ -132,18 +131,12 @@ export class Backend {
         Accept: accept,
         "CEDAR-Client-Session-Id": this.session,
       };
-      if (body !== undefined && !(body instanceof FormData))
-        headers["Content-Type"] = "application/json";
+      if (body !== undefined) headers["Content-Type"] = "application/json";
       if (etag) headers["If-Match"] = etag;
       const response = await fetch(url, {
         method,
         headers,
-        body:
-          body === undefined
-            ? undefined
-            : body instanceof FormData
-              ? body
-              : JSON.stringify(body),
+        body: body === undefined ? undefined : JSON.stringify(body),
       });
       if (response.status === 401 && attempt === 0) {
         await this.renew(-1);

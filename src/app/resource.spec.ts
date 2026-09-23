@@ -29,6 +29,24 @@ describe("Workspace navigation contract", () => {
     });
   });
   it.each([
+    "",
+    "search=heart",
+    "sharing=shared-with-me",
+    "viewMode=view-special-folders",
+  ])(
+    "requests folders first before the selected sort across listing modes: %s",
+    (mode) => {
+      const params = new URLSearchParams(mode);
+      params.set("folders", "first");
+      const url = new URL(
+        listingPath(params, "home", "-createdOnTS", 50),
+        "https://api.example",
+      );
+      expect(url.searchParams.get("sort")).toBe("foldersFirst,-createdOnTS");
+      expect(url.searchParams.get("offset")).toBe("50");
+    },
+  );
+  it.each([
     ["search", "heart & lung", "q", "heart & lung"],
     ["sharing", "shared-with-me", "sharing", "shared-with-me"],
     ["viewMode", "view-special-folders", "mode", "special-folders"],

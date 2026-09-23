@@ -1,3 +1,6 @@
+import { Toast } from "./toast";
+import { Confirmation } from "./confirmation";
+import { Icon } from "./icon";
 import {
   AfterViewInit,
   Component,
@@ -73,16 +76,41 @@ export function metadataKey(value: unknown): string {
       : v,
   );
 }
+// Resolve each property in its declaring parent, including repeated elements.
+// Use the same label precedence as CEE's rendered field headings.
+export function metadataFieldLabel(
+  template: CeeJsonObject,
+  path: string[],
+): string {
+  let parent = template;
+  return path
+    .map((key) => {
+      const properties = parent["properties"] as CeeJsonObject | undefined;
+      const property = properties?.[key] as CeeJsonObject | undefined;
+      if (!property) return /^\d+$/.test(key) ? `#${Number(key) + 1}` : key;
+      const child =
+        (property["items"] as CeeJsonObject | undefined) || property;
+      const labels = (parent["_ui"] as CeeJsonObject | undefined)?.[
+        "propertyLabels"
+      ] as CeeJsonObject | undefined;
+      const label =
+        labels?.[key] ?? child["skos:prefLabel"] ?? child["schema:name"] ?? key;
+      parent = child;
+      return String(label);
+    })
+    .join(" / ");
+}
 export const leaveMetadata: CanDeactivateFn<MetadataEditor> = (editor) =>
   editor.mayLeave();
 
 @Component({
   selector: "cedar-metadata-page",
-  imports: [FormsModule],
+  imports: [Toast, Icon, FormsModule],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: "./metadata-editor.html",
 })
 export class MetadataEditor implements AfterViewInit, OnDestroy {
+  readonly confirmation = inject(Confirmation);
   readonly api = inject(Backend);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -180,16 +208,21 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       this.baseline = metadataKey(this.cee.currentMetadata);
       this.baselineName = this.chosenName();
       this.cee.addEventListener("change", this.changed);
-      this.quality.set(this.cee.dataQualityReport);
+      this.refreshQuality();
       this.loading.set(false);
     } catch (e) {
       if (this.alive)
         this.error.set(e instanceof Error ? e.message : String(e));
     }
   }
+  private refreshQuality() {
+    const report = this.cee.dataQualityReport;
+    // Snapshot event data: a component may update an existing report object.
+    this.quality.set({ ...report, problems: [...(report.problems || [])] });
+  }
   readonly changed = () => {
     if (this.loading() || !this.alive) return;
-    this.quality.set(this.cee.dataQualityReport);
+    this.refreshQuality();
     this.dirty.set(
       metadataKey(this.cee.currentMetadata) !== this.baseline ||
         this.chosenName() !== this.baselineName,
@@ -204,8 +237,48 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         (q?.nonNullRequiredFieldValueCount || 0),
     );
   }
+  get validationWarnings() {
+    const q = this.quality();
+    const problems = (q?.problems || []).filter((p) =>
+      ["required", "missingProperty", "minItems"].includes(p.code),
+    );
+    const items = problems.map((p) => ({
+      label: metadataFieldLabel(this.template, p.path) || p.field || "Metadata",
+      message: p.message || p.code,
+    }));
+    if (this.missingRequired && !problems.some((p) => p.code === "required"))
+      items.push({
+        label: "Metadata",
+        message: `${this.missingRequired} required fields are missing.`,
+      });
+    return items;
+  }
+  get validationErrors() {
+    const q = this.quality();
+    const items = (q?.problems || [])
+      .filter(
+        (p) => !["required", "missingProperty", "minItems"].includes(p.code),
+      )
+      .map((p) => ({
+        label:
+          metadataFieldLabel(this.template, p.path) || p.field || "Metadata",
+        message: p.message || p.code,
+      }));
+    if (
+      q?.isValid === false &&
+      !items.length &&
+      !this.validationWarnings.length
+    )
+      items.push({
+        label: "Metadata",
+        message: "Review invalid metadata before saving.",
+      });
+    return items;
+  }
   async save() {
     if (this.loading() || this.saving() || !this.writable()) return;
+    this.refreshQuality();
+    if (this.validationErrors.length) return;
     this.saving.set(true);
     this.error.set("");
     this.notice.set("");
@@ -273,11 +346,14 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       this.saving.set(false);
     }
   }
-  mayLeave() {
+  async mayLeave() {
     return (
       this.updatingAddress ||
       (!this.saving() &&
-        (!this.dirty() || window.confirm("Discard unsaved metadata changes?")))
+        (!this.dirty() ||
+          (await this.confirmation.confirm(
+            "Discard unsaved metadata changes?",
+          ))))
     );
   }
   back() {

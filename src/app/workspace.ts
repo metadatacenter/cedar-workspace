@@ -1,12 +1,23 @@
+import { SortMenu } from "./sort-menu";
+import { ResourceFilters } from "./resource-filters";
+import {
+  ListingFilters,
+  filtersFromParams,
+  filterQuery,
+} from "./listing-filters";
+import { Toast } from "./toast";
 import {
   Component,
   DestroyRef,
   HostListener,
   inject,
   signal,
+  afterNextRender,
+  ElementRef,
+  Injector,
 } from "@angular/core";
-import { dateFormat } from "./date-format";
-import { DatePipe } from "@angular/common";
+import { FriendlyDatePipe } from "./friendly-date";
+import { TitleCasePipe } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { ActivatedRoute, Router, RouterLink } from "@angular/router";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
@@ -22,6 +33,7 @@ import {
 } from "./resource";
 import { Icon } from "./icon";
 import { ResourceDialog } from "./resource-dialog";
+import { PermissionsDialog } from "./permissions-dialog";
 export interface Action {
   id: string;
   label: string;
@@ -36,7 +48,7 @@ export function actions(r: Resource): Action[] {
       enabled: r.resourceType === "template" && cap("populate"),
     },
     { id: "open", label: "Open", enabled: cap("readResource") },
-    { id: "share", label: "Share", enabled: cap("manageGrants") },
+    { id: "permissions", label: "Permissions…", enabled: cap("readResource") },
     {
       id: "copy",
       label: "Copy",
@@ -93,20 +105,32 @@ export function actions(r: Resource): Action[] {
 }
 @Component({
   selector: "cedar-workspace-page",
-  imports: [FormsModule, DatePipe, RouterLink, ResourceDialog, Icon],
+  imports: [
+    Toast,
+    ResourceFilters,
+    SortMenu,
+    FormsModule,
+    FriendlyDatePipe,
+    TitleCasePipe,
+    RouterLink,
+    ResourceDialog,
+    PermissionsDialog,
+    Icon,
+  ],
   templateUrl: "./workspace.html",
 })
 export class Workspace {
-  get preferredDateFormat() {
-    return dateFormat(this.api.profile?.uiPreferences?.preferredDateFormat);
-  }
+  readonly cedarVersion = window.cedarVersion || "unknown";
   readonly api = inject(Backend);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private destroy = inject(DestroyRef);
+  private host: ElementRef<HTMLElement> = inject(ElementRef);
+  private injector = inject(Injector);
   readonly title = title;
   readonly can = can;
   readonly actions = actions;
+  readonly now = signal(Date.now());
   readonly ready = signal(false);
   readonly loading = signal(false);
   readonly error = signal("");
@@ -133,8 +157,10 @@ export class Workspace {
   private listRead = 0;
   private detailRead = 0;
   constructor() {
+    const clock = setInterval(() => this.now.set(Date.now()), 60_000);
     void this.start();
     this.destroy.onDestroy(() => {
+      clearInterval(clock);
       this.listRead++;
       this.detailRead++;
     });
@@ -150,7 +176,23 @@ export class Workspace {
           map.keys.forEach((key) => this.params.set(key, map.get(key)!));
           this.search = map.get("search") || "";
           this.folder = map.get("folderId") || this.api.profile.homeFolderId;
-          this.offset.set(0);
+          const sort = map.get("sort") || "name";
+          this.sort = [
+            "name",
+            "-name",
+            "createdOnTS",
+            "-createdOnTS",
+            "lastUpdatedOnTS",
+            "-lastUpdatedOnTS",
+          ].includes(sort)
+            ? sort
+            : "name";
+          const offset = Number(map.get("offset") || 0);
+          this.offset.set(
+            Number.isSafeInteger(offset) && offset >= 0
+              ? Math.floor(offset / 50) * 50
+              : 0,
+          );
           void this.load();
         });
     } catch (e) {
@@ -182,8 +224,7 @@ export class Workspace {
       this.rows.set(data.resources);
       this.total.set(data.totalCount);
       this.path.set(data.pathInfo || []);
-      const detailRead = this.detailRead;
-      void this.loadFolder(read, detailRead);
+      void this.loadFolder(read);
       // Listings omit lifecycle actions. Enrich template links without blocking the table.
       void this.loadTemplateActions(data.resources, read);
     } catch (e) {
@@ -195,20 +236,13 @@ export class Workspace {
       if (read === this.listRead) this.loading.set(false);
     }
   }
-  private async loadFolder(read: number, detailRead: number) {
+  private async loadFolder(read: number) {
     try {
       const { data } = await this.api.request<Resource>(
         "/folders/" + encodeURIComponent(this.folder),
       );
       if (read !== this.listRead) return;
       this.currentFolder.set(data);
-      if (
-        detailRead === this.detailRead &&
-        !this.params.has("search") &&
-        !this.params.has("sharing") &&
-        !this.params.has("viewMode")
-      )
-        this.selected.set(data);
     } catch (e) {
       if (read === this.listRead) this.fail(e);
     }
@@ -233,8 +267,9 @@ export class Workspace {
       });
     }
   }
-  menuTop = 0;
-  menuLeft = 0;
+  private menuTrigger: HTMLElement | null = null;
+  menuTop = signal(8);
+  menuLeft = signal(8);
   @HostListener("document:click", ["$event"]) dismissMenu(event: MouseEvent) {
     const target = event.target as Element;
     if (!target.closest(".row-actions")) this.menu.set(null);
@@ -246,8 +281,36 @@ export class Workspace {
         if (!menu.contains(target)) menu.open = false;
       });
   }
-  @HostListener("document:keydown.escape") escapeMenu() {
+  @HostListener("window:resize")
+  @HostListener("document:keydown.escape")
+  escapeMenu() {
+    if (this.menu()) this.menuTrigger?.focus();
     this.menu.set(null);
+    this.host.nativeElement
+      .querySelectorAll<HTMLDetailsElement>("details[open]")
+      .forEach((menu) => {
+        menu.open = false;
+        menu.querySelector<HTMLElement>("summary")?.focus();
+      });
+  }
+  menuKey(event: KeyboardEvent) {
+    const keys = ["ArrowDown", "ArrowUp", "Home", "End"];
+    if (!keys.includes(event.key)) return;
+    event.preventDefault();
+    const buttons = [
+      ...this.host.nativeElement.querySelectorAll<HTMLButtonElement>(
+        ".resource-menu button:not(:disabled)",
+      ),
+    ];
+    const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+    const next =
+      event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? buttons.length - 1
+          : (index + (event.key === "ArrowDown" ? 1 : -1) + buttons.length) %
+            buttons.length;
+    buttons[next]?.focus();
   }
   async select(r: Resource, reveal = true) {
     const read = ++this.detailRead;
@@ -286,6 +349,9 @@ export class Workspace {
       if (read === this.detailRead) this.fail(e);
     }
   }
+  parentId(r: Resource): string | undefined {
+    return r.pathInfo?.filter((p) => p["@id"] !== r["@id"]).at(-1)?.["@id"];
+  }
   async copyId(value: string) {
     try {
       await navigator.clipboard.writeText(value);
@@ -299,13 +365,34 @@ export class Workspace {
       this.menu.set(null);
       return;
     }
-    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-    this.menuLeft = Math.max(8, rect.right - 220);
-    this.menuTop = Math.max(
-      80,
-      Math.min(rect.bottom, window.innerHeight - 350),
+    this.menuTrigger = event.currentTarget as HTMLElement;
+    const rect = this.menuTrigger.getBoundingClientRect();
+    this.menuLeft.set(
+      Math.max(8, Math.min(rect.right - 220, window.innerWidth - 228)),
     );
+    this.menuTop.set(8);
     this.menu.set(r["@id"]);
+    afterNextRender(
+      () => {
+        if (this.menu() !== r["@id"]) return;
+        const menu =
+          this.host.nativeElement.querySelector<HTMLElement>(".resource-menu");
+        menu
+          ?.querySelector<HTMLButtonElement>("button:not(:disabled)")
+          ?.focus();
+        if (menu)
+          this.menuTop.set(
+            Math.max(
+              8,
+              Math.min(
+                rect.bottom,
+                window.innerHeight - menu.getBoundingClientRect().height - 8,
+              ),
+            ),
+          );
+      },
+      { injector: this.injector },
+    );
     try {
       const { data } = await this.api.report(r);
       this.rows.update((rows) =>
@@ -324,14 +411,42 @@ export class Workspace {
         : { folderId: this.folder },
     });
   }
+  get filters(): ListingFilters {
+    return filtersFromParams(this.params);
+  }
+  changeFilters(filters: ListingFilters) {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParamsHandling: "merge",
+      queryParams: filterQuery(filters),
+    });
+  }
   changeSort(field: string) {
-    this.sort = this.sort === field ? "-" + field : field;
-    this.offset.set(0);
-    void this.load();
+    this.setSort(this.sort === field ? "-" + field : field);
+  }
+  setFoldersFirst(first: boolean) {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParamsHandling: "merge",
+      queryParams: { folders: first ? "first" : null, offset: null },
+    });
+  }
+  setSort(sort: string) {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParamsHandling: "merge",
+      queryParams: {
+        sort,
+        offset: null,
+      },
+    });
   }
   page(delta: number) {
-    this.offset.set(Math.max(0, this.offset() + delta * 50));
-    void this.load();
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParamsHandling: "merge",
+      queryParams: { offset: Math.max(0, this.offset() + delta * 50) },
+    });
   }
   link(r: Resource, populate = false) {
     return resourceLink(
@@ -361,6 +476,7 @@ export class Workspace {
     );
   }
   async act(id: string, r: Resource) {
+    this.menuTrigger?.focus();
     this.menu.set(null);
     this.error.set("");
     if (!actions(r).find((a) => a.id === id)?.enabled) return;
@@ -420,6 +536,11 @@ export class Workspace {
       .querySelector<HTMLDetailsElement>(".new-menu")
       ?.removeAttribute("open");
     this.dialog.set({ action });
+  }
+  permissionsClosed(message?: string) {
+    if (message) this.notice.set(message);
+    this.dialog.set(null);
+    void this.load();
   }
   saved() {
     this.dialog.set(null);
