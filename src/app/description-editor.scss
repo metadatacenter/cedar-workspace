@@ -11,7 +11,7 @@ label,
 textarea {
   display: block;
   width: 100%;
-  resize: vertical;
+  @include patterns.info-description-resize;
 }
 p {
   white-space: pre-wrap;
