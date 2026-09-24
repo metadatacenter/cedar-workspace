@@ -49,11 +49,11 @@ for (const readonly of [false, true]) {
       info.getByRole("link", { name: "Source template", exact: true }),
     ).toHaveAttribute("href", /source-template/);
     const folderCopy = info.getByRole("button", {
-      name: "Copy folder identifier", exact: true,
+      name: "Copy location", exact: true,
     });
     await folderCopy.hover();
     const help = info.getByRole("tooltip");
-    await expect(help).toHaveText("Copy folder identifier");
+    await expect(help).toHaveText("Copy location");
     await help.hover();
     await expect(help).toBeVisible();
     await page.keyboard.press("Escape");
@@ -61,11 +61,11 @@ for (const readonly of [false, true]) {
     await info.locator("h1").hover();
     await page.keyboard.press("Tab");
     await folderCopy.focus();
-    await expect(help).toHaveText("Copy folder identifier");
+    await expect(help).toHaveText("Copy location");
     await page.keyboard.press("Escape");
     await expect(help).toHaveCount(0);
     await info
-      .getByRole("button", { name: "Copy folder identifier", exact: true })
+      .getByRole("button", { name: "Copy location", exact: true })
       .click();
     await expect.poll(() => page.evaluate(() => window.copiedId)).toBe("home");
     await info
@@ -103,8 +103,10 @@ for (const readonly of [false, true]) {
       name: "Description",
       exact: true,
     });
+    await expect(info.locator(".info-section").last().locator("cedar-description-editor")).toHaveCount(1);
     if (readonly) await expect(edit).toHaveCount(0);
     else {
+      await expect(edit).toHaveCSS("resize", "vertical");
       await page
         .getByRole("textbox", { name: "Description", exact: true })
         .fill("Updated description");

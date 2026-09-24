@@ -291,8 +291,7 @@
       </table>
       @if(refreshing()){
       <span class="sr-only" role="status">Refreshing…</span>
-      }
-      @if(loading()&&!refreshing()){
+      } @if(loading()&&!refreshing()){
       <p class="empty" role="status">Loading…</p>
       } @else if(!rows().length){
       <p class="empty">No items found.</p>
@@ -361,10 +360,7 @@
           >}}</span
         >
         @if(parentId(r); as id){
-        <cedar-copy-button
-          label="Copy folder identifier"
-          (copied)="copyId(id)"
-        />
+        <cedar-copy-button label="Copy location" (copied)="copyId(id)" />
         }
       </dd>
       <dt>Owner</dt>
@@ -393,14 +389,6 @@
         || '—'}}
       </dd>
     </dl>
-    <section class="info-section">
-      @for (item of [r]; track item['@id']) {
-      <cedar-description-editor
-        [resource]="item"
-        (saved)="descriptionSaved($event)"
-      />
-      }
-    </section>
     @if(r.derivedFrom;as derived){
     <section class="info-section">
       <div class="description-heading">Derived from</div>
@@ -456,7 +444,9 @@
         </div>
         }
       </div>
-      <p>{{instances().length}} of {{instanceTotal()}} accessible instances.</p>
+      <p class="instance-count">
+        {{instances().length}} of {{instanceTotal()}} accessible instances.
+      </p>
       }
     </section>
     }
@@ -469,6 +459,14 @@
           (copied)="copyId(r['@id'])"
         />
       </div>
+    </section>
+    <section class="info-section">
+      @for (item of [r]; track item['@id']) {
+      <cedar-description-editor
+        [resource]="item"
+        (saved)="descriptionSaved($event)"
+      />
+      }
     </section>
     } @else {
     <div role="tabpanel">

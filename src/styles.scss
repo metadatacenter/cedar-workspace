@@ -467,6 +467,9 @@ dd small {
   @include patterns.field-label($size: body);
   margin-bottom: var(--cedar-space-1);
 }
+.info-section .instance-count {
+  margin: var(--cedar-space-2) 0 0;
+}
 .info-section small {
   display: block;
   color: var(--cedar-text-muted);
