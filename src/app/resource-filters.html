@@ -19,15 +19,18 @@
   />
   <label class="version-filter">
     <span class="version-choice">
-    <select
-      aria-label="Version"
-      [ngModel]="version()"
-      (ngModelChange)="versionChange.emit($event)"
-    >
-      <option value="latest">Latest version</option>
-      <option value="all">All versions</option>
-    </select>
-    <cedar-icon name="chevron-down" size="small" />
+      <span class="version-choice-label" aria-hidden="true"
+        >{{version() === 'latest' ? 'Latest version' : 'All versions'}}</span
+      >
+      <select
+        aria-label="Version"
+        [ngModel]="version()"
+        (ngModelChange)="versionChange.emit($event)"
+      >
+        <option value="latest">Latest version</option>
+        <option value="all">All versions</option>
+      </select>
+      <cedar-icon name="chevron-down" size="small" />
     </span>
   </label>
   @if(value().types.length || value().modified) {

@@ -150,3 +150,35 @@ test('Version selector and menu share persisted server filtering', async ({page,
   await expect.poll(() => requests.at(-1)?.searchParams.has('version')).toBe(false);
   await expect(page).not.toHaveURL(/version=latest/);
 });
+
+test('Version selector fits each selected label with the same chevron spacing', async ({page, api}) => {
+  await dashboard(page);
+  const select = page.getByRole('combobox', {name: 'Version', exact: true});
+  const widths = [];
+  for (const value of ['all', 'latest', 'all']) {
+    await select.selectOption(value);
+    const geometry = await page.locator('.version-choice').evaluate(el => {
+      const label = el.querySelector('.version-choice-label');
+      const select = el.querySelector('select');
+      const icon = el.querySelector('cedar-icon');
+      const range = document.createRange();
+      range.selectNodeContents(label);
+      const text = range.getBoundingClientRect();
+      const iconBox = icon.getBoundingClientRect();
+      return {
+        width: el.getBoundingClientRect().width,
+        gap: iconBox.left - text.right,
+        inset: el.getBoundingClientRect().right - iconBox.right,
+        spacing: parseFloat(getComputedStyle(el).getPropertyValue('--cedar-space-3')),
+        labelFont: getComputedStyle(label).font,
+        selectFont: getComputedStyle(select).font,
+      };
+    });
+    expect(geometry.gap).toBeCloseTo(geometry.inset, 0);
+    expect(geometry.gap).toBeGreaterThan(0);
+    expect(geometry.labelFont).toBe(geometry.selectFont);
+    widths.push(geometry.width);
+  }
+  expect(widths[1]).toBeGreaterThan(widths[0]);
+  expect(widths[2]).toBe(widths[0]);
+});

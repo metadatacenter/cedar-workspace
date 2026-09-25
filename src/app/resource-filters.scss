@@ -146,6 +146,10 @@ footer span {
   pointer-events: none;
 }
 .version-filter select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  min-width: 0;
   appearance: none;
   border: 0;
   border-radius: 0;
@@ -154,4 +158,11 @@ footer span {
   &:focus-visible {
     outline: none;
   }
+}
+.version-choice-label {
+  visibility: hidden;
+  white-space: nowrap;
+  padding-inline: var(--cedar-space-3)
+    calc(2 * var(--cedar-space-3) + var(--cedar-icon-size-small));
+  min-height: var(--cedar-control-height-default);
 }
