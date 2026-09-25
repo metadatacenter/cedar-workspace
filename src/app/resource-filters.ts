@@ -8,6 +8,7 @@ import {
   signal,
 } from "@angular/core";
 import { FormsModule } from "@angular/forms";
+import { TranslatePipe } from "@ngx-translate/core";
 import { FilterChip } from "./filter-chip";
 import {
   ListingFilters,
@@ -18,10 +19,11 @@ import {
   resourceTypes,
 } from "./listing-filters";
 import { Icon } from "./icon";
+import { I18n } from "./i18n";
 
 @Component({
   selector: "cedar-resource-filters",
-  imports: [FormsModule, FilterChip, Icon],
+  imports: [FormsModule, FilterChip, Icon, TranslatePipe],
   templateUrl: "./resource-filters.html",
   styleUrl: "./resource-filters.scss",
 })
@@ -36,24 +38,29 @@ export class ResourceFilters {
   readonly types = resourceTypes;
   readonly draft = signal<ListingFilters>(emptyFilters());
   private host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly i18n = inject(I18n);
   private trigger?: HTMLElement;
   get presets(): { value: DatePreset; label: string }[] {
     const year = new Date().getFullYear();
+    const t = this.i18n.t.bind(this.i18n);
     return [
-      { value: "today", label: "Today" },
-      { value: "week", label: "Last 7 days" },
-      { value: "month", label: "Last 30 days" },
-      { value: "year", label: `This year (${year})` },
-      { value: "last-year", label: `Last year (${year - 1})` },
-      { value: "custom", label: "Custom date range" },
+      { value: "today", label: t("Filters.Presets.Today") },
+      { value: "week", label: t("Filters.Presets.Week") },
+      { value: "month", label: t("Filters.Presets.Month") },
+      { value: "year", label: t("Filters.Presets.Year", { year }) },
+      {
+        value: "last-year",
+        label: t("Filters.Presets.LastYear", { year: year - 1 }),
+      },
+      { value: "custom", label: t("Filters.Presets.Custom") },
     ];
   }
   get typeLabel(): string {
     return (
       this.types
         .filter((type) => this.value().types.includes(type.value))
-        .map((type) => type.label)
-        .join(", ") || "Type"
+        .map((type) => this.i18n.t(type.label))
+        .join(", ") || this.i18n.t("Common.Type")
     );
   }
   get dateLabel(): string {
@@ -61,27 +68,31 @@ export class ResourceFilters {
     if (v.modified !== "custom")
       return (
         this.presets.find((p) => p.value === v.modified)?.label ||
-        "Last modified"
+        this.i18n.t("Common.LastModified")
       );
     const format = (value: string) =>
-      new Intl.DateTimeFormat("en-GB", {
+      new Intl.DateTimeFormat(this.i18n.locale("en-GB"), {
         day: "numeric",
         month: "short",
         year: "numeric",
       }).format(parseDate(value)!);
-    if (v.after && v.before) return `${format(v.after)} – ${format(v.before)}`;
+    if (v.after && v.before)
+      return this.i18n.t("Filters.Range", {
+        after: format(v.after),
+        before: format(v.before),
+      });
     return v.after
-      ? `From ${format(v.after)}`
+      ? this.i18n.t("Filters.From", { date: format(v.after) })
       : v.before
-        ? `Through ${format(v.before)}`
-        : "Last modified";
+        ? this.i18n.t("Filters.Through", { date: format(v.before) })
+        : this.i18n.t("Common.LastModified");
   }
   get rangeError(): string {
     const d = this.draft();
     if ((d.after && !parseDate(d.after)) || (d.before && !parseDate(d.before)))
-      return "Enter a valid date.";
+      return this.i18n.t("Filters.InvalidDate");
     return d.after && d.before && d.after > d.before
-      ? "Before must be on or after After."
+      ? this.i18n.t("Filters.RangeOrder")
       : "";
   }
   toggle(kind: "type" | "date") {

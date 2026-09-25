@@ -7,6 +7,7 @@ import {
   signal,
   viewChild,
 } from "@angular/core";
+import { TranslatePipe } from "@ngx-translate/core";
 import { DialogKeyboard } from "./dialog-keyboard";
 
 @Injectable({ providedIn: "root" })
@@ -37,7 +38,7 @@ export class Confirmation {
 
 @Component({
   selector: "cedar-confirmation",
-  imports: [DialogKeyboard],
+  imports: [DialogKeyboard, TranslatePipe],
   template: `@if (confirmation.message()) {
     <dialog
       #dialog
@@ -49,11 +50,14 @@ export class Confirmation {
         $event.preventDefault(); $event.stopPropagation(); decide(false)
       "
     >
-      <h2 id="confirmation-title">Are you sure?</h2>
+      <h2 id="confirmation-title">{{ "Confirmation.Title" | translate }}</h2>
       <p id="confirmation-message">{{ confirmation.message() }}</p>
       <footer>
-        <button autofocus (click)="decide(false)">Cancel</button
-        ><button class="primary" (click)="decide(true)">OK</button>
+        <button autofocus (click)="decide(false)">
+          {{ "Common.Cancel" | translate }}</button
+        ><button class="primary" (click)="decide(true)">
+          {{ "Common.OK" | translate }}
+        </button>
       </footer>
     </dialog>
   }`,

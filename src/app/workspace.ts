@@ -21,6 +21,7 @@ import {
 import { FriendlyDatePipe } from "./friendly-date";
 import { TitleCasePipe } from "@angular/common";
 import { FormsModule } from "@angular/forms";
+import { TranslatePipe } from "@ngx-translate/core";
 import { ActivatedRoute, Router, RouterLink } from "@angular/router";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { Backend } from "./backend.service";
@@ -36,71 +37,106 @@ import {
 import { Icon } from "./icon";
 import { ResourceDialog } from "./resource-dialog";
 import { PermissionsDialog } from "./permissions-dialog";
+import { I18n } from "./i18n";
 export interface Action {
   id: string;
   label: string;
   enabled: boolean;
 }
-export function actions(r: Resource): Action[] {
+export function actions(r: Resource, i18n: Pick<I18n, "t">): Action[] {
   const cap = (key: string) => can(r, key);
+  const label = (key: string) => i18n.t(key);
   return [
     {
       id: "populate",
-      label: "Populate",
+      label: label("ResourceActions.Populate"),
       enabled: r.resourceType === "template" && cap("populate"),
     },
-    { id: "open", label: "Open", enabled: cap("readResource") },
-    { id: "permissions", label: "Permissions…", enabled: cap("readResource") },
+    {
+      id: "open",
+      label: label("ResourceActions.Open"),
+      enabled: cap("readResource"),
+    },
+    {
+      id: "permissions",
+      label: label("ResourceActions.Permissions"),
+      enabled: cap("readResource"),
+    },
     {
       id: "copy",
-      label: "Copy",
+      label: label("ResourceActions.Copy"),
       enabled: r.resourceType !== "folder" && cap("copyFromResource"),
     },
-    { id: "move", label: "Move", enabled: cap("moveResource") },
-    { id: "rename", label: "Rename", enabled: cap("updateResource") },
+    {
+      id: "move",
+      label: label("ResourceActions.Move"),
+      enabled: cap("moveResource"),
+    },
+    {
+      id: "rename",
+      label: label("ResourceActions.Rename"),
+      enabled: cap("updateResource"),
+    },
     {
       id: "folder-id",
-      label: "Copy Folder ID",
+      label: label("ResourceActions.CopyFolderId"),
       enabled: r.resourceType === "folder",
     },
     {
       id: "parent-id",
-      label: "Copy Parent Folder ID",
+      label: label("ResourceActions.CopyParentFolderId"),
       enabled: !!r.pathInfo?.length,
     },
-    ...["json", "yaml", "yamlc"].map((id) => ({
+    ...(
+      [
+        ["json", "ResourceActions.DownloadJson"],
+        ["yaml", "ResourceActions.DownloadYaml"],
+        ["yamlc", "ResourceActions.DownloadCompactYaml"],
+      ] as const
+    ).map(([id, key]) => ({
       id,
-      label:
-        "Download " + { json: "JSON", yaml: "YAML", yamlc: "Compact YAML" }[id],
+      label: label(key),
       enabled: r.resourceType !== "folder" && cap("readResource"),
     })),
     ...(r.resourceType === "instance"
       ? []
       : [
-          { id: "publish", label: "Publish", enabled: cap("publish") },
-          { id: "draft", label: "Create Draft", enabled: cap("createDraft") },
+          {
+            id: "publish",
+            label: label("ResourceActions.Publish"),
+            enabled: cap("publish"),
+          },
+          {
+            id: "draft",
+            label: label("ResourceActions.CreateDraft"),
+            enabled: cap("createDraft"),
+          },
         ]),
-    { id: "delete", label: "Delete", enabled: cap("deleteResource") },
+    {
+      id: "delete",
+      label: label("ResourceActions.Delete"),
+      enabled: cap("deleteResource"),
+    },
     {
       id: "datacite",
-      label: "DataCite wizard",
+      label: label("ResourceActions.DataCite"),
       enabled:
         window.dataciteEnabled !== false &&
         ["template", "instance"].includes(r.resourceType),
     },
     {
       id: "make-open",
-      label: "Make Open",
+      label: label("ResourceActions.MakeOpen"),
       enabled: window.makeOpenEnabled !== false && cap("enableOpenView"),
     },
     {
       id: "make-not-open",
-      label: "Make Not Open",
+      label: label("ResourceActions.MakeNotOpen"),
       enabled: window.makeOpenEnabled !== false && cap("disableOpenView"),
     },
     {
       id: "openview",
-      label: "Open in OpenView",
+      label: label("ResourceActions.OpenInOpenView"),
       enabled: window.makeOpenEnabled !== false && !!r.isOpen,
     },
   ];
@@ -115,25 +151,40 @@ export function actions(r: Resource): Action[] {
     CopyButton,
     FormsModule,
     FriendlyDatePipe,
-    TitleCasePipe,
     RouterLink,
     ResourceDialog,
     PermissionsDialog,
     Icon,
+    TranslatePipe,
   ],
   templateUrl: "./workspace.html",
 })
 export class Workspace {
-  readonly cedarVersion = window.cedarVersion || "unknown";
+  private readonly i18n = inject(I18n);
+  readonly cedarVersion = window.cedarVersion || this.i18n.t("Common.Unknown");
   readonly api = inject(Backend);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private destroy = inject(DestroyRef);
   private host: ElementRef<HTMLElement> = inject(ElementRef);
   private injector = inject(Injector);
-  readonly title = title;
+  readonly title = (r: Resource) => title(r, this.i18n.t("Common.Untitled"));
   readonly can = can;
-  readonly actions = actions;
+  readonly actions = (r: Resource) => actions(r, this.i18n);
+  /** A role as the server states it, translated when Workspace knows it. */
+  role(r: Resource) {
+    const role = r.currentUserPermissions?.role;
+    return role ? this.i18n.known("Roles." + role, role) : "—";
+  }
+  /** A version's publication status, translated when Workspace knows it. */
+  status(v: Resource) {
+    const status = v["bibo:status"]?.replace("bibo:", "");
+    if (!status) return "—";
+    return this.i18n.known(
+      "Status." + status,
+      new TitleCasePipe().transform(status),
+    );
+  }
   readonly now = signal(Date.now());
   readonly ready = signal(false);
   readonly loading = signal(false);
@@ -366,7 +417,7 @@ export class Workspace {
   async copyId(value: string) {
     try {
       await navigator.clipboard.writeText(value);
-      this.notice.set("ID copied.");
+      this.notice.set(this.i18n.t("Common.IdCopied"));
     } catch (e) {
       this.fail(e);
     }
@@ -463,7 +514,7 @@ export class Workspace {
         row["@id"] === resource["@id"] ? { ...row, ...resource } : row,
       ),
     );
-    this.notice.set("Description saved.");
+    this.notice.set(this.i18n.t("Dashboard.DescriptionSaved"));
   }
   setSort(sort: string) {
     void this.router.navigate([], {
@@ -513,7 +564,7 @@ export class Workspace {
     this.menuTrigger?.focus();
     this.menu.set(null);
     this.error.set("");
-    if (!actions(r).find((a) => a.id === id)?.enabled) return;
+    if (!this.actions(r).find((a) => a.id === id)?.enabled) return;
     try {
       if (id === "open" || id === "populate") {
         if (r.resourceType === "folder")
@@ -529,16 +580,12 @@ export class Workspace {
       }
       if (id === "datacite") {
         if (!r.isOpen)
-          throw new Error(
-            "Make this artifact open before starting the DataCite wizard.",
-          );
+          throw new Error(this.i18n.t("Dashboard.OpenBeforeDataCite"));
         if (
           r.resourceType === "template" &&
           r["bibo:status"] !== "bibo:published"
         )
-          throw new Error(
-            "Publish this template before starting the DataCite wizard.",
-          );
+          throw new Error(this.i18n.t("Dashboard.PublishBeforeDataCite"));
         window.open(
           this.api.config.dataciteDOIBase + "/" + encodeURIComponent(r["@id"]),
           "_blank",
@@ -552,7 +599,7 @@ export class Workspace {
         await navigator.clipboard.writeText(
           id === "folder-id" ? r["@id"] : parent?.["@id"] || this.folder,
         );
-        this.notice.set("ID copied.");
+        this.notice.set(this.i18n.t("Common.IdCopied"));
         return;
       }
       if (["json", "yaml", "yamlc"].includes(id)) {
@@ -578,7 +625,7 @@ export class Workspace {
   }
   saved() {
     this.dialog.set(null);
-    this.notice.set("Saved.");
+    this.notice.set(this.i18n.t("Common.Saved"));
     void this.load();
   }
 }

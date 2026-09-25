@@ -1,13 +1,12 @@
 <header class="metadata-toolbar">
   <button (click)="back()" [disabled]="saving()">
-    <cedar-icon name="back" /> Workspace
+    <cedar-icon name="back" /> {{'Common.Workspace' | translate}}
   </button>
   <span
     class="metadata-save-status"
     [class.is-dirty]="dirty() && writable() && !loading() && !saving()"
     role="status"
-    >{{loading() ? 'Loading…' : saving() ? 'Saving…' : !writable() ? 'Read only'
-    : dirty() ? 'Unsaved changes' : 'Saved'}}</span
+    >{{saveStatus | translate}}</span
   >
   @if(writable()) {<button
     id="button-save-metadata"
@@ -15,7 +14,7 @@
     (click)="save()"
     [disabled]="loading() || saving() || validationErrors.length > 0"
   >
-    Save</button
+    {{'Common.Save' | translate}}</button
   >}
 </header>
 <main class="metadata-content">
@@ -24,7 +23,7 @@
   } @if(notice()){
   <cedar-toast [message]="notice()" />
   } @if(!loading()) {
-  <label for="instance-name">Metadata Name</label>
+  <label for="instance-name">{{'Metadata.Name' | translate}}</label>
   <input
     spellcheck="false"
     id="instance-name"
@@ -33,9 +32,12 @@
     [readOnly]="!writable()"
   />
   @if(!writable()){
-  <p role="status">You have read-only access to this metadata.</p>
+  <p role="status">{{'Metadata.ReadOnlyAccess' | translate}}</p>
   } } @if(validationErrors.length){
-  <details class="metadata-quality" aria-label="Metadata errors">
+  <details
+    class="metadata-quality"
+    [attr.aria-label]="'Metadata.ErrorsRegion' | translate"
+  >
     <summary>
       <cedar-icon
         size="small"
@@ -43,8 +45,9 @@
         class="validation-disclosure"
       /><cedar-icon size="small" name="warning" />
       <span
-        >{{validationErrors.length}} {{validationErrors.length === 1 ? 'error' :
-        'errors'}} — review before saving</span
+        >{{(validationErrors.length === 1 ? 'Metadata.ErrorsOne' :
+        'Metadata.ErrorsMany') | translate: {count: validationErrors.length}
+        }}</span
       >
     </summary>
     <ul>
@@ -56,7 +59,7 @@
   } @if(validationWarnings.length){
   <details
     class="metadata-quality validation-summary--warning"
-    aria-label="Metadata warnings"
+    [attr.aria-label]="'Metadata.WarningsRegion' | translate"
   >
     <summary>
       <cedar-icon
@@ -65,8 +68,9 @@
         class="validation-disclosure"
       /><cedar-icon size="small" name="warning" />
       <span
-        >{{validationWarnings.length}} {{validationWarnings.length === 1 ?
-        'warning' : 'warnings'}} — metadata can still be saved</span
+        >{{(validationWarnings.length === 1 ? 'Metadata.WarningsOne' :
+        'Metadata.WarningsMany') | translate: {count: validationWarnings.length}
+        }}</span
       >
     </summary>
     <ul>

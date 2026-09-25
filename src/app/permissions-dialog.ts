@@ -15,10 +15,12 @@ import {
   signal,
 } from "@angular/core";
 import { FormsModule } from "@angular/forms";
+import { TranslatePipe } from "@ngx-translate/core";
 import { Backend, HttpError } from "./backend.service";
 import { Resource, title, can } from "./resource";
 import { GroupPicker } from "./group-picker";
 import { Icon } from "./icon";
+import { I18n } from "./i18n";
 
 export interface Principal {
   "@id": string;
@@ -37,21 +39,29 @@ export interface Permissions {
   userPermissions: { user: Principal; role: string }[];
   groupPermissions: { group: Principal; role: string }[];
 }
-export const principalName = (p: Principal) =>
+export const principalName = (p: Principal, i18n: Pick<I18n, "t">) =>
   p.specialGroup
-    ? "Everyone"
+    ? i18n.t("Common.Everyone")
     : p["schema:name"] ||
       [p.firstName, p.lastName].filter(Boolean).join(" ") ||
-      "Unnamed user";
+      i18n.t("Common.UnnamedUser");
 
 @Component({
   selector: "cedar-permissions-dialog",
-  imports: [Toast, DialogKeyboard, FormsModule, GroupPicker, Icon],
+  imports: [
+    Toast,
+    DialogKeyboard,
+    FormsModule,
+    GroupPicker,
+    Icon,
+    TranslatePipe,
+  ],
   templateUrl: "./permissions-dialog.html",
   styleUrl: "./permissions-dialog.scss",
 })
 export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
   readonly confirmation = inject(Confirmation);
+  private readonly i18n = inject(I18n);
   @Input({ required: true }) resource!: Resource;
   @Output() closed = new EventEmitter<string | undefined>();
   @ViewChild("dialog", { static: true }) dialog!: ElementRef<HTMLDialogElement>;
@@ -64,8 +74,11 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
   readonly current = signal<Resource | null>(null);
   readonly permissions = signal<Permissions | null>(null);
   readonly people = signal<(Principal & { kind: "user" | "group" })[]>([]);
-  readonly title = title;
-  readonly principalName = principalName;
+  readonly title = (r: Resource) => title(r, this.i18n.t("Common.Untitled"));
+  readonly principalName = (p: Principal) => principalName(p, this.i18n);
+  private roleName(role: string) {
+    return this.i18n.known("Roles." + role, role);
+  }
   personId = "";
   role = "viewer";
   etag: string | null = null;
@@ -110,7 +123,12 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
       )
       .map((p) => ({
         id: p["@id"],
-        label: principalName(p) + (p.kind === "group" ? " (Group)" : ""),
+        label:
+          p.kind === "group"
+            ? this.i18n.t("Permissions.GroupSuffix", {
+                name: this.principalName(p),
+              })
+            : this.principalName(p),
       }))
       .sort((a, b) => a.label.localeCompare(b.label));
   }
@@ -180,10 +198,7 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
     if (e instanceof HttpError && e.status === 412) this.stale.set(true);
   }
   private revision() {
-    if (!this.etag)
-      throw new Error(
-        "No permissions revision was returned. Reload permissions before making changes.",
-      );
+    if (!this.etag) throw new Error(this.i18n.t("Permissions.NoRevision"));
     return this.etag;
   }
   selectPerson(id: string) {
@@ -196,7 +211,10 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
     if (
       await this.save(
         [...this.grants, { node: person, kind: person.kind, role: this.role }],
-        "Add " + principalName(person) + " as " + this.role,
+        this.i18n.t("Permissions.Changes.Add", {
+          name: this.principalName(person),
+          role: this.roleName(this.role),
+        }),
       )
     )
       this.personId = "";
@@ -207,13 +225,18 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
       this.grants.map((g) =>
         g.node["@id"] === grant.node["@id"] ? { ...g, role } : g,
       ),
-      "Set " + principalName(grant.node) + " to " + role,
+      this.i18n.t("Permissions.Changes.Set", {
+        name: this.principalName(grant.node),
+        role: this.roleName(role),
+      }),
     );
   }
   async remove(grant: Grant) {
     await this.save(
       this.grants.filter((g) => g.node["@id"] !== grant.node["@id"]),
-      "Remove access for " + principalName(grant.node),
+      this.i18n.t("Permissions.Changes.Remove", {
+        name: this.principalName(grant.node),
+      }),
     );
   }
   private async save(grants: Grant[], description: string) {
@@ -259,11 +282,10 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
     const resource = this.resource;
     if (
       !(await this.confirmation.confirm(
-        "Make " +
-          principalName(grant.node) +
-          " the owner of “" +
-          title(this.resource) +
-          "”? You may lose the ability to manage access or transfer ownership.",
+        this.i18n.t("Permissions.ConfirmTransfer", {
+          name: this.principalName(grant.node),
+          resource: this.title(this.resource),
+        }),
       ))
     )
       return;
@@ -275,7 +297,9 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
     )
       return;
     const transferred = await this.write(
-      "Transfer ownership to " + principalName(grant.node),
+      this.i18n.t("Permissions.Changes.Transfer", {
+        name: this.principalName(grant.node),
+      }),
       () =>
         this.api.request<Permissions>(
           "/command/transfer-resource-ownership",
@@ -286,7 +310,9 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
     );
     if (transferred && this.alive)
       this.closed.emit(
-        "Ownership transferred to " + principalName(grant.node) + ".",
+        this.i18n.t("Permissions.Transferred", {
+          name: this.principalName(grant.node),
+        }),
       );
   }
   private async write(
@@ -304,7 +330,7 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
       this.permissions.set(reply.data);
       this.etag = reply.etag;
       saved = true;
-      this.notice.set("Permissions saved.");
+      this.notice.set(this.i18n.t("Permissions.Saved"));
       // Keep the existing layout while all mutation controls remain disabled.
       // Apply refreshed privileges atomically, including a genuine self-demotion.
       const report = await this.api.report(this.resource);

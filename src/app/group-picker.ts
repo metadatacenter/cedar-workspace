@@ -7,10 +7,11 @@ import {
   SimpleChanges,
 } from "@angular/core";
 import { FormsModule } from "@angular/forms";
+import { TranslatePipe } from "@ngx-translate/core";
 
 @Component({
   selector: "cedar-group-picker",
-  imports: [FormsModule],
+  imports: [FormsModule, TranslatePipe],
   template: `
     @if (!labelledBy) {
       <label [for]="id + '-input'">{{ label }}</label>
@@ -60,7 +61,7 @@ import { FormsModule } from "@angular/forms";
         }
       </div>
     } @else if (open && query.trim()) {
-      <p role="status">No matches found.</p>
+      <p role="status">{{ "GroupPicker.NoMatches" | translate }}</p>
     }
   `,
   styles: [

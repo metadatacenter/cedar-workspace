@@ -2,8 +2,8 @@
   #trigger
   type="button"
   class="trigger"
-  aria-label="Sort options"
-  title="Sort options"
+  [attr.aria-label]="'Sort.Options' | translate"
+  [title]="'Sort.Options' | translate"
   aria-haspopup="menu"
   [attr.aria-expanded]="open()"
   (click)="toggle()"
@@ -16,13 +16,13 @@
   #panel
   class="sort-menu"
   role="menu"
-  aria-label="Sort options"
+  [attr.aria-label]="'Sort.Options' | translate"
   [style.top.px]="top()"
   [style.left.px]="left()"
   (keydown)="key($event)"
 >
-  <div role="group" aria-label="Sort by">
-    <div class="section-label">Sort by</div>
+  <div role="group" [attr.aria-label]="'Sort.By' | translate">
+    <div class="section-label">{{'Sort.By' | translate}}</div>
     @for (option of fields; track option.value) {
     <button
       type="button"
@@ -33,12 +33,12 @@
       <cedar-icon
         name="check"
         [class.unchecked]="field !== option.value"
-      />{{option.label}}
+      />{{option.label | translate}}
     </button>
     }
   </div>
-  <div role="group" aria-label="Sort direction">
-    <div class="section-label">Sort direction</div>
+  <div role="group" [attr.aria-label]="'Sort.Direction' | translate">
+    <div class="section-label">{{'Sort.Direction' | translate}}</div>
     @for (label of directions; track $index; let index = $index) {
     <button
       type="button"
@@ -49,19 +49,22 @@
       <cedar-icon
         name="check"
         [class.unchecked]="descending !== (index === 1)"
-      />{{label}}
+      />{{label | translate}}
     </button>
     }
   </div>
-  <div role="group" aria-label="Folders">
-    <div class="section-label">Folders</div>
+  <div role="group" [attr.aria-label]="'Sort.Folders' | translate">
+    <div class="section-label">{{'Sort.Folders' | translate}}</div>
     <button
       type="button"
       role="menuitemradio"
       [attr.aria-checked]="foldersFirst()"
       (click)="chooseFolders(true)"
     >
-      <cedar-icon name="check" [class.unchecked]="!foldersFirst()" />On top
+      <cedar-icon
+        name="check"
+        [class.unchecked]="!foldersFirst()"
+      />{{'Sort.OnTop' | translate}}
     </button>
     <button
       type="button"
@@ -69,12 +72,14 @@
       [attr.aria-checked]="!foldersFirst()"
       (click)="chooseFolders(false)"
     >
-      <cedar-icon name="check" [class.unchecked]="foldersFirst()" />Mixed with
-      files
+      <cedar-icon
+        name="check"
+        [class.unchecked]="foldersFirst()"
+      />{{'Sort.Mixed' | translate}}
     </button>
   </div>
-  <div role="group" aria-label="Version">
-    <div class="section-label">Version</div>
+  <div role="group" [attr.aria-label]="'Sort.Version' | translate">
+    <div class="section-label">{{'Sort.Version' | translate}}</div>
     @for (value of ['latest', 'all']; track value) {
     <button
       type="button"
@@ -82,8 +87,11 @@
       [attr.aria-checked]="version() === value"
       (click)="versionChange.emit(value); close()"
     >
-      <cedar-icon name="check" [class.unchecked]="version() !== value" />{{value
-      === 'latest' ? 'Latest version' : 'All versions'}}
+      <cedar-icon
+        name="check"
+        [class.unchecked]="version() !== value"
+      />{{(value === 'latest' ? 'Common.LatestVersion' : 'Common.AllVersions') |
+      translate}}
     </button>
     }
   </div>

@@ -1,3 +1,4 @@
+import { TestBed } from "@angular/core/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Backend } from "./backend.service";
 import { Config } from "./resource";
@@ -11,7 +12,7 @@ describe("Authorized backend", () => {
   let fetcher: ReturnType<typeof vi.fn>;
   let renew: ReturnType<typeof vi.fn>;
   beforeEach(() => {
-    api = new Backend();
+    api = TestBed.runInInjectionContext(() => new Backend());
     api.config = config;
     renew = vi.fn((_s: number, ok: () => void) => ok());
     Object.assign(api, {

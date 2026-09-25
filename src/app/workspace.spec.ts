@@ -2,6 +2,7 @@ import { TestBed } from "@angular/core/testing";
 import { provideRouter, Router } from "@angular/router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Workspace, actions } from "./workspace";
+import { I18n } from "./i18n";
 import { Backend } from "./backend.service";
 import { Config, Resource } from "./resource";
 const folder: Resource = {
@@ -209,7 +210,7 @@ describe("Angular Workspace", () => {
     expect(f.componentInstance.rows()).toBe(rows);
   });
   it("exposes the original action set and gates it using the server capabilities", () => {
-    const list = actions(template);
+    const list = actions(template, TestBed.inject(I18n));
     expect(list.find((a) => a.id === "permissions")).toEqual({
       id: "permissions",
       label: "Permissions…",

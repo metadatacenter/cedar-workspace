@@ -8,11 +8,12 @@ import {
   signal,
   viewChild,
 } from "@angular/core";
+import { TranslatePipe } from "@ngx-translate/core";
 import { Icon } from "./icon";
 
 @Component({
   selector: "cedar-sort-menu",
-  imports: [Icon],
+  imports: [Icon, TranslatePipe],
   templateUrl: "./sort-menu.html",
   styleUrl: "./sort-menu.scss",
 })
@@ -29,10 +30,11 @@ export class SortMenu {
   readonly trigger = viewChild<ElementRef<HTMLButtonElement>>("trigger");
   readonly panel = viewChild<ElementRef<HTMLElement>>("panel");
   private readonly host = inject(ElementRef<HTMLElement>);
+  // Labels are translation keys.
   readonly fields = [
-    { value: "name", label: "Name" },
-    { value: "lastUpdatedOnTS", label: "Last modified" },
-    { value: "createdOnTS", label: "Date created" },
+    { value: "name", label: "Sort.Fields.Name" },
+    { value: "lastUpdatedOnTS", label: "Sort.Fields.LastModified" },
+    { value: "createdOnTS", label: "Sort.Fields.Created" },
   ];
   get field() {
     return this.sort().replace(/^-/, "");
@@ -42,8 +44,8 @@ export class SortMenu {
   }
   get directions() {
     return this.field === "name"
-      ? ["A to Z", "Z to A"]
-      : ["Oldest first", "Newest first"];
+      ? ["Sort.Directions.AToZ", "Sort.Directions.ZToA"]
+      : ["Sort.Directions.Oldest", "Sort.Directions.Newest"];
   }
   toggle() {
     if (this.open()) return this.close();

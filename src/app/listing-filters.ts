@@ -1,11 +1,12 @@
 import type { ResourceType } from "./resource";
 
+// Each label is a translation key.
 export const resourceTypes: { value: ResourceType; label: string }[] = [
-  { value: "folder", label: "Folder" },
-  { value: "element", label: "Element" },
-  { value: "template", label: "Template" },
-  { value: "field", label: "Field" },
-  { value: "instance", label: "Instance" },
+  { value: "folder", label: "ResourceTypes.folder" },
+  { value: "element", label: "ResourceTypes.element" },
+  { value: "template", label: "ResourceTypes.template" },
+  { value: "field", label: "ResourceTypes.field" },
+  { value: "instance", label: "ResourceTypes.instance" },
 ];
 export type DatePreset =
   "today" | "week" | "month" | "year" | "last-year" | "custom";

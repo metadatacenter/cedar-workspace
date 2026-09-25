@@ -1,6 +1,6 @@
 import { Confirmation } from "./confirmation";
 import { TestBed } from "@angular/core/testing";
-import { ElementRef } from "@angular/core";
+import { ElementRef, Provider } from "@angular/core";
 import {
   ActivatedRoute,
   Router,
@@ -17,6 +17,7 @@ import {
 } from "./metadata-editor";
 import { Backend } from "./backend.service";
 import { CeeLoader } from "./cee-loader";
+import { provideWorkspaceTranslations } from "./i18n";
 import type { CedarEmbeddableEditorElement } from "cedar-embeddable-editor";
 
 describe("Modern metadata host", () => {
@@ -27,6 +28,7 @@ describe("Modern metadata host", () => {
   };
   let cee: CedarEmbeddableEditorElement;
   let host: MetadataEditor;
+  let providers: Provider[];
   let address: ReturnType<typeof vi.fn>;
   let route: {
     snapshot: {
@@ -75,17 +77,16 @@ describe("Modern metadata host", () => {
         }),
       },
     };
-    TestBed.configureTestingModule({
-      providers: [
-        { provide: Backend, useValue: api },
-        { provide: ActivatedRoute, useValue: route },
-        { provide: Router, useValue: { navigateByUrl: address } },
-        {
-          provide: CeeLoader,
-          useValue: { load: vi.fn().mockResolvedValue(undefined) },
-        },
-      ],
-    });
+    providers = [
+      { provide: Backend, useValue: api },
+      { provide: ActivatedRoute, useValue: route },
+      { provide: Router, useValue: { navigateByUrl: address } },
+      {
+        provide: CeeLoader,
+        useValue: { load: vi.fn().mockResolvedValue(undefined) },
+      },
+    ];
+    TestBed.configureTestingModule({ providers });
     cee = document.createElement(
       "cedar-embeddable-editor",
     ) as CedarEmbeddableEditorElement;
@@ -126,6 +127,24 @@ describe("Modern metadata host", () => {
     expect(host.returnTo).toBe("/dashboard?search=Study");
     expect(host.loading()).toBe(false);
     expect(host.dirty()).toBe(false);
+  });
+  it("passes the active language to CEE with English as its fallback", async () => {
+    await host.ngAfterViewInit();
+    expect(cee.config.defaultLanguage).toBe("en");
+    expect(cee.config.fallbackLanguage).toBe("en");
+  });
+  it("passes Hungarian to CEE when Workspace shows Hungarian", async () => {
+    host.ngOnDestroy();
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [...providers, ...provideWorkspaceTranslations("hu")],
+    });
+    host = TestBed.runInInjectionContext(() => new MetadataEditor());
+    host.editor = new ElementRef(cee);
+    await host.ngAfterViewInit();
+    expect(cee.config.defaultLanguage).toBe("hu");
+    expect(cee.config.fallbackLanguage).toBe("en");
+    expect(host.name).toBe("Study – metaadatok");
   });
   it("loads an instance and its template into a read-only editor for viewers", async () => {
     const original = api.request.getMockImplementation()! as (

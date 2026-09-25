@@ -1,9 +1,10 @@
 import { Component, effect, input, signal } from "@angular/core";
+import { TranslatePipe } from "@ngx-translate/core";
 import { Icon } from "./icon";
 
 @Component({
   selector: "cedar-toast",
-  imports: [Icon],
+  imports: [Icon, TranslatePipe],
   template: `@if (message() && visible()) {
     <div
       class="toast"
@@ -16,7 +17,10 @@ import { Icon } from "./icon";
       (focusout)="resume()"
     >
       <cedar-icon name="check" /><span>{{ message() }}</span>
-      <button aria-label="Dismiss notification" (click)="dismiss()">
+      <button
+        [attr.aria-label]="'Toast.Dismiss' | translate"
+        (click)="dismiss()"
+      >
         <cedar-icon name="close" />
       </button>
     </div>

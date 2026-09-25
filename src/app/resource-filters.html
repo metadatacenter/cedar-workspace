@@ -1,7 +1,7 @@
-<div class="filters" aria-label="Resource filters">
+<div class="filters" [attr.aria-label]="'Filters.Region' | translate">
   <cedar-filter-chip
     [text]="typeLabel"
-    label="Type"
+    [label]="'Common.Type' | translate"
     [controls]="id + '-type'"
     [active]="value().types.length > 0"
     [expanded]="open() === 'type'"
@@ -10,7 +10,7 @@
   />
   <cedar-filter-chip
     [text]="dateLabel"
-    label="Last modified"
+    [label]="'Common.LastModified' | translate"
     [controls]="id + '-date'"
     [active]="!!value().modified"
     [expanded]="open() === 'date'"
@@ -20,21 +20,25 @@
   <label class="version-filter">
     <span class="version-choice">
       <span class="version-choice-label" aria-hidden="true"
-        >{{version() === 'latest' ? 'Latest version' : 'All versions'}}</span
+        >{{(version() === 'latest' ? 'Common.LatestVersion' :
+        'Common.AllVersions') | translate}}</span
       >
       <select
-        aria-label="Version"
+        [attr.aria-label]="'Common.Version' | translate"
         [ngModel]="version()"
         (ngModelChange)="versionChange.emit($event)"
       >
-        <option value="latest">Latest version</option>
-        <option value="all">All versions</option>
+        <option value="latest">{{'Common.LatestVersion' | translate}}</option>
+        <option value="all">{{'Common.AllVersions' | translate}}</option>
       </select>
       <cedar-icon name="chevron-down" size="small" />
     </span>
   </label>
   @if(value().types.length || value().modified) {
-  <button type="button" (click)="clear()">Clear filters</button> }
+  <button type="button" (click)="clear()">
+    {{'Filters.ClearFilters' | translate}}
+  </button>
+  }
 </div>
 @if(open()) {
 <section
@@ -42,7 +46,7 @@
   [class.date]="open() === 'date'"
   role="dialog"
   [attr.id]="id + (open() === 'type' ? '-type' : '-date')"
-  [attr.aria-label]="open() === 'type' ? 'Filter by type' : 'Filter by last modified'"
+  [attr.aria-label]="(open() === 'type' ? 'Filters.ByType' : 'Filters.ByLastModified') | translate"
 >
   @if(open() === 'type') {
   <div class="type-options">
@@ -57,13 +61,17 @@
       <cedar-icon
         [name]="type.value === 'folder' ? 'folder' : 'artifact-' + type.value"
       />
-      {{type.label}}</label
+      {{type.label | translate}}</label
     >
     }
   </div>
   } @else {
   <div class="date-body">
-    <div class="presets" role="group" aria-label="Date presets">
+    <div
+      class="presets"
+      role="group"
+      [attr.aria-label]="'Filters.DatePresets' | translate"
+    >
       @for(p of presets; track p.value) {
       <button
         type="button"
@@ -79,18 +87,18 @@
     </div>
     <div class="range">
       <label
-        >After<input
+        >{{'Filters.After' | translate}}<input
           type="date"
           spellcheck="false"
-          aria-label="After"
+          [attr.aria-label]="'Filters.After' | translate"
           [ngModel]="draft().after || ''"
           (ngModelChange)="editDate('after', $event)"
       /></label>
       <label
-        >Before<input
+        >{{'Filters.Before' | translate}}<input
           type="date"
           spellcheck="false"
-          aria-label="Before"
+          [attr.aria-label]="'Filters.Before' | translate"
           [ngModel]="draft().before || ''"
           (ngModelChange)="editDate('before', $event)"
           [attr.aria-invalid]="rangeError ? true : null"
@@ -99,22 +107,23 @@
       @if(rangeError){
       <p class="error" [id]="id + '-error'" role="alert">{{rangeError}}</p>
       }
-      <p class="hint">
-        Includes both dates. Leave either date blank for an open range.
-      </p>
+      <p class="hint">{{'Filters.Hint' | translate}}</p>
     </div>
   </div>
   }
   <footer>
-    <button type="button" (click)="clearDraft()">Clear all</button><span></span
-    ><button type="button" (click)="close()">Cancel</button
+    <button type="button" (click)="clearDraft()">
+      {{'Filters.ClearAll' | translate}}</button
+    ><span></span
+    ><button type="button" (click)="close()">
+      {{'Common.Cancel' | translate}}</button
     ><button
       type="button"
       class="primary"
       [disabled]="!!rangeError && open() === 'date'"
       (click)="apply()"
     >
-      Apply
+      {{'Filters.Apply' | translate}}
     </button>
   </footer>
 </section>

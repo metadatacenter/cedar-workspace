@@ -7,13 +7,13 @@
   <header class="permissions-header">
     <button
       class="close"
-      aria-label="Close permissions"
+      [attr.aria-label]="'Permissions.Close' | translate"
       [disabled]="busy()"
       (click)="close()"
     >
       <cedar-icon name="close" />
     </button>
-    <h2 id="permissions-title">Permissions</h2>
+    <h2 id="permissions-title">{{'Permissions.Title' | translate}}</h2>
     <div class="resource-context">
       <span class="resource-avatar"
         ><cedar-icon [name]="resource.resourceType"
@@ -21,7 +21,7 @@
       <div>
         <div class="resource-name">{{title(resource)}}</div>
         <div class="resource-type">
-          {{resource.resourceType}}
+          {{'ResourceKinds.' + resource.resourceType | translate}}
         </div>
       </div>
     </div>
@@ -30,50 +30,51 @@
     @if(error()) {
     <div role="alert" class="alert">
       {{error()}} @if(failedChange()) {
-      <p>Not saved: {{failedChange()}}.</p>
+      <p>{{'Permissions.NotSaved' | translate: {change: failedChange()} }}</p>
       }
-      <button (click)="load()" [disabled]="busy()">Reload permissions</button>
+      <button (click)="load()" [disabled]="busy()">{{'Permissions.Reload' |
+        translate}}</button>
     </div>
     } @if(notice()) {
     <cedar-toast [message]="notice()" />
     } @if(busy()) {
     <p role="status" [class.sr-only]="permissions()">
-      {{permissions() ? 'Saving permissions…' : 'Loading…'}}
+      {{(permissions() ? 'Permissions.Saving' : 'Common.Loading') | translate}}
     </p>
     } @if(resource.resourceType === 'folder') {
     <div class="folder-notice">
       <cedar-icon name="folder" /><span
-        >Access granted here also applies to the resources this folder
-        contains.</span
+        >{{'Permissions.FolderNotice' | translate}}</span
       >
     </div>
     } @if(canManage) {
     <section class="access-panel">
-      <h3>Add users or groups</h3>
-      <p>Choose one user or group and assign a role.</p>
+      <h3>{{'Permissions.AddHeading' | translate}}</h3>
+      <p>{{'Permissions.AddIntro' | translate}}</p>
       <form class="add-controls" (ngSubmit)="add()">
         <cedar-group-picker
           class="principal-picker"
           id="share-principal"
-          label="User or group"
-          placeholder="Search by name"
+          [label]="'Permissions.UserOrGroup' | translate"
+          [placeholder]="'Permissions.SearchByName' | translate"
           [options]="options"
           [value]="personId"
           (valueChange)="selectPerson($event)"
           [disabled]="busy() || stale()"
         />
         <div class="role-picker">
-          <label for="share-role">Role</label>
+          <label for="share-role">{{'Permissions.Role' | translate}}</label>
           <select
             id="share-role"
             name="role"
             [(ngModel)]="role"
             [disabled]="!selectedPerson || busy() || stale()"
           >
-            <option value="viewer">Viewer</option>
+            <option value="viewer">{{'Permissions.Viewer' | translate}}</option>
             @if(!selectedPerson?.specialGroup) {
-            <option value="editor">Editor</option>
-            <option value="manager">Manager</option>
+            <option value="editor">{{'Permissions.Editor' | translate}}</option>
+            <option value="manager">{{'Permissions.Manager' |
+              translate}}</option>
             }
           </select>
         </div>
@@ -81,37 +82,54 @@
           class="primary add-button"
           [disabled]="!selectedPerson || busy() || stale()"
         >
-          Add
+          {{'Permissions.Add' | translate}}
         </button>
       </form>
-      <div class="role-help" aria-label="Role descriptions">
-        <span><strong>Viewer</strong> can view.</span>
-        <span><strong>Editor</strong> can view and change content.</span>
-        <span><strong>Manager</strong> can view, edit and manage access.</span>
+      <div
+        class="role-help"
+        [attr.aria-label]="'Permissions.RoleDescriptions' | translate"
+      >
+        <span
+          ><strong>{{'Permissions.Viewer' | translate}}</strong>
+          {{'Permissions.ViewerHelp' | translate}}</span
+        >
+        <span
+          ><strong>{{'Permissions.Editor' | translate}}</strong>
+          {{'Permissions.EditorHelp' | translate}}</span
+        >
+        <span
+          ><strong>{{'Permissions.Manager' | translate}}</strong>
+          {{'Permissions.ManagerHelp' | translate}}</span
+        >
       </div>
     </section>
     } @if(permissions(); as p) {
     <section class="access-panel">
-      <h3>Access on this resource</h3>
+      <h3>{{'Permissions.AccessHeading' | translate}}</h3>
       <p>
-        The table shows the owner and roles assigned directly to this resource.
-        {{canManage ? 'Role changes are saved immediately.' : 'Only a Manager or
-        the owner can change roles.'}}
+        {{'Permissions.TableIntro' | translate}}
+        {{(canManage ? 'Permissions.SavedImmediately' : 'Permissions.OnlyManager')
+        | translate}}
       </p>
       <div
         class="access-list"
         role="table"
-        aria-label="Direct resource permissions"
+        [attr.aria-label]="'Permissions.DirectPermissions' | translate"
       >
         <div class="access-row access-header" role="row">
           <span class="principal-cell" role="columnheader"
-            ><span class="sr-only">User or group</span></span
+            ><span class="sr-only">{{'Permissions.UserOrGroup' |
+              translate}}</span></span
           >
-          <span class="type-cell" role="columnheader">Type</span
-          ><span class="role-cell" role="columnheader">Role</span>
-          <span class="owner-cell" role="columnheader">Owner</span
+          <span class="type-cell" role="columnheader">{{'Common.Type' |
+            translate}}</span
+          ><span class="role-cell" role="columnheader">{{'Permissions.Role' |
+            translate}}</span>
+          <span class="owner-cell" role="columnheader">{{'Common.Owner' |
+            translate}}</span
           ><span class="action-cell" role="columnheader"
-            ><span class="sr-only">Remove access</span></span
+            ><span class="sr-only">{{'Permissions.RemoveAccess' |
+              translate}}</span></span
           >
         </div>
         <div class="access-row" role="row">
@@ -119,25 +137,28 @@
             <span class="avatar"><cedar-icon name="user" /></span
             ><span class="principal-name">{{principalName(p.owner)}}</span>
           </div>
-          <span class="type-cell" role="cell">User</span>
+          <span class="type-cell" role="cell">{{'Common.User' | translate}}</span>
           <span
             class="role-cell"
             role="cell"
-            aria-label="Ownership is separate from roles"
+            [attr.aria-label]="'Permissions.OwnershipSeparate' | translate"
           ></span>
           <span
             class="owner-cell"
             role="cell"
-            title="The owner can manage access and transfer ownership."
+            [title]="'Permissions.OwnerHelp' | translate"
             ><input
               spellcheck="false"
               type="checkbox"
               checked
               disabled
-              [attr.aria-label]="principalName(p.owner) + ' is the owner'"
+              [attr.aria-label]="'Permissions.IsOwner' | translate: {name: principalName(p.owner)}"
           /></span>
           <span class="action-cell" role="cell"
-            ><button disabled aria-label="The owner cannot be removed">
+            ><button
+              disabled
+              [attr.aria-label]="'Permissions.OwnerCannotBeRemoved' | translate"
+            >
               <cedar-icon name="trash" /></button
           ></span>
         </div>
@@ -152,24 +173,25 @@
             >
           </div>
           <span class="type-cell" role="cell"
-            >{{g.kind === 'group' ? 'Group' : 'User'}}</span
+            >{{(g.kind === 'group' ? 'Common.Group' : 'Common.User') |
+            translate}}</span
           >
           <span class="role-cell" role="cell">
             <select
               [class.readonly-role]="!canManage"
               (change)="changeRole(g, $any($event.target).value); $any($event.target).value = g.role"
               [disabled]="!canManage || busy() || stale()"
-              [attr.aria-label]="'Role for ' + principalName(g.node)"
+              [attr.aria-label]="'Permissions.RoleFor' | translate: {name: principalName(g.node)}"
             >
               <option value="viewer" [selected]="g.role === 'viewer'">
-                Viewer
+                {{'Permissions.Viewer' | translate}}
               </option>
               @if(!g.node.specialGroup) {
               <option value="editor" [selected]="g.role === 'editor'">
-                Editor
+                {{'Permissions.Editor' | translate}}
               </option>
               <option value="manager" [selected]="g.role === 'manager'">
-                Manager
+                {{'Permissions.Manager' | translate}}
               </option>
               }
             </select>
@@ -177,7 +199,7 @@
           <span
             class="owner-cell"
             role="cell"
-            [title]="g.kind === 'group' ? 'A group cannot own a resource.' : 'Make this user the owner'"
+            [title]="(g.kind === 'group' ? 'Permissions.GroupCannotOwn' : 'Permissions.MakeUserOwner') | translate"
           >
             <input
               spellcheck="false"
@@ -185,7 +207,7 @@
               [checked]="false"
               (click)="$event.preventDefault(); transfer(g)"
               [disabled]="g.kind === 'group' || !canTransfer || busy() || stale()"
-              [attr.aria-label]="'Make ' + principalName(g.node) + ' the owner'"
+              [attr.aria-label]="'Permissions.MakeOwner' | translate: {name: principalName(g.node)}"
             />
           </span>
           <span class="action-cell" role="cell">
@@ -193,8 +215,8 @@
             <button
               [disabled]="busy() || stale()"
               (click)="remove(g)"
-              [attr.aria-label]="'Remove access for ' + principalName(g.node)"
-              title="Remove access"
+              [attr.aria-label]="'Permissions.RemoveAccessFor' | translate: {name: principalName(g.node)}"
+              [title]="'Permissions.RemoveAccess' | translate"
             >
               <cedar-icon name="trash" />
             </button>
@@ -207,6 +229,8 @@
     }
   </div>
   <footer>
-    <button class="primary" [disabled]="busy()" (click)="close()">Done</button>
+    <button class="primary" [disabled]="busy()" (click)="close()">{{
+      'Permissions.Done' | translate
+    }}</button>
   </footer>
 </dialog>

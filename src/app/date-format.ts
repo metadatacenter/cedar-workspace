@@ -1,3 +1,10 @@
+import { registerLocaleData } from "@angular/common";
+import localeHu from "@angular/common/locales/hu";
+
+// Angular's date formatter needs locale data for every locale it is given.
+// English data is built in; Hungarian is registered with the formats.
+registerLocaleData(localeHu);
+
 // Stored preferences use Moment tokens; rendering uses Angular's date formatter.
 export const dateFormats: Record<string, string> = {
   "MM/DD/YYYY": "MM/dd/yyyy",

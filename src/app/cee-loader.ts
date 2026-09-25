@@ -1,4 +1,5 @@
-import { Injectable } from "@angular/core";
+import { Injectable, inject } from "@angular/core";
+import { I18n } from "./i18n";
 declare global {
   interface Window {
     cedarCacheControl?: string;
@@ -8,6 +9,7 @@ declare global {
 
 @Injectable({ providedIn: "root" })
 export class CeeLoader {
+  private readonly i18n = inject(I18n);
   private pending?: Promise<void>;
   load(): Promise<void> {
     if (customElements.get("cedar-embeddable-editor")) return Promise.resolve();
@@ -18,7 +20,7 @@ export class CeeLoader {
         clearTimeout(timer);
         script.remove();
         this.pending = undefined;
-        reject(new Error("Unable to load the metadata editor. Please reload."));
+        reject(new Error(this.i18n.t("Errors.EditorUnavailable")));
       };
       script.src =
         "/third_party_components/cedar-embeddable-editor/cedar-embeddable-editor" +

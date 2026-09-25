@@ -1,75 +1,99 @@
 <header class="topbar groups-topbar">
-  <a href="/dashboard" class="brand" aria-label="CEDAR Workspace"
+  <a
+    href="/dashboard"
+    class="brand"
+    [attr.aria-label]="'Header.Brand' | translate"
     ><img src="/img/cedar-mark.png" alt="" /><span class="brand-label"
-      >Workspace<small class="brand-version">{{ cedarVersion }}</small></span
+      >{{'Common.Workspace' | translate}}<small class="brand-version"
+        >{{ cedarVersion }}</small
+      ></span
     ></a
   >
   <form class="search" action="/dashboard">
     <input
       spellcheck="false"
-      aria-label="Search workspace"
+      [attr.aria-label]="'Header.SearchWorkspace' | translate"
       name="search"
-      placeholder="Search"
+      [placeholder]="'Header.SearchPlaceholder' | translate"
     />
-    <button aria-label="Search" type="submit">
+    <button [attr.aria-label]="'Header.Search' | translate" type="submit">
       <cedar-icon name="search" />
     </button>
   </form>
   <details class="header-menu">
-    <summary aria-label="User menu"><cedar-icon name="user" /></summary>
+    <summary [attr.aria-label]="'Header.UserMenu' | translate">
+      <cedar-icon name="user" />
+    </summary>
     <nav>
-      <a href="/profile"><span>Profile</span><cedar-icon name="user" /></a
-      ><a href="/settings"><span>Settings</span><cedar-icon name="tuning" /></a
-      ><a href="/logout"><span>Logout</span><cedar-icon name="sign-out" /></a>
+      <a href="/profile"
+        ><span>{{'Header.Profile' | translate}}</span
+        ><cedar-icon name="user" /></a
+      ><a href="/settings"
+        ><span>{{'Header.Settings' | translate}}</span
+        ><cedar-icon name="tuning" /></a
+      ><a href="/logout"
+        ><span>{{'Header.Logout' | translate}}</span
+        ><cedar-icon name="sign-out"
+      /></a>
     </nav>
   </details>
   <details class="header-menu">
-    <summary aria-label="More menu"><cedar-icon name="more" /></summary>
+    <summary [attr.aria-label]="'Header.MoreMenu' | translate">
+      <cedar-icon name="more" />
+    </summary>
     <nav>
-      <a href="/groups"><span>Groups</span><cedar-icon name="groups" /></a
+      <a href="/groups"
+        ><span>{{'Header.Groups' | translate}}</span
+        ><cedar-icon name="groups" /></a
       ><a href="/privacy"
-        ><span>Privacy</span><cedar-icon name="permissions"
+        ><span>{{'Header.Privacy' | translate}}</span
+        ><cedar-icon name="permissions"
       /></a>
       <a
         href="https://metadatacenter.org/help/#subscribe"
         target="_blank"
         rel="noopener"
-        ><span>Help</span><cedar-icon name="external"
+        ><span>{{'Header.Help' | translate}}</span><cedar-icon name="external"
       /></a>
       <a href="https://metadatacenter.org/#about" target="_blank" rel="noopener"
-        ><span>About</span><cedar-icon name="external"
+        ><span>{{'Header.About' | translate}}</span><cedar-icon name="external"
       /></a>
     </nav>
   </details>
 </header>
 <div id="groups-page">
   <div class="navbar-back">
-    <a href="/dashboard" aria-label="Back to Workspace"
-      ><cedar-icon name="back" /><span class="document-title">Groups</span></a
+    <a
+      href="/dashboard"
+      [attr.aria-label]="'Groups.BackToWorkspace' | translate"
+      ><cedar-icon name="back" /><span class="document-title"
+        >{{'Groups.Title' | translate}}</span
+      ></a
     >
   </div>
   <main class="groups-content">
     <header class="groups-page-header">
-      <h1>Groups</h1>
-      <p>
-        A group is a named collection of users. Group Administrators can change
-        its name, membership and administrators.
-      </p>
+      <h1>{{'Groups.Title' | translate}}</h1>
+      <p>{{'Groups.Intro' | translate}}</p>
     </header>
     @if(error()) {
     <div class="alert" role="alert">
       {{error()}} @if(recoveryGroup(); as group) {
       <button (click)="select(group)" [disabled]="busy() || selecting()">
-        Reload group
+        {{'Groups.Reload' | translate}}
       </button>
       }
     </div>
     } @if(notice()) {
     <cedar-toast [message]="notice()" />
     } @if(loading() || selecting()) {
-    <p role="status">Loading…</p>
+    <p role="status">{{'Common.Loading' | translate}}</p>
     } @if(ready()) {
-    <div class="groups-tabs" role="tablist" aria-label="Group tasks">
+    <div
+      class="groups-tabs"
+      role="tablist"
+      [attr.aria-label]="'Groups.Tasks' | translate"
+    >
       <button
         id="manage-groups-tab"
         class="groups-tab"
@@ -80,7 +104,7 @@
         [disabled]="busy() || selecting()"
         (click)="selectTab('manage')"
       >
-        Manage groups
+        {{'Groups.Manage' | translate}}
       </button>
       <button
         id="create-group-tab"
@@ -92,7 +116,7 @@
         [disabled]="busy() || selecting()"
         (click)="selectTab('create')"
       >
-        Create group
+        {{'Groups.Create' | translate}}
       </button>
     </div>
     @if(activeTab === 'create') {
@@ -103,13 +127,11 @@
     >
       <div class="groups-card groups-create-card">
         <div>
-          <h2>Create a group</h2>
-          <p>
-            Create a group before assigning it access to folders or artifacts.
-          </p>
+          <h2>{{'Groups.CreateHeading' | translate}}</h2>
+          <p>{{'Groups.CreateIntro' | translate}}</p>
         </div>
         <form class="groups-create-form" (ngSubmit)="create()">
-          <label for="new-group-name">Group name</label>
+          <label for="new-group-name">{{'Groups.GroupName' | translate}}</label>
           <div class="groups-inline-controls">
             <input
               spellcheck="false"
@@ -117,7 +139,7 @@
               class="form-control"
               name="newName"
               [(ngModel)]="newName"
-              placeholder="Enter a group name"
+              [placeholder]="'Groups.EnterName' | translate"
               [disabled]="busy() || selecting()"
               required
             />
@@ -125,7 +147,7 @@
               class="btn btn-primary groups-primary-action"
               [disabled]="busy() || selecting() || !newName.trim()"
             >
-              Create group
+              {{'Groups.Create' | translate}}
             </button>
           </div>
         </form>
@@ -143,13 +165,13 @@
       role="tabpanel"
       aria-labelledby="manage-groups-tab"
     >
-      <h2 id="group-search-heading">Find a group</h2>
+      <h2 id="group-search-heading">{{'Groups.Find' | translate}}</h2>
       <cedar-group-picker
         class="groups-selector"
         id="group-search-picker"
-        label="Find a group"
+        [label]="'Groups.Find' | translate"
         labelledBy="group-search-heading"
-        placeholder="Search for a group"
+        [placeholder]="'Groups.SearchGroups' | translate"
         [options]="groupOptions"
         [clearOnPick]="true"
         [disabled]="busy() || selecting()"
@@ -157,7 +179,7 @@
       />
       @if(!selected() && !selecting()) {
       <div class="groups-empty-state">
-        Select a group to view its details and members.
+        {{'Groups.SelectPrompt' | translate}}
       </div>
       }
       <ng-container *ngTemplateOutlet="details" />
@@ -171,15 +193,13 @@
     @if(g.specialGroup || !canAdmin) {
     <div class="groups-selected-message">
       <p>
-        {{g.specialGroup ? 'This built-in group contains every CEDAR user and
-        cannot be changed.' : 'You can view this group, but only a Group
-        Administrator can change it.'}}
+        {{(g.specialGroup ? 'Groups.BuiltIn' : 'Groups.ViewOnly') | translate}}
       </p>
     </div>
     }
     <form class="groups-details-form" (ngSubmit)="save()">
       <div class="groups-field">
-        <label for="group-name">Name</label>
+        <label for="group-name">{{'Common.Name' | translate}}</label>
         <input
           spellcheck="false"
           id="group-name"
@@ -191,7 +211,9 @@
         />
       </div>
       <div class="groups-field">
-        <label for="group-description">Description</label>
+        <label for="group-description"
+          >{{'Common.Description' | translate}}</label
+        >
         <textarea
           spellcheck="false"
           id="group-description"
@@ -200,7 +222,7 @@
           name="editDescription"
           [(ngModel)]="editDescription"
           [disabled]="!canAdmin || busy()"
-          [placeholder]="canAdmin ? 'Optional description' : ''"
+          [placeholder]="canAdmin ? ('Groups.OptionalDescription' | translate) : ''"
         ></textarea>
       </div>
       @if(canAdmin) {
@@ -210,8 +232,8 @@
           class="btn groups-delete-button"
           [disabled]="busy()"
           (click)="remove()"
-          aria-label="Delete group"
-          title="Delete group"
+          [attr.aria-label]="'Groups.Delete' | translate"
+          [title]="'Groups.Delete' | translate"
         >
           <ng-container *ngTemplateOutlet="trash" />
         </button>
@@ -219,7 +241,7 @@
           class="btn btn-primary groups-primary-action"
           [disabled]="busy() || !editName.trim()"
         >
-          Save
+          {{'Common.Save' | translate}}
         </button>
       </div>
       }
@@ -227,10 +249,8 @@
     <div class="groups-members-section">
       <div class="groups-members-heading">
         <div>
-          <h3>Members</h3>
-          <p>
-            The Group Administrator role allows a member to manage this group.
-          </p>
+          <h3>{{'Groups.Members' | translate}}</h3>
+          <p>{{'Groups.AdministratorRole' | translate}}</p>
         </div>
         @if(!restricted()) {
         <span class="groups-member-count">{{members()?.length || 0}}</span> }
@@ -240,8 +260,8 @@
         <div>
           <cedar-group-picker
             id="new-group-member"
-            label="Add a member"
-            placeholder="Search for a user"
+            [label]="'Groups.AddMemberLabel' | translate"
+            [placeholder]="'Groups.SearchUsers' | translate"
             [options]="memberOptions"
             [(value)]="newMember"
             [disabled]="busy()"
@@ -251,14 +271,18 @@
           class="btn btn-primary groups-primary-action"
           [disabled]="busy() || !newMember"
         >
-          Add member
+          {{'Groups.AddMember' | translate}}
         </button>
       </form>
       }
-      <div class="groups-member-list" role="list" aria-label="Group members">
+      <div
+        class="groups-member-list"
+        role="list"
+        [attr.aria-label]="'Groups.MemberList' | translate"
+      >
         @if(members()?.length) {
         <div class="groups-member-list-header">
-          <span>Group Administrator</span>
+          <span>{{'Groups.Administrator' | translate}}</span>
         </div>
         } @for(m of members(); track m.user['@id']) {
         <div
@@ -274,7 +298,7 @@
           </div>
           <label
             class="groups-admin-control"
-            [title]="onlyAdmin(m) ? 'A group must have at least one Group Administrator.' : ''"
+            [title]="onlyAdmin(m) ? ('Groups.LastAdministrator' | translate) : ''"
           >
             <input
               spellcheck="false"
@@ -282,12 +306,12 @@
               [checked]="m.administrator"
               (click)="$event.preventDefault(); toggleAdmin(m)"
               [disabled]="!canAdmin || busy() || onlyAdmin(m)"
-              [attr.aria-label]="userName(m.user) + ' is a Group Administrator'"
+              [attr.aria-label]="'Groups.IsAdministrator' | translate: {name: userName(m.user)}"
             />
           </label>
           <span
             class="groups-remove-member-wrapper"
-            [title]="onlyAdmin(m) ? 'Assign another Group Administrator before removing this member.' : ''"
+            [title]="onlyAdmin(m) ? ('Groups.AssignAnother' | translate) : ''"
           >
             @if(canAdmin) {
             <button
@@ -295,7 +319,7 @@
               class="btn groups-remove-member"
               [disabled]="busy() || onlyAdmin(m)"
               (click)="removeMember(m)"
-              [attr.aria-label]="'Remove ' + userName(m.user) + ' from the group'"
+              [attr.aria-label]="'Groups.RemoveMember' | translate: {name: userName(m.user)}"
             >
               <ng-container *ngTemplateOutlet="trash" />
             </button>
@@ -304,10 +328,12 @@
         </div>
         } @empty { @if(restricted()) {
         <div class="groups-empty-members">
-          Only a Group Administrator can see who is in this group.
+          {{'Groups.MembersHidden' | translate}}
         </div>
         } @else if(members()) {
-        <div class="groups-empty-members">This group has no members.</div>
+        <div class="groups-empty-members">
+          {{'Groups.NoMembers' | translate}}
+        </div>
         } }
       </div>
     </div>

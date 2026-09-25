@@ -1,5 +1,6 @@
 import type { UserProfile } from "./account-types";
-import { Injectable } from "@angular/core";
+import { Injectable, inject } from "@angular/core";
+import { I18n } from "./i18n";
 import { Config, Resource, collections } from "./resource";
 interface Auth {
   initUserHandler(ok: (authenticated: boolean) => void, fail: () => void): void;
@@ -36,6 +37,7 @@ export interface Reply<T> {
 export class Backend {
   config!: Config;
   profile!: UserProfile;
+  private readonly i18n = inject(I18n);
   get userId() {
     return this.auth.getParsedToken().sub;
   }
@@ -65,12 +67,12 @@ export class Backend {
       cache: "no-store",
     });
     if (!response.ok)
-      throw new Error("Unable to load workspace configuration.");
+      throw new Error(this.i18n.t("Errors.ConfigurationUnavailable"));
     this.config = await response.json();
     this.auth = new window.KeycloakUserHandler();
     const authenticated = await new Promise<boolean>((resolve, reject) =>
       this.auth.initUserHandler(resolve, () =>
-        reject(new Error("Sign-in failed. Please reload.")),
+        reject(new Error(this.i18n.t("Errors.SignInFailed"))),
       ),
     );
     return authenticated;
@@ -100,7 +102,7 @@ export class Backend {
   private renew(seconds: number) {
     return (this.refresh ||= new Promise<void>((resolve, reject) =>
       this.auth.refreshToken(seconds, resolve, () =>
-        reject(new Error("Your session expired. Please sign in again.")),
+        reject(new Error(this.i18n.t("Errors.SessionExpired"))),
       ),
     ).finally(() => {
       this.refresh = undefined;
@@ -123,7 +125,7 @@ export class Backend {
       this.config.groupRestAPI,
     ].map((base) => new URL(base).origin);
     if (!allowed.includes(new URL(url).origin))
-      throw new Error("Untrusted API destination.");
+      throw new Error(this.i18n.t("Errors.UntrustedDestination"));
     await this.renew(30);
     for (let attempt = 0; attempt < 2; attempt++) {
       const headers: Record<string, string> = {
@@ -152,17 +154,18 @@ export class Backend {
           throw new HttpError(
             412,
             /no longer exists/i.test(message)
-              ? "This item was deleted. Your edits have been kept. Return to Workspace to choose another item."
-              : "This item changed since you opened it. Your edits have been kept. Cancel and reopen to review the latest version.",
+              ? this.i18n.t("Errors.ItemDeleted")
+              : this.i18n.t("Errors.ItemChanged"),
           );
         throw new HttpError(
           response.status,
-          message || `Request failed (${response.status}).`,
+          message ||
+            this.i18n.t("Errors.RequestFailed", { status: response.status }),
         );
       }
       return response;
     }
-    throw new Error("Your session expired. Please sign in again.");
+    throw new Error(this.i18n.t("Errors.SessionExpired"));
   }
   async request<T>(
     path: string,

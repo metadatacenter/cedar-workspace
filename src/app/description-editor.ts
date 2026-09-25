@@ -7,19 +7,22 @@ import {
   signal,
 } from "@angular/core";
 import { FormsModule } from "@angular/forms";
+import { TranslatePipe } from "@ngx-translate/core";
 import { Backend, Reply } from "./backend.service";
 import { Resource, can, title } from "./resource";
 
 @Component({
   selector: "cedar-description-editor",
-  imports: [FormsModule],
+  imports: [FormsModule, TranslatePipe],
   template: `
     @if (editable) {
-      <label for="resource-description">Description</label>
+      <label for="resource-description">{{
+        "Common.Description" | translate
+      }}</label>
       <textarea
         id="resource-description"
         rows="2"
-        placeholder="No description"
+        [placeholder]="'Description.Empty' | translate"
         [ngModel]="draft()"
         (ngModelChange)="draft.set($event)"
         [disabled]="busy() || !snapshot()"
@@ -28,7 +31,7 @@ import { Resource, can, title } from "./resource";
       @if (dirty) {
         <div class="actions">
           <button type="button" [disabled]="busy()" (click)="cancel()">
-            Cancel
+            {{ "Common.Cancel" | translate }}
           </button>
           <button
             type="button"
@@ -36,18 +39,24 @@ import { Resource, can, title } from "./resource";
             [disabled]="busy()"
             (click)="save()"
           >
-            {{ busy() ? "Saving…" : "Save" }}
+            {{ (busy() ? "Common.Saving" : "Common.Save") | translate }}
           </button>
         </div>
       }
     } @else {
-      <div class="heading">Description</div>
-      <p>{{ resource()["schema:description"] || "No description" }}</p>
+      <div class="heading">{{ "Common.Description" | translate }}</div>
+      <p>
+        {{
+          resource()["schema:description"] || ("Description.Empty" | translate)
+        }}
+      </p>
     }
     @if (error()) {
       <p role="alert">{{ error() }}</p>
       @if (!snapshot()) {
-        <button type="button" (click)="load()">Retry</button>
+        <button type="button" (click)="load()">
+          {{ "Common.Retry" | translate }}
+        </button>
       }
     }
   `,

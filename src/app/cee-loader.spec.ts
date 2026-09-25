@@ -1,3 +1,4 @@
+import { TestBed } from "@angular/core/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CeeLoader } from "./cee-loader";
 
@@ -6,7 +7,7 @@ describe("CEE bundle loading", () => {
   let loader: CeeLoader;
   beforeEach(() => {
     registered = false;
-    loader = new CeeLoader();
+    loader = TestBed.runInInjectionContext(() => new CeeLoader());
     vi.spyOn(customElements, "get").mockImplementation(() =>
       registered ? HTMLElement : undefined,
     );

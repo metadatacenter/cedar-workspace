@@ -1,0 +1,7 @@
+[
+  {
+    "file": "src/index.html",
+    "text": "CEDAR Workspace",
+    "reason": "The host page's static title, shown only until the application starts; main.ts then replaces it with the translated Header.Brand."
+  }
+]

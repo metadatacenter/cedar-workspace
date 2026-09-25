@@ -52,7 +52,10 @@ export const collections: Record<ResourceType, string> = {
   field: "template-fields",
   instance: "template-instances",
 };
-export const title = (r: Resource) => r["schema:name"] || r.name || "Untitled";
+// The English default is what a nameless resource is saved under; screens pass
+// the translated word instead.
+export const title = (r: Resource, untitled = "Untitled") =>
+  r["schema:name"] || r.name || untitled;
 export const can = (r: Resource | undefined, action: string) =>
   !!r &&
   [

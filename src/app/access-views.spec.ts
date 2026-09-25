@@ -138,9 +138,11 @@ describe("Groups legacy view contracts", () => {
       el.querySelector('[aria-label="Remove Grace Hopper from the group"] svg'),
     ).not.toBeNull();
     expect(el.textContent).toContain("Save");
+    // The label is a translated binding, so it is read from the rendered picker.
     expect(
-      el.querySelector('cedar-group-picker[label="Add a member"]'),
-    ).not.toBeNull();
+      el.querySelector('cedar-group-picker label[for="new-group-member-input"]')
+        ?.textContent,
+    ).toBe("Add a member");
     expect(el.textContent).not.toContain("@example.org");
   });
   it("keeps search independent from the selected editor and never claims an unreadable roster is empty", async () => {

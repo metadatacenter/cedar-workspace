@@ -1,33 +1,35 @@
 <cedar-account-shell
-  title="Profile"
+  [title]="'Account.Profile.Title' | translate"
   [loading]="loading()"
   [error]="error()"
   [notice]="notice()"
 >
   @if(profile){
   <section class="account-card">
-    <h2 class="account-section-heading"><cedar-icon name="user" />Account</h2>
+    <h2 class="account-section-heading">
+      <cedar-icon name="user" />{{'Account.Profile.Account' | translate}}
+    </h2>
     <div class="account-section-body">
       <dl class="profile-facts">
-        @for(field of fields;track field[0]){
-        <dt>{{field[0]}}</dt>
+        @for(field of fields;track field.label){
+        <dt>{{field.label | translate}}</dt>
         <dd>
           <span
             class="profile-value"
-            [class.profile-identifier]="field[0]==='UUID' || field[0]==='@id' || field[0].includes('folder id')"
-            >{{field[1] || '—'}}</span
+            [class.profile-identifier]="field.identifier"
+            >{{field.value || '—'}}</span
           >
           <button
             class="profile-copy"
-            [attr.aria-label]="'Copy '+field[0]"
-            [title]="'Copy '+field[0]"
-            (click)="copy(field[1])"
+            [attr.aria-label]="'Account.Profile.CopyField' | translate: {field: (field.label | translate)}"
+            [title]="'Account.Profile.CopyField' | translate: {field: (field.label | translate)}"
+            (click)="copy(field.value)"
           >
             <cedar-icon name="copy" />
           </button>
         </dd>
         }@if(memberSince()){
-        <dt>Member since</dt>
+        <dt>{{'Account.Profile.MemberSince' | translate}}</dt>
         <dd>{{memberSince()}}</dd>
         }
       </dl>
@@ -35,15 +37,14 @@
   </section>
   <section class="account-card">
     <h2 class="account-section-heading">
-      <cedar-icon name="lock" />API Keys <small>{{keys().length}} / 20</small>
+      <cedar-icon name="lock" />{{'Account.Profile.ApiKeys' | translate}}
+      <small>{{keys().length}} / 20</small>
     </h2>
     <div class="account-section-body">
-      <p>
-        Keep your keys secret. Each grants access to your CEDAR account. Keep at
-        least one active key.
-      </p>
+      <p>{{'Account.Profile.KeysIntro' | translate}}</p>
       <form (ngSubmit)="mutate('create')">
-        <label for="key-description">New key description (optional)</label
+        <label for="key-description"
+          >{{'Account.Profile.NewKeyDescription' | translate}}</label
         ><input
           spellcheck="false"
           id="key-description"
@@ -51,33 +52,35 @@
           [(ngModel)]="description"
           [disabled]="busy() || keys().length>=20"
         /><button class="primary" [disabled]="busy() || keys().length>=20">
-          New key
+          {{'Account.Profile.NewKey' | translate}}
         </button>
       </form>
       @if(keys().length>=20){
-      <p>You have reached the limit of 20 keys.</p>
+      <p>{{'Account.Profile.KeyLimit' | translate}}</p>
       } @for(key of keys();track key.id){
       <article
         class="account-key"
-        [attr.aria-label]="key.description || 'API key'"
+        [attr.aria-label]="key.description || ('Account.Profile.ApiKey' | translate)"
       >
-        <h3>{{key.description || 'API key'}}</h3>
+        <h3>{{key.description || ('Account.Profile.ApiKey' | translate)}}</h3>
         <p>
-          {{key.enabled?'Active':'Disabled'}} · {{date(key.creationDate)}}
-          {{key.serviceName}}
+          {{(key.enabled?'Account.Profile.Active':'Account.Profile.Disabled') |
+          translate}} · {{date(key.creationDate)}} {{key.serviceName}}
         </p>
         <code>{{keyText(key)}}</code>
         <div class="account-actions">
           <button (click)="toggle(key)">
-            {{revealed().has(key.id)?'Hide':'Reveal'}}</button
-          ><button (click)="copy(key.key)">Copy key</button
+            {{(revealed().has(key.id)?'Account.Profile.Hide':'Account.Profile.Reveal')
+            | translate}}</button
+          ><button (click)="copy(key.key)">
+            {{'Account.Profile.CopyKey' | translate}}</button
           ><button [disabled]="busy()" (click)="mutate('regenerate',key)">
-            Regenerate</button
+            {{'Account.Profile.Regenerate' | translate}}</button
           ><button
             [disabled]="busy() || !canDelete(key)"
             (click)="mutate('delete',key)"
           >
-            Delete
+            {{'Common.Delete' | translate}}
           </button>
         </div>
       </article>
@@ -86,22 +89,19 @@
   </section>
   <section class="account-card">
     <h2 class="account-section-heading">
-      <cedar-icon name="code" />Using the CEDAR REST API
+      <cedar-icon name="code" />{{'Account.Profile.RestHeading' | translate}}
     </h2>
     <div class="account-section-body">
-      <p>
-        Replace &lt;API_KEY&gt; with a key above. Artifact identifiers in URLs
-        must be URL encoded.
-      </p>
+      <p>{{'Account.Profile.RestIntro' | translate}}</p>
       @for(example of examples;track example[0]){
       <article class="profile-example">
         <header>
-          <h3>{{example[0]}}</h3>
+          <h3>{{example[0] | translate}}</h3>
           <button
-            [attr.aria-label]="'Copy example: '+example[0]"
+            [attr.aria-label]="'Account.Profile.CopyExample' | translate: {example: (example[0] | translate)}"
             (click)="copy(example[1])"
           >
-            <cedar-icon name="copy" />Copy
+            <cedar-icon name="copy" />{{'Common.Copy' | translate}}
           </button>
         </header>
         <pre><code>{{example[1]}}</code></pre>

@@ -1,9 +1,10 @@
 import { Component, OnInit, inject, signal } from "@angular/core";
+import { TranslatePipe } from "@ngx-translate/core";
 import { Backend } from "./backend.service";
 import { AccountShell } from "./account-shell";
 @Component({
   selector: "cedar-privacy-page",
-  imports: [AccountShell],
+  imports: [AccountShell, TranslatePipe],
   templateUrl: "./privacy.html",
 })
 export class Privacy implements OnInit {

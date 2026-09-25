@@ -2,10 +2,12 @@ import { Toast } from "./toast";
 import { Confirmation } from "./confirmation";
 import { Component, OnInit, inject, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
+import { TranslatePipe } from "@ngx-translate/core";
 import { Backend, HttpError } from "./backend.service";
 import { NgTemplateOutlet } from "@angular/common";
 import { Icon } from "./icon";
 import { GroupPicker } from "./group-picker";
+import { I18n } from "./i18n";
 export interface Group {
   "@id": string;
   "schema:name": string;
@@ -22,18 +24,27 @@ export interface Member {
   administrator: boolean;
   member: boolean;
 }
-export const groupName = (g: Group) =>
-  g.specialGroup ? "Everyone" : g["schema:name"];
-export const userName = (u: GroupUser) =>
-  [u.firstName, u.lastName].filter(Boolean).join(" ") || "Unnamed user";
+export const groupName = (g: Group, i18n: Pick<I18n, "t">) =>
+  g.specialGroup ? i18n.t("Common.Everyone") : g["schema:name"];
+export const userName = (u: GroupUser, i18n: Pick<I18n, "t">) =>
+  [u.firstName, u.lastName].filter(Boolean).join(" ") ||
+  i18n.t("Common.UnnamedUser");
 @Component({
   selector: "cedar-groups-page",
-  imports: [Toast, FormsModule, NgTemplateOutlet, Icon, GroupPicker],
+  imports: [
+    Toast,
+    FormsModule,
+    NgTemplateOutlet,
+    Icon,
+    GroupPicker,
+    TranslatePipe,
+  ],
   styleUrl: "./groups.scss",
   templateUrl: "./groups.html",
 })
 export class Groups implements OnInit {
-  readonly cedarVersion = window.cedarVersion || "unknown";
+  private readonly i18n = inject(I18n);
+  readonly cedarVersion = window.cedarVersion || this.i18n.t("Common.Unknown");
   readonly confirmation = inject(Confirmation);
   readonly api = inject(Backend);
   readonly loading = signal(true);
@@ -59,7 +70,7 @@ export class Groups implements OnInit {
     return this.filteredGroups.map((g) => ({
       id: g["@id"],
       label:
-        groupName(g) +
+        this.groupName(g) +
         (g["schema:description"]?.trim()
           ? " - " + g["schema:description"]!.trim()
           : ""),
@@ -68,7 +79,7 @@ export class Groups implements OnInit {
   get memberOptions() {
     return this.availableUsers.map((u) => ({
       id: u["@id"],
-      label: userName(u),
+      label: this.userName(u),
     }));
   }
   async chooseGroup(id: string) {
@@ -99,8 +110,8 @@ export class Groups implements OnInit {
   editName = "";
   editDescription = "";
   newMember = "";
-  readonly groupName = groupName;
-  readonly userName = userName;
+  readonly groupName = (g: Group) => groupName(g, this.i18n);
+  readonly userName = (u: GroupUser) => userName(u, this.i18n);
   get base() {
     return this.api.config.groupRestAPI.replace(/\/$/, "") + "/groups";
   }
@@ -110,11 +121,11 @@ export class Groups implements OnInit {
   get filteredGroups() {
     return this.groups()
       .filter((g) =>
-        (groupName(g) + " " + (g["schema:description"] || ""))
+        (this.groupName(g) + " " + (g["schema:description"] || ""))
           .toLowerCase()
           .includes(this.search.toLowerCase()),
       )
-      .sort((a, b) => groupName(a).localeCompare(groupName(b)));
+      .sort((a, b) => this.groupName(a).localeCompare(this.groupName(b)));
   }
   get availableUsers() {
     return this.users().filter(
@@ -148,7 +159,7 @@ export class Groups implements OnInit {
       this.groups.set(groups.data.groups || []);
       this.users.set(
         (users.data.users || []).sort((a, b) =>
-          userName(a).localeCompare(userName(b)),
+          this.userName(a).localeCompare(this.userName(b)),
         ),
       );
       this.ready.set(true);
@@ -213,7 +224,7 @@ export class Groups implements OnInit {
         ),
       );
       this.groupEtag = detail.etag;
-      this.editName = groupName(detail.data);
+      this.editName = this.groupName(detail.data);
       this.editDescription = detail.data["schema:description"] || "";
       if (returningToCreate) this.activeTab = "create";
     } catch (e) {
@@ -228,9 +239,7 @@ export class Groups implements OnInit {
   private requireEtag(value: string | null) {
     if (!value) {
       this.stale.set(true);
-      throw new Error(
-        "The server did not return a revision. Reload this group before making changes.",
-      );
+      throw new Error(this.i18n.t("Groups.NoRevision"));
     }
     return value;
   }
@@ -272,7 +281,7 @@ export class Groups implements OnInit {
         this.search = "";
         await this.load(r.data);
       },
-      "Group created.",
+      this.i18n.t("Groups.Created"),
       false,
     );
   }
@@ -298,7 +307,7 @@ export class Groups implements OnInit {
       this.groups.update((gs) =>
         gs.map((v) => (v["@id"] === g["@id"] ? current : v)),
       );
-    }, "Group details saved.");
+    }, this.i18n.t("Groups.DetailsSaved"));
   }
   async remove() {
     const g = this.selected();
@@ -306,7 +315,9 @@ export class Groups implements OnInit {
       !g ||
       !this.canAdmin ||
       this.busy() ||
-      !(await this.confirmation.confirm("Delete group “" + groupName(g) + "”?"))
+      !(await this.confirmation.confirm(
+        this.i18n.t("Groups.ConfirmDelete", { name: this.groupName(g) }),
+      ))
     )
       return;
     if (this.selected() !== g || !this.canAdmin || this.busy()) return;
@@ -321,7 +332,7 @@ export class Groups implements OnInit {
       this.selected.set(null);
       this.members.set(null);
       if (this.createdGroup?.["@id"] === g["@id"]) this.createdGroup = null;
-    }, "Group deleted.");
+    }, this.i18n.t("Groups.Deleted"));
   }
   async addMember() {
     const u = this.availableUsers.find((u) => u["@id"] === this.newMember);
@@ -348,11 +359,12 @@ export class Groups implements OnInit {
       !this.members()?.includes(m) ||
       this.busy() ||
       !(await this.confirmation.confirm(
-        (m.administrator
-          ? "Remove administrator access for "
-          : "Make an administrator: ") +
-          userName(m.user) +
-          "?",
+        this.i18n.t(
+          m.administrator
+            ? "Groups.ConfirmRemoveAdministrator"
+            : "Groups.ConfirmMakeAdministrator",
+          { name: this.userName(m.user) },
+        ),
       ))
     )
       return;
@@ -387,6 +399,6 @@ export class Groups implements OnInit {
         this.members.set(null);
         this.restricted.set(true);
       }
-    }, "Group members saved.");
+    }, this.i18n.t("Groups.MembersSaved"));
   }
 }

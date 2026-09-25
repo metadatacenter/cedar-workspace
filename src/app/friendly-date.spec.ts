@@ -1,8 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { TestBed } from "@angular/core/testing";
+import { beforeEach, describe, expect, it } from "vitest";
 import { FriendlyDatePipe } from "./friendly-date";
+import { provideWorkspaceTranslations } from "./i18n";
 
 describe("Workspace friendly dates", () => {
-  const pipe = new FriendlyDatePipe();
+  let pipe: FriendlyDatePipe;
+  beforeEach(() => {
+    pipe = TestBed.runInInjectionContext(() => new FriendlyDatePipe());
+  });
   const now = new Date(2026, 8, 22, 12).getTime();
   it.each([
     [0, "Just now"],
@@ -36,5 +41,41 @@ describe("Workspace friendly dates", () => {
   it("handles missing and invalid dates", () => {
     expect(pipe.transform(undefined, now)).toBe("—");
     expect(pipe.transform("invalid", now)).toBe("—");
+  });
+});
+
+describe("Workspace friendly dates in Hungarian", () => {
+  let pipe: FriendlyDatePipe;
+  const now = new Date(2026, 8, 22, 12).getTime();
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [provideWorkspaceTranslations("hu")],
+    });
+    pipe = TestBed.runInInjectionContext(() => new FriendlyDatePipe());
+  });
+  // Hungarian keeps the noun singular after a numeral.
+  it.each([
+    [0, "Az imént"],
+    [60_000, "1 perce"],
+    [180_000, "3 perce"],
+    [3_600_000, "1 órája"],
+    [10_800_000, "3 órája"],
+    [86_400_000, "1 napja"],
+    [259_200_000, "3 napja"],
+  ])("formats an age of %i milliseconds as %s", (age, expected) => {
+    expect(pipe.transform(new Date(now - age).toISOString(), now)).toBe(
+      expected,
+    );
+  });
+  it("formats older dates with the Hungarian locale", () => {
+    expect(pipe.transform(new Date(2026, 8, 15).toISOString(), now)).toBe(
+      new Intl.DateTimeFormat("hu-HU", {
+        day: "numeric",
+        month: "short",
+      }).format(new Date(2026, 8, 15)),
+    );
+    expect(pipe.transform(new Date(2021, 5, 4).toISOString(), now)).toBe(
+      "2021. jún. 4.",
+    );
   });
 });

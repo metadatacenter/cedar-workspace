@@ -13,7 +13,7 @@
         type="button"
         (click)="close()"
         [disabled]="busy()"
-        aria-label="Close dialog"
+        [attr.aria-label]="'ResourceDialog.Close' | translate"
       >
         <cedar-icon name="close" />
       </button>
@@ -29,7 +29,7 @@
     }
     <fieldset [disabled]="busy()">
       @if(['new-folder','rename','copy'].includes(action)){<label
-        >Name<input
+        >{{'Common.Name' | translate}}<input
           spellcheck="false"
           [attr.aria-invalid]="submitted && nameError ? true : null"
           [attr.aria-describedby]="submitted && nameError ? 'name-error' : null"
@@ -42,14 +42,14 @@
       @if(submitted && nameError){
       <p id="name-error" class="field-error" role="alert">{{nameError}}</p>
       } } @if(['new-folder','rename'].includes(action)){<label
-        >Description<textarea
+        >{{'Common.Description' | translate}}<textarea
           spellcheck="false"
           name="description"
           [(ngModel)]="description"
           rows="3"
         ></textarea></label
       >} @if(['publish','draft'].includes(action)){<label
-        >Version<input
+        >{{'Common.Version' | translate}}<input
           spellcheck="false"
           [attr.aria-invalid]="submitted && versionError ? true : null"
           [attr.aria-describedby]="submitted && versionError ? 'version-error' : null"
@@ -68,24 +68,27 @@
           type="checkbox"
           name="propagate"
           [(ngModel)]="propagate"
-        />Keep sharing permissions</label
+        />{{'ResourceDialog.KeepSharing' | translate}}</label
       ><label
-        >New folder name (optional)<input
+        >{{'ResourceDialog.NewFolderName' | translate}}<input
           spellcheck="false"
           name="newFolderName"
           [(ngModel)]="newFolderName" /></label
       >} @if(choosesFolder){
-      <section class="folder-picker" aria-label="Destination folder">
-        <h3>Destination</h3>
+      <section
+        class="folder-picker"
+        [attr.aria-label]="'ResourceDialog.DestinationFolder' | translate"
+      >
+        <h3>{{'ResourceDialog.Destination' | translate}}</h3>
         <nav class="breadcrumbs">
           <button type="button" (click)="browse(api.profile.homeFolderId)">
-            Home</button
+            {{'Common.Home' | translate}}</button
           >@for(p of path();track p['@id']){<span
             class="breadcrumb-separator"
             aria-hidden="true"
             >/</span
           ><button type="button" (click)="browse(p['@id'])">
-            {{title(p)==='/'?'All':title(p)}}</button
+            {{title(p)==='/'?('Common.All' | translate):title(p)}}</button
           >}
         </nav>
         <div class="folder-list">
@@ -96,7 +99,7 @@
           >
             ▰ {{title(f)}}</button
           >}@empty{
-          <p>No subfolders</p>
+          <p>{{'ResourceDialog.NoSubfolders' | translate}}</p>
           }
         </div>
         <button
@@ -104,37 +107,41 @@
           (click)="browse(target,targetOffset-50)"
           [disabled]="targetOffset===0"
         >
-          Previous</button
+          {{'Common.Previous' | translate}}</button
         ><button
           type="button"
           (click)="browse(target,targetOffset+50)"
           [disabled]="targetOffset+folders().length>=targetTotal"
         >
-          Next
+          {{'Common.Next' | translate}}
         </button>
-        <p>Selected: {{targetResource?title(targetResource):'Loading…'}}</p>
+        <p>{{'ResourceDialog.Selected' | translate: {name:
+          targetResource?title(targetResource):('Common.Loading' | translate)}
+          }}</p>
         @if(!destinationAllowed){
-        <p>You cannot use this folder as the destination.</p>
+        <p>{{'ResourceDialog.DestinationNotAllowed' | translate}}</p>
         }
       </section>
       } @if(action==='delete'){
       <p>
-        Are you sure you want to delete the selected {{resource?.resourceType}}?
+        {{'ResourceDialog.ConfirmDelete.' + resource?.resourceType | translate}}
       </p>
       } @if(action==='make-open'){
-      <p>This item will be available through OpenView.</p>
+      <p>{{'ResourceDialog.WillBeOpen' | translate}}</p>
       } @if(action==='make-not-open'){
-      <p>This item will no longer be available through OpenView.</p>
+      <p>{{'ResourceDialog.WillNotBeOpen' | translate}}</p>
       }
     </fieldset>
     <footer>
-      <button type="button" (click)="close()" [disabled]="busy()">Cancel</button
+      <button type="button" (click)="close()" [disabled]="busy()">{{
+        'Common.Cancel' | translate
+      }}</button
       ><button
         class="primary"
         type="submit"
         [disabled]="busy()||!destinationAllowed"
       >
-        {{busy()?'Working…':action==='delete'?'Yes, delete it!':['make-open','make-not-open'].includes(action)?'Ok':'Save'}}
+        {{submitLabel | translate}}
       </button>
     </footer>
   </form>

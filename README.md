@@ -47,6 +47,24 @@ Folders remain mixed by default. Folder grouping uses the server's compound
 `sort=foldersFirst,<field>` order before pagination, including search and shared
 views, and requires the corresponding microservice-library support.
 
+## Languages
+
+Workspace is available in English and Hungarian. It shows the first language in
+the browser's `navigator.languages` whose primary subtag is `en` or `hu`, and
+English otherwise; English is also the fallback for any missing string. Every
+user-visible string lives in `src/assets/i18n/en.json` and `hu.json`, which
+`@ngx-translate/core` reads from the bundle, so no language map is fetched at run
+time. The metadata editor passes the active language to CEE as its
+`defaultLanguage`, with English as `fallbackLanguage`. Dates use `hu-HU` in
+Hungarian; in English each date keeps the locale it used before localization.
+
+`npm test` enforces this. `translations.spec.ts` checks that both maps declare the
+same keys and parameters, that keys are ASCII, and that no Hungarian value repeats
+the English unless it is listed as legitimately identical.
+`tools/i18n-guard.test.mjs` fails when a template or a user-facing TypeScript call
+states literal text instead of a translation key; its deliberate exceptions, each
+with a reason, are in `tools/i18n-allowlist.json`.
+
 ## Local development
 
 Use Node 24.19.0. Start the managed app with `cedarcli native start frontend workspace`.
