@@ -205,6 +205,8 @@ textarea {
 .new-menu {
   margin-top: 0;
   position: relative;
+  // As wide as its button. A full-width box sat over the collapse arrow and took its clicks.
+  width: fit-content;
 }
 .primary {
   @include controls.primary-action;
