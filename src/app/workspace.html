@@ -344,6 +344,7 @@
           @for(r of rows();track r['@id']){
           <tr
             class="explorer-item"
+            [class.explorer-schema]="['template','element','field'].includes(r.resourceType)"
             [class.selected]="selectionIds().includes(r['@id'])"
             [attr.aria-selected]="selectionIds().includes(r['@id'])"
             [attr.data-resource-id]="r['@id']"
@@ -394,7 +395,19 @@
               }
             </td>
             <td>
-              @if(grid()){<span class="explorer-kind"
+              @if(grid() &&
+              ['template','element','field'].includes(r.resourceType)){
+              <span class="explorer-release">
+                <span [attr.title]="'Common.Version' | translate"
+                  >{{r['pav:version'] || ('Dashboard.Unversioned' |
+                  translate)}}</span
+                >
+                <span aria-hidden="true"> · </span>
+                <span [attr.title]="'Dashboard.Status' | translate"
+                  >{{status(r)}}</span
+                >
+              </span>
+              } @if(grid()){<span class="explorer-kind"
                 >{{'ResourceTypes.' + r.resourceType | translate}} · </span
               >}
               <time

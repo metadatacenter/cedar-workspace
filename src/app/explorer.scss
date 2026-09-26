@@ -140,3 +140,25 @@
   color: var(--cedar-text-muted);
   margin-top: 4px;
 }
+
+.explorer-grid .explorer-schema {
+  padding-block: 6px;
+  gap: 2px;
+}
+.explorer-grid .explorer-schema td:first-child {
+  gap: 2px;
+}
+.explorer-grid .explorer-schema .explorer-name {
+  line-height: 18px;
+  max-height: 36px;
+}
+.explorer-grid .explorer-schema td:nth-child(2) {
+  line-height: 15px;
+  flex-shrink: 0;
+}
+.explorer-release {
+  display: block;
+  color: var(--cedar-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

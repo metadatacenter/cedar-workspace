@@ -112,3 +112,57 @@ for (const width of [1280, 375]) {
       });
   });
 }
+
+test("schema cards show version and release status without expanding the cards", async ({
+  page,
+  api,
+}) => {
+  await page.route("**/api/resource/folders/home/contents?**", (route) =>
+    route.fulfill({
+      json: {
+        resources: ["template", "element", "field", "instance", "folder"].map(
+          (resourceType, index) => ({
+            ...resource,
+            resourceType,
+            "@id": `schema-${index}`,
+            "schema:name":
+              "A long schema artifact name that occupies two lines",
+            "pav:version": "2.1.0",
+            "bibo:status": index === 0 ? "bibo:published" : "bibo:draft",
+          }),
+        ),
+        totalCount: 5,
+        pathInfo: [],
+      },
+    }),
+  );
+  await page.route("**/templates/schema-0/report", (route) =>
+    route.fulfill({
+      json: {
+        ...resource,
+        "@id": "schema-0",
+        "pav:version": "2.1.0",
+        "bibo:status": "bibo:published",
+      },
+    }),
+  );
+  await page.goto("/dashboard");
+  await page.getByRole("button", { name: "Grid view", exact: true }).click();
+  const cards = page.locator(".explorer-item");
+  await expect(cards).toHaveCount(5);
+  await expect(cards.nth(0).locator(".explorer-release")).toHaveText(
+    "2.1.0 · Published",
+  );
+  await expect(cards.nth(1).locator(".explorer-release")).toHaveText(
+    "2.1.0 · Draft",
+  );
+  await expect(cards.nth(2).locator(".explorer-release")).toHaveText(
+    "2.1.0 · Draft",
+  );
+  await expect(cards.nth(3).locator(".explorer-release")).toHaveCount(0);
+  await expect(cards.nth(4).locator(".explorer-release")).toHaveCount(0);
+  for (const card of await cards.all()) {
+    expect((await card.boundingBox()).height).toBe(106);
+    await expect(card.locator("time")).toBeVisible();
+  }
+});
