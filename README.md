@@ -2,9 +2,9 @@
 
 CEDAR's split Workspace frontend. `/` and `/dashboard` run a standalone Angular
 22 application with Angular routing, signals, forms and shared CEDAR design tokens.
-The initial workspace provides a table, search, folder navigation, collapsible side
-panels, Info/Version tabs, Type and Last modified filters, and resource action dialogs. It deliberately has no
-categories, a latest-version filter or a tile view.
+Workspace provides list and compact grid views, search, folder navigation, collapsible
+side panels, Info/Version tabs, Type and Last modified filters, version filtering,
+and resource action dialogs.
 
 Template, element and field authoring opens the configured CED/CEFD Designer host;
 metadata creation/editing opens the standalone Angular CEE host at
@@ -46,6 +46,27 @@ with the column headers and stored in the URL; changing it resets pagination.
 Folders remain mixed by default. Folder grouping uses the server's compound
 `sort=foldersFirst,<field>` order before pagination, including search and shared
 views, and requires the corresponding microservice-library support.
+
+## Grid selection and moves
+
+The result toolbar switches between the existing list and 106px-high grid cards.
+Both views use the same server-sorted, filtered page and keep selection when switching.
+Click selects; Shift-click and Shift+arrows extend a range; Cmd/Ctrl-click toggles;
+Cmd/Ctrl+A selects the current page. Dragging blank space selects a rectangle.
+Grid names select on click and open on double-click or Enter. List links retain
+single-click navigation and row Enter retains selection.
+
+Drag selected items onto a folder or breadcrumb, use Move to choose a destination,
+or Cut and Paste (also Cmd/Ctrl+X and Cmd/Ctrl+V). Moves recheck server permissions
+and obtain each resource's ETag before writing. The server remains authoritative.
+Group moves are individual conditional requests: partial failures are named, successful
+items are refreshed, and failed items can be explicitly retried. Selected descendants
+travel with selected ancestors; cycles are rejected. Selection clears when the listing
+changes, so operations cannot accidentally include a hidden page.
+
+Angular CDK 22.2.0 and Selecto 1.26.3 are MIT licensed. CDK provides dragging and
+Selecto supplies marquee geometry; no commercial file-manager dependency is used.
+The isolated `experiments/` prototype is not part of the production build.
 
 ## Languages
 

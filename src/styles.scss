@@ -1,3 +1,4 @@
+@use "sass:meta";
 @use "@org.metadatacenter/cedar-design-tokens/patterns";
 @use "@org.metadatacenter/cedar-design-tokens/motion";
 @use "@org.metadatacenter/cedar-design-tokens/controls";
@@ -955,3 +956,5 @@ th,
 .version dl {
   margin-top: 0;
 }
+
+@include meta.load-css("./app/explorer");

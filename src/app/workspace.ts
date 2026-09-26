@@ -1,3 +1,12 @@
+import {
+  CdkDropList,
+  CdkDrag,
+  CdkDragPreview,
+  CdkDragMove,
+  CdkDragEnd,
+} from "@angular/cdk/drag-drop";
+import { ExplorerSelection } from "./explorer-selection";
+import { ResourceMoves, validMoveShape } from "./resource-moves";
 import { CopyButton } from "./copy-button";
 import { DescriptionEditor } from "./description-editor";
 import { SortMenu } from "./sort-menu";
@@ -17,6 +26,7 @@ import {
   afterNextRender,
   ElementRef,
   Injector,
+  computed,
 } from "@angular/core";
 import { FriendlyDatePipe } from "./friendly-date";
 import { TitleCasePipe } from "@angular/common";
@@ -144,6 +154,10 @@ export function actions(r: Resource, i18n: Pick<I18n, "t">): Action[] {
 @Component({
   selector: "cedar-workspace-page",
   imports: [
+    CdkDropList,
+    CdkDrag,
+    CdkDragPreview,
+    ExplorerSelection,
     Toast,
     ResourceFilters,
     SortMenu,
@@ -194,6 +208,22 @@ export class Workspace {
   readonly rows = signal<Resource[]>([]);
   readonly path = signal<Resource[]>([]);
   readonly currentFolder = signal<Resource | undefined>(undefined);
+  readonly grid = signal(false);
+  readonly selectionIds = signal<string[]>([]);
+  readonly selection = computed(() =>
+    this.rows().filter((r) => this.selectionIds().includes(r["@id"])),
+  );
+  readonly moving = signal(false);
+  readonly cutItems = signal<Resource[]>([]);
+  readonly moveDialog = signal<Resource[] | null>(null);
+  readonly dropTarget = signal("");
+  private dragging: Resource[] = [];
+  private moves = inject(ResourceMoves);
+  readonly canMoveSelection = computed(
+    () =>
+      this.selection().length > 0 &&
+      this.selection().every((r) => can(r, "moveResource")),
+  );
   readonly selected = signal<Resource | undefined>(undefined);
   readonly instances = signal<Resource[]>([]);
   readonly instanceTotal = signal(0);
@@ -265,6 +295,7 @@ export class Workspace {
     this.refreshing.set(refresh);
     this.error.set("");
     this.selected.set(undefined);
+    this.selectionIds.set([]);
     if (!refresh) {
       this.currentFolder.set(undefined);
       this.path.set([]);
@@ -376,6 +407,7 @@ export class Workspace {
   }
   async select(r: Resource, reveal = true) {
     const read = ++this.detailRead;
+    this.selectionIds.set([r["@id"]]);
     this.selected.set(r);
     this.instances.set([]);
     this.instanceTotal.set(0);
@@ -394,6 +426,109 @@ export class Workspace {
       }
     } catch (e) {
       if (read === this.detailRead) this.fail(e);
+    }
+  }
+  setSelection(ids: string[]) {
+    if (this.moving()) return;
+    this.selectionIds.set(ids);
+    if (ids.length === 1) {
+      const r = this.rows().find((r) => r["@id"] === ids[0]);
+      if (r) void this.select(r);
+    } else {
+      this.detailRead++;
+      this.selected.set(undefined);
+      if (ids.length) this.right.set(true);
+    }
+  }
+  openItem(id: string) {
+    const r = this.rows().find((r) => r["@id"] === id);
+    if (r) void this.act("open", r);
+  }
+  startDrag(r: Resource) {
+    this.menu.set(null);
+    if (!this.selectionIds().includes(r["@id"])) this.setSelection([r["@id"]]);
+    this.dragging = [...this.selection()];
+  }
+  dragMove(event: CdkDragMove) {
+    const element = document
+      .elementFromPoint(
+        event.pointerPosition.x - window.scrollX,
+        event.pointerPosition.y - window.scrollY,
+      )
+      ?.closest<HTMLElement>("[data-drop-id]");
+    const id = element?.dataset["dropId"];
+    const target = [...this.rows(), ...this.path()].find(
+      (r) => r["@id"] === id,
+    );
+    this.dropTarget.set(
+      target &&
+        validMoveShape(this.dragging, target) &&
+        (can(target, "moveIntoFolder") ||
+          this.path().some((p) => p["@id"] === id)) &&
+        id !== this.folder
+        ? id!
+        : "",
+    );
+  }
+  endDrag(event: CdkDragEnd, explorer: ExplorerSelection) {
+    const target = this.dropTarget(),
+      resources = this.dragging;
+    this.dropTarget.set("");
+    this.dragging = [];
+    event.source.reset();
+    explorer.ignoreClick();
+    if (target) void this.moveItems(resources, target);
+  }
+  cutSelection() {
+    if (this.canMoveSelection()) this.cutItems.set([...this.selection()]);
+  }
+  async moveItems(resources: Resource[], target: string) {
+    if (this.moving() || !resources.length) return;
+    this.moving.set(true);
+    this.error.set("");
+    try {
+      const result = await this.moves.move(resources, target);
+      this.cutItems.update((items) =>
+        items.filter((r) => !result.moved.includes(r["@id"])),
+      );
+      await this.load(true);
+      this.selectionIds.set(
+        result.failed
+          .map((f) => f.resource["@id"])
+          .filter((id) => this.rows().some((r) => r["@id"] === id)),
+      );
+      this.notice.set(
+        this.i18n.t("Explorer.Moved", { count: result.moved.length }),
+      );
+      if (result.failed.length)
+        this.error.set(
+          result.failed
+            .map((f) => this.title(f.resource) + ": " + f.message)
+            .join("; "),
+        );
+    } catch (e) {
+      this.fail(e);
+    } finally {
+      this.moving.set(false);
+    }
+  }
+  explorerKeys(event: KeyboardEvent) {
+    if (
+      (event.target as Element).closest("input,textarea,select") ||
+      !(event.metaKey || event.ctrlKey)
+    )
+      return;
+    if (event.key.toLowerCase() === "x") {
+      event.preventDefault();
+      this.cutSelection();
+    }
+    if (
+      event.key.toLowerCase() === "v" &&
+      this.cutItems().length &&
+      can(this.currentFolder(), "moveIntoFolder")
+    ) {
+      event.preventDefault();
+      void this.moveItems(this.cutItems(), this.folder);
     }
   }
   private async loadInstances(r: Resource, read: number) {

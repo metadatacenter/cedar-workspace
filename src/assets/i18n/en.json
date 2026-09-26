@@ -455,5 +455,16 @@
       "SecurityHeading": "Data Security",
       "Security": "To prevent unauthorized access, maintain data accuracy, and ensure the appropriate use of information, we have put in place appropriate physical, electronic, and managerial procedures to protect the information we collect online."
     }
+  },
+  "Explorer": {
+    "Selected": "{{count}} selected",
+    "Clear": "Clear selection",
+    "Cut": "Cut",
+    "Paste": "Paste {{count}} items",
+    "View": "Result view",
+    "List": "List view",
+    "Grid": "Grid view",
+    "MoveDenied": "You no longer have permission to move this item.",
+    "Moved": "Moved {{count}} items."
   }
 }

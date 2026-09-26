@@ -18,7 +18,13 @@
         <cedar-icon name="close" />
       </button>
     </header>
-    @if(resource){
+    @if(resources.length){
+    <ul>
+      @for(item of resources;track item["@id"]){
+      <li>{{title(item)}}</li>
+      }
+    </ul>
+    } @if(resource){
     <p class="resource-dialog-resource">
       <cedar-icon [name]="resource.resourceType" /><span
         >{{title(resource)}}</span
@@ -115,9 +121,11 @@
         >
           {{'Common.Next' | translate}}
         </button>
-        <p>{{'ResourceDialog.Selected' | translate: {name:
+        <p>
+          {{'ResourceDialog.Selected' | translate: {name:
           targetResource?title(targetResource):('Common.Loading' | translate)}
-          }}</p>
+          }}
+        </p>
         @if(!destinationAllowed){
         <p>{{'ResourceDialog.DestinationNotAllowed' | translate}}</p>
         }
@@ -133,9 +141,8 @@
       }
     </fieldset>
     <footer>
-      <button type="button" (click)="close()" [disabled]="busy()">{{
-        'Common.Cancel' | translate
-      }}</button
+      <button type="button" (click)="close()" [disabled]="busy()">
+        {{ 'Common.Cancel' | translate }}</button
       ><button
         class="primary"
         type="submit"

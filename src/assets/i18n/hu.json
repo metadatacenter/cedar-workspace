@@ -455,5 +455,16 @@
       "SecurityHeading": "Adatbiztonság",
       "Security": "Az illetéktelen hozzáférés megakadályozása, az adatok pontosságának megőrzése és az adatok megfelelő felhasználásának biztosítása érdekében megfelelő fizikai, elektronikus és szervezési eljárásokat vezettünk be az online gyűjtött adatok védelmére."
     }
+  },
+  "Explorer": {
+    "Selected": "{{count}} kijelölve",
+    "Clear": "Kijelölés törlése",
+    "Cut": "Kivágás",
+    "Paste": "{{count}} elem beillesztése",
+    "View": "Találatok nézete",
+    "List": "Listanézet",
+    "Grid": "Rácsnézet",
+    "MoveDenied": "Már nincs jogosultsága az elem áthelyezésére.",
+    "Moved": "{{count}} elem áthelyezve."
   }
 }

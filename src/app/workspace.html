@@ -163,7 +163,10 @@
     </nav>
     }
   </aside>
-  <main>
+  <main (keydown)="explorerKeys($event)">
+    @if(grid()){
+    <h1 class="sr-only">{{'Common.Workspace' | translate}}</h1>
+    }
     <div class="table-toolbar">
       <nav
         [attr.aria-label]="'Dashboard.Breadcrumb' | translate"
@@ -181,6 +184,8 @@
           routerLink="/dashboard"
           [queryParams]="{folderId:p['@id']}"
           [attr.aria-current]="last?'page':null"
+          [attr.data-drop-id]="p['@id']"
+          [class.explorer-drop-target]="dropTarget()===p['@id']"
           >{{title(p)==='/'?('Common.All' | translate):title(p)}}</a
         >@if(!last){<span class="breadcrumb-separator" aria-hidden="true"
           >/</span
@@ -200,7 +205,98 @@
       (versionChange)="setVersion($event)"
       (change)="changeFilters($event)"
     />
-    <div class="table-scroll" [attr.aria-busy]="loading()">
+    <div class="explorer-toolbar">
+      @if(selectionIds().length){
+      <span role="status"
+        >{{'Explorer.Selected' | translate:{count:selectionIds().length}
+        }}</span
+      >
+      <button
+        (click)="setSelection([])"
+        [disabled]="moving()"
+        [attr.aria-label]="'Explorer.Clear' | translate"
+      >
+        <cedar-icon name="close" />
+      </button>
+      <button
+        (click)="moveDialog.set(selection())"
+        [disabled]="moving() || !canMoveSelection()"
+      >
+        {{'ResourceActions.Move' | translate}}
+      </button>
+      <button
+        (click)="cutSelection()"
+        [disabled]="moving() || !canMoveSelection()"
+      >
+        {{'Explorer.Cut' | translate}}
+      </button>
+      } @if(cutItems().length){<button
+        (click)="moveItems(cutItems(),folder)"
+        [disabled]="moving() || !can(currentFolder(),'moveIntoFolder')"
+      >
+        {{'Explorer.Paste' | translate:{count:cutItems().length} }}</button
+      >}
+      <div
+        class="explorer-view-switch"
+        role="group"
+        [attr.aria-label]="'Explorer.View' | translate"
+      >
+        <button
+          (click)="grid.set(false)"
+          [attr.aria-pressed]="!grid()"
+          [attr.aria-label]="'Explorer.List' | translate"
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 18 18"
+            fill="none"
+            stroke="currentColor"
+            aria-hidden="true"
+          >
+            <path d="M5 4h11M5 9h11M5 14h11M1 4h1M1 9h1M1 14h1" />
+          </svg>
+        </button>
+        <button
+          (click)="grid.set(true)"
+          [attr.aria-pressed]="grid()"
+          [attr.aria-label]="'Explorer.Grid' | translate"
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 18 18"
+            fill="none"
+            stroke="currentColor"
+            aria-hidden="true"
+          >
+            <path d="M2 2h5v5H2zM11 2h5v5h-5zM2 11h5v5H2zM11 11h5v5h-5z" />
+          </svg>
+        </button>
+      </div>
+      @if(grid()){<cedar-sort-menu
+        [sort]="sort"
+        [version]="version"
+        (versionChange)="setVersion($event)"
+        [foldersFirst]="params.get('folders') === 'first'"
+        (sortChange)="setSort($event)"
+        (foldersFirstChange)="setFoldersFirst($event)"
+      />}
+    </div>
+    <div
+      class="table-scroll"
+      [class.explorer-grid]="grid()"
+      [attr.aria-busy]="loading() || moving()"
+      cdkDropList
+      [cdkDropListSortingDisabled]="true"
+      cedarExplorerSelection
+      #explorer="explorerSelection"
+      [selection]="selectionIds()"
+      [gridView]="grid()"
+      [selectionDisabled]="loading() || moving()"
+      (selectionChange)="setSelection($event)"
+      (openItem)="openItem($event)"
+    >
       <table>
         <caption class="sr-only">
           {{'Dashboard.TableCaption' | translate}}
@@ -247,11 +343,27 @@
         <tbody>
           @for(r of rows();track r['@id']){
           <tr
-            [class.selected]="selected()?.['@id']===r['@id']"
-            (click)="select(r)"
+            class="explorer-item"
+            [class.selected]="selectionIds().includes(r['@id'])"
+            [attr.aria-selected]="selectionIds().includes(r['@id'])"
+            [attr.data-resource-id]="r['@id']"
+            [attr.data-drop-id]="r.resourceType==='folder'?r['@id']:null"
+            [class.explorer-drop-target]="dropTarget()===r['@id']"
             tabindex="0"
-            (keydown.enter)="$event.target === $event.currentTarget ? select(r) : null"
+            cdkDrag
+            [cdkDragDisabled]="loading() || moving() || !can(r,'moveResource') || (selectionIds().includes(r['@id']) && !canMoveSelection())"
+            [cdkDragStartDelay]="{mouse:0,touch:180}"
+            (cdkDragStarted)="startDrag(r)"
+            (cdkDragMoved)="dragMove($event)"
+            (cdkDragEnded)="endDrag($event,explorer)"
+            (dblclick)="$event.target === $event.currentTarget ? openItem(r['@id']) : null"
           >
+            <ng-template cdkDragPreview
+              ><div class="explorer-drag-preview">
+                {{'Explorer.Selected' | translate:{count:selectionIds().length}
+                }}
+              </div></ng-template
+            >
             <td>
               <span
                 class="resource-icon"
@@ -260,7 +372,12 @@
                 aria-hidden="true"
                 ><cedar-icon [name]="r.resourceType"
               /></span>
-              @if(r.resourceType==='folder') {
+              @if(grid()){<span
+                class="explorer-name"
+                [title]="title(r)"
+                (dblclick)="openItem(r['@id'])"
+                >{{title(r)}}</span
+              >} @else if(r.resourceType==='folder') {
               <a
                 routerLink="/dashboard"
                 [queryParams]="{folderId:r['@id']}"
@@ -277,6 +394,9 @@
               }
             </td>
             <td>
+              @if(grid()){<span class="explorer-kind"
+                >{{'ResourceTypes.' + r.resourceType | translate}} · </span
+              >}
               <time
                 [attr.datetime]="r['pav:lastUpdatedOn'] || null"
                 [attr.title]="r['pav:lastUpdatedOn'] || null"
@@ -361,7 +481,20 @@
     >
       <cedar-icon [name]="right()?'right':'left'" />
     </button>
-    @if(right()){ @if(selected();as r){
+    @if(right()){ @if(selectionIds().length > 1){
+    <h1>{{'Explorer.Selected' | translate:{count:selectionIds().length} }}</h1>
+    <ul class="explorer-selected-names">
+      @for(item of selection();track item['@id']){
+      <li>
+        <cedar-icon [name]="item.resourceType" /><span
+          >{{title(item)}}<small
+            >{{'ResourceTypes.'+item.resourceType | translate}}</small
+          ></span
+        >
+      </li>
+      }
+    </ul>
+    } @else if(selected();as r){
     <h1>
       <cedar-icon [name]="r.resourceType" size="large" /><span
         >{{title(r)}}</span
@@ -565,4 +698,11 @@
   [folder]="folder"
   (closed)="dialog.set(null)"
   (saved)="saved()"
-/>} } }
+/>} } } @if(moveDialog();as items){<cedar-resource-dialog
+  action="move"
+  [resources]="items"
+  [folder]="folder"
+  (closed)="moveDialog.set(null)"
+  (changed)="load(true)"
+  (saved)="moveDialog.set(null); saved()"
+/>}
