@@ -1,3 +1,4 @@
+@use "sass:meta";
 @use "@org.metadatacenter/cedar-design-tokens/patterns";
 @use "@org.metadatacenter/cedar-design-tokens/motion";
 @use "@org.metadatacenter/cedar-design-tokens/controls";
@@ -205,6 +206,8 @@ textarea {
 .new-menu {
   margin-top: 0;
   position: relative;
+  // As wide as its button. A full-width box sat over the collapse arrow and took its clicks.
+  width: fit-content;
 }
 .primary {
   @include controls.primary-action;
@@ -394,7 +397,7 @@ tr.selected:hover {
   right: auto;
 }
 .badge {
-  font-size: var(--cedar-font-size-small);
+  font-size: var(--cedar-font-size);
   color: var(--cedar-text-muted);
   margin-right: var(--cedar-space-3);
 }
@@ -434,11 +437,13 @@ dd {
   border-bottom: 1px solid var(--cedar-border-rule-light);
 }
 .information dt {
+  @include patterns.field-label($size: body);
+  margin: 0;
   padding-right: var(--cedar-space-4);
 }
 dt {
   color: var(--cedar-text-muted);
-  font-size: var(--cedar-font-size-small);
+  font-size: var(--cedar-font-size);
 }
 dd small {
   display: block;
@@ -458,12 +463,15 @@ dd small {
 }
 .information .info-section {
   margin: 0;
-  padding: var(--cedar-space-3) 0;
+  padding: var(--cedar-space-2) 0;
   border-bottom: 1px solid var(--cedar-border-rule-light);
 }
 .info-section .description-heading {
+  @include patterns.field-label($size: body);
   margin-bottom: var(--cedar-space-1);
-  font-weight: var(--cedar-font-weight-regular);
+}
+.info-section .instance-count {
+  margin: var(--cedar-space-2) 0 0;
 }
 .info-section small {
   display: block;
@@ -479,6 +487,7 @@ dd small {
   min-width: 0;
 }
 .detail-with-copy .copy-icon {
+  min-height: var(--cedar-icon-size-default);
   flex: none;
   padding: 0 var(--cedar-space-1);
 }
@@ -697,20 +706,9 @@ td:first-child a {
   padding: var(--cedar-space-4);
   background: var(--cedar-color-on-primary);
   border-bottom: 1px solid var(--cedar-border-rule);
-  > div {
-    flex: 1;
-    min-width: 0;
-  }
-  strong,
-  small {
-    display: block;
-    overflow-wrap: anywhere;
-  }
-  small {
-    color: var(--cedar-text-muted);
-  }
 }
 .metadata-save-status {
+  margin-left: auto;
   display: inline-flex;
   align-items: center;
   gap: var(--cedar-space-2);
@@ -873,7 +871,7 @@ textarea {
 @include motion.reduced-motion;
 
 .field-error {
-  @include patterns.field-error;
+  @include patterns.field-error($size: body);
 }
 
 // Flat section panels follow the editor's understated heading and divider treatment.
@@ -932,7 +930,7 @@ textarea {
 }
 .brand-version {
   color: var(--cedar-text-muted);
-  font-size: var(--cedar-font-size-small);
+  font-size: var(--cedar-font-size);
   font-weight: var(--cedar-font-weight-regular);
 }
 @media (max-width: 700px) {
@@ -944,3 +942,19 @@ textarea {
     min-height: 0;
   }
 }
+
+/* Supporting text and shared table/empty-state recipes use the body size. */
+small,
+th,
+.empty {
+  font-size: var(--cedar-font-size);
+}
+.version {
+  padding: 0;
+  border-bottom: 0;
+}
+.version dl {
+  margin-top: 0;
+}
+
+@include meta.load-css("./app/explorer");

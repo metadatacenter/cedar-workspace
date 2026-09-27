@@ -2,11 +2,18 @@ import { Icon } from "./icon";
 import { Confirmation } from "./confirmation";
 import { Component, OnInit, inject, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
+import { TranslatePipe } from "@ngx-translate/core";
 import { Backend } from "./backend.service";
 import { AccountShell } from "./account-shell";
 import { ApiKey, UserProfile } from "./account-types";
+import { I18n } from "./i18n";
+/**
+ * An account date in the viewer's locale. `locale` is left undefined for
+ * English, which keeps the browser's default locale as before localization.
+ */
 export function displayAccountDate(
   value: string | number | number[] | undefined,
+  locale?: string,
 ): string {
   if (value === undefined || value === null) return "";
   const date = Array.isArray(value)
@@ -19,17 +26,18 @@ export function displayAccountDate(
         value[5] || 0,
       )
     : new Date(value);
-  return isNaN(date.getTime()) ? "" : date.toLocaleString();
+  return isNaN(date.getTime()) ? "" : date.toLocaleString(locale);
 }
 @Component({
   selector: "cedar-profile-page",
-  imports: [FormsModule, AccountShell, Icon],
+  imports: [FormsModule, AccountShell, Icon, TranslatePipe],
   templateUrl: "./profile.html",
   styleUrl: "./profile.scss",
 })
 export class Profile implements OnInit {
   readonly confirmation = inject(Confirmation);
   readonly api = inject(Backend);
+  private readonly i18n = inject(I18n);
   readonly loading = signal(true);
   readonly busy = signal(false);
   readonly error = signal("");
@@ -39,7 +47,8 @@ export class Profile implements OnInit {
   profile!: UserProfile;
   description = "";
   memberSince = signal("");
-  readonly date = displayAccountDate;
+  readonly date = (value: string | number | number[] | undefined) =>
+    displayAccountDate(value, this.i18n.locale(undefined));
   async ngOnInit() {
     try {
       if (!(await this.api.init())) return;
@@ -50,7 +59,7 @@ export class Profile implements OnInit {
       this.loading.set(false);
       try {
         this.memberSince.set(
-          displayAccountDate(
+          this.date(
             (
               await this.api.request<{ createdTimestamp: number }>(
                 this.api.userPath + "/summary",
@@ -66,21 +75,31 @@ export class Profile implements OnInit {
       this.loading.set(false);
     }
   }
-  get fields() {
+  // Each label is a translation key; identifiers are shown in a monospace face.
+  get fields(): { label: string; value: string; identifier: boolean }[] {
     const p = this.profile;
+    const field = (label: string, value: string, identifier = false) => ({
+      label,
+      value,
+      identifier,
+    });
     return p
       ? [
-          ["First name", p.firstName || ""],
-          ["Last name", p.lastName || ""],
-          ["Email", p.email || this.api.email],
-          ["UUID", this.api.userId],
-          ["@id", p["@id"] || ""],
-          ["Home folder id", p.homeFolderId],
-          ["Encoded home folder id", encodeURIComponent(p.homeFolderId)],
-          [
-            "Preferred date format",
+          field("Account.Profile.FirstName", p.firstName || ""),
+          field("Account.Profile.LastName", p.lastName || ""),
+          field("Account.Profile.Email", p.email || this.api.email),
+          field("Account.Profile.Uuid", this.api.userId, true),
+          field("Account.Profile.Id", p["@id"] || "", true),
+          field("Account.Profile.HomeFolderId", p.homeFolderId, true),
+          field(
+            "Account.Profile.EncodedHomeFolderId",
+            encodeURIComponent(p.homeFolderId),
+            true,
+          ),
+          field(
+            "Account.Profile.PreferredDateFormat",
             p.uiPreferences?.preferredDateFormat || "MM/DD/YYYY",
-          ],
+          ),
         ]
       : [];
   }
@@ -103,9 +122,9 @@ export class Profile implements OnInit {
   async copy(value: string) {
     try {
       await navigator.clipboard.writeText(value);
-      this.notice.set("Copied.");
+      this.notice.set(this.i18n.t("Account.Profile.Copied"));
     } catch {
-      this.error.set("Unable to copy. Please select and copy the text.");
+      this.error.set(this.i18n.t("Account.Profile.CopyFailed"));
     }
   }
   async mutate(action: "create" | "regenerate" | "delete", key?: ApiKey) {
@@ -119,9 +138,11 @@ export class Profile implements OnInit {
       action !== "create" &&
       (!key ||
         !(await this.confirmation.confirm(
-          action === "delete"
-            ? "Delete this API key? Scripts using it will stop working."
-            : "Regenerate this API key? Its previous value will immediately stop working.",
+          this.i18n.t(
+            action === "delete"
+              ? "Account.Profile.ConfirmDelete"
+              : "Account.Profile.ConfirmRegenerate",
+          ),
         )))
     )
       return;
@@ -151,11 +172,13 @@ export class Profile implements OnInit {
       this.revealed.set(new Set());
       if (action === "create") this.description = "";
       this.notice.set(
-        action === "create"
-          ? "API key created."
-          : action === "delete"
-            ? "API key deleted."
-            : "API key regenerated.",
+        this.i18n.t(
+          action === "create"
+            ? "Account.Profile.KeyCreated"
+            : action === "delete"
+              ? "Account.Profile.KeyDeleted"
+              : "Account.Profile.KeyRegenerated",
+        ),
       );
     } catch (e) {
       this.error.set(e instanceof Error ? e.message : String(e));
@@ -171,29 +194,30 @@ export class Profile implements OnInit {
         ? "curl"
         : "curl -k";
     const auth = ' -H "Authorization: apiKey <API_KEY>"';
+    // The first item of each pair is a translation key.
     return [
       [
-        "List your home folder contents",
+        "Account.Profile.Examples.HomeContents",
         `${curl} "${base}/folders/${encodeURIComponent(this.profile.homeFolderId)}/contents"${auth}`,
       ],
       [
-        "List resources shared with you",
+        "Account.Profile.Examples.Shared",
         `${curl} "${base}/search?sharing=shared-with-me"${auth}`,
       ],
       [
-        "Retrieve a template",
+        "Account.Profile.Examples.Retrieve",
         `${curl} "${base}/templates/{TEMPLATE_ID}"${auth}`,
       ],
       [
-        "Create a template",
+        "Account.Profile.Examples.Create",
         `${curl} -X POST "${base}/templates?folder_id=${encodeURIComponent(this.profile.homeFolderId)}"${auth} -H "Content-Type: application/json" -d @template.json`,
       ],
       [
-        "Update a template (use the ETag returned by GET)",
+        "Account.Profile.Examples.Update",
         `${curl} -X PUT "${base}/templates/{TEMPLATE_ID}"${auth} -H 'If-Match: "<ETAG>"' -H "Content-Type: application/json" -d @template.json`,
       ],
       [
-        "Get metadata based on a template",
+        "Account.Profile.Examples.Instances",
         `${curl} "${base}/search?is_based_on={TEMPLATE_ID}&resource_types=instance"${auth}`,
       ],
     ];

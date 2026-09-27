@@ -13,14 +13,14 @@ test("Type applies multiple selections, cancels drafts, clears independently and
   await popup.getByLabel("Template", { exact: true }).check();
   await popup.getByRole("button", { name: "Apply", exact: true }).click();
   await expect(page).toHaveURL(/resource_types=folder(?:%2C|,)template/);
-  await expect(type).toHaveText(/2 types/);
+  await expect(type).toHaveText("Folder, Template");
   await type.click();
   await popup.getByLabel("Field", { exact: true }).check();
   await popup.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(type).toBeFocused();
-  await expect(type).toHaveText(/2 types/);
+  await expect(type).toHaveText("Folder, Template");
   await page.reload();
-  await expect(type).toHaveText(/2 types/);
+  await expect(type).toHaveText("Folder, Template");
   await type.click();
   await expect(popup.getByLabel("Field", { exact: true })).not.toBeChecked();
   expect(
@@ -31,6 +31,7 @@ test("Type applies multiple selections, cancels drafts, clears independently and
   await expect(type).toBeFocused();
   await page.getByRole("button", { name: "Clear type filter" }).click();
   await expect(page).not.toHaveURL(/resource_types/);
+  await expect(type).toHaveText("Type");
 });
 
 test("date presets and inclusive custom ranges are sent to the listing API, including after reload", async ({
@@ -121,5 +122,11 @@ for (const width of [1440, 375]) {
       await expect(page).toHaveScreenshot(`type-filter-${width}.png`, {
         fullPage: true,
       });
+    await page.getByRole("button", { name: "Apply", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Type", exact: true }))
+      .toHaveText("Folder, Instance");
+    expect(await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    )).toBe(true);
   });
 }

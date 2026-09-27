@@ -10,6 +10,7 @@ for (const readonly of [false, true]) {
   test(`information copy controls and description ${readonly ? "readonly" : "editable"}`, async ({
     page,
     api,
+    browserName,
   }) => {
     api.readonly = readonly;
     const selected = {
@@ -47,8 +48,24 @@ for (const readonly of [false, true]) {
     await expect(
       info.getByRole("link", { name: "Source template", exact: true }),
     ).toHaveAttribute("href", /source-template/);
+    const folderCopy = info.getByRole("button", {
+      name: "Copy location", exact: true,
+    });
+    await folderCopy.hover();
+    const help = info.getByRole("tooltip");
+    await expect(help).toHaveText("Copy location");
+    await help.hover();
+    await expect(help).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(help).toHaveCount(0);
+    await info.locator("h1").hover();
+    await page.keyboard.press("Tab");
+    await folderCopy.focus();
+    await expect(help).toHaveText("Copy location");
+    await page.keyboard.press("Escape");
+    await expect(help).toHaveCount(0);
     await info
-      .getByRole("button", { name: "Copy folder location", exact: true })
+      .getByRole("button", { name: "Copy location", exact: true })
       .click();
     await expect.poll(() => page.evaluate(() => window.copiedId)).toBe("home");
     await info
@@ -66,6 +83,8 @@ for (const readonly of [false, true]) {
     await expect
       .poll(() => page.evaluate(() => window.copiedId))
       .toBe("template");
+    await expect(info.locator('.identifiers a')).toHaveAttribute('href', /templates\/edit\/template/);
+    await expect(info.locator('.identifiers a')).toHaveText('template');
     const locationCenters = await info.evaluate((panel) => {
       const label = panel.querySelector(".location-label");
       const value = label.nextElementSibling.querySelector("span");
@@ -77,15 +96,17 @@ for (const readonly of [false, true]) {
       });
     });
     expect(Math.abs(locationCenters[0] - locationCenters[1])).toBeLessThan(2);
-    if (process.env.WORKSPACE_VISUAL && !readonly)
+    await info.locator("h1").hover();
+    if (process.env.WORKSPACE_VISUAL && !readonly && browserName === "chromium")
       await expect(info).toHaveScreenshot("information-details.png");
-    const edit = info.getByRole("button", {
-      name: "Edit description",
+    const edit = info.getByRole("textbox", {
+      name: "Description",
       exact: true,
     });
+    await expect(info.locator(".info-section").last().locator("cedar-description-editor")).toHaveCount(1);
     if (readonly) await expect(edit).toHaveCount(0);
     else {
-      await edit.click();
+      await expect(edit).toHaveCSS("resize", "vertical");
       await page
         .getByRole("textbox", { name: "Description", exact: true })
         .fill("Updated description");
@@ -106,3 +127,72 @@ for (const readonly of [false, true]) {
     }
   });
 }
+
+test("inline description keeps edits on conflict and cancel reloads the current revision", async ({page, api}) => {
+  await dashboard(page);
+  await page.locator('tbody tr').first().press('Enter');
+  const info = page.getByRole('complementary', {name: 'Resource information'});
+  const description = info.getByRole('textbox', {name: 'Description', exact: true});
+  await expect(description).toBeEnabled();
+  await description.fill('Unsaved description');
+  await page.route('**/command/rename-resource', route => route.fulfill({status: 412, json: {message: 'Changed'}}));
+  await info.getByRole('button', {name:'Save', exact:true}).click();
+  await expect(info.getByRole('alert')).toContainText('changed since you opened');
+  await expect(description).toHaveValue('Unsaved description');
+  await info.getByRole('button', {name:'Cancel', exact:true}).click();
+  await expect(description).toHaveValue(resource['schema:description'] || '');
+  await expect(info.getByRole('alert')).toHaveCount(0);
+});
+
+test("version details and instances have concise labels and identifier copy controls", async ({page, api}) => {
+  await page.route('**/templates/template/report', route => route.fulfill({json: {...resource, numberOfInstances: 1, versions: [{...resource, 'pav:version':'1.2.0', 'bibo:status':'bibo:published'}]}}));
+  await page.route('**/search?is_based_on=*', route => route.fulfill({json: {resources: [{...resource, '@id':'instance-id', resourceType:'instance'}], totalCount: 1}}));
+  await page.addInitScript(() => Object.defineProperty(navigator, 'clipboard', {value: {writeText: async value => { window.copiedId = value; }}}));
+  await dashboard(page);
+  await page.locator('tbody tr').first().press('Enter');
+  const info = page.getByRole('complementary', {name:'Resource information'});
+  await expect(info.getByText('Instances', {exact:true})).toBeVisible();
+  await info.getByRole('button', {name:'Copy identifier for Study metadata', exact:true}).click();
+  await expect.poll(() => page.evaluate(() => window.copiedId)).toBe('instance-id');
+  await info.getByRole('tab', {name:'Version', exact:true}).click();
+  await expect(info.locator('.version dt')).toHaveText(['Type', 'Version', 'Status']);
+  await expect(info.locator('.version dd')).toHaveText(['Template', '1.2.0', 'Published']);
+  await expect(info.locator('.version a')).toHaveCount(0);
+  await expect(info.locator('.version')).not.toContainText('Modified');
+});
+
+test("first instance copy help escapes the scrolling list and dismisses on scroll", async ({ page, api }) => {
+  const instances = Array.from({ length: 12 }, (_, i) => ({
+    ...resource,
+    '@id': `instance-${i}`,
+    resourceType: 'instance',
+    'schema:name': `Long study metadata instance name that wraps onto another line ${i + 1}`,
+  }));
+  await page.route('**/templates/template/report', route => route.fulfill({
+    json: { ...resource, numberOfInstances: instances.length },
+  }));
+  await page.route('**/search?is_based_on=*', route => route.fulfill({
+    json: { resources: instances, totalCount: instances.length },
+  }));
+  await dashboard(page);
+  await page.locator('tbody tr').first().press('Enter');
+  const list = page.locator('.instance-list');
+  const first = list.getByRole('button').first();
+  await first.hover();
+  const help = page.getByRole('tooltip');
+  await expect(help).toHaveText('Copy instance identifier');
+  expect((await help.boundingBox()).y).toBeLessThan((await list.boundingBox()).y);
+  // A visible DOM box can still be clipped; hit-test its painted text above the list.
+  expect(await help.evaluate(el => {
+    const box = el.getBoundingClientRect();
+    return document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2) === el;
+  })).toBe(true);
+  await help.hover();
+  await expect(help).toBeVisible();
+  await list.evaluate(el => { el.scrollTop = el.scrollHeight; });
+  await expect(help).toHaveCount(0);
+  await list.getByRole('button').last().hover();
+  await expect(help).toHaveText('Copy instance identifier');
+  await page.keyboard.press('Escape');
+  await expect(help).toHaveCount(0);
+});

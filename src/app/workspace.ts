@@ -1,3 +1,14 @@
+import {
+  CdkDropList,
+  CdkDrag,
+  CdkDragPreview,
+  CdkDragMove,
+  CdkDragEnd,
+} from "@angular/cdk/drag-drop";
+import { ExplorerSelection } from "./explorer-selection";
+import { ResourceMoves, validMoveShape } from "./resource-moves";
+import { CopyButton } from "./copy-button";
+import { DescriptionEditor } from "./description-editor";
 import { SortMenu } from "./sort-menu";
 import { ResourceFilters } from "./resource-filters";
 import {
@@ -15,10 +26,12 @@ import {
   afterNextRender,
   ElementRef,
   Injector,
+  computed,
 } from "@angular/core";
 import { FriendlyDatePipe } from "./friendly-date";
 import { TitleCasePipe } from "@angular/common";
 import { FormsModule } from "@angular/forms";
+import { TranslatePipe } from "@ngx-translate/core";
 import { ActivatedRoute, Router, RouterLink } from "@angular/router";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { Backend } from "./backend.service";
@@ -34,71 +47,106 @@ import {
 import { Icon } from "./icon";
 import { ResourceDialog } from "./resource-dialog";
 import { PermissionsDialog } from "./permissions-dialog";
+import { I18n } from "./i18n";
 export interface Action {
   id: string;
   label: string;
   enabled: boolean;
 }
-export function actions(r: Resource): Action[] {
+export function actions(r: Resource, i18n: Pick<I18n, "t">): Action[] {
   const cap = (key: string) => can(r, key);
+  const label = (key: string) => i18n.t(key);
   return [
     {
       id: "populate",
-      label: "Populate",
+      label: label("ResourceActions.Populate"),
       enabled: r.resourceType === "template" && cap("populate"),
     },
-    { id: "open", label: "Open", enabled: cap("readResource") },
-    { id: "permissions", label: "Permissions…", enabled: cap("readResource") },
+    {
+      id: "open",
+      label: label("ResourceActions.Open"),
+      enabled: cap("readResource"),
+    },
+    {
+      id: "permissions",
+      label: label("ResourceActions.Permissions"),
+      enabled: cap("readResource"),
+    },
     {
       id: "copy",
-      label: "Copy",
+      label: label("ResourceActions.Copy"),
       enabled: r.resourceType !== "folder" && cap("copyFromResource"),
     },
-    { id: "move", label: "Move", enabled: cap("moveResource") },
-    { id: "rename", label: "Rename", enabled: cap("updateResource") },
+    {
+      id: "move",
+      label: label("ResourceActions.Move"),
+      enabled: cap("moveResource"),
+    },
+    {
+      id: "rename",
+      label: label("ResourceActions.Rename"),
+      enabled: cap("updateResource"),
+    },
     {
       id: "folder-id",
-      label: "Copy Folder ID",
+      label: label("ResourceActions.CopyFolderId"),
       enabled: r.resourceType === "folder",
     },
     {
       id: "parent-id",
-      label: "Copy Parent Folder ID",
+      label: label("ResourceActions.CopyParentFolderId"),
       enabled: !!r.pathInfo?.length,
     },
-    ...["json", "yaml", "yamlc"].map((id) => ({
+    ...(
+      [
+        ["json", "ResourceActions.DownloadJson"],
+        ["yaml", "ResourceActions.DownloadYaml"],
+        ["yamlc", "ResourceActions.DownloadCompactYaml"],
+      ] as const
+    ).map(([id, key]) => ({
       id,
-      label:
-        "Download " + { json: "JSON", yaml: "YAML", yamlc: "Compact YAML" }[id],
+      label: label(key),
       enabled: r.resourceType !== "folder" && cap("readResource"),
     })),
     ...(r.resourceType === "instance"
       ? []
       : [
-          { id: "publish", label: "Publish", enabled: cap("publish") },
-          { id: "draft", label: "Create Draft", enabled: cap("createDraft") },
+          {
+            id: "publish",
+            label: label("ResourceActions.Publish"),
+            enabled: cap("publish"),
+          },
+          {
+            id: "draft",
+            label: label("ResourceActions.CreateDraft"),
+            enabled: cap("createDraft"),
+          },
         ]),
-    { id: "delete", label: "Delete", enabled: cap("deleteResource") },
+    {
+      id: "delete",
+      label: label("ResourceActions.Delete"),
+      enabled: cap("deleteResource"),
+    },
     {
       id: "datacite",
-      label: "DataCite wizard",
+      label: label("ResourceActions.DataCite"),
       enabled:
         window.dataciteEnabled !== false &&
         ["template", "instance"].includes(r.resourceType),
     },
     {
       id: "make-open",
-      label: "Make Open",
+      label: label("ResourceActions.MakeOpen"),
       enabled: window.makeOpenEnabled !== false && cap("enableOpenView"),
     },
     {
       id: "make-not-open",
-      label: "Make Not Open",
+      label: label("ResourceActions.MakeNotOpen"),
       enabled: window.makeOpenEnabled !== false && cap("disableOpenView"),
     },
     {
       id: "openview",
-      label: "Open in OpenView",
+      label: label("ResourceActions.OpenInOpenView"),
       enabled: window.makeOpenEnabled !== false && !!r.isOpen,
     },
   ];
@@ -106,38 +154,76 @@ export function actions(r: Resource): Action[] {
 @Component({
   selector: "cedar-workspace-page",
   imports: [
+    CdkDropList,
+    CdkDrag,
+    CdkDragPreview,
+    ExplorerSelection,
     Toast,
     ResourceFilters,
     SortMenu,
+    DescriptionEditor,
+    CopyButton,
     FormsModule,
     FriendlyDatePipe,
-    TitleCasePipe,
     RouterLink,
     ResourceDialog,
     PermissionsDialog,
     Icon,
+    TranslatePipe,
   ],
   templateUrl: "./workspace.html",
 })
 export class Workspace {
-  readonly cedarVersion = window.cedarVersion || "unknown";
+  private readonly i18n = inject(I18n);
+  readonly cedarVersion = window.cedarVersion || this.i18n.t("Common.Unknown");
   readonly api = inject(Backend);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private destroy = inject(DestroyRef);
   private host: ElementRef<HTMLElement> = inject(ElementRef);
   private injector = inject(Injector);
-  readonly title = title;
+  readonly title = (r: Resource) => title(r, this.i18n.t("Common.Untitled"));
   readonly can = can;
-  readonly actions = actions;
+  readonly actions = (r: Resource) => actions(r, this.i18n);
+  /** A role as the server states it, translated when Workspace knows it. */
+  role(r: Resource) {
+    const role = r.currentUserPermissions?.role;
+    return role ? this.i18n.known("Roles." + role, role) : "—";
+  }
+  /** A version's publication status, translated when Workspace knows it. */
+  status(v: Resource) {
+    const status = v["bibo:status"]?.replace("bibo:", "");
+    if (!status) return "—";
+    return this.i18n.known(
+      "Status." + status,
+      new TitleCasePipe().transform(status),
+    );
+  }
   readonly now = signal(Date.now());
   readonly ready = signal(false);
   readonly loading = signal(false);
+  readonly refreshing = signal(false);
   readonly error = signal("");
   readonly notice = signal("");
   readonly rows = signal<Resource[]>([]);
   readonly path = signal<Resource[]>([]);
   readonly currentFolder = signal<Resource | undefined>(undefined);
+  readonly grid = signal(false);
+  readonly selectionIds = signal<string[]>([]);
+  readonly selection = computed(() =>
+    this.rows().filter((r) => this.selectionIds().includes(r["@id"])),
+  );
+  readonly moving = signal(false);
+  readonly cutItems = signal<Resource[]>([]);
+  readonly moveDialog = signal<Resource[] | null>(null);
+  readonly dropTarget = signal("");
+  private dragging: Resource[] = [];
+  private moves = inject(ResourceMoves);
+  readonly canMoveSelection = computed(
+    () =>
+      this.selection().length > 0 &&
+      this.selection().every((r) => can(r, "moveResource")),
+  );
   readonly selected = signal<Resource | undefined>(undefined);
   readonly instances = signal<Resource[]>([]);
   readonly instanceTotal = signal(0);
@@ -202,14 +288,18 @@ export class Workspace {
   fail(e: unknown) {
     this.error.set(e instanceof Error ? e.message : String(e));
   }
-  async load() {
+  async load(refresh = false) {
     const read = ++this.listRead;
     this.detailRead++;
     this.loading.set(true);
+    this.refreshing.set(refresh);
     this.error.set("");
     this.selected.set(undefined);
-    this.currentFolder.set(undefined);
-    this.path.set([]);
+    this.selectionIds.set([]);
+    if (!refresh) {
+      this.currentFolder.set(undefined);
+      this.path.set([]);
+    }
     this.menu.set(null);
     try {
       const { data } = await this.api.request<Listing>(
@@ -229,11 +319,14 @@ export class Workspace {
       void this.loadTemplateActions(data.resources, read);
     } catch (e) {
       if (read === this.listRead) {
-        this.rows.set([]);
+        if (!refresh) this.rows.set([]);
         this.fail(e);
       }
     } finally {
-      if (read === this.listRead) this.loading.set(false);
+      if (read === this.listRead) {
+        this.loading.set(false);
+        this.refreshing.set(false);
+      }
     }
   }
   private async loadFolder(read: number) {
@@ -314,6 +407,7 @@ export class Workspace {
   }
   async select(r: Resource, reveal = true) {
     const read = ++this.detailRead;
+    this.selectionIds.set([r["@id"]]);
     this.selected.set(r);
     this.instances.set([]);
     this.instanceTotal.set(0);
@@ -332,6 +426,109 @@ export class Workspace {
       }
     } catch (e) {
       if (read === this.detailRead) this.fail(e);
+    }
+  }
+  setSelection(ids: string[]) {
+    if (this.moving()) return;
+    this.selectionIds.set(ids);
+    if (ids.length === 1) {
+      const r = this.rows().find((r) => r["@id"] === ids[0]);
+      if (r) void this.select(r);
+    } else {
+      this.detailRead++;
+      this.selected.set(undefined);
+      if (ids.length) this.right.set(true);
+    }
+  }
+  openItem(id: string) {
+    const r = this.rows().find((r) => r["@id"] === id);
+    if (r) void this.act("open", r);
+  }
+  startDrag(r: Resource) {
+    this.menu.set(null);
+    if (!this.selectionIds().includes(r["@id"])) this.setSelection([r["@id"]]);
+    this.dragging = [...this.selection()];
+  }
+  dragMove(event: CdkDragMove) {
+    const element = document
+      .elementFromPoint(
+        event.pointerPosition.x - window.scrollX,
+        event.pointerPosition.y - window.scrollY,
+      )
+      ?.closest<HTMLElement>("[data-drop-id]");
+    const id = element?.dataset["dropId"];
+    const target = [...this.rows(), ...this.path()].find(
+      (r) => r["@id"] === id,
+    );
+    this.dropTarget.set(
+      target &&
+        validMoveShape(this.dragging, target) &&
+        (can(target, "moveIntoFolder") ||
+          this.path().some((p) => p["@id"] === id)) &&
+        id !== this.folder
+        ? id!
+        : "",
+    );
+  }
+  endDrag(event: CdkDragEnd, explorer: ExplorerSelection) {
+    const target = this.dropTarget(),
+      resources = this.dragging;
+    this.dropTarget.set("");
+    this.dragging = [];
+    event.source.reset();
+    explorer.ignoreClick();
+    if (target) void this.moveItems(resources, target);
+  }
+  cutSelection() {
+    if (this.canMoveSelection()) this.cutItems.set([...this.selection()]);
+  }
+  async moveItems(resources: Resource[], target: string) {
+    if (this.moving() || !resources.length) return;
+    this.moving.set(true);
+    this.error.set("");
+    try {
+      const result = await this.moves.move(resources, target);
+      this.cutItems.update((items) =>
+        items.filter((r) => !result.moved.includes(r["@id"])),
+      );
+      await this.load(true);
+      this.selectionIds.set(
+        result.failed
+          .map((f) => f.resource["@id"])
+          .filter((id) => this.rows().some((r) => r["@id"] === id)),
+      );
+      this.notice.set(
+        this.i18n.t("Explorer.Moved", { count: result.moved.length }),
+      );
+      if (result.failed.length)
+        this.error.set(
+          result.failed
+            .map((f) => this.title(f.resource) + ": " + f.message)
+            .join("; "),
+        );
+    } catch (e) {
+      this.fail(e);
+    } finally {
+      this.moving.set(false);
+    }
+  }
+  explorerKeys(event: KeyboardEvent) {
+    if (
+      (event.target as Element).closest("input,textarea,select") ||
+      !(event.metaKey || event.ctrlKey)
+    )
+      return;
+    if (event.key.toLowerCase() === "x") {
+      event.preventDefault();
+      this.cutSelection();
+    }
+    if (
+      event.key.toLowerCase() === "v" &&
+      this.cutItems().length &&
+      can(this.currentFolder(), "moveIntoFolder")
+    ) {
+      event.preventDefault();
+      void this.moveItems(this.cutItems(), this.folder);
     }
   }
   private async loadInstances(r: Resource, read: number) {
@@ -355,7 +552,7 @@ export class Workspace {
   async copyId(value: string) {
     try {
       await navigator.clipboard.writeText(value);
-      this.notice.set("ID copied.");
+      this.notice.set(this.i18n.t("Common.IdCopied"));
     } catch (e) {
       this.fail(e);
     }
@@ -431,6 +628,29 @@ export class Workspace {
       queryParams: { folders: first ? "first" : null, offset: null },
     });
   }
+  get version() {
+    return this.params.get("version") === "latest" ? "latest" : "all";
+  }
+  setVersion(version: string) {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParamsHandling: "merge",
+      queryParams: {
+        version: version === "latest" ? "latest" : null,
+        offset: null,
+      },
+    });
+  }
+  descriptionSaved(resource: Resource) {
+    if (this.selected()?.["@id"] === resource["@id"])
+      this.selected.update((current) => ({ ...current!, ...resource }));
+    this.rows.update((rows) =>
+      rows.map((row) =>
+        row["@id"] === resource["@id"] ? { ...row, ...resource } : row,
+      ),
+    );
+    this.notice.set(this.i18n.t("Dashboard.DescriptionSaved"));
+  }
   setSort(sort: string) {
     void this.router.navigate([], {
       relativeTo: this.route,
@@ -479,7 +699,7 @@ export class Workspace {
     this.menuTrigger?.focus();
     this.menu.set(null);
     this.error.set("");
-    if (!actions(r).find((a) => a.id === id)?.enabled) return;
+    if (!this.actions(r).find((a) => a.id === id)?.enabled) return;
     try {
       if (id === "open" || id === "populate") {
         if (r.resourceType === "folder")
@@ -495,16 +715,12 @@ export class Workspace {
       }
       if (id === "datacite") {
         if (!r.isOpen)
-          throw new Error(
-            "Make this artifact open before starting the DataCite wizard.",
-          );
+          throw new Error(this.i18n.t("Dashboard.OpenBeforeDataCite"));
         if (
           r.resourceType === "template" &&
           r["bibo:status"] !== "bibo:published"
         )
-          throw new Error(
-            "Publish this template before starting the DataCite wizard.",
-          );
+          throw new Error(this.i18n.t("Dashboard.PublishBeforeDataCite"));
         window.open(
           this.api.config.dataciteDOIBase + "/" + encodeURIComponent(r["@id"]),
           "_blank",
@@ -518,7 +734,7 @@ export class Workspace {
         await navigator.clipboard.writeText(
           id === "folder-id" ? r["@id"] : parent?.["@id"] || this.folder,
         );
-        this.notice.set("ID copied.");
+        this.notice.set(this.i18n.t("Common.IdCopied"));
         return;
       }
       if (["json", "yaml", "yamlc"].includes(id)) {
@@ -544,7 +760,7 @@ export class Workspace {
   }
   saved() {
     this.dialog.set(null);
-    this.notice.set("Saved.");
+    this.notice.set(this.i18n.t("Common.Saved"));
     void this.load();
   }
 }

@@ -1,0 +1,164 @@
+.explorer-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--cedar-space-1);
+  min-height: calc(var(--cedar-control-height-default) + var(--cedar-space-1));
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--cedar-border-rule);
+}
+.explorer-toolbar > span {
+  color: var(--cedar-text-muted);
+}
+.explorer-view-switch {
+  display: flex;
+  margin-left: auto;
+  border: 1px solid var(--cedar-border-rule);
+  border-radius: calc(var(--cedar-control-radius-default) * 1.25);
+  overflow: hidden;
+}
+.explorer-view-switch button {
+  min-width: 36px;
+  padding: calc(var(--cedar-space-1) * 1.25) var(--cedar-space-2);
+  border-radius: 0;
+}
+.explorer-view-switch [aria-pressed="true"] {
+  background: var(--cedar-surface-selected);
+}
+.explorer-item {
+  user-select: none;
+}
+.explorer-item:focus-visible {
+  outline: 2px solid var(--cedar-color-primary);
+  outline-offset: -2px;
+}
+.explorer-drop-target {
+  outline: 2px solid var(--cedar-color-primary) !important;
+  background: var(--cedar-surface-selected) !important;
+}
+.explorer-grid {
+  min-height: calc(10 * var(--cedar-space-6));
+  padding: var(--cedar-space-3) calc(var(--cedar-space-1) / 4) calc(2 * var(--cedar-space-4));
+}
+.explorer-grid table {
+  min-width: 0;
+  display: block;
+}
+.explorer-grid thead {
+  display: none;
+}
+.explorer-grid tbody {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr));
+  gap: calc(var(--cedar-space-2) + var(--cedar-space-1) / 2);
+}
+.explorer-grid tr {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: calc(3 * var(--cedar-control-height-default) - var(--cedar-space-1) / 2);
+  padding: var(--cedar-space-2) calc(var(--cedar-space-3) + var(--cedar-space-1) / 2);
+  border: 1px solid var(--cedar-border-rule);
+  border-radius: calc(var(--cedar-control-radius-default) * 1.25);
+  gap: var(--cedar-space-1);
+  min-width: 0;
+}
+.explorer-grid tr.selected {
+  border-color: var(--cedar-color-primary);
+}
+.explorer-grid td {
+  border: 0;
+  padding: 0;
+  height: auto;
+  min-width: 0;
+}
+.explorer-grid td:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cedar-space-1);
+  max-width: none;
+}
+.explorer-grid .explorer-name {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: var(--cedar-font-size-heading);
+  max-height: 40px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.explorer-grid td:nth-child(2) {
+  margin-top: auto;
+  color: var(--cedar-text-muted);
+  font-size: var(--cedar-font-size-small);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.explorer-grid .row-actions {
+  position: absolute;
+  right: 5px;
+  top: 4px;
+  display: flex;
+  align-items: center;
+  background: inherit;
+  border-radius: var(--cedar-control-radius-default);
+}
+.explorer-grid .row-actions > a {
+  margin: 0;
+}
+.explorer-grid .row-actions button {
+  padding: calc(var(--cedar-space-1) / 2);
+  min-height: var(--cedar-space-6);
+}
+.explorer-drag-preview {
+  background: var(--cedar-surface-raised);
+  color: var(--cedar-text-primary);
+  border: 1px solid var(--cedar-color-primary);
+  border-radius: calc(var(--cedar-control-radius-default) * 1.25);
+  padding: var(--cedar-space-3) var(--cedar-space-4);
+  box-shadow: var(--cedar-drag-preview-shadow);
+}
+.cdk-drag-preview {
+  pointer-events: none !important;
+}
+.selecto-selection {
+  border: 1px solid var(--cedar-color-primary) !important;
+  background: var(--cedar-selection-marquee-surface) !important;
+}
+.explorer-selected-names {
+  list-style: none;
+  padding: 0;
+}
+.explorer-selected-names li {
+  display: flex;
+  gap: calc(var(--cedar-space-2) + var(--cedar-space-1) / 2);
+  padding: var(--cedar-space-3) 0;
+  border-bottom: 1px solid var(--cedar-border-rule);
+}
+.explorer-selected-names small {
+  display: block;
+  color: var(--cedar-text-muted);
+  margin-top: var(--cedar-space-1);
+}
+
+.explorer-grid .explorer-schema {
+  padding-block: calc(var(--cedar-space-1) + var(--cedar-space-1) / 2);
+  gap: calc(var(--cedar-space-1) / 2);
+}
+.explorer-grid .explorer-schema td:first-child {
+  gap: calc(var(--cedar-space-1) / 2);
+}
+.explorer-grid .explorer-schema .explorer-name {
+  line-height: var(--cedar-control-line-height-authoring);
+  max-height: 36px;
+}
+.explorer-grid .explorer-schema td:nth-child(2) {
+  line-height: var(--cedar-font-size-lead);
+  flex-shrink: 0;
+}
+.explorer-release {
+  display: block;
+  color: var(--cedar-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

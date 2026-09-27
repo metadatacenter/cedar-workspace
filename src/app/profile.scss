@@ -75,7 +75,7 @@ form input {
 }
 .account-section-heading small {
   margin-inline-start: auto;
-  font-size: var(--cedar-font-size-small);
+  font-size: var(--cedar-font-size);
 }
 
 .profile-facts dt:last-of-type,
@@ -86,7 +86,7 @@ form input {
 .profile-example code,
 .account-key code {
   font-family: var(--cedar-font-family-monospace);
-  font-size: var(--cedar-font-size-small);
+  font-size: var(--cedar-font-size);
 }
 .account-key,
 .profile-example {

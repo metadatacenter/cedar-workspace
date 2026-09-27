@@ -40,7 +40,13 @@ describe("Logout", () => {
         ),
       );
     vi.stubGlobal("fetch", fetcher);
-    return { api: new Backend(), logout, login, assign, fetcher };
+    return {
+      api: TestBed.runInInjectionContext(() => new Backend()),
+      logout,
+      login,
+      assign,
+      fetcher,
+    };
   }
   it("signs out without fetching the user profile", async () => {
     const { api, logout, fetcher } = setup();

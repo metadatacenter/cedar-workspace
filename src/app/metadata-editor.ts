@@ -13,6 +13,7 @@ import {
   signal,
 } from "@angular/core";
 import { FormsModule } from "@angular/forms";
+import { TranslatePipe } from "@ngx-translate/core";
 import {
   ActivatedRoute,
   CanDeactivateFn,
@@ -29,6 +30,7 @@ import type {
 import { Backend } from "./backend.service";
 import { CeeLoader } from "./cee-loader";
 import { can, Resource } from "./resource";
+import { I18n, fallbackLanguage } from "./i18n";
 
 export const metadataRoute: UrlMatcher = (segments) => {
   if (
@@ -105,13 +107,14 @@ export const leaveMetadata: CanDeactivateFn<MetadataEditor> = (editor) =>
 
 @Component({
   selector: "cedar-metadata-page",
-  imports: [Toast, Icon, FormsModule],
+  imports: [Toast, Icon, FormsModule, TranslatePipe],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: "./metadata-editor.html",
 })
 export class MetadataEditor implements AfterViewInit, OnDestroy {
   readonly confirmation = inject(Confirmation);
   readonly api = inject(Backend);
+  private readonly i18n = inject(I18n);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly loader = inject(CeeLoader);
@@ -139,7 +142,10 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     return this.editor.nativeElement;
   }
   private chosenName() {
-    return this.name.trim() || this.templateName + " metadata";
+    return this.name.trim() || this.defaultName();
+  }
+  private defaultName() {
+    return this.i18n.t("Metadata.DefaultName", { template: this.templateName });
   }
   async ngAfterViewInit() {
     try {
@@ -156,7 +162,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         { cache: "no-store" },
       );
       if (!configResponse.ok)
-        throw new Error("Unable to load metadata editor configuration.");
+        throw new Error(this.i18n.t("Metadata.ConfigurationUnavailable"));
       const config: CeeConfig = await configResponse.json();
       const id = this.route.snapshot.paramMap.get("id")!;
       if (this.route.snapshot.paramMap.get("mode") === "edit") {
@@ -170,7 +176,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         this.writable.set(can(report.data, "updateResource"));
         const templateId = this.saved["schema:isBasedOn"];
         if (typeof templateId !== "string")
-          throw new Error("Metadata does not identify its template.");
+          throw new Error(this.i18n.t("Metadata.NoTemplate"));
         this.template = (
           await this.api.request<CeeJsonObject>(
             "/templates/" + encodeURIComponent(templateId),
@@ -190,12 +196,21 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       }
       await this.loader.load();
       if (!this.alive) return;
-      this.templateName = String(this.template["schema:name"] || "Untitled");
+      this.templateName = String(
+        this.template["schema:name"] || this.i18n.t("Common.Untitled"),
+      );
       this.name = this.saved
         ? String(this.saved["schema:name"] || "")
-        : this.templateName + " metadata";
+        : this.defaultName();
       // Both inputs are set once; permission must be settled before configuration.
-      this.cee.config = { ...config, readOnlyMode: !this.writable() };
+      // CEE shows its own strings in the language Workspace shows, falling back
+      // to English for any string CEE does not translate.
+      this.cee.config = {
+        ...config,
+        readOnlyMode: !this.writable(),
+        defaultLanguage: this.i18n.language,
+        fallbackLanguage,
+      };
       if (this.saved)
         this.cee.templateAndInstanceObject = {
           templateObject: this.template,
@@ -229,6 +244,13 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     );
     this.notice.set("");
   };
+  /** The translation key for the toolbar's save status. */
+  get saveStatus() {
+    if (this.loading()) return "Common.Loading";
+    if (this.saving()) return "Common.Saving";
+    if (!this.writable()) return "Metadata.ReadOnly";
+    return this.dirty() ? "Metadata.UnsavedChanges" : "Metadata.SavedStatus";
+  }
   get missingRequired() {
     const q = this.quality();
     return Math.max(
@@ -243,13 +265,18 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       ["required", "missingProperty", "minItems"].includes(p.code),
     );
     const items = problems.map((p) => ({
-      label: metadataFieldLabel(this.template, p.path) || p.field || "Metadata",
+      label:
+        metadataFieldLabel(this.template, p.path) ||
+        p.field ||
+        this.i18n.t("Metadata.Label"),
       message: p.message || p.code,
     }));
     if (this.missingRequired && !problems.some((p) => p.code === "required"))
       items.push({
-        label: "Metadata",
-        message: `${this.missingRequired} required fields are missing.`,
+        label: this.i18n.t("Metadata.Label"),
+        message: this.i18n.t("Metadata.RequiredMissing", {
+          count: this.missingRequired,
+        }),
       });
     return items;
   }
@@ -261,7 +288,9 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       )
       .map((p) => ({
         label:
-          metadataFieldLabel(this.template, p.path) || p.field || "Metadata",
+          metadataFieldLabel(this.template, p.path) ||
+          p.field ||
+          this.i18n.t("Metadata.Label"),
         message: p.message || p.code,
       }));
     if (
@@ -270,8 +299,8 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       !this.validationWarnings.length
     )
       items.push({
-        label: "Metadata",
-        message: "Review invalid metadata before saving.",
+        label: this.i18n.t("Metadata.Label"),
+        message: this.i18n.t("Metadata.ReviewInvalid"),
       });
     return items;
   }
@@ -284,9 +313,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     this.notice.set("");
     try {
       if (this.saved && !this.etag)
-        throw new Error(
-          "No concurrency validator was returned. Reload before saving. Your edits have been kept.",
-        );
+        throw new Error(this.i18n.t("Metadata.NoRevision"));
       const current = this.cee.currentMetadata;
       const baseline = metadataKey(current);
       const name = this.chosenName();
@@ -337,7 +364,9 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       }
       this.changed();
       this.notice.set(
-        this.dirty() ? "Saved. You have further unsaved changes." : "Saved.",
+        this.i18n.t(
+          this.dirty() ? "Metadata.SavedWithChanges" : "Common.Saved",
+        ),
       );
     } catch (e) {
       if (this.alive)
@@ -352,7 +381,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       (!this.saving() &&
         (!this.dirty() ||
           (await this.confirmation.confirm(
-            "Discard unsaved metadata changes?",
+            this.i18n.t("Metadata.DiscardChanges"),
           ))))
     );
   }

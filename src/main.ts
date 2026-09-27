@@ -1,6 +1,7 @@
 import { ConfirmationOutlet } from "./app/confirmation";
 import { Component } from "@angular/core";
 import { bootstrapApplication } from "@angular/platform-browser";
+import { TranslateService } from "@ngx-translate/core";
 import { provideRouter, RouterOutlet } from "@angular/router";
 import { Logout } from "./app/logout";
 import { Privacy } from "./app/privacy";
@@ -8,6 +9,11 @@ import { Groups } from "./app/groups";
 import { Settings } from "./app/settings";
 import { Profile } from "./app/profile";
 import { Workspace } from "./app/workspace";
+import {
+  detectLanguage,
+  provideWorkspaceTranslations,
+  translations,
+} from "./app/i18n";
 import {
   MetadataEditor,
   metadataRoute,
@@ -19,8 +25,11 @@ import {
   template: "<router-outlet /><cedar-confirmation />",
 })
 class App {}
+const language = detectLanguage();
+document.documentElement.lang = language;
 bootstrapApplication(App, {
   providers: [
+    provideWorkspaceTranslations(language),
     provideRouter([
       { path: "", pathMatch: "full", redirectTo: "dashboard" },
       { path: "dashboard", component: Workspace },
@@ -38,7 +47,14 @@ bootstrapApplication(App, {
       { path: "**", redirectTo: "dashboard" },
     ]),
   ],
-}).catch((error) => {
-  console.error(error);
-  document.body.textContent = "Unable to start CEDAR Workspace.";
-});
+})
+  .then((application) => {
+    document.title = application.injector
+      .get(TranslateService)
+      .instant("Header.Brand");
+  })
+  .catch((error) => {
+    console.error(error);
+    // Translation may be what failed, so the message is read from the map directly.
+    document.body.textContent = translations[language].Errors.StartupFailed;
+  });

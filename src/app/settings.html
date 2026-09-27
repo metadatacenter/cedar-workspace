@@ -1,33 +1,36 @@
 <cedar-account-shell
-  title="Settings"
+  [title]="'Account.Settings.Title' | translate"
   [loading]="loading()"
   [error]="error()"
   [notice]="notice()"
 >
   @if(ready()){
   <section class="account-card">
-    <h2 class="account-section-heading">About CEDAR</h2>
+    <h2 class="account-section-heading">
+      {{'Account.Settings.About' | translate}}
+    </h2>
     <div class="account-section-body">
       <dl class="account-facts">
-        <dt>Version</dt>
+        <dt>{{'Account.Settings.Version' | translate}}</dt>
         <dd>{{version}}</dd>
         @if(modifier){
-        <dt>Version modifier</dt>
-        <dd>{{modifier}} — UI cache version</dd>
+        <dt>{{'Account.Settings.VersionModifier' | translate}}</dt>
+        <dd>{{modifier}} {{'Account.Settings.CacheVersion' | translate}}</dd>
         }
-        <dt>CEE version</dt>
+        <dt>{{'Account.Settings.CeeVersion' | translate}}</dt>
         <dd>{{ceeVersion()}}</dd>
       </dl>
     </div>
   </section>
   <section class="account-card">
-    <h2 class="account-section-heading">Preferred date format</h2>
+    <h2 class="account-section-heading">
+      {{'Account.Settings.DateFormatHeading' | translate}}
+    </h2>
     <div class="account-section-body">
-      <p>
-        How dates are shown in Workspace. Saved to your account and available to
-        CEDAR tools.
-      </p>
-      <label for="date-format">Date format</label>
+      <p>{{'Account.Settings.DateFormatIntro' | translate}}</p>
+      <label for="date-format"
+        >{{'Account.Settings.DateFormat' | translate}}</label
+      >
       <select
         id="date-format"
         [ngModel]="selected"

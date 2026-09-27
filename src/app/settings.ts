@@ -1,10 +1,12 @@
 import { Component, OnInit, inject, signal } from "@angular/core";
 import { formatDate } from "@angular/common";
 import { FormsModule } from "@angular/forms";
+import { TranslatePipe } from "@ngx-translate/core";
 import { Backend } from "./backend.service";
 import { AccountShell } from "./account-shell";
 import { CeeLoader } from "./cee-loader";
 import { dateFormats } from "./date-format";
+import { I18n } from "./i18n";
 declare global {
   interface Window {
     cedarVersion?: string;
@@ -14,23 +16,28 @@ declare global {
 }
 @Component({
   selector: "cedar-settings-page",
-  imports: [FormsModule, AccountShell],
+  imports: [FormsModule, AccountShell, TranslatePipe],
   templateUrl: "./settings.html",
 })
 export class Settings implements OnInit {
   readonly api = inject(Backend);
   readonly loader = inject(CeeLoader);
+  private readonly i18n = inject(I18n);
   readonly loading = signal(true);
   readonly ready = signal(false);
   readonly busy = signal(false);
   readonly error = signal("");
   readonly notice = signal("");
-  readonly ceeVersion = signal("Loading…");
-  readonly version = window.cedarVersion || "unknown";
+  readonly ceeVersion = signal(this.i18n.t("Common.Loading"));
+  readonly version = window.cedarVersion || this.i18n.t("Common.Unknown");
   readonly modifier = window.cedarVersionModifier || "";
   readonly formats = Object.entries(dateFormats).map(([value, format]) => ({
     value,
-    label: formatDate(new Date(), format, "en-US") + " (" + value + ")",
+    label:
+      formatDate(new Date(), format, this.i18n.locale("en-US")) +
+      " (" +
+      value +
+      ")",
   }));
   selected = "MM/DD/YYYY";
   saved = "MM/DD/YYYY";
@@ -43,9 +50,11 @@ export class Settings implements OnInit {
       this.loading.set(false);
       try {
         await this.loader.load();
-        this.ceeVersion.set(window.cedarEmbeddableEditorVersion || "unknown");
+        this.ceeVersion.set(
+          window.cedarEmbeddableEditorVersion || this.i18n.t("Common.Unknown"),
+        );
       } catch {
-        this.ceeVersion.set("Unavailable");
+        this.ceeVersion.set(this.i18n.t("Account.Settings.Unavailable"));
       }
     } catch (e) {
       this.error.set(e instanceof Error ? e.message : String(e));
@@ -66,7 +75,7 @@ export class Settings implements OnInit {
         preferredDateFormat: value,
       };
       this.saved = this.selected = value;
-      this.notice.set("Date format saved.");
+      this.notice.set(this.i18n.t("Account.Settings.Saved"));
     } catch (e) {
       this.selected = this.saved;
       this.error.set(e instanceof Error ? e.message : String(e));

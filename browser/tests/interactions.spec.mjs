@@ -104,7 +104,12 @@ test("delete names its target and cancellation makes no request", async ({
   await dashboard(page);
   await action(page, "Delete");
   await expect(page.locator("dialog")).toContainText("Study metadata");
-  await expect(page.locator("dialog")).toContainText("This will delete");
+  await expect(page.locator("dialog")).toContainText(
+    "Are you sure you want to delete the selected template?",
+  );
+  await expect(page.locator("dialog").getByRole("button", {
+    name: "Yes, delete it!", exact: true,
+  })).toBeVisible();
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   expect(api.requests.filter((r) => r.method !== "GET")).toHaveLength(0);
 });
@@ -235,7 +240,7 @@ test("New menu offers only supported creation actions", async ({
   await expect(page.locator('input[type="file"]')).toHaveCount(0);
 });
 
-test("group member confirmation cancels safely, restores focus, and toasts successful removal", async ({
+test("group members are removed immediately without confirmation and show a success notice", async ({
   page,
   api,
 }) => {
@@ -253,23 +258,7 @@ test("group member confirmation cancels safely, restores focus, and toasts succe
     .filter({ hasText: "Sam Curator" })
     .getByRole("button");
   await remove.click();
-  const confirm = page.locator(".confirmation-dialog");
-  await expect(confirm).toContainText("Remove Sam Curator from this group?");
-  await expect(confirm.getByRole("button", { name: "Cancel" })).toBeFocused();
-  if (process.env.WORKSPACE_VISUAL)
-    await expect(confirm).toHaveScreenshot("member-removal-confirmation.png");
-  await page.keyboard.press("Shift+Tab");
-  await expect(
-    confirm.getByRole("button", { name: "OK", exact: true }),
-  ).toBeFocused();
-  await page.keyboard.press("Tab");
-  await expect(confirm.getByRole("button", { name: "Cancel" })).toBeFocused();
-  await page.keyboard.press("Escape");
-  await expect(confirm).toHaveCount(0);
-  await expect(remove).toBeFocused();
-  expect(api.requests.filter((r) => r.method === "PUT")).toHaveLength(0);
-  await remove.click();
-  await confirm.getByRole("button", { name: "OK", exact: true }).click();
+  await expect(page.locator(".confirmation-dialog")).toHaveCount(0);
   await expect(page.locator(".groups-member-row")).toHaveCount(1);
   await expect(page.getByRole("status")).toHaveText("Group members saved.");
   expect(api.requests.filter((r) => r.method === "PUT")).toHaveLength(1);
@@ -279,6 +268,34 @@ test("group member confirmation cancels safely, restores focus, and toasts succe
     );
   await page.getByRole("button", { name: "Dismiss notification" }).click();
   await expect(page.locator(".toast")).toHaveCount(0);
+});
+
+test("group creation errors do not offer unrelated reloads, but stale edits can recover", async ({ page, api }) => {
+  await page.goto("/groups");
+  const search = page.getByRole("combobox", { name: "Find a group", exact: true });
+  await search.fill("Research");
+  await search.press("Enter");
+  await expect(page.getByLabel("Name", { exact: true })).toHaveValue("Research team");
+  await page.getByRole("tab", { name: "Create group", exact: true }).click();
+  await page.route("**/api/group/groups", route => route.request().method() === "POST"
+    ? route.fulfill({ status: 409, json: { message: "Group names must be unique" } })
+    : route.fallback());
+  const name = page.getByLabel("Group name", { exact: true });
+  await name.fill("Research team");
+  await page.getByRole("button", { name: "Create group", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("Group names must be unique");
+  await expect(name).toHaveValue("Research team");
+  await expect(page.getByRole("button", { name: "Reload group" })).toHaveCount(0);
+  await page.getByRole("tab", { name: "Manage groups", exact: true }).click();
+  api.fail = true;
+  await page.getByLabel("Name", { exact: true }).fill("My edit");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Reload group" })).toBeVisible();
+  await expect(page.getByLabel("Name", { exact: true })).toHaveValue("My edit");
+  api.fail = false;
+  await page.getByRole("button", { name: "Reload group" }).click();
+  await expect(page.getByLabel("Name", { exact: true })).toHaveValue("Research team");
+  await expect(page.getByRole("alert")).toHaveCount(0);
 });
 
 test("success toast expires and pauses while hovered without blocking the form", async ({

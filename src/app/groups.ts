@@ -2,10 +2,12 @@ import { Toast } from "./toast";
 import { Confirmation } from "./confirmation";
 import { Component, OnInit, inject, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
+import { TranslatePipe } from "@ngx-translate/core";
 import { Backend, HttpError } from "./backend.service";
 import { NgTemplateOutlet } from "@angular/common";
 import { Icon } from "./icon";
 import { GroupPicker } from "./group-picker";
+import { I18n } from "./i18n";
 export interface Group {
   "@id": string;
   "schema:name": string;
@@ -22,24 +24,34 @@ export interface Member {
   administrator: boolean;
   member: boolean;
 }
-export const groupName = (g: Group) =>
-  g.specialGroup ? "Everyone" : g["schema:name"];
-export const userName = (u: GroupUser) =>
-  [u.firstName, u.lastName].filter(Boolean).join(" ") || "Unnamed user";
+export const groupName = (g: Group, i18n: Pick<I18n, "t">) =>
+  g.specialGroup ? i18n.t("Common.Everyone") : g["schema:name"];
+export const userName = (u: GroupUser, i18n: Pick<I18n, "t">) =>
+  [u.firstName, u.lastName].filter(Boolean).join(" ") ||
+  i18n.t("Common.UnnamedUser");
 @Component({
   selector: "cedar-groups-page",
-  imports: [Toast, FormsModule, NgTemplateOutlet, Icon, GroupPicker],
+  imports: [
+    Toast,
+    FormsModule,
+    NgTemplateOutlet,
+    Icon,
+    GroupPicker,
+    TranslatePipe,
+  ],
   styleUrl: "./groups.scss",
   templateUrl: "./groups.html",
 })
 export class Groups implements OnInit {
-  readonly cedarVersion = window.cedarVersion || "unknown";
+  private readonly i18n = inject(I18n);
+  readonly cedarVersion = window.cedarVersion || this.i18n.t("Common.Unknown");
   readonly confirmation = inject(Confirmation);
   readonly api = inject(Backend);
   readonly loading = signal(true);
   readonly ready = signal(false);
   readonly busy = signal(false);
   readonly error = signal("");
+  readonly recoveryGroup = signal<Group | null>(null);
   readonly stale = signal(false);
   readonly notice = signal("");
   readonly groups = signal<Group[]>([]);
@@ -58,7 +70,7 @@ export class Groups implements OnInit {
     return this.filteredGroups.map((g) => ({
       id: g["@id"],
       label:
-        groupName(g) +
+        this.groupName(g) +
         (g["schema:description"]?.trim()
           ? " - " + g["schema:description"]!.trim()
           : ""),
@@ -67,7 +79,7 @@ export class Groups implements OnInit {
   get memberOptions() {
     return this.availableUsers.map((u) => ({
       id: u["@id"],
-      label: userName(u),
+      label: this.userName(u),
     }));
   }
   async chooseGroup(id: string) {
@@ -76,6 +88,14 @@ export class Groups implements OnInit {
   }
   async selectTab(tab: "manage" | "create") {
     if (this.busy() || this.selecting()) return;
+    if (
+      tab === "create" &&
+      this.createdGroup &&
+      this.selected()?.["@id"] !== this.createdGroup["@id"]
+    ) {
+      await this.load(this.createdGroup, true);
+      return;
+    }
     this.activeTab = tab;
     if (
       tab === "manage" &&
@@ -85,20 +105,13 @@ export class Groups implements OnInit {
       this.members.set(null);
       this.newMember = "";
     }
-    if (
-      tab === "create" &&
-      this.createdGroup &&
-      this.selected()?.["@id"] !== this.createdGroup["@id"]
-    ) {
-      await this.select(this.createdGroup);
-    }
   }
   newName = "";
   editName = "";
   editDescription = "";
   newMember = "";
-  readonly groupName = groupName;
-  readonly userName = userName;
+  readonly groupName = (g: Group) => groupName(g, this.i18n);
+  readonly userName = (u: GroupUser) => userName(u, this.i18n);
   get base() {
     return this.api.config.groupRestAPI.replace(/\/$/, "") + "/groups";
   }
@@ -108,11 +121,11 @@ export class Groups implements OnInit {
   get filteredGroups() {
     return this.groups()
       .filter((g) =>
-        (groupName(g) + " " + (g["schema:description"] || ""))
+        (this.groupName(g) + " " + (g["schema:description"] || ""))
           .toLowerCase()
           .includes(this.search.toLowerCase()),
       )
-      .sort((a, b) => groupName(a).localeCompare(groupName(b)));
+      .sort((a, b) => this.groupName(a).localeCompare(this.groupName(b)));
   }
   get availableUsers() {
     return this.users().filter(
@@ -146,7 +159,7 @@ export class Groups implements OnInit {
       this.groups.set(groups.data.groups || []);
       this.users.set(
         (users.data.users || []).sort((a, b) =>
-          userName(a).localeCompare(userName(b)),
+          this.userName(a).localeCompare(this.userName(b)),
         ),
       );
       this.ready.set(true);
@@ -156,64 +169,78 @@ export class Groups implements OnInit {
       this.loading.set(false);
     }
   }
-  private fail(e: unknown) {
+  private fail(e: unknown, recoveryGroup: Group | null = null) {
     this.error.set(e instanceof Error ? e.message : String(e));
+    this.recoveryGroup.set(recoveryGroup);
     if (e instanceof HttpError && e.status === 412) this.stale.set(true);
   }
   async select(g: Group) {
     if (this.busy()) return;
     await this.load(g);
   }
-  private async load(g: Group) {
+  private async load(g: Group, returningToCreate = false) {
     const generation = ++this.generation;
-    this.selected.set(null);
-    this.members.set(null);
-    this.stale.set(false);
-    this.restricted.set(false);
-    this.selecting.set(true);
-    this.groupEtag = this.memberEtag = null;
+    // Keep the current panel intact until both reads complete when changing tabs.
+    if (returningToCreate) this.busy.set(true);
+    else {
+      this.selected.set(null);
+      this.members.set(null);
+      this.stale.set(false);
+      this.restricted.set(false);
+      this.selecting.set(true);
+      this.groupEtag = this.memberEtag = null;
+    }
     this.error.set("");
+    this.recoveryGroup.set(null);
     this.newMember = "";
     try {
       const detail = await this.api.request<Group>(this.path(g));
       if (generation !== this.generation) return;
+      let members: Member[] | null = null;
+      let memberEtag: string | null = null;
+      let restricted = !!detail.data.specialGroup;
+      if (!restricted) {
+        try {
+          const roster = await this.api.request<{ users: Member[] }>(
+            this.path(g) + "/users",
+          );
+          if (generation !== this.generation) return;
+          memberEtag = roster.etag;
+          members = roster.data.users || [];
+        } catch (e) {
+          if (generation !== this.generation) return;
+          if (e instanceof HttpError && e.status === 403) restricted = true;
+          else this.fail(e, g);
+        }
+      }
       this.selected.set(detail.data);
+      this.members.set(members);
+      this.memberEtag = memberEtag;
+      this.restricted.set(restricted);
+      if (!this.error()) this.stale.set(false);
       this.groups.update((groups) =>
         groups.map((value) =>
           value["@id"] === g["@id"] ? detail.data : value,
         ),
       );
       this.groupEtag = detail.etag;
-      this.editName = groupName(detail.data);
+      this.editName = this.groupName(detail.data);
       this.editDescription = detail.data["schema:description"] || "";
-      if (detail.data.specialGroup) {
-        this.restricted.set(true);
-        return;
-      }
-      try {
-        const roster = await this.api.request<{ users: Member[] }>(
-          this.path(g) + "/users",
-        );
-        if (generation !== this.generation) return;
-        this.memberEtag = roster.etag;
-        this.members.set(roster.data.users || []);
-      } catch (e) {
-        if (generation !== this.generation) return;
-        if (e instanceof HttpError && e.status === 403)
-          this.restricted.set(true);
-        else this.fail(e);
-      }
+      if (returningToCreate) this.activeTab = "create";
     } catch (e) {
-      if (generation === this.generation) this.fail(e);
+      if (generation === this.generation) this.fail(e, g);
     } finally {
-      if (generation === this.generation) this.selecting.set(false);
+      if (generation === this.generation) {
+        if (returningToCreate) this.busy.set(false);
+        else this.selecting.set(false);
+      }
     }
   }
   private requireEtag(value: string | null) {
-    if (!value)
-      throw new Error(
-        "The server did not return a revision. Reload this group before making changes.",
-      );
+    if (!value) {
+      this.stale.set(true);
+      throw new Error(this.i18n.t("Groups.NoRevision"));
+    }
     return value;
   }
   private async write(
@@ -225,12 +252,16 @@ export class Groups implements OnInit {
       return;
     this.busy.set(true);
     this.error.set("");
+    this.recoveryGroup.set(null);
     this.notice.set("");
     try {
       await action();
       this.notice.set(message);
     } catch (e) {
-      this.fail(e);
+      const needsReload =
+        needsRevision &&
+        (this.stale() || (e instanceof HttpError && e.status === 412));
+      this.fail(e, needsReload ? this.selected() : null);
     } finally {
       this.busy.set(false);
     }
@@ -250,7 +281,7 @@ export class Groups implements OnInit {
         this.search = "";
         await this.load(r.data);
       },
-      "Group created.",
+      this.i18n.t("Groups.Created"),
       false,
     );
   }
@@ -276,7 +307,7 @@ export class Groups implements OnInit {
       this.groups.update((gs) =>
         gs.map((v) => (v["@id"] === g["@id"] ? current : v)),
       );
-    }, "Group details saved.");
+    }, this.i18n.t("Groups.DetailsSaved"));
   }
   async remove() {
     const g = this.selected();
@@ -284,7 +315,9 @@ export class Groups implements OnInit {
       !g ||
       !this.canAdmin ||
       this.busy() ||
-      !(await this.confirmation.confirm("Delete group “" + groupName(g) + "”?"))
+      !(await this.confirmation.confirm(
+        this.i18n.t("Groups.ConfirmDelete", { name: this.groupName(g) }),
+      ))
     )
       return;
     if (this.selected() !== g || !this.canAdmin || this.busy()) return;
@@ -299,7 +332,7 @@ export class Groups implements OnInit {
       this.selected.set(null);
       this.members.set(null);
       if (this.createdGroup?.["@id"] === g["@id"]) this.createdGroup = null;
-    }, "Group deleted.");
+    }, this.i18n.t("Groups.Deleted"));
   }
   async addMember() {
     const u = this.availableUsers.find((u) => u["@id"] === this.newMember);
@@ -314,13 +347,9 @@ export class Groups implements OnInit {
       !this.canAdmin ||
       this.onlyAdmin(m) ||
       !this.members()?.includes(m) ||
-      this.busy() ||
-      !(await this.confirmation.confirm(
-        "Remove " + userName(m.user) + " from this group?",
-      ))
+      this.busy()
     )
       return;
-    if (!this.members()?.includes(m) || this.onlyAdmin(m)) return;
     await this.saveMembers(this.members()!.filter((v) => v !== m));
   }
   async toggleAdmin(m: Member) {
@@ -330,11 +359,12 @@ export class Groups implements OnInit {
       !this.members()?.includes(m) ||
       this.busy() ||
       !(await this.confirmation.confirm(
-        (m.administrator
-          ? "Remove administrator access for "
-          : "Make an administrator: ") +
-          userName(m.user) +
-          "?",
+        this.i18n.t(
+          m.administrator
+            ? "Groups.ConfirmRemoveAdministrator"
+            : "Groups.ConfirmMakeAdministrator",
+          { name: this.userName(m.user) },
+        ),
       ))
     )
       return;
@@ -369,6 +399,6 @@ export class Groups implements OnInit {
         this.members.set(null);
         this.restricted.set(true);
       }
-    }, "Group members saved.");
+    }, this.i18n.t("Groups.MembersSaved"));
   }
 }

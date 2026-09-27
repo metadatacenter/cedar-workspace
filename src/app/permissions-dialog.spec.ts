@@ -92,6 +92,38 @@ describe("Permissions dialog", () => {
     });
     expect(host.options.map((p) => p.id)).not.toContain("user");
   });
+  it("keeps the form mounted and blocks writes until refreshed privileges arrive", async () => {
+    host.selectPerson("user");
+    api.request.mockResolvedValue({
+      data: { ...initial, userPermissions: [{ user, role: "viewer" }] },
+      etag: '"revision-2"',
+    });
+    let refresh!: (value: unknown) => void;
+    api.report.mockImplementationOnce(() => new Promise(resolve => (refresh = resolve)));
+    const adding = host.add();
+    await vi.waitFor(() => expect(refresh).toBeDefined());
+    expect(host.current()).toBe(resource);
+    expect(host.canManage).toBe(true);
+    expect(host.busy()).toBe(true);
+    await host.remove(host.grants[0]);
+    expect(api.request).toHaveBeenCalledTimes(1);
+    refresh({ data: { ...resource, currentUserPermissions: { capabilities: ["readResource"] } } });
+    await adding;
+    expect(host.canManage).toBe(false);
+    expect(host.busy()).toBe(false);
+  });
+  it("disables mutations when a successful save cannot refresh privileges", async () => {
+    host.selectPerson("user");
+    api.request.mockResolvedValue({ data: initial, etag: '"revision-2"' });
+    api.report.mockRejectedValue(new HttpError(403, "Access revoked"));
+    await host.add();
+    expect(host.canManage).toBe(false);
+    expect(host.canTransfer).toBe(false);
+    expect(host.error()).toBe("Access revoked");
+    host.selectPerson("user");
+    await host.add();
+    expect(api.request).toHaveBeenCalledTimes(1);
+  });
   it("keeps failed changes visible and blocks retries with a stale revision until explicit reload", async () => {
     host.selectPerson("user");
     host.role = "editor";

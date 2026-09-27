@@ -13,10 +13,10 @@ button {
 }
 .active {
   background: var(--cedar-surface-selected);
-  border-color: var(--cedar-color-primary);
+  border-color: var(--cedar-border-selected);
 }
 .active button {
-  color: var(--cedar-color-primary);
+  color: var(--cedar-text-selected);
 }
 .clear {
   border-left: 1px solid var(--cedar-border-rule);

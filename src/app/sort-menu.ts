@@ -8,17 +8,20 @@ import {
   signal,
   viewChild,
 } from "@angular/core";
+import { TranslatePipe } from "@ngx-translate/core";
 import { Icon } from "./icon";
 
 @Component({
   selector: "cedar-sort-menu",
-  imports: [Icon],
+  imports: [Icon, TranslatePipe],
   templateUrl: "./sort-menu.html",
   styleUrl: "./sort-menu.scss",
 })
 export class SortMenu {
   readonly sort = input("name");
   readonly foldersFirst = input(false);
+  readonly version = input("all");
+  readonly versionChange = output<string>();
   readonly sortChange = output<string>();
   readonly foldersFirstChange = output<boolean>();
   readonly open = signal(false);
@@ -27,10 +30,11 @@ export class SortMenu {
   readonly trigger = viewChild<ElementRef<HTMLButtonElement>>("trigger");
   readonly panel = viewChild<ElementRef<HTMLElement>>("panel");
   private readonly host = inject(ElementRef<HTMLElement>);
+  // Labels are translation keys.
   readonly fields = [
-    { value: "name", label: "Name" },
-    { value: "lastUpdatedOnTS", label: "Last modified" },
-    { value: "createdOnTS", label: "Date created" },
+    { value: "name", label: "Sort.Fields.Name" },
+    { value: "lastUpdatedOnTS", label: "Sort.Fields.LastModified" },
+    { value: "createdOnTS", label: "Sort.Fields.Created" },
   ];
   get field() {
     return this.sort().replace(/^-/, "");
@@ -40,8 +44,8 @@ export class SortMenu {
   }
   get directions() {
     return this.field === "name"
-      ? ["A to Z", "Z to A"]
-      : ["Oldest first", "Newest first"];
+      ? ["Sort.Directions.AToZ", "Sort.Directions.ZToA"]
+      : ["Sort.Directions.Oldest", "Sort.Directions.Newest"];
   }
   toggle() {
     if (this.open()) return this.close();
@@ -108,12 +112,16 @@ export class SortMenu {
     if (!this.host.nativeElement.contains(event.target as Node))
       this.close(false);
   }
-  @HostListener("focusout")
-  focusOut() {
-    queueMicrotask(() => {
-      if (!this.host.nativeElement.contains(document.activeElement))
-        this.close(false);
-    });
+  @HostListener("focusout", ["$event"])
+  focusOut(event: FocusEvent) {
+    // Safari blurs the focused item on pointer-down without focusing the
+    // clicked button. Keep the menu mounted until that click can select it.
+    // Explicit focus transfers (including Tab) and outside clicks still dismiss.
+    if (
+      event.relatedTarget instanceof Node &&
+      !this.host.nativeElement.contains(event.relatedTarget)
+    )
+      this.close(false);
   }
   @HostListener("window:resize")
   resized() {

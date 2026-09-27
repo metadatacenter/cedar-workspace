@@ -2,9 +2,9 @@
 
 CEDAR's split Workspace frontend. `/` and `/dashboard` run a standalone Angular
 22 application with Angular routing, signals, forms and shared CEDAR design tokens.
-The initial workspace provides a table, search, folder navigation, collapsible side
-panels, Info/Version tabs, Type and Last modified filters, and resource action dialogs. It deliberately has no
-categories, a latest-version filter or a tile view.
+Workspace provides list and compact grid views, search, folder navigation, collapsible
+side panels, Info/Version tabs, Type and Last modified filters, version filtering,
+and resource action dialogs.
 
 Template, element and field authoring opens the configured CED/CEFD Designer host;
 metadata creation/editing opens the standalone Angular CEE host at
@@ -46,6 +46,45 @@ with the column headers and stored in the URL; changing it resets pagination.
 Folders remain mixed by default. Folder grouping uses the server's compound
 `sort=foldersFirst,<field>` order before pagination, including search and shared
 views, and requires the corresponding microservice-library support.
+
+## Grid selection and moves
+
+The result toolbar switches between the existing list and 106px-high grid cards.
+Both views use the same server-sorted, filtered page and keep selection when switching.
+Click selects; Shift-click and Shift+arrows extend a range; Cmd/Ctrl-click toggles;
+Cmd/Ctrl+A selects the current page. Dragging blank space selects a rectangle.
+Grid names select on click and open on double-click or Enter. List links retain
+single-click navigation and row Enter retains selection.
+
+Drag selected items onto a folder or breadcrumb, use Move to choose a destination,
+or Cut and Paste (also Cmd/Ctrl+X and Cmd/Ctrl+V). Moves recheck server permissions
+and obtain each resource's ETag before writing. The server remains authoritative.
+Group moves are individual conditional requests: partial failures are named, successful
+items are refreshed, and failed items can be explicitly retried. Selected descendants
+travel with selected ancestors; cycles are rejected. Selection clears when the listing
+changes, so operations cannot accidentally include a hidden page.
+
+Angular CDK 22.2.0 and Selecto 1.26.3 are MIT licensed. CDK provides dragging and
+Selecto supplies marquee geometry; no commercial file-manager dependency is used.
+The isolated `experiments/` prototype is not part of the production build.
+
+## Languages
+
+Workspace is available in English and Hungarian. It shows the first language in
+the browser's `navigator.languages` whose primary subtag is `en` or `hu`, and
+English otherwise; English is also the fallback for any missing string. Every
+user-visible string lives in `src/assets/i18n/en.json` and `hu.json`, which
+`@ngx-translate/core` reads from the bundle, so no language map is fetched at run
+time. The metadata editor passes the active language to CEE as its
+`defaultLanguage`, with English as `fallbackLanguage`. Dates use `hu-HU` in
+Hungarian; in English each date keeps the locale it used before localization.
+
+`npm test` enforces this. `translations.spec.ts` checks that both maps declare the
+same keys and parameters, that keys are ASCII, and that no Hungarian value repeats
+the English unless it is listed as legitimately identical.
+`tools/i18n-guard.test.mjs` fails when a template or a user-facing TypeScript call
+states literal text instead of a translation key; its deliberate exceptions, each
+with a reason, are in `tools/i18n-allowlist.json`.
 
 ## Local development
 

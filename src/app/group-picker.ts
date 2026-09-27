@@ -7,17 +7,21 @@ import {
   SimpleChanges,
 } from "@angular/core";
 import { FormsModule } from "@angular/forms";
+import { TranslatePipe } from "@ngx-translate/core";
 
 @Component({
   selector: "cedar-group-picker",
-  imports: [FormsModule],
+  imports: [FormsModule, TranslatePipe],
   template: `
-    <label [for]="id + '-input'">{{ label }}</label>
+    @if (!labelledBy) {
+      <label [for]="id + '-input'">{{ label }}</label>
+    }
     <input
       spellcheck="false"
       [id]="id + '-input'"
       type="text"
       role="combobox"
+      [attr.aria-labelledby]="labelledBy || null"
       autocomplete="off"
       [attr.aria-expanded]="open && matches.length > 0"
       [attr.aria-controls]="open && matches.length ? id + '-options' : null"
@@ -48,6 +52,7 @@ import { FormsModule } from "@angular/forms";
             [id]="id + '-option-' + i"
             [attr.aria-selected]="i === active"
             [class.active]="i === active"
+            (pointermove)="active = i"
             (mousedown)="$event.preventDefault()"
             (click)="choose(option)"
           >
@@ -56,7 +61,7 @@ import { FormsModule } from "@angular/forms";
         }
       </div>
     } @else if (open && query.trim()) {
-      <p role="status">No matches found.</p>
+      <p role="status">{{ "GroupPicker.NoMatches" | translate }}</p>
     }
   `,
   styles: [
@@ -69,7 +74,7 @@ import { FormsModule } from "@angular/forms";
         display: block;
         margin: 0 0 6px;
         color: var(--cedar-text-muted);
-        font-size: var(--cedar-font-size-small);
+        font-size: var(--cedar-font-size);
         font-weight: var(--cedar-font-weight-medium);
       }
       input {
@@ -89,11 +94,12 @@ import { FormsModule } from "@angular/forms";
         top: 100%;
         left: 0;
         min-width: 160px;
+        width: 100%;
         max-width: 100%;
         padding: var(--cedar-space-1) 0;
-        background: var(--cedar-color-on-primary);
-        border: 1px solid var(--cedar-border-rule);
-        border-radius: var(--cedar-control-radius-default);
+        background: var(--cedar-overlay-surface);
+        border: 1px solid var(--cedar-overlay-border);
+        border-radius: var(--cedar-menu-radius);
         box-shadow: var(--cedar-menu-shadow);
       }
       button {
@@ -106,10 +112,14 @@ import { FormsModule } from "@angular/forms";
         text-align: left;
         color: var(--cedar-text-primary);
       }
+      button:hover:not(:disabled):not([aria-disabled='true']) {
+        color: var(--cedar-text-primary);
+        background: transparent;
+      }
       button.active,
-      button:hover {
-        color: var(--cedar-color-on-primary);
-        background: var(--cedar-color-primary);
+      button.active:hover:not(:disabled):not([aria-disabled='true']) {
+        color: var(--cedar-text-selected);
+        background: var(--cedar-surface-selected);
       }
     `,
   ],
@@ -117,6 +127,7 @@ import { FormsModule } from "@angular/forms";
 export class GroupPicker implements OnChanges {
   @Input() id = "";
   @Input() label = "";
+  @Input() labelledBy = "";
   @Input() placeholder = "";
   @Input() options: { id: string; label: string }[] = [];
   @Input() value = "";

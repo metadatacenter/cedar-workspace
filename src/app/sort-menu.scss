@@ -1,3 +1,4 @@
+@use "@org.metadatacenter/cedar-design-tokens/patterns";
 :host {
   display: inline-block;
   font-weight: var(--cedar-font-weight-regular);
@@ -7,42 +8,37 @@
   min-width: 28px;
 }
 .sort-menu {
+  @include patterns.menu-surface;
   position: fixed;
-  z-index: var(--cedar-layer-menu);
   width: min(256px, calc(100vw - 16px));
   max-height: calc(100dvh - 16px);
   overflow: auto;
   text-align: left;
-  background: var(--cedar-color-on-primary);
-  border: 1px solid var(--cedar-border-rule);
-  border-radius: var(--cedar-menu-radius);
-  box-shadow: var(--cedar-menu-shadow);
 }
 [role="group"] {
   padding-block: var(--cedar-space-2);
 }
 [role="group"] + [role="group"] {
-  border-top: 1px solid var(--cedar-border-rule);
+  border-top: 1px solid var(--cedar-overlay-border);
 }
 .section-label {
-  padding: var(--cedar-space-2) var(--cedar-space-4);
+  padding: var(--cedar-menu-item-padding-block) var(--cedar-menu-item-padding-inline);
   color: var(--cedar-text-muted);
   font-size: var(--cedar-font-size);
 }
 [role="menuitemradio"] {
+  @include patterns.menu-item;
   display: flex;
   align-items: center;
   width: 100%;
   gap: var(--cedar-space-4);
-  padding: var(--cedar-space-2) var(--cedar-space-4);
   border-radius: 0;
-  text-align: left;
   color: var(--cedar-text-primary);
   font-weight: var(--cedar-font-weight-regular);
 }
 [aria-checked="true"] {
   background: var(--cedar-surface-selected);
-  color: var(--cedar-color-primary);
+  color: var(--cedar-text-selected);
 }
 .unchecked {
   visibility: hidden;

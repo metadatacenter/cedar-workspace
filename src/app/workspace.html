@@ -1,51 +1,73 @@
 <header class="topbar">
-  <a href="/dashboard" class="brand" aria-label="CEDAR Workspace"
+  <a
+    href="/dashboard"
+    class="brand"
+    [attr.aria-label]="'Header.Brand' | translate"
     ><img src="/img/cedar-mark.png" alt="" /><span class="brand-label"
-      >Workspace<small class="brand-version">{{ cedarVersion }}</small></span
+      >{{'Common.Workspace' | translate}}<small class="brand-version"
+        >{{ cedarVersion }}</small
+      ></span
     ></a
   >
   <form class="search" (ngSubmit)="submitSearch()">
     <input
       spellcheck="false"
-      aria-label="Search workspace"
+      autocomplete="off"
+      autocorrect="off"
+      autocapitalize="off"
+      [attr.aria-label]="'Header.SearchWorkspace' | translate"
       name="search"
       [(ngModel)]="search"
-      placeholder="Search"
-    /><button aria-label="Search" type="submit">
+      [placeholder]="'Header.SearchPlaceholder' | translate"
+    /><button [attr.aria-label]="'Header.Search' | translate" type="submit">
       <cedar-icon name="search" />
     </button>
   </form>
   <details class="header-menu">
-    <summary aria-label="User menu"><cedar-icon name="user" /></summary>
+    <summary [attr.aria-label]="'Header.UserMenu' | translate">
+      <cedar-icon name="user" />
+    </summary>
     <nav>
-      <a href="/profile"><span>Profile</span><cedar-icon name="user" /></a
-      ><a href="/settings"><span>Settings</span><cedar-icon name="tuning" /></a
+      <a href="/profile"
+        ><span>{{'Header.Profile' | translate}}</span
+        ><cedar-icon name="user" /></a
+      ><a href="/settings"
+        ><span>{{'Header.Settings' | translate}}</span
+        ><cedar-icon name="tuning" /></a
       ><a routerLink="/logout"
-        ><span>Logout</span><cedar-icon name="sign-out"
+        ><span>{{'Header.Logout' | translate}}</span
+        ><cedar-icon name="sign-out"
       /></a>
     </nav>
   </details>
   <details class="header-menu">
-    <summary aria-label="More menu"><cedar-icon name="more" /></summary>
+    <summary [attr.aria-label]="'Header.MoreMenu' | translate">
+      <cedar-icon name="more" />
+    </summary>
     <nav>
-      <a href="/groups"><span>Groups</span><cedar-icon name="groups" /></a
+      <a href="/groups"
+        ><span>{{'Header.Groups' | translate}}</span
+        ><cedar-icon name="groups" /></a
       ><a href="/privacy"
-        ><span>Privacy</span><cedar-icon name="permissions" /></a
+        ><span>{{'Header.Privacy' | translate}}</span
+        ><cedar-icon name="permissions" /></a
       >@if(ready() && api.monitoringAllowed){<a
         [href]="api.config.monitoringFrontend"
         target="_blank"
         rel="noopener"
-        ><span>Monitoring</span><cedar-icon name="activity" /></a
+        ><span>{{'Header.Monitoring' | translate}}</span
+        ><cedar-icon name="activity" /></a
       >}<a
         href="https://metadatacenter.org/help/#subscribe"
         target="_blank"
         rel="noopener"
-        ><span>Help</span><cedar-icon name="external" /></a
+        ><span>{{'Header.Help' | translate}}</span
+        ><cedar-icon name="external" /></a
       ><a
         href="https://metadatacenter.org/#about"
         target="_blank"
         rel="noopener"
-        ><span>About</span><cedar-icon name="external"
+        ><span>{{'Header.About' | translate}}</span><cedar-icon name="external"
       /></a>
     </nav>
   </details>
@@ -53,26 +75,32 @@
 @if(error()){
 <div class="alert" role="alert">
   {{error()}}
-  <button (click)="error.set('')" aria-label="Dismiss error">
+  <button
+    (click)="error.set('')"
+    [attr.aria-label]="'Dashboard.DismissError' | translate"
+  >
     <cedar-icon name="close" />
   </button>
 </div>
 } @if(notice()){
 <cedar-toast [message]="notice()" />
 } @if(!ready()){
-<p class="loading" role="status">Connecting to your workspace…</p>
+<p class="loading" role="status">{{'Dashboard.Connecting' | translate}}</p>
 } @else {
 <div
   class="workspace"
   [class.left-collapsed]="!left()"
   [class.right-collapsed]="!right()"
 >
-  <aside class="navigation" aria-label="Workspace navigation">
+  <aside
+    class="navigation"
+    [attr.aria-label]="'Dashboard.Navigation' | translate"
+  >
     <button
       class="collapse"
       (click)="left.set(!left())"
       [attr.aria-expanded]="left()"
-      [attr.aria-label]="left()?'Collapse navigation':'Expand navigation'"
+      [attr.aria-label]="(left()?'Dashboard.CollapseNavigation':'Dashboard.ExpandNavigation') | translate"
     >
       <cedar-icon [name]="left()?'left':'right'" />
     </button>
@@ -82,75 +110,90 @@
         class="primary"
         id="button-create"
         role="button"
-        aria-label="New"
+        [attr.aria-label]="'Dashboard.New' | translate"
       >
-        New <cedar-icon name="add" />
+        {{'Dashboard.New' | translate}} <cedar-icon name="add" />
       </summary>
       <nav>
         <button
           (click)="openNew('new-folder')"
           [disabled]="!can(currentFolder(),'createInFolder')"
         >
-          Folder
+          {{'ResourceTypes.folder' | translate}}
         </button>
         @if(can(currentFolder(),'createInFolder')){
-        <a [href]="createLink('fields')">Field</a
-        ><a [href]="createLink('elements')">Element</a
+        <a [href]="createLink('fields')"
+          >{{'ResourceTypes.field' | translate}}</a
+        ><a [href]="createLink('elements')"
+          >{{'ResourceTypes.element' | translate}}</a
         ><a id="button-create-template" [href]="createLink('templates')"
-          >Template</a
+          >{{'ResourceTypes.template' | translate}}</a
         >
-        } @else {<button disabled>Field</button><button disabled>Element</button
-        ><button disabled>Template</button>}
+        } @else {<button disabled>{{'ResourceTypes.field' | translate}}</button
+        ><button disabled>{{'ResourceTypes.element' | translate}}</button
+        ><button disabled>{{'ResourceTypes.template' | translate}}</button>}
       </nav>
     </details>
     <nav class="destinations">
       <a
         routerLink="/dashboard"
         [class.active]="!params.has('sharing')&&!params.has('search')&&!params.has('viewMode')"
-        ><cedar-icon name="home" />Home</a
+        ><cedar-icon name="home" />{{'Common.Home' | translate}}</a
       >
       <a
         routerLink="/dashboard"
         [queryParams]="{sharing:'shared-with-me'}"
         [class.active]="params.get('sharing')==='shared-with-me'"
-        ><cedar-icon name="groups" />Shared with Me</a
+        ><cedar-icon name="groups" />{{'Dashboard.SharedWithMe' | translate}}</a
       >
       <a
         routerLink="/dashboard"
         [queryParams]="{sharing:'shared-with-everybody'}"
         [class.active]="params.get('sharing')==='shared-with-everybody'"
-        ><cedar-icon name="groups" />Shared with Everyone</a
+        ><cedar-icon name="groups" />{{'Dashboard.SharedWithEveryone' |
+        translate}}</a
       >
       <a
         routerLink="/dashboard"
         [queryParams]="{viewMode:'view-special-folders'}"
         [class.active]="params.has('viewMode')"
-        ><cedar-icon name="groups" />Community Folders</a
+        ><cedar-icon name="groups" />{{'Dashboard.CommunityFolders' |
+        translate}}</a
       >
     </nav>
     }
   </aside>
-  <main>
+  <main (keydown)="explorerKeys($event)">
+    @if(grid()){
+    <h1 class="sr-only">{{'Common.Workspace' | translate}}</h1>
+    }
     <div class="table-toolbar">
-      <nav aria-label="Folder breadcrumb" class="breadcrumbs">
+      <nav
+        [attr.aria-label]="'Dashboard.Breadcrumb' | translate"
+        class="breadcrumbs"
+      >
         @if(params.has('search')){<span
-          >Search results for “{{params.get('search')}}”</span
+          >{{'Dashboard.SearchResults' | translate: {query:
+          params.get('search')} }}</span
         >} @else if(params.has('sharing')){<span
-          >{{params.get('sharing')==='shared-with-me'?'Shared with Me':'Shared
-          with Everyone'}}</span
-        >} @else if(params.has('viewMode')){<span>Community Folders</span>}
-        @else { @for(p of path();track p['@id'];let last=$last){<a
+          >{{(params.get('sharing')==='shared-with-me'?'Dashboard.SharedWithMe':'Dashboard.SharedWithEveryone')
+          | translate}}</span
+        >} @else if(params.has('viewMode')){<span
+          >{{'Dashboard.CommunityFolders' | translate}}</span
+        >} @else { @for(p of path();track p['@id'];let last=$last){<a
           routerLink="/dashboard"
           [queryParams]="{folderId:p['@id']}"
           [attr.aria-current]="last?'page':null"
-          >{{title(p)==='/'?'All':title(p)}}</a
+          [attr.data-drop-id]="p['@id']"
+          [class.explorer-drop-target]="dropTarget()===p['@id']"
+          >{{title(p)==='/'?('Common.All' | translate):title(p)}}</a
         >@if(!last){<span class="breadcrumb-separator" aria-hidden="true"
           >/</span
         >}} }
       </nav>
       <button
-        (click)="load()"
-        aria-label="Refresh workspace"
+        (click)="load(true)"
+        [attr.aria-label]="'Dashboard.Refresh' | translate"
         [disabled]="loading()"
       >
         <cedar-icon name="refresh" />
@@ -158,12 +201,87 @@
     </div>
     <cedar-resource-filters
       [value]="filters"
+      [version]="version"
+      (versionChange)="setVersion($event)"
       (change)="changeFilters($event)"
     />
-    <div class="table-scroll" [attr.aria-busy]="loading()">
+    <div class="explorer-toolbar">
+      @if(selectionIds().length){
+      <span role="status"
+        >{{'Explorer.Selected' | translate:{count:selectionIds().length}
+        }}</span
+      >
+      <button
+        (click)="setSelection([])"
+        [disabled]="moving()"
+        [attr.aria-label]="'Explorer.Clear' | translate"
+      >
+        <cedar-icon name="close" />
+      </button>
+      <button
+        (click)="moveDialog.set(selection())"
+        [disabled]="moving() || !canMoveSelection()"
+      >
+        {{'ResourceActions.Move' | translate}}
+      </button>
+      <button
+        (click)="cutSelection()"
+        [disabled]="moving() || !canMoveSelection()"
+      >
+        {{'Explorer.Cut' | translate}}
+      </button>
+      } @if(cutItems().length){<button
+        (click)="moveItems(cutItems(),folder)"
+        [disabled]="moving() || !can(currentFolder(),'moveIntoFolder')"
+      >
+        {{'Explorer.Paste' | translate:{count:cutItems().length} }}</button
+      >}
+      <div
+        class="explorer-view-switch"
+        role="group"
+        [attr.aria-label]="'Explorer.View' | translate"
+      >
+        <button
+          (click)="grid.set(false)"
+          [attr.aria-pressed]="!grid()"
+          [attr.aria-label]="'Explorer.List' | translate"
+        >
+          <cedar-icon name="list" size="small" />
+        </button>
+        <button
+          (click)="grid.set(true)"
+          [attr.aria-pressed]="grid()"
+          [attr.aria-label]="'Explorer.Grid' | translate"
+        >
+          <cedar-icon name="grid" size="small" />
+        </button>
+      </div>
+      @if(grid()){<cedar-sort-menu
+        [sort]="sort"
+        [version]="version"
+        (versionChange)="setVersion($event)"
+        [foldersFirst]="params.get('folders') === 'first'"
+        (sortChange)="setSort($event)"
+        (foldersFirstChange)="setFoldersFirst($event)"
+      />}
+    </div>
+    <div
+      class="table-scroll"
+      [class.explorer-grid]="grid()"
+      [attr.aria-busy]="loading() || moving()"
+      cdkDropList
+      [cdkDropListSortingDisabled]="true"
+      cedarExplorerSelection
+      #explorer="explorerSelection"
+      [selection]="selectionIds()"
+      [gridView]="grid()"
+      [selectionDisabled]="loading() || moving()"
+      (selectionChange)="setSelection($event)"
+      (openItem)="openItem($event)"
+    >
       <table>
         <caption class="sr-only">
-          Workspace artifacts and folders
+          {{'Dashboard.TableCaption' | translate}}
         </caption>
         <thead>
           <tr>
@@ -171,7 +289,8 @@
               [attr.aria-sort]="sort==='name'?'ascending':sort==='-name'?'descending':'none'"
             >
               <button (click)="changeSort('name')">
-                Name @if(sort === "name" || sort === "-name") {
+                {{'Common.Name' | translate}} @if(sort === "name" || sort ===
+                "-name") {
                 <cedar-icon
                   [name]="sort === 'name' ? 'chevron-up' : 'chevron-down'"
                 />
@@ -182,8 +301,8 @@
               [attr.aria-sort]="sort==='lastUpdatedOnTS'?'ascending':sort==='-lastUpdatedOnTS'?'descending':'none'"
             >
               <button (click)="changeSort('lastUpdatedOnTS')">
-                Last modified @if(sort === "lastUpdatedOnTS" || sort ===
-                "-lastUpdatedOnTS") {
+                {{'Common.LastModified' | translate}} @if(sort ===
+                "lastUpdatedOnTS" || sort === "-lastUpdatedOnTS") {
                 <cedar-icon
                   [name]="sort === 'lastUpdatedOnTS' ? 'chevron-up' : 'chevron-down'"
                 />
@@ -191,9 +310,11 @@
               </button>
             </th>
             <th class="sort-column">
-              <span class="sr-only">Actions</span>
+              <span class="sr-only">{{'Dashboard.Actions' | translate}}</span>
               <cedar-sort-menu
                 [sort]="sort"
+                [version]="version"
+                (versionChange)="setVersion($event)"
                 [foldersFirst]="params.get('folders') === 'first'"
                 (sortChange)="setSort($event)"
                 (foldersFirstChange)="setFoldersFirst($event)"
@@ -204,20 +325,42 @@
         <tbody>
           @for(r of rows();track r['@id']){
           <tr
-            [class.selected]="selected()?.['@id']===r['@id']"
-            (click)="select(r)"
+            class="explorer-item"
+            [class.explorer-schema]="['template','element','field'].includes(r.resourceType)"
+            [class.selected]="selectionIds().includes(r['@id'])"
+            [attr.aria-selected]="selectionIds().includes(r['@id'])"
+            [attr.data-resource-id]="r['@id']"
+            [attr.data-drop-id]="r.resourceType==='folder'?r['@id']:null"
+            [class.explorer-drop-target]="dropTarget()===r['@id']"
             tabindex="0"
-            (keydown.enter)="$event.target === $event.currentTarget ? select(r) : null"
+            cdkDrag
+            [cdkDragDisabled]="loading() || moving() || !can(r,'moveResource') || (selectionIds().includes(r['@id']) && !canMoveSelection())"
+            [cdkDragStartDelay]="{mouse:0,touch:180}"
+            (cdkDragStarted)="startDrag(r)"
+            (cdkDragMoved)="dragMove($event)"
+            (cdkDragEnded)="endDrag($event,explorer)"
+            (dblclick)="$event.target === $event.currentTarget ? openItem(r['@id']) : null"
           >
+            <ng-template cdkDragPreview
+              ><div class="explorer-drag-preview">
+                {{'Explorer.Selected' | translate:{count:selectionIds().length}
+                }}
+              </div></ng-template
+            >
             <td>
               <span
                 class="resource-icon"
                 [attr.data-type]="r.resourceType"
-                [attr.title]="r.resourceType"
+                [attr.title]="'ResourceKinds.' + r.resourceType | translate"
                 aria-hidden="true"
                 ><cedar-icon [name]="r.resourceType"
               /></span>
-              @if(r.resourceType==='folder') {
+              @if(grid()){<span
+                class="explorer-name"
+                [title]="title(r)"
+                (dblclick)="openItem(r['@id'])"
+                >{{title(r)}}</span
+              >} @else if(r.resourceType==='folder') {
               <a
                 routerLink="/dashboard"
                 [queryParams]="{folderId:r['@id']}"
@@ -234,6 +377,21 @@
               }
             </td>
             <td>
+              @if(grid() &&
+              ['template','element','field'].includes(r.resourceType)){
+              <span class="explorer-release">
+                <span [attr.title]="'Common.Version' | translate"
+                  >{{r['pav:version'] || ('Dashboard.Unversioned' |
+                  translate)}}</span
+                >
+                <span aria-hidden="true"> · </span>
+                <span [attr.title]="'Dashboard.Status' | translate"
+                  >{{status(r)}}</span
+                >
+              </span>
+              } @if(grid()){<span class="explorer-kind"
+                >{{'ResourceTypes.' + r.resourceType | translate}} · </span
+              >}
               <time
                 [attr.datetime]="r['pav:lastUpdatedOn'] || null"
                 [attr.title]="r['pav:lastUpdatedOn'] || null"
@@ -245,26 +403,26 @@
                 [href]="openView(r)"
                 target="_blank"
                 rel="noopener"
-                aria-label="Open in OpenView"
-                title="Open in OpenView"
+                [attr.aria-label]="'Dashboard.OpenInOpenView' | translate"
+                [title]="'Dashboard.OpenInOpenView' | translate"
                 ><cedar-icon name="external" /></a
               >} @if(r.resourceType==='template'&&can(r,'populate')){<a
                 [href]="link(r,true)"
-                aria-label="Populate template"
-                title="Populate template"
+                [attr.aria-label]="'Dashboard.PopulateTemplate' | translate"
+                [title]="'Dashboard.PopulateTemplate' | translate"
                 ><cedar-icon name="populate" /></a
               >}
               <button
                 (click)="toggleMenu(r, $event)"
                 [attr.aria-expanded]="menu()===r['@id']"
-                [attr.aria-label]="'Actions for '+title(r)"
+                [attr.aria-label]="'Dashboard.ActionsFor' | translate: {name: title(r)}"
               >
                 <cedar-icon name="more" />
               </button>
               @if(menu()===r['@id']){
               <div
                 class="resource-menu"
-                aria-label="Artifact actions"
+                [attr.aria-label]="'Dashboard.ArtifactActions' | translate"
                 [style.left.px]="menuLeft()"
                 [style.top.px]="menuTop()"
                 (keydown)="menuKey($event)"
@@ -282,48 +440,72 @@
           }
         </tbody>
       </table>
-      @if(loading()){
-      <p class="empty" role="status">Loading…</p>
+      @if(refreshing()){
+      <span class="sr-only" role="status"
+        >{{'Dashboard.Refreshing' | translate}}</span
+      >
+      } @if(loading()&&!refreshing()){
+      <p class="empty" role="status">{{'Common.Loading' | translate}}</p>
       } @else if(!rows().length){
-      <p class="empty">No items found.</p>
+      <p class="empty">{{'Dashboard.NoItems' | translate}}</p>
       }
     </div>
     <footer class="paging">
       <button (click)="page(-1)" [disabled]="offset()===0||loading()">
-        Previous</button
+        {{'Common.Previous' | translate}}</button
       ><span
-        >Displaying {{total()?offset()+1:0}}–{{offset()+rows().length}} of
-        {{total()}}</span
+        >{{'Dashboard.Displaying' | translate: {first: total()?offset()+1:0,
+        last: offset()+rows().length, total: total()} }}</span
       ><button
         (click)="page(1)"
         [disabled]="offset()+rows().length>=total()||loading()"
       >
-        Next
+        {{'Common.Next' | translate}}
       </button>
     </footer>
   </main>
-  <aside class="information" aria-label="Resource information">
+  <aside
+    class="information"
+    [attr.aria-label]="'Dashboard.Information' | translate"
+  >
     <button
       class="collapse"
       (click)="right.set(!right())"
       [attr.aria-expanded]="right()"
-      [attr.aria-label]="right()?'Collapse information':'Expand information'"
+      [attr.aria-label]="(right()?'Dashboard.CollapseInformation':'Dashboard.ExpandInformation') | translate"
     >
       <cedar-icon [name]="right()?'right':'left'" />
     </button>
-    @if(right()){ @if(selected();as r){
+    @if(right()){ @if(selectionIds().length > 1){
+    <h1>{{'Explorer.Selected' | translate:{count:selectionIds().length} }}</h1>
+    <ul class="explorer-selected-names">
+      @for(item of selection();track item['@id']){
+      <li>
+        <cedar-icon [name]="item.resourceType" /><span
+          >{{title(item)}}<small
+            >{{'ResourceTypes.'+item.resourceType | translate}}</small
+          ></span
+        >
+      </li>
+      }
+    </ul>
+    } @else if(selected();as r){
     <h1>
       <cedar-icon [name]="r.resourceType" size="large" /><span
         >{{title(r)}}</span
       >
     </h1>
-    <div class="tabs" role="tablist" aria-label="Resource details">
+    <div
+      class="tabs"
+      role="tablist"
+      [attr.aria-label]="'Dashboard.Details' | translate"
+    >
       <button
         role="tab"
         [attr.aria-selected]="tab==='info'"
         (click)="tab='info'"
       >
-        Info
+        {{'Dashboard.Info' | translate}}
       </button>
       @if(r.resourceType === "template" || r.resourceType === "element" ||
       r.resourceType === "field"){
@@ -332,78 +514,68 @@
         [attr.aria-selected]="tab==='version'"
         (click)="tab='version'"
       >
-        Version
+        {{'Common.Version' | translate}}
       </button>
       }
     </div>
     @if(tab==='info'){
     <dl>
-      <dt>Type</dt>
-      <dd>{{r.resourceType | titlecase}}</dd>
-      <dt class="location-label">Location</dt>
+      <dt>{{'Common.Type' | translate}}</dt>
+      <dd>{{'ResourceTypes.' + r.resourceType | translate}}</dd>
+      <dt class="location-label">{{'Dashboard.Location' | translate}}</dt>
       <dd class="detail-with-copy">
         <span
           >@for(p of r.pathInfo;track p['@id'];let last=$last){@if(!last){<a
             routerLink="/dashboard"
             [queryParams]="{folderId:p['@id']}"
-            >{{title(p)==='/'?'All':title(p)}}</a
+            >{{title(p)==='/'?('Common.All' | translate):title(p)}}</a
           ><span class="breadcrumb-separator" aria-hidden="true">/</span
           >}}</span
         >
         @if(parentId(r); as id){
-        <button
-          class="copy-icon"
-          (click)="copyId(id)"
-          aria-label="Copy folder location"
-          title="Copy folder location"
-        >
-          <cedar-icon name="copy" />
-        </button>
+        <cedar-copy-button
+          [label]="'Dashboard.CopyLocation' | translate"
+          (copied)="copyId(id)"
+        />
         }
       </dd>
-      <dt>Owner</dt>
+      <dt>{{'Common.Owner' | translate}}</dt>
       <dd>{{r.ownedByUserName || '—'}}</dd>
-      <dt>Created</dt>
+      <dt>{{'Dashboard.Created' | translate}}</dt>
       <dd>
         <time
           [attr.datetime]="r['pav:createdOn'] || null"
           [attr.title]="r['pav:createdOn'] || null"
           >{{r['pav:createdOn']|friendlyDate:now()}}</time
-        ><small>{{r.createdByUserName?'by '+r.createdByUserName:''}}</small>
+        ><small
+          >{{r.createdByUserName?('Dashboard.By' | translate: {name:
+          r.createdByUserName}):''}}</small
+        >
       </dd>
-      <dt>Last modified</dt>
+      <dt>{{'Common.LastModified' | translate}}</dt>
       <dd>
         <time
           [attr.datetime]="r['pav:lastUpdatedOn'] || null"
           [attr.title]="r['pav:lastUpdatedOn'] || null"
           >{{r['pav:lastUpdatedOn']|friendlyDate:now()}}</time
         ><small
-          >{{r.lastUpdatedByUserName?'by '+r.lastUpdatedByUserName:''}}</small
+          >{{r.lastUpdatedByUserName?('Dashboard.By' | translate: {name:
+          r.lastUpdatedByUserName}):''}}</small
         >
       </dd>
-      <dt>Access</dt>
+      <dt>{{'Dashboard.Access' | translate}}</dt>
       <dd>
-        {{r.currentUserPermissions?.owner?'Owner':r.currentUserPermissions?.role
-        || '—'}}
+        {{r.currentUserPermissions?.owner?('Common.Owner' | translate):role(r)}}
       </dd>
     </dl>
-    <section class="info-section">
-      <div class="description-heading">
-        Description @if(can(r,'updateResource')){<button
-          (click)="act('rename',r)"
-          aria-label="Edit description"
-        >
-          Edit</button
-        >}
-      </div>
-      <p class="description">{{r['schema:description']||'No description'}}</p>
-    </section>
     @if(r.derivedFrom;as derived){
     <section class="info-section">
-      <div class="description-heading">Derived from</div>
+      <div class="description-heading">
+        {{'Dashboard.DerivedFrom' | translate}}
+      </div>
       <a [href]="link(derived)">{{title(derived)}}</a>
       <small
-        >Modified
+        >{{'Dashboard.Modified' | translate}}
         <time
           [attr.datetime]="derived['pav:lastUpdatedOn'] || null"
           [attr.title]="derived['pav:lastUpdatedOn'] || null"
@@ -413,85 +585,100 @@
     </section>
     } @if(r.isBasedOn;as based){
     <section class="info-section">
-      <div class="description-heading">Template</div>
+      <div class="description-heading">
+        {{'Dashboard.Template' | translate}}
+      </div>
       <div class="detail-with-copy">
         <a [href]="link(based)">{{title(based)}}</a>
-        <button
-          class="copy-icon"
-          (click)="copyId(based['@id'])"
-          aria-label="Copy template identifier"
-          title="Copy template identifier"
-        >
-          <cedar-icon name="copy" />
-        </button>
+        <cedar-copy-button
+          [label]="'Dashboard.CopyTemplateIdentifier' | translate"
+          (copied)="copyId(based['@id'])"
+        />
       </div>
     </section>
     } @if(r.trustedBy){
     <section class="info-section">
-      <div class="description-heading">Trusted by</div>
+      <div class="description-heading">
+        {{'Dashboard.TrustedBy' | translate}}
+      </div>
       {{r.trustedBy}}
     </section>
     } @if(r['schema:identifier']){
     <section class="info-section">
-      <div class="description-heading">Identifier</div>
+      <div class="description-heading">
+        {{'Dashboard.Identifier' | translate}}
+      </div>
       {{r['schema:identifier']}}
     </section>
     } @if(r.doi){
     <section class="info-section">
-      <div class="description-heading">DOI</div>
+      <div class="description-heading">{{'Dashboard.Doi' | translate}}</div>
       <a [href]="r.doi" target="_blank" rel="noopener">{{r.doi}}</a>
     </section>
     } @if(r.numberOfInstances!==undefined || instances().length){
     <section class="info-section">
       <div class="description-heading">
-        Metadata instances: {{r.numberOfInstances ?? instanceTotal()}}
+        {{'Dashboard.Instances' | translate}}
       </div>
       @if(instances().length){
       <div class="instance-list">
-        @for(instance of instances();track instance['@id']){<a
-          [href]="link(instance)"
-          >{{title(instance)}}</a
-        >}
+        @for(instance of instances();track instance['@id']){
+        <div class="detail-with-copy">
+          <a [href]="link(instance)">{{title(instance)}}</a>
+          <cedar-copy-button
+            [label]="'Dashboard.CopyIdentifierFor' | translate: {name: title(instance)}"
+            [help]="'Dashboard.CopyInstanceIdentifier' | translate"
+            (copied)="copyId(instance['@id'])"
+          />
+        </div>
+        }
       </div>
-      <p>{{instances().length}} of {{instanceTotal()}} accessible instances.</p>
+      <p class="instance-count">
+        {{'Dashboard.InstanceCount' | translate: {shown: instances().length,
+        total: instanceTotal()} }}
+      </p>
       }
     </section>
     }
     <section class="identifiers info-section">
-      <div class="description-heading">Identifier</div>
-      <div class="detail-with-copy">
-        <span>{{r['@id']}}</span>
-        <button
-          class="copy-icon"
-          (click)="copyId(r['@id'])"
-          aria-label="Copy identifier"
-          title="Copy identifier"
-        >
-          <cedar-icon name="copy" />
-        </button>
+      <div class="description-heading">
+        {{'Dashboard.Identifier' | translate}}
       </div>
+      <div class="detail-with-copy">
+        <a [href]="link(r)">{{r['@id']}}</a>
+        <cedar-copy-button
+          [label]="'Dashboard.CopyIdentifier' | translate"
+          (copied)="copyId(r['@id'])"
+        />
+      </div>
+    </section>
+    <section class="info-section">
+      @for (item of [r]; track item['@id']) {
+      <cedar-description-editor
+        [resource]="item"
+        (saved)="descriptionSaved($event)"
+      />
+      }
     </section>
     } @else {
     <div role="tabpanel">
       @for(v of r.versions?.length?r.versions:[r];track v['@id']){
       <article class="version">
-        <a [href]="link(v)"
-          >{{v['pav:version']||'Unversioned'}} · {{title(v)}}</a
-        >
-        <p>{{v['bibo:status']}}</p>
-        <small
-          >Modified
-          <time
-            [attr.datetime]="v['pav:lastUpdatedOn'] || null"
-            [attr.title]="v['pav:lastUpdatedOn'] || null"
-            >{{v['pav:lastUpdatedOn']|friendlyDate:now()}}</time
-          ></small
-        >
+        <dl>
+          @if($first){
+          <dt>{{'Common.Type' | translate}}</dt>
+          <dd>{{'ResourceTypes.' + r.resourceType | translate}}</dd>
+          }
+          <dt>{{'Common.Version' | translate}}</dt>
+          <dd>{{v['pav:version'] || ('Dashboard.Unversioned' | translate)}}</dd>
+          <dt>{{'Dashboard.Status' | translate}}</dt>
+          <dd>{{status(v)}}</dd>
+        </dl>
       </article>
       }
     </div>
     } }@else{
-    <p class="empty">Select an item to see its details</p>
+    <p class="empty">{{'Dashboard.SelectItem' | translate}}</p>
     } }
   </aside>
 </div>
@@ -506,4 +693,11 @@
   [folder]="folder"
   (closed)="dialog.set(null)"
   (saved)="saved()"
-/>} } }
+/>} } } @if(moveDialog();as items){<cedar-resource-dialog
+  action="move"
+  [resources]="items"
+  [folder]="folder"
+  (closed)="moveDialog.set(null)"
+  (changed)="load(true)"
+  (saved)="moveDialog.set(null); saved()"
+/>}

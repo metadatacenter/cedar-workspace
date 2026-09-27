@@ -1,4 +1,4 @@
-import { test, expect, dashboard } from "./fixtures.mjs";
+import { test, expect, dashboard, resource } from "./fixtures.mjs";
 import AxeBuilder from "@axe-core/playwright";
 
 test("sort menu, column arrows, folder grouping and URL stay synchronized", async ({ page, api }) => {
@@ -63,17 +63,23 @@ test("sort menu supports keyboard selection, dismissal and accessible groups", a
   await trigger.click();
   expect((await new AxeBuilder({ page }).include("cedar-sort-menu").analyze()).violations).toEqual([]);
   await page.keyboard.press("End");
-  await expect(menu.getByRole("menuitemradio", { name: "Mixed with files" })).toBeFocused();
+  await expect(menu.getByRole("menuitemradio", { name: "All versions", exact: true })).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(menu).toHaveCount(0);
   await expect(trigger).toBeFocused();
+  await trigger.click();
+  // Opening focuses the selected item on the next animation frame.
+  await expect(menu.locator('[aria-checked="true"]').first()).toBeFocused();
+  await menu.getByRole("menuitemradio", { name: "All versions", exact: true }).focus();
+  await page.keyboard.press("Tab");
+  await expect(menu).toHaveCount(0);
   await trigger.click();
   await page.getByRole("link", { name: "Home", exact: true }).click();
   await expect(menu).toHaveCount(0);
 });
 
 for (const width of [1440, 375]) {
-  test(`sort options at ${width}`, async ({ page, api }) => {
+  test(`sort options at ${width}`, async ({ page, api, browserName }) => {
     await page.setViewportSize({ width, height: 1000 });
     await dashboard(page);
     const trigger = page.getByRole("button", { name: "Sort options", exact: true });
@@ -83,7 +89,96 @@ for (const width of [1440, 375]) {
     const sort = await trigger.boundingBox();
     const dots = await page.getByRole("button", { name: "Actions for Study metadata" }).boundingBox();
     expect(Math.abs(sort.x + sort.width / 2 - dots.x - dots.width / 2)).toBeLessThan(2);
-    if (process.env.WORKSPACE_VISUAL)
+    if (process.env.WORKSPACE_VISUAL && browserName === "chromium")
       await expect(menu).toHaveScreenshot(`sort-menu-${width}.png`);
   });
 }
+
+test("pointer selections update visible order, folder grouping and version results", async ({ page, api }) => {
+  const alpha = { ...resource, "@id": "alpha", "schema:name": "Alpha" };
+  const historical = { ...resource, "@id": "old", "schema:name": "Alpha historical", "pav:version": "0.9.0" };
+  const folder = { ...resource, "@id": "museum", "schema:name": "Museum", resourceType: "folder" };
+  const zulu = { ...resource, "@id": "zulu", "schema:name": "Zulu" };
+  await page.route("**/api/resource/templates/*/report", route => {
+    const id = new URL(route.request().url()).pathname.split("/").at(-2);
+    return route.fulfill({ json: [alpha, historical, zulu].find(item => item["@id"] === id) });
+  });
+  await page.route("**/api/resource/folders/home/contents?**", route => {
+    const params = new URL(route.request().url()).searchParams;
+    const orders = {
+      name: [alpha, historical, folder, zulu],
+      "-name": [zulu, folder, historical, alpha],
+      "foldersFirst,-name": [folder, zulu, historical, alpha],
+    };
+    const resources = orders[params.get("sort")].filter(item => params.get("version") !== "latest" || item !== historical);
+    return route.fulfill({ json: { resources, totalCount: resources.length } });
+  });
+  await page.goto("/dashboard");
+  const rows = page.locator("tbody td:first-child");
+  await expect(rows).toHaveText(["Alpha", "Alpha historical", "Museum", "Zulu"]);
+  const select = async name => {
+    await page.getByRole("button", { name: "Sort options", exact: true }).click();
+    await page.getByRole("menuitemradio", { name, exact: true }).click();
+  };
+  await select("Z to A");
+  await expect(rows).toHaveText(["Zulu", "Museum", "Alpha historical", "Alpha"]);
+  await select("On top");
+  await expect(rows).toHaveText(["Museum", "Zulu", "Alpha historical", "Alpha"]);
+  await select("Latest version");
+  await expect(rows).toHaveText(["Museum", "Zulu", "Alpha"]);
+  await select("All versions");
+  await expect(rows).toHaveText(["Museum", "Zulu", "Alpha historical", "Alpha"]);
+  await select("Mixed with files");
+  await expect(rows).toHaveText(["Zulu", "Museum", "Alpha historical", "Alpha"]);
+});
+
+test('Version selector and menu share persisted server filtering', async ({page, api}) => {
+  const requests = [];
+  page.on('request', request => { if(request.url().includes('/contents?')) requests.push(new URL(request.url())); });
+  await dashboard(page);
+  const version = page.getByRole('combobox', {name:'Version', exact:true});
+  await expect(version).toHaveValue('all');
+  await version.selectOption('latest');
+  await expect.poll(() => requests.at(-1)?.searchParams.get('version')).toBe('latest');
+  await page.reload();
+  await expect(version).toHaveValue('latest');
+  await page.getByRole('button', {name:'Sort options', exact:true}).click();
+  const group = page.getByRole('menu').getByRole('group', {name:'Version', exact:true});
+  await expect(group.getByRole('menuitemradio', {name:'Latest version',exact:true})).toHaveAttribute('aria-checked','true');
+  await group.getByRole('menuitemradio', {name:'All versions',exact:true}).click();
+  await expect(version).toHaveValue('all');
+  await expect.poll(() => requests.at(-1)?.searchParams.has('version')).toBe(false);
+  await expect(page).not.toHaveURL(/version=latest/);
+});
+
+test('Version selector fits each selected label with the same chevron spacing', async ({page, api}) => {
+  await dashboard(page);
+  const select = page.getByRole('combobox', {name: 'Version', exact: true});
+  const widths = [];
+  for (const value of ['all', 'latest', 'all']) {
+    await select.selectOption(value);
+    const geometry = await page.locator('.version-choice').evaluate(el => {
+      const label = el.querySelector('.version-choice-label');
+      const select = el.querySelector('select');
+      const icon = el.querySelector('cedar-icon');
+      const range = document.createRange();
+      range.selectNodeContents(label);
+      const text = range.getBoundingClientRect();
+      const iconBox = icon.getBoundingClientRect();
+      return {
+        width: el.getBoundingClientRect().width,
+        gap: iconBox.left - text.right,
+        inset: el.getBoundingClientRect().right - iconBox.right,
+        spacing: parseFloat(getComputedStyle(el).getPropertyValue('--cedar-space-3')),
+        labelFont: getComputedStyle(label).font,
+        selectFont: getComputedStyle(select).font,
+      };
+    });
+    expect(geometry.gap).toBeCloseTo(geometry.inset, 0);
+    expect(geometry.gap).toBeGreaterThan(0);
+    expect(geometry.labelFont).toBe(geometry.selectFont);
+    widths.push(geometry.width);
+  }
+  expect(widths[1]).toBeGreaterThan(widths[0]);
+  expect(widths[2]).toBe(widths[0]);
+});

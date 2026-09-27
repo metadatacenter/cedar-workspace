@@ -67,6 +67,23 @@ describe("Groups", () => {
     expect(host.editName).toBe("Local edit");
     expect(host.groups()[0]["schema:name"]).toBe("Team");
     expect(host.error()).toBe("changed");
+    expect(host.recoveryGroup()).toEqual(g);
+  });
+  it("does not offer an older selected group as recovery for a duplicate creation name", async () => {
+    await host.selectTab("create");
+    host.newName = "Existing name";
+    request.mockRejectedValue(new HttpError(409, "Group names must be unique"));
+    await host.create();
+    expect(host.error()).toBe("Group names must be unique");
+    expect(host.newName).toBe("Existing name");
+    expect(host.selected()).toEqual(g);
+    expect(host.recoveryGroup()).toBeNull();
+  });
+  it("offers the failed read's group for recovery even before it can be selected", async () => {
+    request.mockRejectedValue(new HttpError(503, "Temporarily unavailable"));
+    await host.select(g);
+    expect(host.selected()).toBeNull();
+    expect(host.recoveryGroup()).toEqual(g);
   });
   it("sends identifiers only and the membership revision", async () => {
     host.users.set([other.user]);
@@ -268,6 +285,46 @@ describe("Groups", () => {
     expect(host.selected()).toEqual(created);
     expect(host.canAdmin).toBe(true);
   });
+  it("keeps Manage intact until the returning Create group and roster are both ready", async () => {
+    const created = { ...g, "@id": "created", "schema:name": "New" };
+    host.createdGroup = created;
+    let resolveRoster!: (value: unknown) => void;
+    request
+      .mockResolvedValueOnce({ data: created, etag: '"g2"' })
+      .mockImplementationOnce(
+        () => new Promise((resolve) => (resolveRoster = resolve)),
+      );
+    const pending = host.selectTab("create");
+    await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(2));
+    expect(host.activeTab).toBe("manage");
+    expect(host.selected()).toEqual(g);
+    expect(host.members()).toEqual([me]);
+    expect(host.busy()).toBe(true);
+    expect(host.selecting()).toBe(false);
+    await host.save();
+    expect(request).toHaveBeenCalledTimes(2);
+    resolveRoster({ data: { users: [me, other] }, etag: '"m2"' });
+    await pending;
+    expect(host.activeTab).toBe("create");
+    expect(host.selected()).toEqual(created);
+    expect(host.members()).toEqual([me, other]);
+    expect(host.groupEtag).toBe('"g2"');
+    expect(host.memberEtag).toBe('"m2"');
+    expect(host.busy()).toBe(false);
+  });
+  it("keeps the current tab and its revision state if returning to Create fails", async () => {
+    host.createdGroup = { ...g, "@id": "created" };
+    host.stale.set(true);
+    request.mockRejectedValueOnce(new HttpError(503, "Unavailable"));
+    await host.selectTab("create");
+    expect(host.activeTab).toBe("manage");
+    expect(host.selected()).toEqual(g);
+    expect(host.groupEtag).toBe('"group1"');
+    expect(host.memberEtag).toBe('"members1"');
+    expect(host.stale()).toBe(true);
+    expect(host.recoveryGroup()).toEqual(host.createdGroup);
+    expect(host.busy()).toBe(false);
+  });
   it("reports roster failures other than forbidden and does not call them an empty roster", async () => {
     request
       .mockResolvedValueOnce({ data: g, etag: '"g"' })
@@ -342,14 +399,12 @@ describe("Groups", () => {
     await host.addMember();
     expect(request).not.toHaveBeenCalled();
   });
-  it("confirms member removal, updates the roster, and restores that user to the picker", async () => {
+  it("removes members immediately, updates the roster, and restores that user to the picker", async () => {
     host.users.set([me.user, other.user]);
     host.members.set([me, other]);
     request.mockResolvedValue({ data: { users: [me] }, etag: '"m2"' });
     await host.removeMember(other);
-    expect(TestBed.inject(Confirmation).confirm).toHaveBeenCalledWith(
-      "Remove Other from this group?",
-    );
+    expect(TestBed.inject(Confirmation).confirm).not.toHaveBeenCalled();
     expect(host.members()).toEqual([me]);
     expect(host.availableUsers).toEqual([other.user]);
     expect(host.notice()).toBe("Group members saved.");
