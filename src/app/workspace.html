@@ -246,32 +246,14 @@
           [attr.aria-pressed]="!grid()"
           [attr.aria-label]="'Explorer.List' | translate"
         >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 18 18"
-            fill="none"
-            stroke="currentColor"
-            aria-hidden="true"
-          >
-            <path d="M5 4h11M5 9h11M5 14h11M1 4h1M1 9h1M1 14h1" />
-          </svg>
+          <cedar-icon name="list" size="small" />
         </button>
         <button
           (click)="grid.set(true)"
           [attr.aria-pressed]="grid()"
           [attr.aria-label]="'Explorer.Grid' | translate"
         >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 18 18"
-            fill="none"
-            stroke="currentColor"
-            aria-hidden="true"
-          >
-            <path d="M2 2h5v5H2zM11 2h5v5h-5zM2 11h5v5H2zM11 11h5v5h-5z" />
-          </svg>
+          <cedar-icon name="grid" size="small" />
         </button>
       </div>
       @if(grid()){<cedar-sort-menu
