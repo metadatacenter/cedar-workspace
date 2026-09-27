@@ -146,7 +146,7 @@
           <span
             class="owner-cell"
             role="cell"
-            [title]="'Permissions.OwnerHelp' | translate"
+            [cedarTooltip]="'Permissions.OwnerHelp' | translate"
             ><input
               spellcheck="false"
               type="checkbox"
@@ -168,7 +168,7 @@
             <span class="avatar" [class.group]="g.kind === 'group'"
               ><cedar-icon
                 [name]="g.kind === 'group' ? 'group' : 'user'" /></span
-            ><span class="principal-name" [title]="principalName(g.node)"
+            ><span class="principal-name" [cedarTooltip]="principalName(g.node)"
               >{{principalName(g.node)}}</span
             >
           </div>
@@ -199,7 +199,7 @@
           <span
             class="owner-cell"
             role="cell"
-            [title]="(g.kind === 'group' ? 'Permissions.GroupCannotOwn' : 'Permissions.MakeUserOwner') | translate"
+            [cedarTooltip]="(g.kind === 'group' ? 'Permissions.GroupCannotOwn' : 'Permissions.MakeUserOwner') | translate"
           >
             <input
               spellcheck="false"
@@ -216,7 +216,7 @@
               [disabled]="busy() || stale()"
               (click)="remove(g)"
               [attr.aria-label]="'Permissions.RemoveAccessFor' | translate: {name: principalName(g.node)}"
-              [title]="'Permissions.RemoveAccess' | translate"
+              [cedarTooltip]="'Permissions.RemoveAccess' | translate"
             >
               <cedar-icon name="trash" />
             </button>

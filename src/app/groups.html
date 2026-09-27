@@ -233,7 +233,7 @@
           [disabled]="busy()"
           (click)="remove()"
           [attr.aria-label]="'Groups.Delete' | translate"
-          [title]="'Groups.Delete' | translate"
+          [cedarTooltip]="'Groups.Delete' | translate"
         >
           <ng-container *ngTemplateOutlet="trash" />
         </button>
@@ -298,7 +298,7 @@
           </div>
           <label
             class="groups-admin-control"
-            [title]="onlyAdmin(m) ? ('Groups.LastAdministrator' | translate) : ''"
+            [cedarTooltip]="onlyAdmin(m) ? ('Groups.LastAdministrator' | translate) : ''"
           >
             <input
               spellcheck="false"
@@ -311,7 +311,7 @@
           </label>
           <span
             class="groups-remove-member-wrapper"
-            [title]="onlyAdmin(m) ? ('Groups.AssignAnother' | translate) : ''"
+            [cedarTooltip]="onlyAdmin(m) ? ('Groups.AssignAnother' | translate) : ''"
           >
             @if(canAdmin) {
             <button

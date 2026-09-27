@@ -37,7 +37,8 @@
 }
 .explorer-grid {
   min-height: calc(10 * var(--cedar-space-6));
-  padding: var(--cedar-space-3) calc(var(--cedar-space-1) / 4) calc(2 * var(--cedar-space-4));
+  padding: var(--cedar-space-3) calc(var(--cedar-space-1) / 4)
+    calc(2 * var(--cedar-space-4));
 }
 .explorer-grid table {
   min-width: 0;
@@ -55,8 +56,11 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  height: calc(3 * var(--cedar-control-height-default) - var(--cedar-space-1) / 2);
-  padding: var(--cedar-space-2) calc(var(--cedar-space-3) + var(--cedar-space-1) / 2);
+  height: calc(
+    3 * var(--cedar-control-height-default) - var(--cedar-space-1) / 2
+  );
+  padding: var(--cedar-space-2)
+    calc(var(--cedar-space-3) + var(--cedar-space-1) / 2);
   border: 1px solid var(--cedar-border-rule);
   border-radius: calc(var(--cedar-control-radius-default) * 1.25);
   gap: var(--cedar-space-1);
@@ -97,7 +101,7 @@
 .explorer-grid .row-actions {
   position: absolute;
   right: 5px;
-  top: 4px;
+  top: var(--cedar-space-2);
   display: flex;
   align-items: center;
   background: inherit;
@@ -161,4 +165,20 @@
   color: var(--cedar-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.explorer-grid .resource-icon {
+  display: flex;
+  align-items: center;
+  height: var(--cedar-space-6);
+}
+.explorer-grid .row-actions > a,
+.explorer-grid .row-actions > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--cedar-space-6);
+}
+.explorer-grid .explorer-schema .row-actions {
+  top: calc(var(--cedar-space-1) + var(--cedar-space-1) / 2);
 }

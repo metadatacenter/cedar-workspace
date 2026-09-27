@@ -1,3 +1,4 @@
+import { Tooltip } from "./tooltip";
 import {
   CdkDropList,
   CdkDrag,
@@ -154,6 +155,7 @@ export function actions(r: Resource, i18n: Pick<I18n, "t">): Action[] {
 @Component({
   selector: "cedar-workspace-page",
   imports: [
+    Tooltip,
     CdkDropList,
     CdkDrag,
     CdkDragPreview,

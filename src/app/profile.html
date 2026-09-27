@@ -22,7 +22,7 @@
           <button
             class="profile-copy"
             [attr.aria-label]="'Account.Profile.CopyField' | translate: {field: (field.label | translate)}"
-            [title]="'Account.Profile.CopyField' | translate: {field: (field.label | translate)}"
+            [cedarTooltip]="'Account.Profile.CopyField' | translate: {field: (field.label | translate)}"
             (click)="copy(field.value)"
           >
             <cedar-icon name="copy" />

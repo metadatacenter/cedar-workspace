@@ -351,13 +351,13 @@
               <span
                 class="resource-icon"
                 [attr.data-type]="r.resourceType"
-                [attr.title]="'ResourceKinds.' + r.resourceType | translate"
+                [cedarTooltip]="'ResourceKinds.' + r.resourceType | translate"
                 aria-hidden="true"
                 ><cedar-icon [name]="r.resourceType"
               /></span>
               @if(grid()){<span
                 class="explorer-name"
-                [title]="title(r)"
+                [cedarTooltip]="title(r)"
                 (dblclick)="openItem(r['@id'])"
                 >{{title(r)}}</span
               >} @else if(r.resourceType==='folder') {
@@ -369,7 +369,7 @@
               >
               } @else {
               <a
-                [attr.title]="title(r)"
+                [cedarTooltip]="title(r)"
                 [href]="link(r)"
                 (click)="$event.stopPropagation()"
                 >{{title(r)}}</a
@@ -380,12 +380,12 @@
               @if(grid() &&
               ['template','element','field'].includes(r.resourceType)){
               <span class="explorer-release">
-                <span [attr.title]="'Common.Version' | translate"
+                <span [cedarTooltip]="'Common.Version' | translate"
                   >{{r['pav:version'] || ('Dashboard.Unversioned' |
                   translate)}}</span
                 >
                 <span aria-hidden="true"> · </span>
-                <span [attr.title]="'Dashboard.Status' | translate"
+                <span [cedarTooltip]="'Dashboard.Status' | translate"
                   >{{status(r)}}</span
                 >
               </span>
@@ -394,7 +394,7 @@
               >}
               <time
                 [attr.datetime]="r['pav:lastUpdatedOn'] || null"
-                [attr.title]="r['pav:lastUpdatedOn'] || null"
+                [cedarTooltip]="r['pav:lastUpdatedOn'] || null"
                 >{{r['pav:lastUpdatedOn'] | friendlyDate:now()}}</time
               >
             </td>
@@ -404,17 +404,18 @@
                 target="_blank"
                 rel="noopener"
                 [attr.aria-label]="'Dashboard.OpenInOpenView' | translate"
-                [title]="'Dashboard.OpenInOpenView' | translate"
+                [cedarTooltip]="'Dashboard.OpenInOpenView' | translate"
                 ><cedar-icon name="external" /></a
               >} @if(r.resourceType==='template'&&can(r,'populate')){<a
                 [href]="link(r,true)"
                 [attr.aria-label]="'Dashboard.PopulateTemplate' | translate"
-                [title]="'Dashboard.PopulateTemplate' | translate"
+                [cedarTooltip]="'Dashboard.PopulateTemplate' | translate"
                 ><cedar-icon name="populate" /></a
               >}
               <button
                 (click)="toggleMenu(r, $event)"
                 [attr.aria-expanded]="menu()===r['@id']"
+                [cedarTooltip]="'Dashboard.ActionsFor' | translate: {name: title(r)}"
                 [attr.aria-label]="'Dashboard.ActionsFor' | translate: {name: title(r)}"
               >
                 <cedar-icon name="more" />
@@ -545,7 +546,7 @@
       <dd>
         <time
           [attr.datetime]="r['pav:createdOn'] || null"
-          [attr.title]="r['pav:createdOn'] || null"
+          [cedarTooltip]="r['pav:createdOn'] || null"
           >{{r['pav:createdOn']|friendlyDate:now()}}</time
         ><small
           >{{r.createdByUserName?('Dashboard.By' | translate: {name:
@@ -556,7 +557,7 @@
       <dd>
         <time
           [attr.datetime]="r['pav:lastUpdatedOn'] || null"
-          [attr.title]="r['pav:lastUpdatedOn'] || null"
+          [cedarTooltip]="r['pav:lastUpdatedOn'] || null"
           >{{r['pav:lastUpdatedOn']|friendlyDate:now()}}</time
         ><small
           >{{r.lastUpdatedByUserName?('Dashboard.By' | translate: {name:
@@ -578,7 +579,7 @@
         >{{'Dashboard.Modified' | translate}}
         <time
           [attr.datetime]="derived['pav:lastUpdatedOn'] || null"
-          [attr.title]="derived['pav:lastUpdatedOn'] || null"
+          [cedarTooltip]="derived['pav:lastUpdatedOn'] || null"
           >{{derived['pav:lastUpdatedOn']|friendlyDate:now()}}</time
         ></small
       >

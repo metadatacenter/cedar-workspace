@@ -80,7 +80,7 @@ describe("Angular Workspace", () => {
     const time = table.querySelector("time")!;
     expect(time.textContent?.trim()).toBe("3 minutes ago");
     expect(time.getAttribute("datetime")).toBe(stamp);
-    expect(time.getAttribute("title")).toBe(stamp);
+    expect(time.getAttribute("data-cedar-help")).toBe(stamp);
     const navigate = vi.spyOn(TestBed.inject(Router), "navigate");
     table
       .querySelectorAll("th button")[1]

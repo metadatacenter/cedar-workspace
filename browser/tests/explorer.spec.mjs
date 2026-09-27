@@ -94,6 +94,7 @@ for (const width of [1280, 375]) {
   }) => {
     await page.setViewportSize({ width, height: 800 });
     await setup(page);
+    await page.mouse.move(0, 0);
     await expect(page.locator(".explorer-grid")).toBeVisible();
     expect(
       await page.evaluate(
@@ -124,6 +125,7 @@ test("schema cards show version and release status without expanding the cards",
           (resourceType, index) => ({
             ...resource,
             resourceType,
+            isOpen: true,
             "@id": `schema-${index}`,
             "schema:name":
               "A long schema artifact name that occupies two lines",
@@ -164,5 +166,10 @@ test("schema cards show version and release status without expanding the cards",
   for (const card of await cards.all()) {
     expect((await card.boundingBox()).height).toBe(106);
     await expect(card.locator("time")).toBeVisible();
+    const center = box => box.y + box.height / 2;
+    const icon = await card.locator(".resource-icon svg").boundingBox();
+    for (const action of await card.locator(".row-actions > a svg, .row-actions > button svg").all()) {
+      expect(Math.abs(center(await action.boundingBox()) - center(icon))).toBeLessThanOrEqual(1);
+    }
   }
 });

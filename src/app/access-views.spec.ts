@@ -130,7 +130,7 @@ describe("Groups legacy view contracts", () => {
     ).toBe(true);
     expect(
       el.querySelector(
-        '[title="Assign another Group Administrator before removing this member."]',
+        '[data-cedar-help="Assign another Group Administrator before removing this member."]',
       ),
     ).not.toBeNull();
     expect(el.querySelector('[aria-label="Delete group"] svg')).not.toBeNull();

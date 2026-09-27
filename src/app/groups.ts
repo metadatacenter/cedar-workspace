@@ -1,3 +1,4 @@
+import { Tooltip } from "./tooltip";
 import { Toast } from "./toast";
 import { Confirmation } from "./confirmation";
 import { Component, OnInit, inject, signal } from "@angular/core";
@@ -32,6 +33,7 @@ export const userName = (u: GroupUser, i18n: Pick<I18n, "t">) =>
 @Component({
   selector: "cedar-groups-page",
   imports: [
+    Tooltip,
     Toast,
     FormsModule,
     NgTemplateOutlet,
