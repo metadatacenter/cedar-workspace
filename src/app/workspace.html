@@ -377,7 +377,19 @@
               }
             </td>
             <td>
-              @if(grid() &&
+              @if(grid() && r.resourceType !== 'folder'){
+              <button
+                class="explorer-preview"
+                type="button"
+                [cedarTooltip]="'Preview.Label' | translate"
+                [attr.aria-label]="'Preview.For' | translate:{name:title(r)}"
+                (mousedown)="$event.stopPropagation()"
+                (touchstart)="$event.stopPropagation()"
+                (click)="$event.stopPropagation(); preview.set(r)"
+              >
+                <cedar-icon name="preview" />
+              </button>
+              } @if(grid() &&
               ['template','element','field'].includes(r.resourceType)){
               <span class="explorer-release">
                 <span [cedarTooltip]="'Common.Version' | translate"
@@ -411,7 +423,18 @@
                 [attr.aria-label]="'Dashboard.PopulateTemplate' | translate"
                 [cedarTooltip]="'Dashboard.PopulateTemplate' | translate"
                 ><cedar-icon name="populate" /></a
-              >}
+              >} @if(!grid() && r.resourceType !== 'folder'){
+              <button
+                type="button"
+                [cedarTooltip]="'Preview.Label' | translate"
+                [attr.aria-label]="'Preview.For' | translate:{name:title(r)}"
+                (mousedown)="$event.stopPropagation()"
+                (touchstart)="$event.stopPropagation()"
+                (click)="preview.set(r)"
+              >
+                <cedar-icon name="preview" />
+              </button>
+              }
               <button
                 (click)="toggleMenu(r, $event)"
                 [attr.aria-expanded]="menu()===r['@id']"
@@ -701,4 +724,7 @@
   (closed)="moveDialog.set(null)"
   (changed)="load(true)"
   (saved)="moveDialog.set(null); saved()"
+/>} @if(preview();as item){<cedar-artifact-preview
+  [resource]="item"
+  (closed)="preview.set(null)"
 />}

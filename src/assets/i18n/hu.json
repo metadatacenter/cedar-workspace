@@ -199,6 +199,12 @@
     "OpenBeforeDataCite": "A DataCite varázsló indítása előtt tegye nyitottá ezt az erőforrást.",
     "PublishBeforeDataCite": "A DataCite varázsló indítása előtt tegye közzé ezt a sablont."
   },
+  "Preview": {
+    "Label": "Előnézet",
+    "For": "Előnézet: {{name}}",
+    "Close": "Előnézet bezárása",
+    "Unavailable": "Az előnézet nem tölthető be. Zárja be, és próbálja újra."
+  },
   "ResourceActions": {
     "Populate": "Kitöltés",
     "Open": "Megnyitás",

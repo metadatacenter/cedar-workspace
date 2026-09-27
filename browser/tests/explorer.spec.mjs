@@ -163,6 +163,14 @@ test("schema cards show version and release status without expanding the cards",
   );
   await expect(cards.nth(3).locator(".explorer-release")).toHaveCount(0);
   await expect(cards.nth(4).locator(".explorer-release")).toHaveCount(0);
+  await expect(cards.nth(4).getByRole('button', {name: /^Preview /})).toHaveCount(0);
+  for (const card of (await cards.all()).slice(0, 4)) {
+    const eye = card.getByRole('button', {name: /^Preview /});
+    await expect(eye).toBeVisible();
+    const cardBox = await card.boundingBox(), eyeBox = await eye.boundingBox();
+    expect(eyeBox.x).toBeGreaterThan(cardBox.x + cardBox.width / 2);
+    expect(eyeBox.y).toBeGreaterThan(cardBox.y + cardBox.height / 2);
+  }
   for (const card of await cards.all()) {
     expect((await card.boundingBox()).height).toBe(106);
     await expect(card.locator("time")).toBeVisible();

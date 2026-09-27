@@ -1,0 +1,48 @@
+@use "@org.metadatacenter/cedar-design-tokens/patterns";
+
+.artifact-preview {
+  @include patterns.dialog-surface;
+  width: 60vw;
+  height: fit-content;
+  max-width: none;
+  max-height: calc(100dvh - 2 * var(--cedar-space-6));
+  padding: 0;
+  overflow: hidden;
+}
+.artifact-preview[open] {
+  display: flex;
+  flex-direction: column;
+}
+header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cedar-space-4);
+  padding: var(--cedar-space-3) var(--cedar-space-6);
+  border-bottom: 1px solid var(--cedar-border-rule);
+}
+h2 {
+  @include patterns.artifact-title;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+header button {
+  flex-shrink: 0;
+}
+section {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--cedar-space-6);
+}
+@media (max-width: 600px) {
+  .artifact-preview {
+    width: calc(100vw - 2 * var(--cedar-space-2));
+    max-height: calc(100dvh - 2 * var(--cedar-space-2));
+  }
+  header,
+  section {
+    padding: var(--cedar-space-3);
+  }
+}

@@ -199,6 +199,12 @@
     "OpenBeforeDataCite": "Make this artifact open before starting the DataCite wizard.",
     "PublishBeforeDataCite": "Publish this template before starting the DataCite wizard."
   },
+  "Preview": {
+    "Label": "Preview",
+    "For": "Preview {{name}}",
+    "Close": "Close preview",
+    "Unavailable": "This preview could not be loaded. Close it and try again."
+  },
   "ResourceActions": {
     "Populate": "Populate",
     "Open": "Open",

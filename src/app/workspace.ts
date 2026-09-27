@@ -17,6 +17,7 @@ import {
   filtersFromParams,
   filterQuery,
 } from "./listing-filters";
+import { ArtifactPreview } from "./artifact-preview";
 import { Toast } from "./toast";
 import {
   Component,
@@ -135,6 +136,7 @@ export function actions(r: Resource, i18n: Pick<I18n, "t">): Action[] {
   selector: "cedar-workspace-page",
   imports: [
     Tooltip,
+    ArtifactPreview,
     CdkDropList,
     CdkDrag,
     CdkDragPreview,
@@ -190,6 +192,7 @@ export class Workspace {
   readonly path = signal<Resource[]>([]);
   readonly currentFolder = signal<Resource | undefined>(undefined);
   readonly grid = signal(false);
+  readonly preview = signal<Resource | null>(null);
   readonly selectionIds = signal<string[]>([]);
   readonly selection = computed(() =>
     this.rows().filter((r) => this.selectionIds().includes(r["@id"])),
