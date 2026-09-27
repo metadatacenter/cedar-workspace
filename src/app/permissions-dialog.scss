@@ -53,7 +53,7 @@ h2 {
   align-items: center;
   justify-content: center;
   width: 36px;
-  height: 36px;
+  height: var(--cedar-control-height-default);
   color: var(--cedar-color-primary);
   flex-shrink: 0;
 }
@@ -215,7 +215,6 @@ select.readonly-role:disabled {
   min-height: 0;
   margin: 0;
   padding: 0;
-  accent-color: var(--cedar-color-primary);
 }
 .action-cell {
   flex: 0 0 28px;
@@ -224,7 +223,7 @@ select.readonly-role:disabled {
   display: flex;
   justify-content: center;
   width: 28px;
-  min-height: 32px;
+  min-height: var(--cedar-control-height-authoring);
   padding: var(--cedar-space-1);
   color: var(--cedar-text-primary);
 }
@@ -250,7 +249,7 @@ footer button {
   dialog {
     width: calc(100% - 16px);
     max-height: calc(100vh - 16px);
-    margin: 8px auto;
+    margin: var(--cedar-space-2) auto;
   }
   .permissions-header,
   .permissions-body,

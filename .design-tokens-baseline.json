@@ -29,13 +29,6 @@
       "value": "calc(100vh - 80px)",
       "count": 1
     },
-    "5b77bd8ad27d596afd7c": {
-      "file": "src/app/permissions-dialog.scss",
-      "rule": "geometry",
-      "property": "height",
-      "value": "36px",
-      "count": 1
-    },
     "600bd7631ff3d2cc2c03": {
       "file": "src/app/permissions-dialog.scss",
       "rule": "geometry",
@@ -77,13 +70,6 @@
       "property": "height",
       "value": "1px",
       "count": 2
-    },
-    "942f3cbcbc9f149a064f": {
-      "file": "src/app/permissions-dialog.scss",
-      "rule": "geometry",
-      "property": "min-height",
-      "value": "32px",
-      "count": 1
     },
     "9a92494e68bf377e5fee": {
       "file": "src/app/groups.scss",
@@ -160,13 +146,6 @@
       "rule": "geometry",
       "property": "min-height",
       "value": "80px",
-      "count": 1
-    },
-    "ef559d4cf495f2fb1595": {
-      "file": "src/app/permissions-dialog.scss",
-      "rule": "spacing",
-      "property": "margin",
-      "value": "8px auto",
       "count": 1
     },
     "f9d9ecfe198b0c28ba20": {
