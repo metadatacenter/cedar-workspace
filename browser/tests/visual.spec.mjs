@@ -88,7 +88,7 @@ test("artifact menu and resource dialog", async ({ page, api }) => {
       "rename-dialog.png",
     );
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
-  await action(page, "Make Open");
+  await action(page, "Enable Openview");
   const openDialog = page.locator("dialog[open]");
   await expect(
     openDialog.getByRole("button", { name: "Ok", exact: true }),

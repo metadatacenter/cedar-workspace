@@ -88,27 +88,6 @@ export function actions(r: Resource, i18n: Pick<I18n, "t">): Action[] {
       label: label("ResourceActions.Rename"),
       enabled: cap("updateResource"),
     },
-    {
-      id: "folder-id",
-      label: label("ResourceActions.CopyFolderId"),
-      enabled: r.resourceType === "folder",
-    },
-    {
-      id: "parent-id",
-      label: label("ResourceActions.CopyParentFolderId"),
-      enabled: !!r.pathInfo?.length,
-    },
-    ...(
-      [
-        ["json", "ResourceActions.DownloadJson"],
-        ["yaml", "ResourceActions.DownloadYaml"],
-        ["yamlc", "ResourceActions.DownloadCompactYaml"],
-      ] as const
-    ).map(([id, key]) => ({
-      id,
-      label: label(key),
-      enabled: r.resourceType !== "folder" && cap("readResource"),
-    })),
     ...(r.resourceType === "instance"
       ? []
       : [
@@ -728,19 +707,6 @@ export class Workspace {
           "_blank",
           "noopener",
         );
-        return;
-      }
-      if (id === "folder-id" || id === "parent-id") {
-        const path = r.pathInfo || [];
-        const parent = path.filter((p) => p["@id"] !== r["@id"]).at(-1);
-        await navigator.clipboard.writeText(
-          id === "folder-id" ? r["@id"] : parent?.["@id"] || this.folder,
-        );
-        this.notice.set(this.i18n.t("Common.IdCopied"));
-        return;
-      }
-      if (["json", "yaml", "yamlc"].includes(id)) {
-        await this.api.download(r, id);
         return;
       }
       this.dialog.set({ action: id, resource: r });

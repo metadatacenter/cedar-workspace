@@ -206,17 +206,12 @@
     "Copy": "Copy",
     "Move": "Move",
     "Rename": "Rename",
-    "CopyFolderId": "Copy Folder ID",
-    "CopyParentFolderId": "Copy Parent Folder ID",
-    "DownloadJson": "Download JSON",
-    "DownloadYaml": "Download YAML",
-    "DownloadCompactYaml": "Download Compact YAML",
     "Publish": "Publish",
     "CreateDraft": "Create Draft",
     "Delete": "Delete",
     "DataCite": "DataCite wizard",
-    "MakeOpen": "Make Open",
-    "MakeNotOpen": "Make Not Open",
+    "MakeOpen": "Enable Openview",
+    "MakeNotOpen": "Disable Openview",
     "OpenInOpenView": "Open in OpenView"
   },
   "ResourceDialog": {
@@ -228,8 +223,8 @@
       "Delete": "Delete",
       "Publish": "Publish",
       "Draft": "Create Draft",
-      "MakeOpen": "Make Open",
-      "MakeNotOpen": "Make Not Open"
+      "MakeOpen": "Enable Openview",
+      "MakeNotOpen": "Disable Openview"
     },
     "Close": "Close dialog",
     "KeepSharing": "Keep sharing permissions",

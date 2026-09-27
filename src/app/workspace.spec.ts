@@ -209,7 +209,7 @@ describe("Angular Workspace", () => {
     expect(window.location.href).toBe(before);
     expect(f.componentInstance.rows()).toBe(rows);
   });
-  it("exposes the original action set and gates it using the server capabilities", () => {
+  it("exposes the artifact action set and gates it using the server capabilities", () => {
     const list = actions(template, TestBed.inject(I18n));
     expect(list.find((a) => a.id === "permissions")).toEqual({
       id: "permissions",
@@ -223,11 +223,6 @@ describe("Angular Workspace", () => {
       "copy",
       "move",
       "rename",
-      "folder-id",
-      "parent-id",
-      "json",
-      "yaml",
-      "yamlc",
       "publish",
       "draft",
       "delete",
@@ -294,16 +289,11 @@ describe("Angular Workspace", () => {
           "Copy",
           "Move",
           "Rename",
-          "Copy Folder ID",
-          "Copy Parent Folder ID",
-          "Download JSON",
-          "Download YAML",
-          "Download Compact YAML",
           ...(resourceType === "instance" ? [] : ["Publish", "Create Draft"]),
           "Delete",
           "DataCite wizard",
-          "Make Open",
-          "Make Not Open",
+          "Enable Openview",
+          "Disable Openview",
           "Open in OpenView",
         ]);
         const disabled = (name: string) =>
@@ -314,10 +304,8 @@ describe("Angular Workspace", () => {
           !editable || resourceType !== "template",
         );
         expect(disabled("Delete")).toBe(!editable);
-        expect(disabled("Download JSON")).toBe(resourceType === "folder");
-        expect(disabled("Copy Folder ID")).toBe(resourceType !== "folder");
         expect(disabled("DataCite wizard")).toBe(true);
-        expect(disabled("Make Open")).toBe(!editable);
+        expect(disabled("Enable Openview")).toBe(!editable);
         const act = vi.spyOn(f.componentInstance, "act");
         buttons
           .find((b) => b.textContent?.trim() === "DataCite wizard")!
@@ -356,8 +344,8 @@ describe("Angular Workspace", () => {
     expect(button("Create Draft").disabled).toBe(false);
     for (const label of [
       "Publish",
-      "Make Open",
-      "Make Not Open",
+      "Enable Openview",
+      "Disable Openview",
       "Open in OpenView",
       "DataCite wizard",
     ])

@@ -206,17 +206,12 @@
     "Copy": "Másolás",
     "Move": "Áthelyezés",
     "Rename": "Átnevezés",
-    "CopyFolderId": "Mappaazonosító másolása",
-    "CopyParentFolderId": "Szülőmappa azonosítójának másolása",
-    "DownloadJson": "Letöltés JSON formátumban",
-    "DownloadYaml": "Letöltés YAML formátumban",
-    "DownloadCompactYaml": "Letöltés tömör YAML formátumban",
     "Publish": "Közzététel",
     "CreateDraft": "Vázlat létrehozása",
     "Delete": "Törlés",
     "DataCite": "DataCite varázsló",
-    "MakeOpen": "Nyitottá tétel",
-    "MakeNotOpen": "Nyitottság megszüntetése",
+    "MakeOpen": "Openview engedélyezése",
+    "MakeNotOpen": "Openview letiltása",
     "OpenInOpenView": "Megnyitás az OpenView-ban"
   },
   "ResourceDialog": {
@@ -228,8 +223,8 @@
       "Delete": "Törlés",
       "Publish": "Közzététel",
       "Draft": "Vázlat létrehozása",
-      "MakeOpen": "Nyitottá tétel",
-      "MakeNotOpen": "Nyitottság megszüntetése"
+      "MakeOpen": "Openview engedélyezése",
+      "MakeNotOpen": "Openview letiltása"
     },
     "Close": "Párbeszédablak bezárása",
     "KeepSharing": "Megosztási jogosultságok megtartása",
