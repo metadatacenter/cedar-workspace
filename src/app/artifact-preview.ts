@@ -182,7 +182,12 @@ export class ArtifactPreview implements AfterViewInit, OnDestroy {
     this.dispose();
     this.dialog.nativeElement.close();
     this.closed.emit();
-    if (this.originalFocus?.isConnected) this.originalFocus.focus();
+    // A grid/list transition can replace the button that opened this dialog.
+    const trigger = document.querySelector<HTMLButtonElement>(
+      `button[data-preview-id="${CSS.escape(this.resource["@id"])}"]`,
+    );
+    if (trigger) trigger.focus();
+    else if (this.originalFocus?.isConnected) this.originalFocus.focus();
   }
   private dispose() {
     this.alive = false;

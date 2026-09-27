@@ -108,7 +108,8 @@ test('preview fits a narrow screen without scaling its fonts', async ({page,api}
 test('list rows offer the same preview without selecting or opening the artifact', async ({page,api}) => {
   await setup(page,'template');
   await page.getByRole('button',{name:'List view',exact:true}).click();
-  const eyes = page.getByRole('button',{name:/^Preview /});
+  // Wait for the list button; the grid button has the same accessible name.
+  const eyes = page.locator('.row-actions').getByRole('button',{name:/^Preview /});
   await expect(eyes).toHaveCount(1);
   await expect(page.locator('.explorer-item').last().getByRole('button',{name:/^Preview /})).toHaveCount(0);
   await eyes.press('Enter');

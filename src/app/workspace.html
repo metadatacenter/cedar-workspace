@@ -382,6 +382,7 @@
                 class="explorer-preview"
                 type="button"
                 [cedarTooltip]="'Preview.Label' | translate"
+                [attr.data-preview-id]="r['@id']"
                 [attr.aria-label]="'Preview.For' | translate:{name:title(r)}"
                 (mousedown)="$event.stopPropagation()"
                 (touchstart)="$event.stopPropagation()"
@@ -427,6 +428,7 @@
               <button
                 type="button"
                 [cedarTooltip]="'Preview.Label' | translate"
+                [attr.data-preview-id]="r['@id']"
                 [attr.aria-label]="'Preview.For' | translate:{name:title(r)}"
                 (mousedown)="$event.stopPropagation()"
                 (touchstart)="$event.stopPropagation()"
