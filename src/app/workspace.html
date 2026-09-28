@@ -348,13 +348,30 @@
               </div></ng-template
             >
             <td>
-              <span
-                class="resource-icon"
-                [attr.data-type]="r.resourceType"
-                [cedarTooltip]="'ResourceKinds.' + r.resourceType | translate"
-                aria-hidden="true"
-                ><cedar-icon [name]="r.resourceType"
-              /></span>
+              <span class="explorer-heading">
+                <span
+                  class="resource-icon"
+                  [attr.data-type]="r.resourceType"
+                  [cedarTooltip]="'ResourceKinds.' + r.resourceType | translate"
+                  aria-hidden="true"
+                  ><cedar-icon [name]="r.resourceType"
+                /></span>
+                @if(grid() &&
+                ['template','element','field'].includes(r.resourceType)){
+                <span class="explorer-release">
+                  <span [cedarTooltip]="'Common.Version' | translate"
+                    >{{r['pav:version'] || ('Dashboard.Unversioned' |
+                    translate)}}</span
+                  >
+                  <span aria-hidden="true"> · </span>
+                  <span
+                    class="explorer-status"
+                    [cedarTooltip]="'Dashboard.Status' | translate"
+                    >{{status(r)}}</span
+                  >
+                </span>
+                }
+              </span>
               @if(grid()){<span
                 class="explorer-name"
                 [cedarTooltip]="title(r)"
@@ -390,26 +407,18 @@
               >
                 <cedar-icon name="preview" />
               </button>
-              } @if(grid() &&
-              ['template','element','field'].includes(r.resourceType)){
-              <span class="explorer-release">
-                <span [cedarTooltip]="'Common.Version' | translate"
-                  >{{r['pav:version'] || ('Dashboard.Unversioned' |
-                  translate)}}</span
-                >
-                <span aria-hidden="true"> · </span>
-                <span [cedarTooltip]="'Dashboard.Status' | translate"
-                  >{{status(r)}}</span
+              }
+              <span class="explorer-modified">
+                @if(grid()){<span class="explorer-kind"
+                  >{{'ResourceTypes.' + r.resourceType | translate}}
+                  · </span
+                >}
+                <time
+                  [attr.datetime]="r['pav:lastUpdatedOn'] || null"
+                  [cedarTooltip]="r['pav:lastUpdatedOn'] || null"
+                  >{{r['pav:lastUpdatedOn'] | friendlyDate:now()}}</time
                 >
               </span>
-              } @if(grid()){<span class="explorer-kind"
-                >{{'ResourceTypes.' + r.resourceType | translate}} · </span
-              >}
-              <time
-                [attr.datetime]="r['pav:lastUpdatedOn'] || null"
-                [cedarTooltip]="r['pav:lastUpdatedOn'] || null"
-                >{{r['pav:lastUpdatedOn'] | friendlyDate:now()}}</time
-              >
             </td>
             <td class="row-actions" (click)="$event.stopPropagation()">
               @if(r.isOpen){<a
@@ -420,6 +429,7 @@
                 [cedarTooltip]="'Dashboard.OpenInOpenView' | translate"
                 ><cedar-icon name="external" /></a
               >} @if(r.resourceType==='template'&&can(r,'populate')){<a
+                class="explorer-populate"
                 [href]="link(r,true)"
                 [attr.aria-label]="'Dashboard.PopulateTemplate' | translate"
                 [cedarTooltip]="'Dashboard.PopulateTemplate' | translate"

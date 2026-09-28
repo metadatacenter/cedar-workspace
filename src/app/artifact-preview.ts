@@ -57,6 +57,12 @@ export function previewElement(element: CeeJsonObject): CeeJsonObject {
       (cancel)="$event.preventDefault(); $event.stopPropagation(); close()"
     >
       <header>
+        @if (
+          resource.resourceType === "instance" ||
+          resource.resourceType === "template"
+        ) {
+          <h2>{{ name }}</h2>
+        }
         <button
           autofocus
           type="button"

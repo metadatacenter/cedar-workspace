@@ -161,8 +161,34 @@
   line-height: var(--cedar-font-size-lead);
   flex-shrink: 0;
 }
+.explorer-grid .explorer-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--cedar-space-1);
+  min-height: var(--cedar-space-6);
+  // The action group extends into the card's right gutter.
+  padding-right: var(--cedar-space-4);
+}
+.explorer-grid .explorer-heading .resource-icon {
+  flex: 0 0 var(--cedar-space-6);
+  align-self: flex-start;
+}
+.explorer-grid tr:has(.row-actions > a) .explorer-heading {
+  padding-right: calc(
+    var(--cedar-space-4) + var(--cedar-space-6) + var(--cedar-space-1)
+  );
+}
+.explorer-grid tr:has(.row-actions > a ~ a) .explorer-heading {
+  padding-right: calc(
+    var(--cedar-space-4) + 2 * (var(--cedar-space-6) + var(--cedar-space-1))
+  );
+}
 .explorer-release {
   display: block;
+  min-width: 0;
+  font-size: var(--cedar-font-size-small);
+  line-height: var(--cedar-font-size);
+  white-space: normal;
   color: var(--cedar-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -187,7 +213,18 @@
   top: calc(var(--cedar-space-1) + var(--cedar-space-1) / 2);
 }
 
-.explorer-grid .explorer-item:has(.explorer-preview) td:nth-child(2) {
+// Balance the visible gaps around the clipboard and the narrow menu glyph.
+.explorer-grid .explorer-populate cedar-icon {
+  transform: translateX(calc(var(--cedar-space-1) / 2));
+}
+
+// Reserve the eye's space on the date row.
+.explorer-grid .explorer-modified {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.explorer-grid .explorer-item:has(.explorer-preview) .explorer-modified {
   padding-right: var(--cedar-control-height-default);
 }
 .explorer-grid .explorer-preview {

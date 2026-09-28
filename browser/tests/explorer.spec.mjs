@@ -172,6 +172,17 @@ test("schema cards show version and release status without expanding the cards",
     expect(eyeBox.y).toBeGreaterThan(cardBox.y + cardBox.height / 2);
   }
   for (const card of await cards.all()) {
+    await expect(card.locator('.explorer-kind')).toHaveCSS('font-style', 'normal');
+    if (await card.locator('.explorer-release').count()) {
+      await expect(card.locator('.explorer-status')).toHaveCSS('font-style', 'normal');
+      const release = await card.locator('.explorer-release').boundingBox();
+      const icon = await card.locator('.resource-icon').boundingBox();
+      const actions = await card.locator('.row-actions').boundingBox();
+      expect(release.x).toBeGreaterThanOrEqual(icon.x + icon.width);
+      expect(release.x + release.width).toBeLessThanOrEqual(actions.x);
+      expect(Math.abs(release.y - icon.y)).toBeLessThanOrEqual(8);
+      expect(await card.locator('.explorer-release').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+    }
     expect((await card.boundingBox()).height).toBe(106);
     await expect(card.locator("time")).toBeVisible();
     const center = box => box.y + box.height / 2;
