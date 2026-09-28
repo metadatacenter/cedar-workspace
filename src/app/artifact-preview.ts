@@ -23,26 +23,12 @@ import { I18n, fallbackLanguage } from "./i18n";
 import { Icon } from "./icon";
 import { Resource, collections, title } from "./resource";
 
-/** A transient template deployment; the original element and its nested schema stay intact. */
+/** Render the element's contents as a transient template; the dialog owns its root heading. */
 export function previewElement(element: CeeJsonObject): CeeJsonObject {
-  const name = String(element["schema:name"] || "");
   return {
+    ...element,
     "@id": "urn:cedar:workspace:element-preview",
     "@type": "https://schema.metadatacenter.org/core/Template",
-    "@context": element["@context"] || {},
-    $schema: "http://json-schema.org/draft-04/schema#",
-    type: "object",
-    "schema:name": name,
-    "schema:description": "",
-    "schema:schemaVersion": element["schema:schemaVersion"] || "1.6.0",
-    "pav:version": "0.0.1",
-    "bibo:status": "bibo:draft",
-    _ui: {
-      order: ["element"],
-      propertyLabels: { element: name },
-      propertyDescriptions: {},
-    },
-    properties: { element },
   };
 }
 
@@ -59,7 +45,8 @@ export function previewElement(element: CeeJsonObject): CeeJsonObject {
       <header>
         @if (
           resource.resourceType === "instance" ||
-          resource.resourceType === "template"
+          resource.resourceType === "template" ||
+          resource.resourceType === "element"
         ) {
           <h2>{{ name }}</h2>
         }

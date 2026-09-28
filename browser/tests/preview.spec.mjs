@@ -42,7 +42,7 @@ for (const kind of ['template','element','field','instance']) {
     await expect(dialog.getByRole('alert')).toHaveCount(0);
     const viewer = dialog.locator(kind==='field'?'cedar-embeddable-field':'cedar-embeddable-editor');
     await expect(viewer).toBeVisible();
-    if (['instance', 'template'].includes(kind)) {
+    if (['instance', 'template', 'element'].includes(kind)) {
       await expect(dialog.getByRole('heading', {level: 2})).toHaveText(documents[kind]['schema:name']);
     } else await expect(dialog.locator('header h2')).toHaveCount(0);
     await expect(viewer.locator('.logo-block')).toHaveCount(0);
@@ -50,7 +50,10 @@ for (const kind of ['template','element','field','instance']) {
       expect(await viewer.locator('.template-content').evaluate(el => getComputedStyle(el).padding)).toBe('0px');
     }
     if (kind === 'element') {
-      await expect(viewer.locator('mat-expansion-panel')).toHaveCSS('border-radius', '4px');
+      await expect(viewer.locator('mat-expansion-panel')).toHaveCount(0);
+      const heading = await dialog.locator('header h2').boundingBox();
+      const body = await dialog.locator('section').boundingBox();
+      expect(heading.y + heading.height).toBeLessThanOrEqual(body.y);
     }
     if (kind==='instance') {
       const text = viewer.getByRole('textbox',{name:'Specimen name',exact:true});
@@ -187,4 +190,22 @@ test('element previews retain separators between fields without a trailing rule'
   await expect(fields).toHaveCount(2);
   await expect(fields.first()).toHaveCSS('border-bottom-width', '1px');
   await expect(fields.last()).toHaveCSS('border-bottom-width', '0px');
+});
+
+test('moving the preview heading preserves nested element structure', async ({page, api}) => {
+  const artifact = structuredClone(documents.element);
+  artifact.properties.nested = structuredClone(documents.element);
+  artifact._ui.order.push('nested');
+  artifact._ui.propertyLabels.nested = 'Nested specimen';
+  const {button} = await setup(page, 'element', {artifact});
+  await button.click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.locator('[aria-busy]')).toHaveAttribute('aria-busy', 'false');
+  await expect(dialog.locator('header h2')).toHaveText(artifact['schema:name']);
+  const nested = dialog.locator('mat-expansion-panel');
+  await expect(nested).toHaveCount(1);
+  await expect(nested.locator('mat-expansion-panel-header')).toContainText('Nested specimen');
+  await expect(nested.locator('.cee-spec-box')).toBeVisible();
+  await nested.locator('mat-expansion-panel-header').click();
+  await expect(nested.locator('.cee-spec-box')).not.toBeVisible();
 });
