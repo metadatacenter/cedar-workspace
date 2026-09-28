@@ -410,8 +410,7 @@
               }
               <span class="explorer-modified">
                 @if(grid()){<span class="explorer-kind"
-                  >{{'ResourceTypes.' + r.resourceType | translate}}
-                  · </span
+                  >{{'ResourceTypes.' + r.resourceType | translate}} · </span
                 >}
                 <time
                   [attr.datetime]="r['pav:lastUpdatedOn'] || null"
@@ -722,6 +721,14 @@
 <cedar-permissions-dialog
   [resource]="d.resource"
   (closed)="permissionsClosed($event)"
+/>
+} @else if(d.action === "delete" && d.resource?.resourceType === "folder" &&
+d.resource) {
+<cedar-folder-deletion-dialog
+  [resource]="d.resource"
+  (closed)="dialog.set(null)"
+  (changed)="load(true)"
+  (saved)="saved()"
 />
 } @else {<cedar-resource-dialog
   [action]="d.action"

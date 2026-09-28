@@ -47,6 +47,7 @@ import {
   collections,
 } from "./resource";
 import { Icon } from "./icon";
+import { FolderDeletionDialog } from "./folder-deletion-dialog";
 import { ResourceDialog } from "./resource-dialog";
 import { PermissionsDialog } from "./permissions-dialog";
 import { I18n } from "./i18n";
@@ -165,6 +166,7 @@ export function actions(r: Resource, i18n: Pick<I18n, "t">): Action[] {
     FriendlyDatePipe,
     RouterLink,
     ResourceDialog,
+    FolderDeletionDialog,
     PermissionsDialog,
     Icon,
     TranslatePipe,

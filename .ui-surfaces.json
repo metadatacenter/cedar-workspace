@@ -118,7 +118,7 @@
     },
     {
       "id": "workspace.more-menu-hot-dogs",
-      "name": "More Menu (\u201cHot Dogs\u201d)",
+      "name": "More Menu (“Hot Dogs”)",
       "section": "Menus",
       "parent": "workspace.workspace",
       "contract": "menu",
@@ -291,7 +291,7 @@
     },
     {
       "id": "workspace.delete-artifact-folder",
-      "name": "Delete Artifact / Folder",
+      "name": "Delete Artifact",
       "section": "Confirmation / Warning / Error",
       "parent": "workspace.workspace-management",
       "contract": "dialog",
@@ -555,6 +555,74 @@
       ],
       "test": "browser/tests/surfaces.spec.mjs",
       "inventory": false
+    },
+    {
+      "id": "workspace.recursive-delete-confirmation",
+      "name": "Recursive Folder Delete / Confirmation",
+      "section": "Confirmation / Warning / Error",
+      "parent": "workspace.workspace-management",
+      "contract": "dialog",
+      "scenario": "recursive-delete-confirmation",
+      "selector": "cedar-folder-deletion-dialog dialog",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/folder-deletion-dialog.html",
+          "anchor": "aria-labelledby=\"folder-deletion-title\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.recursive-delete-permissions",
+      "name": "Recursive Folder Delete / Permission Refusal",
+      "section": "Confirmation / Warning / Error",
+      "parent": "workspace.workspace-management",
+      "contract": "dialog",
+      "scenario": "recursive-delete-permissions",
+      "selector": "cedar-folder-deletion-dialog dialog",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/folder-deletion-dialog.html",
+          "anchor": "aria-labelledby=\"folder-deletion-title\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.recursive-delete-references",
+      "name": "Recursive Folder Delete / Outside Instance Refusal",
+      "section": "Confirmation / Warning / Error",
+      "parent": "workspace.workspace-management",
+      "contract": "dialog",
+      "scenario": "recursive-delete-references",
+      "selector": "cedar-folder-deletion-dialog dialog",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/folder-deletion-dialog.html",
+          "anchor": "aria-labelledby=\"folder-deletion-title\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.recursive-delete-owner",
+      "name": "Recursive Folder Delete / Ownership Refusal",
+      "section": "Confirmation / Warning / Error",
+      "parent": "workspace.workspace-management",
+      "contract": "dialog",
+      "scenario": "recursive-delete-owner",
+      "selector": "cedar-folder-deletion-dialog dialog",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/folder-deletion-dialog.html",
+          "anchor": "aria-labelledby=\"folder-deletion-title\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     }
   ]
 }

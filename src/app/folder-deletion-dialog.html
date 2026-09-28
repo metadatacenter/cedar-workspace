@@ -1,0 +1,128 @@
+<dialog
+  #dialog
+  cedarDialogKeyboard
+  aria-labelledby="folder-deletion-title"
+  (cancel)="$event.preventDefault(); $event.stopPropagation(); close()"
+>
+  <header>
+    <h2 id="folder-deletion-title">{{ 'FolderDeletion.Title' | translate }}</h2>
+    <button
+      type="button"
+      [disabled]="deleting()"
+      (click)="close()"
+      [attr.aria-label]="'ResourceDialog.Close' | translate"
+    >
+      <cedar-icon name="close" />
+    </button>
+  </header>
+  <section class="deletion-body">
+    <p class="resource-dialog-resource">
+      <cedar-icon name="folder" />{{ name }}
+    </p>
+    @if(busy()) {
+    <p role="status">
+      {{ (deleting() ? 'FolderDeletion.Deleting' : 'FolderDeletion.Checking') |
+      translate }}
+    </p>
+    } @if(error()) {
+    <p class="alert" role="alert">{{ error() }}</p>
+    } @if(outcome(); as result) {
+    <p class="alert" role="alert">{{ 'FolderDeletion.Stopped' | translate }}</p>
+    <p>{{ outcomeMessage(result) }}</p>
+    <p>{{ 'FolderDeletion.DeletedSoFar' | translate }}</p>
+    <p class="deletion-counts">
+      {{ 'FolderDeletion.Summary' | translate: result.deleted }}
+    </p>
+    } @if(plan(); as inventory) {
+    <p>
+      {{ (inventory.allowed ? 'FolderDeletion.Warning' :
+      'FolderDeletion.Refused') | translate }}
+    </p>
+    <p
+      class="deletion-counts"
+      aria-label="{{ 'FolderDeletion.Counts' | translate }}"
+    >
+      {{ 'FolderDeletion.Summary' | translate: inventory.counts }}
+    </p>
+    <p>{{ 'FolderDeletion.IncludesRoot' | translate }}</p>
+    @if(inventory.restrictedItems) {
+    <p class="alert" role="alert">
+      {{ 'FolderDeletion.Permissions' | translate: {count:
+      inventory.restrictedItems} }}
+    </p>
+    } @if(inventory.protectedFolders) {
+    <p class="alert" role="alert">
+      {{ 'FolderDeletion.Protected' | translate: {count:
+      inventory.protectedFolders} }}
+    </p>
+    } @if(inventory.templatesWithInstances) {
+    <p>
+      {{ 'FolderDeletion.Referenced' | translate: {count:
+      inventory.templatesWithInstances} }}
+    </p>
+    } @if(inventory.templatesWithOutsideInstances) {
+    <p class="alert" role="alert">
+      {{ 'FolderDeletion.Outside' | translate: {templates:
+      inventory.templatesWithOutsideInstances, instances:
+      inventory.instancesOutside} }}
+    </p>
+    } @if(inventory.templatesWithInstances &&
+    !inventory.templatesWithOutsideInstances) {
+    <p>
+      {{ 'FolderDeletion.Inside' | translate: {count:
+      inventory.templatesWithInstances} }}
+    </p>
+    }
+    <details>
+      <summary tabindex="0">
+        {{ 'FolderDeletion.Inventory' | translate }}
+      </summary>
+      <div class="deletion-inventory" tabindex="0">
+        <table>
+          <thead>
+            <tr>
+              <th>{{ 'Common.Name' | translate }}</th>
+              <th>{{ 'FolderDeletion.Type' | translate }}</th>
+              <th>{{ 'FolderDeletion.Parent' | translate }}</th>
+              <th>{{ 'FolderDeletion.Check' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for(item of inventory.items; track $index) {
+            <tr>
+              <td>
+                <span class="inventory-name">
+                  <cedar-icon [name]="item.type" size="small" />
+                  <span>{{ itemName(item) }}</span>
+                </span>
+              </td>
+              <td>{{ 'ResourceTypes.' + item.type | translate }}</td>
+              <td>{{ parent(item) }}</td>
+              <td>{{ check(item) }}</td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </details>
+    }
+  </section>
+  <footer>
+    <button autofocus type="button" [disabled]="deleting()" (click)="close()">
+      {{ 'Common.Cancel' | translate }}
+    </button>
+    @if(!busy()) {
+    <button type="button" (click)="load()">
+      {{ 'FolderDeletion.Refresh' | translate }}
+    </button>
+    }
+    <button
+      class="primary"
+      type="button"
+      [disabled]="busy() || !plan()?.allowed"
+      (click)="confirm()"
+    >
+      {{ 'FolderDeletion.Delete' | translate }}
+    </button>
+  </footer>
+</dialog>

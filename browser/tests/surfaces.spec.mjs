@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { test, expect, dashboard, action, resource } from "./fixtures.mjs";
 import { surfaceCases, checkSurface } from "./surface-contracts.generated.mjs";
+import { deletionPlan, deletionOwnerRefusal, openFolderDeletion } from "./folder-deletion-fixture.mjs";
 const registry = JSON.parse(
   readFileSync(new URL("../../.ui-surfaces.json", import.meta.url), "utf8"),
 );
@@ -138,6 +139,15 @@ for (const kind of ["errors", "warnings"])
       editor.dispatchEvent(new CustomEvent("change"));
     });
   };
+scenarios['recursive-delete-owner'] = page => openFolderDeletion(page, deletionOwnerRefusal);
+for (const kind of ['confirmation', 'permissions', 'references']) {
+  scenarios['recursive-delete-' + kind] = async page => {
+    const plan = structuredClone(deletionPlan);
+    if (kind === 'permissions') { plan.allowed = false; plan.restrictedItems = 1; }
+    if (kind === 'references') { plan.allowed = false; plan.templatesWithOutsideInstances = 1; plan.instancesOutside = 3; }
+    await openFolderDeletion(page, plan);
+  };
+}
 for (const { surface, state, width, title } of surfaceCases(
   registry,
   scenarios,
