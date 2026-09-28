@@ -110,9 +110,7 @@ describe("Angular Workspace", () => {
     f.detectChanges();
     expect(f.componentInstance.selected()).toBeUndefined();
     expect(el.querySelector(".information h1")).toBeNull();
-    expect(el.textContent).not.toMatch(
-      /Categories|Tile view|Filter by type/,
-    );
+    expect(el.textContent).not.toMatch(/Categories|Tile view|Filter by type/);
   });
   it.each(["folder", "instance", "template", "element", "field"] as const)(
     "shows Version only for versioned schema resources: %s",
@@ -242,7 +240,7 @@ describe("Angular Workspace", () => {
     "folder",
   ] as const) {
     for (const editable of [false, true]) {
-      it(`renders the legacy menu for ${editable ? "editable" : "read-only"} ${resourceType} resources`, async () => {
+      it(`renders applicable menu actions for ${editable ? "editable" : "read-only"} ${resourceType} resources`, async () => {
         vi.stubGlobal("dataciteEnabled", false);
         vi.stubGlobal("makeOpenEnabled", true);
         const f = await render();
@@ -283,15 +281,19 @@ describe("Angular Workspace", () => {
           ).querySelectorAll<HTMLButtonElement>(".resource-menu button"),
         ];
         expect(buttons.map((b) => b.textContent?.trim())).toEqual([
-          "Populate",
+          ...(resourceType === "template" ? ["Populate"] : []),
           "Open",
           "Permissions…",
-          "Copy",
+          ...(resourceType !== "folder" ? ["Copy"] : []),
           "Move",
           "Rename",
-          ...(resourceType === "instance" ? [] : ["Publish", "Create Draft"]),
+          ...(["folder", "instance"].includes(resourceType)
+            ? []
+            : ["Publish", "Create Draft"]),
           "Delete",
-          "DataCite wizard",
+          ...(["template", "instance"].includes(resourceType)
+            ? ["DataCite wizard"]
+            : []),
           "Enable Openview",
           "Disable Openview",
           "Open in OpenView",
@@ -299,17 +301,17 @@ describe("Angular Workspace", () => {
         const disabled = (name: string) =>
           buttons.find((b) => b.textContent?.trim() === name)!.disabled;
         expect(disabled("Permissions…")).toBe(false);
-        expect(disabled("Copy")).toBe(!editable || resourceType === "folder");
-        expect(disabled("Populate")).toBe(
-          !editable || resourceType !== "template",
-        );
+        if (resourceType !== "folder") expect(disabled("Copy")).toBe(!editable);
+        if (resourceType === "template")
+          expect(disabled("Populate")).toBe(!editable);
         expect(disabled("Delete")).toBe(!editable);
-        expect(disabled("DataCite wizard")).toBe(true);
+        if (["template", "instance"].includes(resourceType))
+          expect(disabled("DataCite wizard")).toBe(true);
         expect(disabled("Enable Openview")).toBe(!editable);
         const act = vi.spyOn(f.componentInstance, "act");
         buttons
-          .find((b) => b.textContent?.trim() === "DataCite wizard")!
-          .click();
+          .find((b) => b.textContent?.trim() === "DataCite wizard")
+          ?.click();
         expect(act).not.toHaveBeenCalled();
       });
     }

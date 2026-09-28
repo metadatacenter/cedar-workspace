@@ -330,9 +330,6 @@ tr.selected:hover {
   font-size: var(--cedar-font-size-heading);
   vertical-align: middle;
 }
-.resource-icon[data-type="folder"] {
-  color: var(--cedar-color-component-title);
-}
 .sort-column {
   text-align: right;
   padding: var(--cedar-space-1);

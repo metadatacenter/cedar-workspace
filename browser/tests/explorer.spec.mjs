@@ -13,7 +13,7 @@ const items = ["a", "b", "c"].map((id) => ({
   resourceType: "instance",
   "schema:name": `Sample ${id}`,
 }));
-async function setup(page) {
+async function setup(page, extra = []) {
   const moved = new Set();
   await page.route("**/api/resource/**", async (route) => {
     const request = route.request(),
@@ -21,7 +21,7 @@ async function setup(page) {
     if (path.includes("/contents"))
       return route.fulfill({
         json: {
-          resources: [folder, ...items.filter((r) => !moved.has(r["@id"]))],
+          resources: [folder, ...items.filter((r) => !moved.has(r["@id"])), ...extra],
           totalCount: 4 - moved.size,
           pathInfo: [],
         },
@@ -32,7 +32,7 @@ async function setup(page) {
     }
     const id = decodeURIComponent(path.split("/").filter(Boolean).at(-1));
     const r =
-      items.find(
+      [...items, ...extra].find(
         (r) => path.includes("/" + r["@id"] + "/") || id === r["@id"],
       ) || folder;
     return route.fulfill({ json: r, headers: { ETag: '"' + r["@id"] + '"' } });
@@ -180,4 +180,32 @@ test("schema cards show version and release status without expanding the cards",
       expect(Math.abs(center(await action.boundingBox()) - center(icon))).toBeLessThanOrEqual(1);
     }
   }
+});
+
+
+test("card icons share colour, spacing and the right-hand column", async ({page, api}) => {
+  await setup(page, [{...resource, isOpen: true}]);
+  await expect(page.locator('.brand')).toContainText('CEDAR Workspace');
+  const cards = page.locator('.explorer-item');
+  await expect(cards).toHaveCount(5);
+  await expect(cards.first().locator('.resource-icon')).toHaveCSS('color', await cards.nth(1).locator('.resource-icon').evaluate(el => getComputedStyle(el).color));
+  const card = cards.nth(1);
+  const eye = await card.locator('.explorer-preview').boundingBox();
+  const menu = await card.getByRole('button', {name: 'Actions for Sample a'}).boundingBox();
+  const bounds = await card.boundingBox();
+  expect(eye.x + eye.width / 2).toBeCloseTo(menu.x + menu.width / 2, 1);
+  expect(bounds.y + bounds.height - eye.y - eye.height).toBeLessThanOrEqual(6);
+  const actions = cards.last().locator('.row-actions > a, .row-actions > button');
+  await expect(actions).toHaveCount(3);
+  const boxes = await actions.evaluateAll(nodes => nodes.map(node => {
+    const {x, y, width, height} = node.getBoundingClientRect();
+    return {x, y, width, height};
+  }));
+  expect(boxes.map(box => box.width)).toEqual([24, 24, 24]);
+  expect(boxes.map(box => box.y)).toEqual([boxes[0].y, boxes[0].y, boxes[0].y]);
+  expect(boxes[1].x - boxes[0].x).toBe(boxes[2].x - boxes[1].x);
+  if (process.env.WORKSPACE_VISUAL) await expect(cards.last()).toHaveScreenshot('template-card-actions.png');
+  await cards.first().getByRole('button', {name: 'Actions for Archive'}).click();
+  const entries = page.locator('.resource-menu button');
+  await expect(entries).toHaveText(['Open', 'Permissions…', 'Move', 'Rename', 'Delete', 'Enable Openview', 'Disable Openview', 'Open in OpenView']);
 });

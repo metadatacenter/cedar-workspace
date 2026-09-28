@@ -130,7 +130,22 @@ export function actions(r: Resource, i18n: Pick<I18n, "t">): Action[] {
       label: label("ResourceActions.OpenInOpenView"),
       enabled: window.makeOpenEnabled !== false && !!r.isOpen,
     },
-  ];
+  ].filter((action) => {
+    // Applicability comes from the resource kind; capabilities still gate valid actions.
+    switch (action.id) {
+      case "populate":
+        return r.resourceType === "template";
+      case "copy":
+        return r.resourceType !== "folder";
+      case "publish":
+      case "draft":
+        return ["template", "element", "field"].includes(r.resourceType);
+      case "datacite":
+        return ["template", "instance"].includes(r.resourceType);
+      default:
+        return true;
+    }
+  });
 }
 @Component({
   selector: "cedar-workspace-page",

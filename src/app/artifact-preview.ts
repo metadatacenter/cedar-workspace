@@ -53,11 +53,10 @@ export function previewElement(element: CeeJsonObject): CeeJsonObject {
     <dialog
       #dialog
       class="artifact-preview"
-      aria-labelledby="preview-title"
+      [attr.aria-label]="name"
       (cancel)="$event.preventDefault(); $event.stopPropagation(); close()"
     >
       <header>
-        <h2 id="preview-title">{{ name }}</h2>
         <button
           autofocus
           type="button"
@@ -158,6 +157,7 @@ export class ArtifactPreview implements AfterViewInit, OnDestroy {
       viewer.config = {
         ...config,
         readOnlyMode: true,
+        previewMode: true,
         trustTemplateRichText: false,
         showDownloadMenu: false,
         showExpandCollapseAll: false,

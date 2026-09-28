@@ -42,6 +42,14 @@ for (const kind of ['template','element','field','instance']) {
     await expect(dialog.getByRole('alert')).toHaveCount(0);
     const viewer = dialog.locator(kind==='field'?'cedar-embeddable-field':'cedar-embeddable-editor');
     await expect(viewer).toBeVisible();
+    await expect(dialog.locator('header h2')).toHaveCount(0);
+    await expect(viewer.locator('.logo-block')).toHaveCount(0);
+    if (kind !== 'field') {
+      expect(await viewer.locator('.template-content').evaluate(el => getComputedStyle(el).padding)).toBe('0px');
+    }
+    if (kind === 'element') {
+      await expect(viewer.locator('mat-expansion-panel')).toHaveCSS('border-radius', '4px');
+    }
     if (kind==='instance') {
       const text = viewer.getByRole('textbox',{name:'Specimen name',exact:true});
       await expect(text).toHaveJSProperty('readOnly',true);
@@ -57,7 +65,7 @@ for (const kind of ['template','element','field','instance']) {
     expect((await dialog.boundingBox()).height).toBeLessThan(500);
     expect(page.url()).toBe(before);
     expect(requests.every(r=>r.method==='GET')).toBe(true);
-    if (kind==='instance' && process.env.WORKSPACE_VISUAL) await expect(dialog).toHaveScreenshot('instance-preview.png');
+    if (['instance','element'].includes(kind) && process.env.WORKSPACE_VISUAL) await expect(dialog).toHaveScreenshot(`${kind}-preview.png`);
     await dialog.getByRole('button',{name:'Close preview'}).focus();
     await page.keyboard.press('Escape');
     await expect(dialog).toHaveCount(0);
@@ -157,8 +165,24 @@ for (const [name, type] of [['nihField', 'NIH Grant ID'], ['attributeField', 'At
     await expect(field.locator('.cee-field-type')).toHaveText(type);
     await expect(field.locator('.cee-field-spec-description')).toHaveText('A description supplied by the field artifact.');
     await expect(dialog.locator('section > p')).toHaveCount(0);
-    if (name === 'nihField') await expect(field.locator('.cee-spec-box')).toHaveCount(0);
+    if (name === 'nihField') await expect(field.locator('.cee-spec-box')).toHaveText('NIH Grant ID');
     expect((await dialog.boundingBox()).height).toBeLessThan(400);
     if (process.env.WORKSPACE_VISUAL) await expect(dialog).toHaveScreenshot(`${name}-preview.png`);
   });
 }
+
+
+test('element previews retain separators between fields without a trailing rule', async ({page, api}) => {
+  const artifact = structuredClone(documents.element);
+  artifact.properties.second = structuredClone(artifact.properties.name);
+  artifact._ui.order.push('second');
+  artifact._ui.propertyLabels.second = 'Second field';
+  const {button} = await setup(page, 'element', {artifact});
+  await button.click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.locator('[aria-busy]')).toHaveAttribute('aria-busy', 'false');
+  const fields = dialog.locator('.non-iterable-component');
+  await expect(fields).toHaveCount(2);
+  await expect(fields.first()).toHaveCSS('border-bottom-width', '1px');
+  await expect(fields.last()).toHaveCSS('border-bottom-width', '0px');
+});

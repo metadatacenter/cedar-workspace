@@ -17,15 +17,10 @@ header {
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: var(--cedar-space-4);
-  padding: var(--cedar-space-3) var(--cedar-space-6);
+  padding: var(--cedar-space-1) var(--cedar-space-3);
   border-bottom: 1px solid var(--cedar-border-rule);
-}
-h2 {
-  @include patterns.artifact-title;
-  margin: 0;
-  overflow-wrap: anywhere;
 }
 header button {
   flex-shrink: 0;
@@ -34,7 +29,7 @@ section {
   flex: 0 1 auto;
   min-height: 0;
   overflow: auto;
-  padding: var(--cedar-space-6);
+  padding: var(--cedar-space-2) var(--cedar-space-3);
 }
 @media (max-width: 600px) {
   .artifact-preview {
