@@ -9,6 +9,10 @@ test("Type applies multiple selections, cancels drafts, clears independently and
   const type = page.getByRole("button", { name: "Type", exact: true });
   await type.click();
   const popup = page.getByRole("dialog", { name: "Filter by type" });
+  await expect(popup.getByRole('checkbox')).toHaveCount(5);
+  for (const [index, name] of ['Folder', 'Template', 'Element', 'Field', 'Instance'].entries()) {
+    await expect(popup.getByRole('checkbox').nth(index)).toHaveAccessibleName(name);
+  }
   await popup.getByLabel("Folder", { exact: true }).check();
   await popup.getByLabel("Template", { exact: true }).check();
   await popup.getByRole("button", { name: "Apply", exact: true }).click();

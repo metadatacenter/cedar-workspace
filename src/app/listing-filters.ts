@@ -3,8 +3,8 @@ import type { ResourceType } from "./resource";
 // Each label is a translation key.
 export const resourceTypes: { value: ResourceType; label: string }[] = [
   { value: "folder", label: "ResourceTypes.folder" },
-  { value: "element", label: "ResourceTypes.element" },
   { value: "template", label: "ResourceTypes.template" },
+  { value: "element", label: "ResourceTypes.element" },
   { value: "field", label: "ResourceTypes.field" },
   { value: "instance", label: "ResourceTypes.instance" },
 ];

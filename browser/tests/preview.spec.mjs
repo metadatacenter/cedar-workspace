@@ -42,9 +42,8 @@ for (const kind of ['template','element','field','instance']) {
     await expect(dialog.getByRole('alert')).toHaveCount(0);
     const viewer = dialog.locator(kind==='field'?'cedar-embeddable-field':'cedar-embeddable-editor');
     await expect(viewer).toBeVisible();
-    if (['instance', 'template', 'element'].includes(kind)) {
-      await expect(dialog.getByRole('heading', {level: 2})).toHaveText(documents[kind]['schema:name']);
-    } else await expect(dialog.locator('header h2')).toHaveCount(0);
+    await expect(dialog.getByRole('heading', {level: 2})).toHaveText(documents[kind]['schema:name']);
+    if (kind === 'field') await expect(viewer.locator('app-cedar-component-header')).toHaveCount(0);
     await expect(viewer.locator('.logo-block')).toHaveCount(0);
     if (kind !== 'field') {
       expect(await viewer.locator('.template-content').evaluate(el => getComputedStyle(el).padding)).toBe('0px');
