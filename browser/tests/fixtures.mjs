@@ -203,6 +203,8 @@ export const test = base.extend({
 export { expect };
 export async function dashboard(page) {
   await page.goto("/dashboard");
+  // These shared scenarios exercise the list; explorer scenarios cover the default grid.
+  await page.getByRole("button", { name: "List view", exact: true }).click();
   await expect(
     page.getByRole("link", { name: "Study metadata", exact: true }),
   ).toBeVisible();

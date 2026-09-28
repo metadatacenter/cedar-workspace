@@ -39,6 +39,7 @@ const scenarios = {
       }),
     );
     await page.goto("/dashboard");
+    await page.getByRole("button", { name: "List view", exact: true }).click();
     await page
       .getByRole("button", { name: "Actions for Folder", exact: true })
       .click();

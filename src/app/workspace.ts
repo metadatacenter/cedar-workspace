@@ -206,7 +206,7 @@ export class Workspace {
   readonly rows = signal<Resource[]>([]);
   readonly path = signal<Resource[]>([]);
   readonly currentFolder = signal<Resource | undefined>(undefined);
-  readonly grid = signal(false);
+  readonly grid = signal(true);
   readonly preview = signal<Resource | null>(null);
   readonly selectionIds = signal<string[]>([]);
   readonly selection = computed(() =>

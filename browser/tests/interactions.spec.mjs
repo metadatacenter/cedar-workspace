@@ -119,6 +119,7 @@ test("URL retains search, ordering and page through reload and Back", async ({
   api,
 }) => {
   await page.goto("/dashboard?search=study&sort=-name&offset=50");
+  await page.getByRole("button", { name: "List view", exact: true }).click();
   await expect(page.locator("th").first()).toHaveAttribute(
     "aria-sort",
     "descending",
@@ -329,6 +330,7 @@ for (const [label, field] of [
     api,
   }) => {
     await page.goto("/dashboard?offset=50");
+    await page.getByRole("button", { name: "List view", exact: true }).click();
     const heading = page.getByRole("columnheader", {
       name: label,
       exact: true,
@@ -348,6 +350,7 @@ for (const [label, field] of [
       heading.locator('[data-cedar-icon="chevron-down"]'),
     ).toBeVisible();
     await page.reload();
+    await page.getByRole("button", { name: "List view", exact: true }).click();
     await expect(heading).toHaveAttribute("aria-sort", "descending");
     await expect(
       heading.locator('[data-cedar-icon="chevron-down"]'),

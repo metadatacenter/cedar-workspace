@@ -38,7 +38,7 @@ async function setup(page, extra = []) {
     return route.fulfill({ json: r, headers: { ETag: '"' + r["@id"] + '"' } });
   });
   await page.goto("/dashboard");
-  await page.getByRole("button", { name: "Grid view", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Grid view", exact: true })).toHaveAttribute("aria-pressed", "true");
   return moved;
 }
 test("grid retains compact sizing, range and list selection, and moves a group with revisions", async ({

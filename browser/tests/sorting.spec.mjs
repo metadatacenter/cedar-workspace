@@ -114,6 +114,7 @@ test("pointer selections update visible order, folder grouping and version resul
     return route.fulfill({ json: { resources, totalCount: resources.length } });
   });
   await page.goto("/dashboard");
+  await page.getByRole("button", { name: "List view", exact: true }).click();
   const rows = page.locator("tbody td:first-child");
   await expect(rows).toHaveText(["Alpha", "Alpha historical", "Museum", "Zulu"]);
   const select = async name => {
