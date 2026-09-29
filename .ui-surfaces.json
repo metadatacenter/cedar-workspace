@@ -365,7 +365,7 @@
       "source": [
         {
           "file": "src/app/confirmation.ts",
-          "anchor": "class=\"confirmation-dialog\""
+          "anchor": "class=\"confirmation-dialog dialog-stack\""
         }
       ],
       "test": "browser/tests/surfaces.spec.mjs"

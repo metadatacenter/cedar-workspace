@@ -148,6 +148,40 @@ for (const kind of ['confirmation', 'permissions', 'references']) {
     await openFolderDeletion(page, plan);
   };
 }
+// Token adoption alone cannot catch two valid margins accumulating into an
+// oversized gap. Check the rendered rhythm, including nested form/body stacks.
+async function checkDialogSpacing(dialog) {
+  const stacks = await dialog.evaluate(element => {
+    const containers = [...element.querySelectorAll('.dialog-stack')];
+    if (element.matches('.dialog-stack')) containers.unshift(element);
+    return containers.map(container => {
+      const style = getComputedStyle(container);
+      const token = container.matches('.folder-picker') ? '--cedar-space-2' : '--cedar-space-4';
+      const children = [...container.children].filter(child => child.getBoundingClientRect().height > 0);
+      return {
+        name: container.className,
+        expected: parseFloat(style.getPropertyValue(token)),
+        gap: parseFloat(style.rowGap),
+        margins: children.map(child => [getComputedStyle(child).marginTop, getComputedStyle(child).marginBottom]),
+        actual: children.slice(1).map((child, index) => child.getBoundingClientRect().top - children[index].getBoundingClientRect().bottom),
+      };
+    });
+  });
+  expect(stacks.length, 'dialog must adopt the shared spacing layout').toBeGreaterThan(0);
+  for (const stack of stacks) {
+    expect(stack.gap, `${stack.name} uses the shared spacing token`).toBe(stack.expected);
+    for (const margin of stack.margins)
+      expect(margin, `${stack.name} must not accumulate child margins`).toEqual(['0px', '0px']);
+    for (const gap of stack.actual)
+      expect(Math.abs(gap - stack.expected), `${stack.name} rendered gap`).toBeLessThanOrEqual(0.5);
+  }
+}
+
+const stackedDialogs = new Set([
+  'new-folder', 'rename', 'copy', 'move', 'publish', 'draft', 'delete', 'make-open',
+  'confirmation', 'recursive-delete-owner', 'recursive-delete-confirmation',
+  'recursive-delete-permissions', 'recursive-delete-references',
+]);
 for (const { surface, state, width, title } of surfaceCases(
   registry,
   scenarios,
@@ -156,7 +190,18 @@ for (const { surface, state, width, title } of surfaceCases(
     await page.setViewportSize({ width, height: 1000 });
     await scenarios[surface.scenario](page);
     await checkSurface(page, surface, state, expect, testInfo);
+    if (stackedDialogs.has(surface.scenario))
+      await checkDialogSpacing(page.locator(surface.selector));
   });
+
+test('dialog spacing follows host tokens and rejects accumulated margins', async ({ page, api }) => {
+  await scenarios.copy(page);
+  const dialog = page.locator('cedar-resource-dialog dialog');
+  await dialog.evaluate(element => element.style.setProperty('--cedar-space-4', '18px'));
+  await checkDialogSpacing(dialog);
+  await dialog.locator('.resource-dialog-resource').evaluate(element => element.style.marginBottom = '24px');
+  await expect(checkDialogSpacing(dialog)).rejects.toThrow('must not accumulate child margins');
+});
 
 test("surface contracts detect computed-style drift and honor host tokens", async ({
   page,

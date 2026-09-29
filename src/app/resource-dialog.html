@@ -4,7 +4,7 @@
   aria-labelledby="dialog-title"
   (cancel)="$event.preventDefault(); close()"
 >
-  <form (ngSubmit)="submit()">
+  <form class="dialog-stack" (ngSubmit)="submit()">
     <header>
       <h2 id="dialog-title" class="resource-dialog-title">
         @if(action === "rename"){<cedar-icon name="edit" />} {{heading}}
@@ -34,7 +34,7 @@
     } @if(error()){
     <p class="alert" role="alert">{{error()}}</p>
     }
-    <fieldset [disabled]="busy()">
+    <fieldset class="dialog-stack" [disabled]="busy()">
       @if(['new-folder','rename','copy'].includes(action)){<label
         >{{'Common.Name' | translate}}<input
           spellcheck="false"
@@ -83,7 +83,7 @@
           [(ngModel)]="newFolderName" /></label
       >} @if(choosesFolder){
       <section
-        class="folder-picker"
+        class="folder-picker dialog-stack"
         [attr.aria-label]="'ResourceDialog.DestinationFolder' | translate"
       >
         <h3>{{'ResourceDialog.Destination' | translate}}</h3>

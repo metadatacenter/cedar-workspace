@@ -191,6 +191,15 @@ deployment and authenticated smokes before accepting the release in an environme
 
 ## Confirmations and success feedback
 
+Action, deletion and confirmation dialogs use the central `.dialog-stack` layout
+in `src/styles.scss`: 16px between sections (`--cedar-space-4`), 8px within a
+destination picker (`--cedar-space-2`), and no vertical margins on direct children.
+Use nested stacks for forms and scrollable bodies; do not add paragraph, label or
+footer margins on top. Outer padding and control/table sizes retain their shared
+tokens. Permissions and preview dialogs retain their compact, divided sections.
+The browser surface suite measures actual gaps and margins in addition to the
+shared surface contract (which checks color and radius, not internal layout).
+
 Use the shared `Confirmation` service for in-app confirmation, awaiting its result
 before writing and rechecking the target and permissions afterward. The root outlet
 provides a styled, labelled modal with Cancel focused, Escape cancellation, focus

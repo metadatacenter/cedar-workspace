@@ -565,7 +565,20 @@ dialog h2 {
 }
 dialog footer {
   justify-content: flex-end;
-  margin-top: var(--cedar-dialog-padding);
+}
+// The container owns vertical spacing; paragraph, label and footer margins must
+// not accumulate. Nested stacks use the same rhythm without adding outer space.
+.dialog-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cedar-space-4);
+}
+.dialog-stack > * {
+  margin-block: 0;
+}
+// Do not override the native display:none on a closed dialog.
+dialog.dialog-stack:not([open]) {
+  display: none;
 }
 fieldset {
   min-width: 0;
@@ -584,13 +597,7 @@ label {
   align-items: center;
 }
 .folder-picker {
-  margin-top: var(--cedar-space-4);
-}
-.folder-picker h3 {
-  margin: 0 0 var(--cedar-space-2);
-}
-.folder-picker .breadcrumbs {
-  margin-bottom: var(--cedar-space-2);
+  gap: var(--cedar-space-2);
 }
 .folder-picker .breadcrumbs button {
   padding-inline: 0;

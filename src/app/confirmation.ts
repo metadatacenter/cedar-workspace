@@ -43,7 +43,7 @@ export class Confirmation {
     <dialog
       #dialog
       cedarDialogKeyboard
-      class="confirmation-dialog"
+      class="confirmation-dialog dialog-stack"
       aria-labelledby="confirmation-title"
       aria-describedby="confirmation-message"
       (cancel)="
@@ -68,12 +68,7 @@ export class Confirmation {
         @include patterns.dialog-surface;
         width: min(460px, calc(100vw - 32px));
       }
-      h2 {
-        @include patterns.artifact-title;
-        margin: 0 0 var(--cedar-space-2);
-      }
       p {
-        margin: 0 0 var(--cedar-space-4);
         line-height: var(--cedar-control-line-height-default);
       }
       footer {

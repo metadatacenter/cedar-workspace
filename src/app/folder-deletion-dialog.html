@@ -1,4 +1,5 @@
 <dialog
+  class="dialog-stack"
   #dialog
   cedarDialogKeyboard
   aria-labelledby="folder-deletion-title"
@@ -16,7 +17,7 @@
       <cedar-icon name="close" />
     </button>
   </header>
-  <section class="deletion-body">
+  <section class="deletion-body dialog-stack">
     <p class="resource-dialog-resource">
       <cedar-icon name="folder" />{{ name }}
     </p>

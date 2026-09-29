@@ -60,10 +60,6 @@ interface DeletionOutcome {
       footer {
         flex-wrap: wrap;
       }
-      dialog[open] {
-        display: flex;
-        flex-direction: column;
-      }
       header,
       footer {
         flex: none;
@@ -71,6 +67,9 @@ interface DeletionOutcome {
       .deletion-body {
         overflow: auto;
         min-height: 0;
+      }
+      .deletion-body > * {
+        flex: none;
       }
       .deletion-inventory {
         max-height: 40vh;
@@ -82,7 +81,6 @@ interface DeletionOutcome {
         padding: 0;
         display: grid;
         gap: var(--cedar-space-1);
-        margin: var(--cedar-space-4) 0;
       }
       table {
         width: 100%;
