@@ -177,12 +177,15 @@ textarea {
 .new-menu nav cedar-icon {
   flex-shrink: 0;
 }
-.workspace {
+.workspace,
+.resource-list {
   // CEE compact controls plus one small gutter per side, including in table cells.
   --cedar-table-cell-padding-block: var(--cedar-space-1);
   --cedar-table-row-height: calc(
     var(--cedar-control-height-default) + 2 * var(--cedar-space-1)
   );
+}
+.workspace {
   display: grid;
   grid-template-columns: 250px minmax(0, 1fr) 340px;
   min-height: calc(100vh - 80px);

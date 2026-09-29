@@ -12,6 +12,7 @@ export type FolderSort =
 /** A reusable folder-only listing. Its host owns navigation, paging and permissions. */
 @Component({
   selector: "cedar-folder-list",
+  host: { class: "resource-list" },
   imports: [TranslatePipe, FriendlyDatePipe, Icon, Tooltip],
   templateUrl: "./folder-list.html",
   styleUrl: "./folder-list.scss",

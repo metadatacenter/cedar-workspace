@@ -48,6 +48,7 @@ interface DeletionOutcome {
 }
 @Component({
   selector: "cedar-folder-deletion-dialog",
+  host: { class: "resource-list" },
   imports: [Tooltip, DialogKeyboard, Icon, TranslatePipe],
   templateUrl: "./folder-deletion-dialog.html",
   styles: [
@@ -79,18 +80,17 @@ interface DeletionOutcome {
         width: 100%;
         border-collapse: collapse;
         table-layout: auto;
-        min-width: 0;
       }
       th,
       td {
         width: auto;
-        height: auto;
         white-space: normal;
         text-align: left;
-        vertical-align: top;
-        padding: var(--cedar-space-2);
-        border-bottom: 1px solid var(--cedar-border-rule);
         overflow-wrap: anywhere;
+      }
+      th {
+        padding: var(--cedar-table-cell-padding-block) var(--cedar-table-cell-padding-inline);
+        overflow-wrap: normal;
       }
       .inventory-name {
         display: flex;

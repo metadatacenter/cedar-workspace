@@ -43,6 +43,14 @@ for (const action of ['Copy', 'Move', 'Create Draft']) {
     await expect(table.locator('.row-actions')).toHaveCount(0);
     await expect(dialog.getByRole('button', {name:'Previous', exact: true})).toHaveCount(0);
     await expect(table.getByRole('row').nth(1)).toContainText('1 day ago');
+    const workspaceRow = await page.locator('.workspace tbody tr').first().boundingBox();
+    const folderRow = await table.locator('tbody tr').first().boundingBox();
+    // Collapsed borders can distribute half a CSS pixel differently between tables.
+    expect(Math.abs(folderRow.height - workspaceRow.height)).toBeLessThanOrEqual(0.5);
+    const padding = locator => locator.evaluate(el => getComputedStyle(el).paddingBlock);
+    expect(await padding(table.locator('tbody td').first())).toBe(
+      await padding(page.locator('.workspace tbody td').first()),
+    );
     if (process.env.WORKSPACE_VISUAL) {
       await page.mouse.move(0, 0);
       await expect(dialog).toHaveScreenshot(`folder-${action.replaceAll(' ', '-').toLowerCase()}.png`);

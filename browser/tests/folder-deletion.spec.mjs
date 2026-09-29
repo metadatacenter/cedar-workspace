@@ -84,3 +84,25 @@ test('ownership lost after review invalidates the confirmation with the specific
   await expect(dialog.getByRole('alert')).toHaveText(deletionOwnerRefusal.message);
   await expect(dialog.getByRole('button', {name: 'Delete folder and contents', exact: true})).toBeDisabled();
 });
+
+
+test('deletion inventory shares Workspace row density while allowing wrapped content', async ({page, api}) => {
+  const plan = structuredClone(deletionPlan);
+  plan.items[1].name = 'Nested folder with a long descriptive name that must wrap without clipping its contents or hiding the deletion check';
+  const dialog = await openFolderDeletion(page, plan);
+  await dialog.getByRole('button', {name:'Cancel', exact:true}).click();
+  await page.getByRole('button', {name:'List view', exact:true}).click();
+  await expect(page.locator('.explorer-grid')).toHaveCount(0);
+  const reference = page.locator('.workspace tbody tr').first();
+  const referenceHeight = (await reference.boundingBox()).height;
+  const referencePadding = await reference.locator('td').first().evaluate(el => getComputedStyle(el).paddingBlock);
+  await page.getByRole('button', {name:'Actions for Study folder', exact:true}).click();
+  await page.locator('.resource-menu').getByRole('button', {name:'Delete', exact:true}).click();
+  await dialog.getByText('View complete inventory', {exact:true}).click();
+  const rows = dialog.locator('tbody tr');
+  expect(Math.abs((await rows.first().boundingBox()).height - referenceHeight)).toBeLessThanOrEqual(0.5);
+  expect(await rows.first().locator('td').first().evaluate(el => getComputedStyle(el).paddingBlock)).toBe(referencePadding);
+  await expect(rows.nth(1)).toContainText(plan.items[1].name);
+  expect((await rows.nth(1).boundingBox()).height).toBeGreaterThan(referenceHeight);
+  await expect(rows.nth(1).locator('td').last()).toHaveText('Eligible');
+});
