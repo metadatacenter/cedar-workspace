@@ -68,7 +68,7 @@ for (const action of ['Copy', 'Move', 'Create Draft']) {
     const archive = table.getByRole('button', {name:'Archive', exact:true});
     await archive.focus();
     await page.keyboard.press('Enter');
-    await expect(dialog).toContainText('Selected: Archive');
+    await expect(dialog.locator('.breadcrumbs').getByRole('button', {name:'Archive', exact:true})).toBeVisible();
     await expect(dialog.getByRole('button', {name:'Save', exact:true})).toBeEnabled();
     expect(reads.at(-1)).toEqual({id:'archive', sort:'lastUpdatedOnTS', offset:'0'});
     await dialog.getByRole('button', {name:'Save', exact:true}).click();
@@ -100,3 +100,42 @@ test('folder list fits a narrow dialog and remains accessible', async ({page, ap
   expect(result.violations).toEqual([]);
   if (process.env.WORKSPACE_VISUAL) await expect(dialog).toHaveScreenshot('folder-copy-narrow.png');
 });
+
+for (const action of ['Move', 'Copy', 'Create Draft']) {
+  for (const exit of ['Cancel', 'Close', 'Escape']) {
+    test(`${action} cancels destination browsing through ${exit} without a discard prompt or write`, async ({page, api}) => {
+      await openPicker(page, action);
+      const dialog = page.locator('cedar-resource-dialog dialog');
+      await dialog.locator('cedar-folder-list').getByRole('button', {name:'Archive', exact:true}).click();
+      await expect(dialog.locator('.breadcrumbs').getByRole('button', {name:'Archive', exact:true})).toBeVisible();
+      if (exit === 'Escape') await page.keyboard.press('Escape');
+      else await dialog.getByRole('button', {name:exit === 'Close' ? 'Close dialog' : exit, exact:true}).click();
+      await expect(dialog).toHaveCount(0);
+      await expect(page.locator('.confirmation-dialog')).toHaveCount(0);
+      expect(api.requests.filter(request => request.method !== 'GET')).toEqual([]);
+    });
+  }
+}
+
+for (const [action, field, value, original] of [
+  ['Copy', 'Name', 'New copy name', 'Study metadata'],
+  ['Create Draft', 'Version', '2.0.0', '1.0.0'],
+]) {
+  test(`${action} still protects edited content after browsing and recognises a revert`, async ({page, api}) => {
+    await openPicker(page, action);
+    const dialog = page.locator('cedar-resource-dialog dialog');
+    await dialog.getByRole('textbox', {name:field, exact:true}).fill(value);
+    await dialog.locator('cedar-folder-list').getByRole('button', {name:'Archive', exact:true}).click();
+    await expect(dialog.locator('.breadcrumbs').getByRole('button', {name:'Archive', exact:true})).toBeVisible();
+    await dialog.getByRole('button', {name:'Cancel', exact:true}).click();
+    const confirmation = page.locator('.confirmation-dialog');
+    await expect(confirmation).toContainText('Discard unsaved changes?');
+    await confirmation.getByRole('button', {name:'Cancel', exact:true}).click();
+    await expect(dialog.getByRole('textbox', {name:field, exact:true})).toHaveValue(value);
+    await dialog.getByRole('textbox', {name:field, exact:true}).fill(original);
+    await dialog.getByRole('button', {name:'Cancel', exact:true}).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(confirmation).toHaveCount(0);
+    expect(api.requests.filter(request => request.method !== 'GET')).toEqual([]);
+  });
+}

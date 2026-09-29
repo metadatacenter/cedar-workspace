@@ -240,7 +240,6 @@
     "DestinationFolder": "Célmappa",
     "Destination": "Cél",
     "NoSubfolders": "Nincsenek almappák",
-    "Selected": "Kiválasztva: {{name}}",
     "DestinationNotAllowed": "Ez a mappa nem használható célként.",
     "ConfirmDelete": {
       "folder": "Biztosan törölni szeretné a kiválasztott mappát?",
@@ -475,7 +474,7 @@
     "Moved": "{{count}} elem áthelyezve."
   },
   "FolderDeletion": {
-    "Title": "Mappa és tartalmának törlése",
+    "Title": "Törlés",
     "Checking": "Minden mappa, műtermék, jogosultság és sablonhivatkozás ellenőrzése…",
     "Deleting": "A jóváhagyott elemek törlése…",
     "Warning": "Ez véglegesen törli a kijelölt mappát és annak teljes tartalmát. Ez a művelet nem vonható vissza.",
@@ -499,7 +498,6 @@
     "Delete": "Mappa és tartalmának törlése",
     "Stopped": "A törlés nem fejeződött be. A folytatás előtt tekintse át az új leltárt.",
     "DeletedSoFar": "Eddig megerősített törlések",
-    "Referenced": "Példányokkal rendelkező sablonok: {{count}}.",
     "NotOwner": "A mappát és annak tartalmát csak a mappa tulajdonosa törölheti.",
     "ProtectedRoot": "A saját kezdőmappák és a rendszermappák nem törölhetők.",
     "InventoryUnavailable": "A teljes tartalom ellenőrzése nem sikerült. Frissítse a leltárt, majd próbálja újra.",
@@ -513,6 +511,13 @@
     "SessionExpired": "A munkamenete lejárt. A folytatáshoz jelentkezzen be újra.",
     "AccessDenied": "Már nincs jogosultsága a mappa elérésére vagy törlésére.",
     "Missing": "Ez a mappa már nem létezik, vagy már nem érhető el.",
-    "Summary": "Mappák: {{folder}}, Sablonok: {{template}}, Elemek: {{element}}, Mezők: {{field}}, Példányok: {{instance}}"
+    "CountLabels": {
+      "folder": "Mappák",
+      "template": "Sablonok",
+      "element": "Elemek",
+      "field": "Mezők",
+      "instance": "Példányok",
+      "referenced": "Példányokkal rendelkező sablonok"
+    }
   }
 }

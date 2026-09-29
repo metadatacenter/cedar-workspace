@@ -124,11 +124,6 @@
           </button>
         </div>
         }
-        <p>
-          {{'ResourceDialog.Selected' | translate: {name:
-          targetResource?title(targetResource):('Common.Loading' | translate)}
-          }}
-        </p>
         @if(!destinationAllowed){
         <p>{{'ResourceDialog.DestinationNotAllowed' | translate}}</p>
         }

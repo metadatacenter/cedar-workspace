@@ -106,11 +106,11 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
     void this.load();
   }
   private values() {
+    // Browsing a destination changes navigation, not authored content to preserve.
     return JSON.stringify([
       this.name,
       this.description,
       this.version,
-      this.target,
       this.propagate,
       this.newFolderName,
     ]);

@@ -11,7 +11,7 @@
       [disabled]="deleting()"
       (click)="close()"
       [attr.aria-label]="'ResourceDialog.Close' | translate"
-        [cedarTooltip]="'ResourceDialog.Close' | translate"
+      [cedarTooltip]="'ResourceDialog.Close' | translate"
     >
       <cedar-icon name="close" />
     </button>
@@ -31,21 +31,44 @@
     <p class="alert" role="alert">{{ 'FolderDeletion.Stopped' | translate }}</p>
     <p>{{ outcomeMessage(result) }}</p>
     <p>{{ 'FolderDeletion.DeletedSoFar' | translate }}</p>
-    <p class="deletion-counts">
-      {{ 'FolderDeletion.Summary' | translate: result.deleted }}
-    </p>
+    <ul class="deletion-counts">
+      @for(type of resourceTypes; track type.value) {
+      <li>
+        <strong
+          >{{ 'FolderDeletion.CountLabels.' + type.value | translate }}</strong
+        >: {{ result.deleted[type.value] }}
+      </li>
+      }
+    </ul>
     } @if(plan(); as inventory) {
     <p>
       {{ (inventory.allowed ? 'FolderDeletion.Warning' :
       'FolderDeletion.Refused') | translate }}
     </p>
-    <p
+    <ul
       class="deletion-counts"
-      aria-label="{{ 'FolderDeletion.Counts' | translate }}"
+      [attr.aria-label]="'FolderDeletion.Counts' | translate"
     >
-      {{ 'FolderDeletion.Summary' | translate: inventory.counts }}
+      @for(type of resourceTypes; track type.value) {
+      <li>
+        <strong
+          >{{ 'FolderDeletion.CountLabels.' + type.value | translate }}</strong
+        >: {{ inventory.counts[type.value] }}
+      </li>
+      }
+      <li>
+        <strong
+          >{{ 'FolderDeletion.CountLabels.referenced' | translate }}</strong
+        >: {{ inventory.templatesWithInstances }}
+      </li>
+    </ul>
+    <p class="inventory-explanation">
+      <span>{{ 'FolderDeletion.IncludesRoot' | translate }}</span>
+      @if(inventory.templatesWithInstances &&
+      !inventory.templatesWithOutsideInstances) {
+      <span> {{ 'FolderDeletion.Inside' | translate }}</span>
+      }
     </p>
-    <p>{{ 'FolderDeletion.IncludesRoot' | translate }}</p>
     @if(inventory.restrictedItems) {
     <p class="alert" role="alert">
       {{ 'FolderDeletion.Permissions' | translate: {count:
@@ -56,22 +79,11 @@
       {{ 'FolderDeletion.Protected' | translate: {count:
       inventory.protectedFolders} }}
     </p>
-    } @if(inventory.templatesWithInstances) {
-    <p>
-      {{ 'FolderDeletion.Referenced' | translate: {count:
-      inventory.templatesWithInstances} }}
-    </p>
     } @if(inventory.templatesWithOutsideInstances) {
     <p class="alert" role="alert">
       {{ 'FolderDeletion.Outside' | translate: {templates:
       inventory.templatesWithOutsideInstances, instances:
       inventory.instancesOutside} }}
-    </p>
-    } @if(inventory.templatesWithInstances &&
-    !inventory.templatesWithOutsideInstances) {
-    <p>
-      {{ 'FolderDeletion.Inside' | translate: {count:
-      inventory.templatesWithInstances} }}
     </p>
     }
     <details>

@@ -1,4 +1,5 @@
 import { Tooltip } from "./tooltip";
+import { resourceTypes } from "./listing-filters";
 import {
   AfterViewInit,
   Component,
@@ -76,6 +77,13 @@ interface DeletionOutcome {
         overflow: auto;
         margin-top: var(--cedar-space-3);
       }
+      .deletion-counts {
+        list-style: none;
+        padding: 0;
+        display: grid;
+        gap: var(--cedar-space-1);
+        margin: var(--cedar-space-4) 0;
+      }
       table {
         width: 100%;
         border-collapse: collapse;
@@ -118,6 +126,7 @@ interface DeletionOutcome {
   ],
 })
 export class FolderDeletionDialog implements AfterViewInit, OnDestroy {
+  readonly resourceTypes = resourceTypes;
   @Input({ required: true }) resource!: Resource;
   @Output() closed = new EventEmitter<void>();
   @Output() saved = new EventEmitter<void>();

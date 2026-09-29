@@ -29,7 +29,7 @@ export async function openFolderDeletion(page, plan = deletionPlan, onDelete) {
   await page.goto('/dashboard');
   await page.getByRole('button', {name: 'Actions for Study folder', exact: true}).click();
   await page.locator('.resource-menu').getByRole('button', {name: 'Delete', exact: true}).click();
-  const dialog = page.getByRole('dialog', {name: 'Delete folder and contents'});
+  const dialog = page.getByRole('dialog', {name: 'Delete', exact: true});
   if (plan.code) await expect(dialog.getByRole('alert')).toHaveText(deletionOwnerRefusal.message);
   else await expect(dialog.getByText('Folder count includes the selected folder and every subfolder.')).toBeVisible();
   return dialog;

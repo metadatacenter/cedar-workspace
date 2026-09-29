@@ -240,7 +240,6 @@
     "DestinationFolder": "Destination folder",
     "Destination": "Destination",
     "NoSubfolders": "No subfolders",
-    "Selected": "Selected: {{name}}",
     "DestinationNotAllowed": "You cannot use this folder as the destination.",
     "ConfirmDelete": {
       "folder": "Are you sure you want to delete the selected folder?",
@@ -475,7 +474,7 @@
     "Moved": "Moved {{count}} items."
   },
   "FolderDeletion": {
-    "Title": "Delete folder and contents",
+    "Title": "Delete",
     "Checking": "Checking every folder, artifact, permission and template reference…",
     "Deleting": "Deleting the confirmed items…",
     "Warning": "This permanently deletes the selected folder and all of its contents. This cannot be undone.",
@@ -499,7 +498,6 @@
     "Delete": "Delete folder and contents",
     "Stopped": "Deletion stopped before everything was removed. Review a fresh inventory before continuing.",
     "DeletedSoFar": "Confirmed deletions so far",
-    "Referenced": "Templates with instances: {{count}}.",
     "NotOwner": "Only the owner of this folder can delete it and its contents.",
     "ProtectedRoot": "Home and system folders cannot be deleted.",
     "InventoryUnavailable": "The complete inventory could not be checked. Refresh the inventory and try again.",
@@ -513,6 +511,13 @@
     "SessionExpired": "Your session expired. Sign in again to continue.",
     "AccessDenied": "You no longer have permission to access or delete this folder.",
     "Missing": "This folder no longer exists or is no longer accessible.",
-    "Summary": "Folders: {{folder}}, Templates: {{template}}, Elements: {{element}}, Fields: {{field}}, Instances: {{instance}}"
+    "CountLabels": {
+      "folder": "Folders",
+      "template": "Templates",
+      "element": "Elements",
+      "field": "Fields",
+      "instance": "Instances",
+      "referenced": "Templates with instances"
+    }
   }
 }

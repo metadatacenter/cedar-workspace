@@ -8,6 +8,13 @@ test('recursive delete inventories every type and sends only the confirmed token
     return route.fulfill({json: {status: 'completed', deleted: deletionPlan.counts, remaining: 0, message: 'Deletion completed.'}});
   });
   await expect(dialog.getByText('All instances of these templates are inside this folder and will be deleted first.')).toBeVisible();
+  const counts = dialog.locator('.deletion-counts li');
+  await expect(counts).toHaveText(['Folders: 2', 'Templates: 1', 'Elements: 1', 'Fields: 1', 'Instances: 2', 'Templates with instances: 1']);
+  await expect(counts.locator('strong')).toHaveText(['Folders', 'Templates', 'Elements', 'Fields', 'Instances', 'Templates with instances']);
+  const lines = await counts.evaluateAll(items => items.map(item => item.getBoundingClientRect().top));
+  expect(new Set(lines).size).toBe(6);
+  await expect(dialog.locator('.inventory-explanation')).toContainText('Folder count includes the selected folder and every subfolder.');
+  await expect(dialog.locator('.inventory-explanation')).toContainText('All instances of these templates are inside this folder and will be deleted first.');
   expect(submitted).toBeNull();
   const inventory = dialog.getByText('View complete inventory', {exact: true});
   await inventory.focus();
