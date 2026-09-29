@@ -565,6 +565,7 @@ dialog footer {
   margin-top: var(--cedar-dialog-padding);
 }
 fieldset {
+  min-width: 0;
   border: 0;
   padding: 0;
   margin: 0;
@@ -580,18 +581,16 @@ label {
   align-items: center;
 }
 .folder-picker {
-  border: 1px solid var(--cedar-border-rule);
-  padding: var(--cedar-space-3);
   margin-top: var(--cedar-space-4);
 }
-.folder-list {
-  max-height: 180px;
-  overflow: auto;
+.folder-picker h3 {
+  margin: 0 0 var(--cedar-space-2);
 }
-.folder-list button {
-  display: block;
-  width: 100%;
-  text-align: left;
+.folder-picker .breadcrumbs {
+  margin-bottom: var(--cedar-space-2);
+}
+.folder-picker .breadcrumbs button {
+  padding-inline: 0;
 }
 .grant {
   display: flex;

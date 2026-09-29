@@ -245,6 +245,12 @@
       "test": "browser/tests/surfaces.spec.mjs"
     },
     {
+      "id": "workspace.folder-list",
+      "name": "Folder List",
+      "section": "Resource Dialogs",
+      "parent": "workspace.destination-folder-picker"
+    },
+    {
       "id": "workspace.destination-folder-picker",
       "name": "Destination Folder Picker",
       "section": "Resource Dialogs",

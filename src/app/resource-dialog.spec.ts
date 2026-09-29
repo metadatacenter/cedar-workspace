@@ -100,4 +100,28 @@ describe("Conditional action dialogs", () => {
     void d.submit();
     expect(api.request).toHaveBeenCalledTimes(1);
   });
+  it("keeps the displayed destination and permissions together when navigation fails", async () => {
+    const d = dialog("copy");
+    const current: Resource = {
+      "@id": "home",
+      resourceType: "folder",
+      "schema:name": "Home",
+      currentUserPermissions: { capabilities: ["copyIntoFolder"] },
+    };
+    d.target = "home";
+    d.targetResource = current;
+    d.path.set([current]);
+    api.request
+      .mockResolvedValueOnce({
+        data: { resources: [], totalCount: 0, pathInfo: [] },
+      })
+      .mockRejectedValueOnce(new Error("Folder is unavailable"));
+    await d.browse("other", 0, "-name");
+    expect(d.target).toBe("home");
+    expect(d.targetResource).toBe(current);
+    expect(d.path()).toEqual([current]);
+    expect(d.folderSort).toBe("name");
+    expect(d.error()).toBe("Folder is unavailable");
+    expect(d.busy()).toBe(false);
+  });
 });

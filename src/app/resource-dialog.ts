@@ -3,6 +3,7 @@ import { ResourceMoves, validMoveTarget } from "./resource-moves";
 import { Confirmation } from "./confirmation";
 import { DialogKeyboard } from "./dialog-keyboard";
 import { Icon } from "./icon";
+import { FolderList, FolderSort } from "./folder-list";
 import {
   AfterViewInit,
   Component,
@@ -23,7 +24,14 @@ import { Resource, Listing, title, can } from "./resource";
 import { I18n } from "./i18n";
 @Component({
   selector: "cedar-resource-dialog",
-  imports: [Tooltip, DialogKeyboard, Icon, FormsModule, TranslatePipe],
+  imports: [
+    Tooltip,
+    DialogKeyboard,
+    Icon,
+    FolderList,
+    FormsModule,
+    TranslatePipe,
+  ],
   templateUrl: "./resource-dialog.html",
 })
 export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
@@ -53,6 +61,7 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   targetResource?: Resource;
   targetOffset = 0;
   targetTotal = 0;
+  folderSort: FolderSort = "name";
   propagate = true;
   newFolderName = "";
   private initialValues: string | null = null;
@@ -151,28 +160,36 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   fail(e: unknown) {
     this.error.set(e instanceof Error ? e.message : String(e));
   }
-  async browse(id: string, offset = 0) {
+  async browse(id: string, offset = 0, sort: FolderSort = this.folderSort) {
     this.busy.set(true);
     try {
       const reply = await this.api.request<Listing>(
         "/folders/" +
           encodeURIComponent(id) +
-          "/contents?resource_types=folder&sort=name&limit=50&offset=" +
+          "/contents?resource_types=folder&sort=" +
+          sort +
+          "&limit=50&offset=" +
           offset,
       );
+      const targetResource = (
+        await this.api.request<Resource>("/folders/" + encodeURIComponent(id))
+      ).data;
       this.target = id;
+      this.folderSort = sort;
       this.targetOffset = offset;
       this.targetTotal = reply.data.totalCount;
       this.folders.set(reply.data.resources);
       this.path.set(reply.data.pathInfo || []);
-      this.targetResource = (
-        await this.api.request<Resource>("/folders/" + encodeURIComponent(id))
-      ).data;
+      this.targetResource = targetResource;
+      this.error.set("");
     } catch (e) {
       this.fail(e);
     } finally {
       this.busy.set(false);
     }
+  }
+  sortFolders(sort: FolderSort) {
+    void this.browse(this.target, 0, sort);
   }
   get destinationAllowed() {
     if (this.action === "move" && this.resources.length)
@@ -214,9 +231,14 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
         if (result.failed.length) {
           this.resources = result.failed.map((f) => f.resource);
           this.error.set(
-            this.i18n.t(result.moved.length === 1 ? "Explorer.MovedOne" : "Explorer.Moved", {
-              count: result.moved.length,
-            }) +
+            this.i18n.t(
+              result.moved.length === 1
+                ? "Explorer.MovedOne"
+                : "Explorer.Moved",
+              {
+                count: result.moved.length,
+              },
+            ) +
               " " +
               result.failed
                 .map((f) => this.title(f.resource) + ": " + f.message)

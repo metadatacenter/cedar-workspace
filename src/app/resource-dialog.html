@@ -98,30 +98,32 @@
             {{title(p)==='/'?('Common.All' | translate):title(p)}}</button
           >}
         </nav>
-        <div class="folder-list">
-          @for(f of folders();track f['@id']){<button
+        <cedar-folder-list
+          [label]="'ResourceDialog.DestinationFolder' | translate"
+          [folders]="folders()"
+          [sort]="folderSort"
+          [busy]="busy()"
+          [disabledId]="resource?.['@id']"
+          (openFolder)="browse($event)"
+          (sortChange)="sortFolders($event)"
+        />
+        @if(targetTotal > 50){
+        <div class="paging">
+          <button
             type="button"
-            (click)="browse(f['@id'])"
-            [disabled]="f['@id']===resource?.['@id']"
+            (click)="browse(target,targetOffset-50)"
+            [disabled]="targetOffset===0"
           >
-            ▰ {{title(f)}}</button
-          >}@empty{
-          <p>{{'ResourceDialog.NoSubfolders' | translate}}</p>
-          }
+            {{'Common.Previous' | translate}}</button
+          ><button
+            type="button"
+            (click)="browse(target,targetOffset+50)"
+            [disabled]="targetOffset+folders().length>=targetTotal"
+          >
+            {{'Common.Next' | translate}}
+          </button>
         </div>
-        <button
-          type="button"
-          (click)="browse(target,targetOffset-50)"
-          [disabled]="targetOffset===0"
-        >
-          {{'Common.Previous' | translate}}</button
-        ><button
-          type="button"
-          (click)="browse(target,targetOffset+50)"
-          [disabled]="targetOffset+folders().length>=targetTotal"
-        >
-          {{'Common.Next' | translate}}
-        </button>
+        }
         <p>
           {{'ResourceDialog.Selected' | translate: {name:
           targetResource?title(targetResource):('Common.Loading' | translate)}
