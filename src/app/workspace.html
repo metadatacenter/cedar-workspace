@@ -199,43 +199,13 @@
         <cedar-icon name="refresh" />
       </button>
     </div>
-    <cedar-resource-filters
-      [value]="filters"
-      [version]="version"
-      (versionChange)="setVersion($event)"
-      (change)="changeFilters($event)"
-    />
     <div class="explorer-toolbar">
-      @if(selectionIds().length){
-      <span role="status"
-        >{{'Explorer.Selected' | translate:{count:selectionIds().length}
-        }}</span
-      >
-      <button
-        (click)="setSelection([])"
-        [disabled]="moving()"
-        [attr.aria-label]="'Explorer.Clear' | translate"
-      >
-        <cedar-icon name="close" />
-      </button>
-      <button
-        (click)="moveDialog.set(selection())"
-        [disabled]="moving() || !canMoveSelection()"
-      >
-        {{'ResourceActions.Move' | translate}}
-      </button>
-      <button
-        (click)="cutSelection()"
-        [disabled]="moving() || !canMoveSelection()"
-      >
-        {{'Explorer.Cut' | translate}}
-      </button>
-      } @if(cutItems().length){<button
-        (click)="moveItems(cutItems(),folder)"
-        [disabled]="moving() || !can(currentFolder(),'moveIntoFolder')"
-      >
-        {{'Explorer.Paste' | translate:{count:cutItems().length} }}</button
-      >}
+      <cedar-resource-filters
+        [value]="filters"
+        [version]="version"
+        (versionChange)="setVersion($event)"
+        (change)="changeFilters($event)"
+      />
       <div
         class="explorer-view-switch"
         role="group"
