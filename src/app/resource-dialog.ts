@@ -14,6 +14,8 @@ import {
   OnInit,
   Output,
   ViewChild,
+  afterNextRender,
+  Injector,
   inject,
   signal,
 } from "@angular/core";
@@ -50,6 +52,8 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   readonly title = (r: Resource) => title(r, this.i18n.t("Common.Untitled"));
   readonly can = can;
   readonly busy = signal(true);
+  readonly preparing = signal(true);
+  private readonly injector = inject(Injector);
   readonly error = signal("");
   readonly folders = signal<Resource[]>([]);
   readonly path = signal<Resource[]>([]);
@@ -116,7 +120,7 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
     ]);
   }
   async close() {
-    if (this.busy()) return;
+    if (this.busy() && !this.preparing()) return;
     if (
       this.initialValues !== null &&
       this.values() !== this.initialValues &&
@@ -155,6 +159,21 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
     } finally {
       this.busy.set(false);
       this.initialValues = this.values();
+      if (this.alive) {
+        this.preparing.set(false);
+        afterNextRender(
+          () => {
+            if (!this.alive) return;
+            const dialog = this.dialog.nativeElement;
+            (
+              dialog.querySelector<HTMLElement>("[autofocus]:not(:disabled)") ||
+              dialog.querySelector<HTMLElement>("button:not(:disabled)") ||
+              dialog
+            ).focus();
+          },
+          { injector: this.injector },
+        );
+      }
     }
   }
   fail(e: unknown) {
@@ -163,17 +182,18 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   async browse(id: string, offset = 0, sort: FolderSort = this.folderSort) {
     this.busy.set(true);
     try {
-      const reply = await this.api.request<Listing>(
-        "/folders/" +
-          encodeURIComponent(id) +
-          "/contents?resource_types=folder&sort=" +
-          sort +
-          "&limit=50&offset=" +
-          offset,
-      );
-      const targetResource = (
-        await this.api.request<Resource>("/folders/" + encodeURIComponent(id))
-      ).data;
+      const [reply, targetReply] = await Promise.all([
+        this.api.request<Listing>(
+          "/folders/" +
+            encodeURIComponent(id) +
+            "/contents?resource_types=folder&sort=" +
+            sort +
+            "&limit=50&offset=" +
+            offset,
+        ),
+        this.api.request<Resource>("/folders/" + encodeURIComponent(id)),
+      ]);
+      const targetResource = targetReply.data;
       this.target = id;
       this.folderSort = sort;
       this.targetOffset = offset;

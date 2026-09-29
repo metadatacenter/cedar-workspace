@@ -1,8 +1,70 @@
 // Workspace overlay spacing recipes. Keep these values here, not in individual
 // dialog/popover styles. Rendered contracts in browser/tests/surfaces.spec.mjs
 // cover each recipe at desktop and narrow widths, including accumulated margins.
+@use "@org.metadatacenter/cedar-design-tokens/patterns";
+
+@mixin dialog-chrome {
+  .dialog-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--cedar-dialog-action-gap);
+  }
+  .dialog-heading > h2 {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+  .dialog-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: var(--cedar-control-height-default);
+    height: var(--cedar-control-height-default);
+    padding: 0;
+  }
+  .dialog-heading > .dialog-close {
+    // Align the icon with the content edge while retaining a full square hit target
+    // in the dialog's padding. Text-button padding otherwise leaves it floating inward.
+    margin-inline-end: calc(
+      (var(--cedar-icon-size-default) - var(--cedar-control-height-default)) / 2
+    );
+  }
+  dialog .field-label {
+    @include patterns.field-label($size: body);
+    margin: 0;
+  }
+}
 
 @mixin action-dialogs {
+  // Keep native modality and its backdrop during initial reads, then reveal the
+  // complete surface once. Intermediate disabled controls and resizing stay hidden.
+  dialog.is-preparing {
+    visibility: hidden;
+  }
+  dialog.is-preparing::backdrop {
+    visibility: visible;
+  }
+  dialog.is-preparing > :not(.dialog-preparing-status) {
+    // Embedded components may explicitly restore visibility inside their shadow
+    // roots. Opacity keeps those descendants unpainted while they lay themselves out.
+    opacity: 0;
+  }
+  .dialog-preparing-status {
+    visibility: visible;
+    display: flex;
+    align-items: center;
+    gap: var(--cedar-space-3);
+    position: fixed;
+    inset: 50% auto auto 50%;
+    transform: translate(-50%, -50%);
+    margin: 0;
+    padding: var(--cedar-space-2) var(--cedar-space-3);
+    color: var(--cedar-text-primary);
+    background: var(--cedar-color-on-primary);
+  }
   dialog.action-dialog,
   dialog.dialog-stack {
     padding-block: var(--cedar-space-4);
@@ -42,8 +104,8 @@
   .access-panel {
     padding: var(--cedar-space-2) 0;
   }
-  h2 {
-    margin: 0 var(--cedar-control-height-default) var(--cedar-space-1) 0;
+  .dialog-heading {
+    margin-bottom: var(--cedar-space-1);
   }
   h3 {
     margin: 0 0 var(--cedar-space-1);

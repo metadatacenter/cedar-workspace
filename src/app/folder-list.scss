@@ -7,15 +7,19 @@
   overflow: auto;
 }
 table {
-  table-layout: fixed;
+  table-layout: auto;
   min-width: 0;
   border-top: 1px solid var(--cedar-border-rule);
 }
 th:first-child {
-  width: 68%;
+  width: auto;
 }
 th:last-child {
-  width: 32%;
+  width: 1%;
+  white-space: nowrap;
+}
+td:last-child:not([colspan]) {
+  white-space: nowrap;
 }
 th button {
   display: inline-flex;

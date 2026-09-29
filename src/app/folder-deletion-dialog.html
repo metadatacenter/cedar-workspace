@@ -5,9 +5,10 @@
   aria-labelledby="folder-deletion-title"
   (cancel)="$event.preventDefault(); $event.stopPropagation(); close()"
 >
-  <header>
+  <header class="dialog-heading">
     <h2 id="folder-deletion-title">{{ 'FolderDeletion.Title' | translate }}</h2>
     <button
+      class="dialog-close"
       type="button"
       [disabled]="deleting()"
       (click)="close()"

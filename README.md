@@ -53,8 +53,10 @@ The result toolbar switches between the existing list and 106px-high grid cards.
 Both views use the same server-sorted, filtered page and keep selection when switching.
 Click selects; Shift-click and Shift+arrows extend a range; Cmd/Ctrl-click toggles;
 Cmd/Ctrl+A selects the current page. Dragging blank space selects a rectangle.
-Grid names select on click and open on double-click or Enter. List links retain
-single-click navigation and row Enter retains selection.
+Grid cards select on click and open on double-click or Enter, including when the
+double-click lands on the icon, version, date or blank card space. Embedded action
+buttons retain their own behavior. List links retain single-click navigation and
+row Enter retains selection.
 
 Drag selected items onto a folder or breadcrumb, use Move to choose a destination,
 or Cut and Paste (also Cmd/Ctrl+X and Cmd/Ctrl+V). Moves recheck server permissions
@@ -205,6 +207,22 @@ Use nested stacks for forms and scrollable bodies; do not add paragraph, label o
 footer margins on top. Vertical outer padding is 16px (`--cedar-space-4`), with
 the shared 24px horizontal padding. Picker breadcrumbs use 24px navigation targets
 without form-button padding; form controls and table rows keep their normal sizes.
+All dismissible dialog headings use `.dialog-heading` and `.dialog-close` from
+the same recipe. The close icon aligns with the title's vertical center and the
+content's right edge; its square hit target extends into the outer padding.
+Do not position close buttons independently or give them text-button padding.
+Form label text uses `.field-label` and the shared medium-weight label recipe;
+keep it separate from the input so entered values retain regular weight.
+The reusable destination folder list sizes its date column to its content, leaving
+the remaining width for folder names rather than reserving a percentage at the right.
+Action dialogs keep native modality and a loading status while preparing their
+initial data, then reveal the complete form and focus its first control after render.
+The shared `.is-preparing` presentation rule prevents intermediate disabled forms
+and partial folder lists from flashing onscreen. Escape can cancel this initial read;
+saving still blocks dismissal, and later folder browsing retains the visible dialog.
+Artifact previews use the same presentation rule until CEE/CEF signals readiness:
+the viewer lays out while unpainted, then its content and the resource title appear
+together. The loading status retains a close control and Escape cancellation.
 Permissions, Preview and filter popovers consume dedicated recipes from that same
 file; their compact divided sections do not need form-dialog spacing. Tooltips and
 toasts share its feedback recipe. Menus and suggestion rows use the design-token
@@ -212,7 +230,8 @@ package's menu sizing. Component styles own positioning, scrolling and responsiv
 structure, not independent section padding or paragraph margins.
 
 The browser surface suite checks every registered dialog and menu at desktop and
-narrow widths: padding, actual gaps, accumulated margins and menu-row sizing. A
+narrow widths: padding, actual gaps, accumulated margins, close-button alignment,
+label weight and menu-row sizing. A
 new dialog must choose a tested spacing recipe. Copy also has a total-height budget
 for an empty destination, and deliberately injected overrides prove the guards
 fail. Tooltip, toast and suggestion-list tests cover their spacing too. These

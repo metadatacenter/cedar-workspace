@@ -17,10 +17,6 @@
 }
 header {
   flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--cedar-space-4);
   border-bottom: 1px solid var(--cedar-border-rule);
 }
 header h2 {
@@ -28,9 +24,6 @@ header h2 {
   margin: 0 auto 0 0;
   min-width: 0;
   overflow-wrap: anywhere;
-}
-header button {
-  flex-shrink: 0;
 }
 section {
   flex: 0 1 auto;

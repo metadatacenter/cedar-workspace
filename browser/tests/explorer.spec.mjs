@@ -61,6 +61,44 @@ test("double-clicking folder actions does not open the folder", async ({page, ap
   await expect(page).not.toHaveURL(/folderId=destination/);
 });
 
+for (const kind of ["template", "element", "field", "instance"]) {
+  test(`double-clicking any part of a ${kind} grid card opens its editor`, async ({page, api}) => {
+    const artifact = {...resource, '@id': `card-${kind}`, resourceType: kind};
+    const editorPath = `/${kind}s/edit/${artifact['@id']}`;
+    await page.route(url => url.pathname === editorPath, route => route.fulfill({
+      contentType: 'text/html', body: '<h1>Editor destination</h1>',
+    }));
+    await setup(page, [artifact]);
+    const targets = ['.resource-icon svg', '.explorer-name', 'time', null];
+    if (kind !== 'instance') targets.push('.explorer-release');
+    for (const selector of targets) {
+      await page.goto('/dashboard');
+      const card = page.locator(`[data-resource-id="${artifact['@id']}"]`);
+      const target = selector ? card.locator(selector) : card;
+      const options = selector ? {} : {position: {x: 8, y: 60}};
+      const returnTo = page.url();
+      await target.click(options);
+      await expect(card).toHaveAttribute('aria-selected', 'true');
+      await expect(page).toHaveURL(returnTo);
+      await target.dblclick(options);
+      await expect(page).toHaveURL(url => url.pathname === editorPath);
+      expect(new URL(page.url()).searchParams.get('returnTo')).toBe(returnTo);
+    }
+  });
+}
+
+test('artifact card actions and list metadata do not trigger the double-click shortcut', async ({page, api}) => {
+  await setup(page, [resource]);
+  const card = page.locator('[data-resource-id="template"]');
+  await card.getByRole('button', {name: 'Actions for Study metadata', exact: true}).dblclick();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await page.getByRole('button', {name: 'List view', exact: true}).click();
+  await card.locator('.resource-icon').dblclick();
+  await card.locator('time').dblclick();
+  await expect(card).toHaveAttribute('aria-selected', 'true');
+  await expect(page).toHaveURL(/\/dashboard$/);
+});
+
 test("grid retains compact sizing, range and list selection, and moves a group with revisions", async ({
   page,
   api,

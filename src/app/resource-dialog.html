@@ -1,16 +1,22 @@
 <dialog
   class="action-dialog"
+  [class.is-preparing]="preparing()"
+  [attr.aria-busy]="preparing()"
   cedarDialogKeyboard
   #dialog
   aria-labelledby="dialog-title"
   (cancel)="$event.preventDefault(); close()"
 >
+  @if(preparing()) {
+  <p class="dialog-preparing-status" role="status">{{'Common.Loading' | translate}}</p>
+  }
   <form class="dialog-stack" (ngSubmit)="submit()">
-    <header>
+    <header class="dialog-heading">
       <h2 id="dialog-title" class="resource-dialog-title">
         @if(action === "rename"){<cedar-icon name="edit" />} {{heading}}
       </h2>
       <button
+        class="dialog-close"
         type="button"
         (click)="close()"
         [disabled]="busy()"
@@ -37,7 +43,7 @@
     }
     <fieldset class="dialog-stack" [disabled]="busy()">
       @if(['new-folder','rename','copy'].includes(action)){<label
-        >{{'Common.Name' | translate}}<input
+        ><span class="field-label">{{'Common.Name' | translate}}</span><input
           spellcheck="false"
           [attr.aria-invalid]="submitted && nameError ? true : null"
           [attr.aria-describedby]="submitted && nameError ? 'name-error' : null"
@@ -50,14 +56,14 @@
       @if(submitted && nameError){
       <p id="name-error" class="field-error" role="alert">{{nameError}}</p>
       } } @if(['new-folder','rename'].includes(action)){<label
-        >{{'Common.Description' | translate}}<textarea
+        ><span class="field-label">{{'Common.Description' | translate}}</span><textarea
           spellcheck="false"
           name="description"
           [(ngModel)]="description"
           rows="3"
         ></textarea></label
       >} @if(['publish','draft'].includes(action)){<label
-        >{{'Common.Version' | translate}}<input
+        ><span class="field-label">{{'Common.Version' | translate}}</span><input
           spellcheck="false"
           [attr.aria-invalid]="submitted && versionError ? true : null"
           [attr.aria-describedby]="submitted && versionError ? 'version-error' : null"
@@ -78,7 +84,7 @@
           [(ngModel)]="propagate"
         />{{'ResourceDialog.KeepSharing' | translate}}</label
       ><label
-        >{{'ResourceDialog.NewFolderName' | translate}}<input
+        ><span class="field-label">{{'ResourceDialog.NewFolderName' | translate}}</span><input
           spellcheck="false"
           name="newFolderName"
           [(ngModel)]="newFolderName" /></label
@@ -89,13 +95,11 @@
       >
         <h3>{{'ResourceDialog.Destination' | translate}}</h3>
         <nav class="breadcrumbs">
-          <button type="button" (click)="browse(api.profile.homeFolderId)">
-            {{'Common.Home' | translate}}</button
-          >@for(p of path();track p['@id']){<span
+          @for(p of path();track p['@id'];let first=$first){@if(!first){<span
             class="breadcrumb-separator"
             aria-hidden="true"
             >/</span
-          ><button type="button" (click)="browse(p['@id'])">
+          >}<button type="button" (click)="browse(p['@id'])">
             {{title(p)==='/'?('Common.All' | translate):title(p)}}</button
           >}
         </nav>

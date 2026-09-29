@@ -26,19 +26,10 @@ dialog::backdrop {
   background: var(--cedar-dialog-backdrop);
 }
 .permissions-header {
-  display: block;
-  position: relative;
   border-bottom: 1px solid var(--cedar-border-rule);
 }
 h2 {
   @include patterns.artifact-title;
-}
-.close {
-  position: absolute;
-  right: 20px;
-  top: 14px;
-  font-size: var(--cedar-font-size-heading);
-  color: var(--cedar-text-muted);
 }
 .resource-context {
   display: flex;

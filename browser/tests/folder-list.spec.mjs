@@ -8,7 +8,7 @@ const folder = (id, name, date = '2026-01-02T12:00:00Z', allowed = true) => ({
 const home = folder('home', 'My workspace');
 const children = [folder('archive', 'Archive'), folder('restricted', 'Read only', '2025-09-16T12:00:00Z', false)];
 
-async function openPicker(page, action = 'Copy', many = false) {
+async function openPicker(page, action = 'Copy', many = false, options = {}) {
   const reads = [];
   await page.route('**/folders/**', async route => {
     const url = new URL(route.request().url());
@@ -16,6 +16,8 @@ async function openPicker(page, action = 'Copy', many = false) {
     if (!url.searchParams.has('resource_types') && url.pathname.endsWith('/contents')) return route.fallback();
     const current = [home, ...children].find(f => f['@id'] === id);
     if (url.pathname.endsWith('/contents')) {
+      if (options.pending) await options.pending;
+      if (options.fail) return route.fulfill({status: 503, json: {message: 'Folder unavailable'}});
       reads.push({id, sort: url.searchParams.get('sort'), offset: url.searchParams.get('offset')});
       let rows = id === 'home' ? [...children] : [];
       if (many && id === 'home') rows = Array.from({length: 51}, (_, n) => folder('f'+n, 'Folder '+String(n).padStart(2, '0')));
@@ -29,7 +31,7 @@ async function openPicker(page, action = 'Copy', many = false) {
   await dashboard(page);
   await page.getByRole('button', {name: 'Actions for Study metadata'}).click();
   await page.locator('.resource-menu').getByRole('button', {name: action, exact: true}).click();
-  await expect(page.locator('dialog .folder-scroll')).toHaveAttribute('aria-busy', 'false');
+  if (!options.pending) await expect(page.locator('dialog .folder-scroll')).toHaveAttribute('aria-busy', 'false');
   return reads;
 }
 
@@ -38,7 +40,17 @@ for (const action of ['Copy', 'Move', 'Create Draft']) {
     const reads = await openPicker(page, action);
     const dialog = page.locator('cedar-resource-dialog dialog');
     const table = dialog.getByRole('table', {name: 'Destination folder'});
+    await expect(dialog.locator('.breadcrumbs button')).toHaveText(['My workspace']);
+    await expect(dialog.locator('.breadcrumb-separator')).toHaveCount(0);
     await expect(table.getByRole('columnheader')).toHaveText(['Name', 'Last modified']);
+    const dateColumn = table.getByRole('columnheader').last();
+    const dateButton = dateColumn.getByRole('button');
+    const dateWidth = (await dateColumn.boundingBox()).width;
+    const insets = await dateColumn.evaluate(el => {
+      const style = getComputedStyle(el);
+      return parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+    });
+    expect(dateWidth - (await dateButton.boundingBox()).width - insets).toBeLessThanOrEqual(1);
     await expect(table.locator('[data-cedar-icon="artifact-folder"]')).toHaveCount(2);
     await expect(table.locator('.row-actions')).toHaveCount(0);
     await expect(dialog.getByRole('button', {name:'Previous', exact: true})).toHaveCount(0);
@@ -69,6 +81,8 @@ for (const action of ['Copy', 'Move', 'Create Draft']) {
     await archive.focus();
     await page.keyboard.press('Enter');
     await expect(dialog.locator('.breadcrumbs').getByRole('button', {name:'Archive', exact:true})).toBeVisible();
+    await expect(dialog.locator('.breadcrumbs button')).toHaveText(['My workspace', 'Archive']);
+    await expect(dialog.locator('.breadcrumb-separator')).toHaveCount(1);
     await expect(dialog.getByRole('button', {name:'Save', exact:true})).toBeEnabled();
     expect(reads.at(-1)).toEqual({id:'archive', sort:'lastUpdatedOnTS', offset:'0'});
     await dialog.getByRole('button', {name:'Save', exact:true}).click();
@@ -77,6 +91,67 @@ for (const action of ['Copy', 'Move', 'Create Draft']) {
     expect(command.body.targetFolderId ?? command.body.folderId).toBe('archive');
   });
 }
+
+for (const action of ['Copy', 'Move', 'Create Draft']) {
+  test(`${action} presents the complete dialog once after its initial reads`, async ({page, api}) => {
+    let release;
+    const pending = new Promise(resolve => { release = resolve; });
+    await openPicker(page, action, false, {pending});
+    const dialog = page.locator('cedar-resource-dialog dialog');
+    await expect(dialog).toHaveAttribute('open', '');
+    await expect(dialog).toHaveAttribute('aria-busy', 'true');
+    expect(await dialog.evaluate(el => el.matches(':modal'))).toBe(true);
+    await expect(dialog.locator('form')).toBeHidden();
+    await expect(dialog.getByRole('status', {includeHidden: true})).toBeVisible();
+    expect(await dialog.evaluate(el => getComputedStyle(el, '::backdrop').visibility)).toBe('visible');
+    // Record only painted panels: there must be no small loading form, disabled
+    // intermediate frame or subsequent resize as the breadcrumb and rows arrive.
+    await page.evaluate(() => {
+      window.dialogFrames = [];
+      const sample = () => {
+        const el = document.querySelector('cedar-resource-dialog dialog');
+        if (el && getComputedStyle(el).visibility === 'visible') {
+          const box = el.getBoundingClientRect();
+          window.dialogFrames.push({height:box.height, y:box.y,
+            rows:el.querySelectorAll('tbody tr').length,
+            disabled:el.querySelector('fieldset').disabled});
+        }
+        window.dialogFrameId = requestAnimationFrame(sample);
+      };
+      sample();
+    });
+    release();
+    await expect(dialog).toHaveAttribute('aria-busy', 'false');
+    await expect(dialog.getByRole('button', {name:'Save', exact:true})).toBeEnabled();
+    await expect(dialog.locator('.dialog-preparing-status')).toHaveCount(0);
+    await expect.poll(() => page.evaluate(() => window.dialogFrames.length)).toBeGreaterThan(2);
+    const frames = await page.evaluate(() => {
+      cancelAnimationFrame(window.dialogFrameId);
+      return window.dialogFrames;
+    });
+    expect(frames.every(frame => frame.rows === 2 && !frame.disabled)).toBe(true);
+    expect(new Set(frames.map(frame => `${frame.y}:${frame.height}`)).size).toBe(1);
+    expect(await dialog.evaluate(el => el.contains(document.activeElement))).toBe(true);
+  });
+}
+
+test('initial destination errors are visible and a pending load can be cancelled safely', async ({page, api}) => {
+  await openPicker(page, 'Copy', false, {fail:true});
+  const dialog = page.locator('cedar-resource-dialog dialog');
+  await expect(dialog.getByRole('alert')).toBeVisible();
+  await dialog.getByRole('button', {name:'Cancel', exact:true}).click();
+  let release;
+  const pending = new Promise(resolve => {release = resolve;});
+  await openPicker(page, 'Move', false, {pending});
+  await expect(dialog).toHaveAttribute('aria-busy', 'true');
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  const returned = page.waitForResponse(response => response.url().includes('resource_types=folder'));
+  release();
+  await returned;
+  await expect(page.getByRole('button', {name:'Actions for Study metadata', exact:true})).toBeFocused();
+  await expect(dialog).toHaveCount(0);
+});
 
 test('folder pagination retains sorting and resets its offset when sorting changes', async ({page, api}) => {
   const reads = await openPicker(page, 'Copy', true);

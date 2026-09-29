@@ -113,13 +113,6 @@ export function actions(r: Resource, i18n: Pick<I18n, "t">): Action[] {
       enabled: cap("deleteResource"),
     },
     {
-      id: "datacite",
-      label: label("ResourceActions.DataCite"),
-      enabled:
-        window.dataciteEnabled !== false &&
-        ["template", "instance"].includes(r.resourceType),
-    },
-    {
       id: "make-open",
       label: label("ResourceActions.MakeOpen"),
       enabled: window.makeOpenEnabled !== false && cap("enableOpenView"),
@@ -144,8 +137,6 @@ export function actions(r: Resource, i18n: Pick<I18n, "t">): Action[] {
       case "publish":
       case "draft":
         return ["template", "element", "field"].includes(r.resourceType);
-      case "datacite":
-        return ["template", "instance"].includes(r.resourceType);
       default:
         return true;
     }
@@ -482,7 +473,7 @@ export class Workspace {
   doubleClickItem(r: Resource, event: MouseEvent) {
     const target = event.target as Element;
     if (this.loading() || this.moving() || target.closest("a,button,input,.row-actions")) return;
-    if (r.resourceType === "folder" || target === event.currentTarget || target.closest(".explorer-name"))
+    if (this.grid() || r.resourceType === "folder" || target === event.currentTarget)
       this.openItem(r["@id"]);
   }
   openItem(id: string) {
@@ -764,21 +755,6 @@ export class Workspace {
       }
       if (id === "openview") {
         window.open(this.openView(r), "_blank", "noopener");
-        return;
-      }
-      if (id === "datacite") {
-        if (!r.isOpen)
-          throw new Error(this.i18n.t("Dashboard.OpenBeforeDataCite"));
-        if (
-          r.resourceType === "template" &&
-          r["bibo:status"] !== "bibo:published"
-        )
-          throw new Error(this.i18n.t("Dashboard.PublishBeforeDataCite"));
-        window.open(
-          this.api.config.dataciteDOIBase + "/" + encodeURIComponent(r["@id"]),
-          "_blank",
-          "noopener",
-        );
         return;
       }
       this.dialog.set({ action: id, resource: r });

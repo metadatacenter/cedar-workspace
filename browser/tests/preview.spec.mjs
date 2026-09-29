@@ -98,13 +98,57 @@ test('closing during a pending preview never mounts the late result',async ({pag
   const delay = new Promise(resolve=>{release=resolve;});
   const {button} = await setup(page,'template',{delay});
   await button.click();
-  await expect(page.getByRole('dialog')).toBeVisible();
+  const dialog = page.locator('dialog.artifact-preview');
+  await expect(dialog).toHaveClass(/is-preparing/);
+  await expect(dialog.locator('header')).toBeHidden();
+  await expect(dialog.getByRole('status', {includeHidden:true})).toBeVisible();
   await page.getByRole('button',{name:'Close preview'}).click();
   release();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.locator('cedar-embeddable-editor')).toHaveCount(0);
   await expect(button).toBeFocused();
 });
+
+for (const kind of ['template', 'element', 'field', 'instance']) {
+  test(`${kind} preview reveals its heading and rendered viewer together`, async ({page,api}) => {
+    let release;
+    const delay = new Promise(resolve => {release = resolve;});
+    const {button} = await setup(page, kind, {delay});
+    await button.click();
+    const dialog = page.locator('dialog.artifact-preview');
+    await expect(dialog).toHaveClass(/is-preparing/);
+    await expect(dialog.locator('header')).toBeHidden();
+    await expect(dialog.getByRole('status', {includeHidden:true})).toBeVisible();
+    await expect(dialog.getByRole('button', {name:'Close preview', exact:true})).toBeVisible();
+    expect(await dialog.evaluate(el => el.matches(':modal'))).toBe(true);
+    await page.evaluate(() => {
+      window.previewFrames = [];
+      const sample = () => {
+        const el = document.querySelector('dialog.artifact-preview');
+        if (el && getComputedStyle(el).visibility === 'visible') {
+          const viewer = el.querySelector('cedar-embeddable-editor, cedar-embeddable-field');
+          const field = viewer?.shadowRoot?.querySelector('input, .cee-spec-box');
+          window.previewFrames.push({height:el.getBoundingClientRect().height,
+            viewerHeight:viewer?.getBoundingClientRect().height ?? 0,
+            fieldHeight:field?.getBoundingClientRect().height ?? 0});
+        }
+        window.previewFrameId = requestAnimationFrame(sample);
+      };
+      sample();
+    });
+    release();
+    await expect(dialog.locator('section')).toHaveAttribute('aria-busy', 'false');
+    await expect(dialog.getByRole('heading', {level:2})).toBeVisible();
+    await expect.poll(() => page.evaluate(() => window.previewFrames.length)).toBeGreaterThan(2);
+    const frames = await page.evaluate(() => {
+      cancelAnimationFrame(window.previewFrameId);
+      return window.previewFrames;
+    });
+    expect(frames.every(frame => frame.viewerHeight > 0 && frame.fieldHeight > 0)).toBe(true);
+    expect(new Set(frames.map(frame => frame.height)).size).toBe(1);
+    await expect(dialog.getByRole('button', {name:'Close preview', exact:true})).toBeFocused();
+  });
+}
 
 test('preview fits a narrow screen without scaling its fonts', async ({page,api}) => {
   await page.setViewportSize({width:375,height:800});
@@ -175,7 +219,7 @@ for (const [name, type] of [['nihField', 'NIH Grant ID'], ['attributeField', 'At
     await expect(field.locator('.cee-field-type')).toHaveText(type);
     await expect(field.locator('.cee-field-spec-description')).toHaveText('A description supplied by the field artifact.');
     await expect(dialog.locator('section > p')).toHaveCount(0);
-    if (name === 'nihField') await expect(field.locator('.cee-spec-box')).toHaveText('NIH Grant ID');
+    if (name === 'nihField') await expect(field.locator('.cee-spec-box')).toBeEmpty();
     expect((await dialog.boundingBox()).height).toBeLessThan(400);
     if (await page.getByRole('tooltip').count()) await page.keyboard.press('Escape');
     if (process.env.WORKSPACE_VISUAL) await expect(dialog).toHaveScreenshot(`${name}-preview.png`);

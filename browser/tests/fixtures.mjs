@@ -83,6 +83,7 @@ export const test = base.extend({
       window.cedarEmbeddableEditorVersion = 'fixture';
       customElements.define('cedar-embeddable-editor', class extends HTMLElement {
         currentMetadata = {}; dataQualityReport = {isValid:true};
+        connectedCallback() { queueMicrotask(() => this.eventHandler?.ready?.()); }
         set templateAndInstanceObject(value) { this.currentMetadata = value.instanceObject; }
       });
     `,

@@ -198,9 +198,7 @@
     "Status": "Állapot",
     "Unversioned": "Verzió nélkül",
     "SelectItem": "Válasszon ki egy elemet a részletek megtekintéséhez",
-    "DescriptionSaved": "Leírás mentve.",
-    "OpenBeforeDataCite": "A DataCite varázsló indítása előtt tegye nyitottá ezt az erőforrást.",
-    "PublishBeforeDataCite": "A DataCite varázsló indítása előtt tegye közzé ezt a sablont."
+    "DescriptionSaved": "Leírás mentve."
   },
   "Preview": {
     "Label": "Előnézet",
@@ -218,7 +216,6 @@
     "Publish": "Közzététel",
     "CreateDraft": "Vázlat létrehozása",
     "Delete": "Törlés",
-    "DataCite": "DataCite varázsló",
     "MakeOpen": "Openview engedélyezése",
     "MakeNotOpen": "Openview letiltása",
     "OpenInOpenView": "Megnyitás az OpenView-ban"

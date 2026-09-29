@@ -267,7 +267,6 @@ describe("Angular Workspace", () => {
       "publish",
       "draft",
       "delete",
-      "datacite",
       "make-open",
       "make-not-open",
       "openview",
@@ -284,7 +283,7 @@ describe("Angular Workspace", () => {
   ] as const) {
     for (const editable of [false, true]) {
       it(`renders applicable menu actions for ${editable ? "editable" : "read-only"} ${resourceType} resources`, async () => {
-        vi.stubGlobal("dataciteEnabled", false);
+        vi.stubGlobal("dataciteEnabled", true);
         vi.stubGlobal("makeOpenEnabled", true);
         const f = await render();
         const resource: Resource = {
@@ -334,9 +333,6 @@ describe("Angular Workspace", () => {
             ? []
             : ["Publish", "Create Draft"]),
           "Delete",
-          ...(["template", "instance"].includes(resourceType)
-            ? ["DataCite wizard"]
-            : []),
           "Enable Openview",
           "Disable Openview",
           "Open in OpenView",
@@ -348,12 +344,10 @@ describe("Angular Workspace", () => {
         if (resourceType === "template")
           expect(disabled("Populate")).toBe(!editable);
         expect(disabled("Delete")).toBe(!editable);
-        if (["template", "instance"].includes(resourceType))
-          expect(disabled("DataCite wizard")).toBe(true);
         expect(disabled("Enable Openview")).toBe(!editable);
         const act = vi.spyOn(f.componentInstance, "act");
         buttons
-          .find((b) => b.textContent?.trim() === "DataCite wizard")
+          .find((b) => b.textContent?.trim() === "Disable Openview")
           ?.click();
         expect(act).not.toHaveBeenCalled();
       });
@@ -361,7 +355,6 @@ describe("Angular Workspace", () => {
   }
   it("shows published lifecycle actions from the fresh report and leaves disabled features visible", async () => {
     vi.stubGlobal("makeOpenEnabled", false);
-    vi.stubGlobal("dataciteEnabled", false);
     const f = await render();
     api.report.mockResolvedValue({
       data: {
@@ -392,7 +385,6 @@ describe("Angular Workspace", () => {
       "Enable Openview",
       "Disable Openview",
       "Open in OpenView",
-      "DataCite wizard",
     ])
       expect(button(label).disabled).toBe(true);
     window.dispatchEvent(new Event("resize"));

@@ -234,6 +234,34 @@ async function checkOverlaySpacing(page, surface) {
       expect(surface.contract, `Missing spacing coverage: ${surface.id}`).not.toBe('dialog');
   }
 }
+
+async function checkDialogHeading(dialog) {
+  const close = dialog.locator('header button:has(svg[data-cedar-icon="close"])');
+  if (!(await close.count())) return; // Confirmation uses its Cancel/OK footer.
+  await tokenStyles(close, {
+    width: '--cedar-control-height-default',
+    height: '--cedar-control-height-default',
+    'padding-left': '0px',
+    'padding-right': '0px',
+  });
+  const alignment = await close.evaluate(button => {
+    const heading = button.closest('.dialog-heading');
+    const title = heading.querySelector('h2').getBoundingClientRect();
+    const icon = button.querySelector('svg').getBoundingClientRect();
+    const edge = heading.getBoundingClientRect().right - parseFloat(getComputedStyle(heading).paddingRight);
+    return {horizontal: icon.right - edge, vertical: (icon.top + icon.bottom - title.top - title.bottom) / 2};
+  });
+  expect(Math.abs(alignment.horizontal), 'close icon aligns with the content right edge').toBeLessThanOrEqual(0.5);
+  expect(Math.abs(alignment.vertical), 'close icon centers with the heading').toBeLessThanOrEqual(0.5);
+  for (const label of await dialog.locator('.field-label').all()) {
+    await tokenStyles(label, {'font-weight':'--cedar-font-weight-medium', color:'--cedar-text-muted'});
+    for (const input of await label.locator('..').locator('input,textarea').all()) {
+      const weight = await input.evaluate(el => getComputedStyle(el).getPropertyValue('--cedar-font-weight-regular').trim());
+      await expect(input).toHaveCSS('font-weight', weight);
+    }
+  }
+}
+
 for (const { surface, state, width, title } of surfaceCases(
   registry,
   scenarios,
@@ -243,6 +271,7 @@ for (const { surface, state, width, title } of surfaceCases(
     await scenarios[surface.scenario](page);
     await checkSurface(page, surface, state, expect, testInfo);
     await checkOverlaySpacing(page, surface);
+    if (surface.contract === 'dialog') await checkDialogHeading(page.locator(surface.selector));
   });
 
 test('dialog spacing follows host tokens and rejects accumulated margins', async ({ page, api }) => {

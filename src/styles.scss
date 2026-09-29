@@ -86,6 +86,9 @@ textarea {
   color: var(--cedar-color-artifact-title);
   font-weight: var(--cedar-font-weight-medium);
 }
+.brand:hover {
+  text-decoration: none;
+}
 .brand img {
   width: var(--cedar-control-height-default);
   height: var(--cedar-control-height-default);
@@ -540,7 +543,6 @@ dialog {
   max-height: 90vh;
   @include patterns.dialog-surface;
 }
-dialog header,
 dialog footer {
   display: flex;
   align-items: center;
@@ -568,6 +570,7 @@ dialog footer {
   justify-content: flex-end;
 }
 @include overlay-spacing.action-dialogs;
+@include overlay-spacing.dialog-chrome;
 fieldset {
   min-width: 0;
   border: 0;

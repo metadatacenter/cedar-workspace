@@ -5,16 +5,18 @@
   (cancel)="$event.preventDefault(); close()"
 >
   <header class="permissions-header">
-    <button
-      class="close"
-      [attr.aria-label]="'Permissions.Close' | translate"
+    <div class="dialog-heading">
+      <h2 id="permissions-title">{{'Permissions.Title' | translate}}</h2>
+      <button
+        class="dialog-close"
+        [attr.aria-label]="'Permissions.Close' | translate"
         [cedarTooltip]="'Permissions.Close' | translate"
-      [disabled]="busy()"
-      (click)="close()"
-    >
-      <cedar-icon name="close" />
-    </button>
-    <h2 id="permissions-title">{{'Permissions.Title' | translate}}</h2>
+        [disabled]="busy()"
+        (click)="close()"
+      >
+        <cedar-icon name="close" />
+      </button>
+    </div>
     <div class="resource-context">
       <span class="resource-avatar"
         ><cedar-icon [name]="resource.resourceType"

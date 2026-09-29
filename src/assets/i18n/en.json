@@ -198,9 +198,7 @@
     "Status": "Status",
     "Unversioned": "Unversioned",
     "SelectItem": "Select an item to see its details",
-    "DescriptionSaved": "Description saved.",
-    "OpenBeforeDataCite": "Make this artifact open before starting the DataCite wizard.",
-    "PublishBeforeDataCite": "Publish this template before starting the DataCite wizard."
+    "DescriptionSaved": "Description saved."
   },
   "Preview": {
     "Label": "Preview",
@@ -218,7 +216,6 @@
     "Publish": "Publish",
     "CreateDraft": "Create Draft",
     "Delete": "Delete",
-    "DataCite": "DataCite wizard",
     "MakeOpen": "Enable Openview",
     "MakeNotOpen": "Disable Openview",
     "OpenInOpenView": "Open in OpenView"

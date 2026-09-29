@@ -8,6 +8,8 @@ import {
   OnDestroy,
   Output,
   ViewChild,
+  afterNextRender,
+  Injector,
   inject,
   signal,
 } from "@angular/core";
@@ -40,33 +42,46 @@ export function previewElement(element: CeeJsonObject): CeeJsonObject {
     <dialog
       #dialog
       class="artifact-preview"
+      [class.is-preparing]="loading()"
       [attr.aria-label]="name"
       (cancel)="$event.preventDefault(); $event.stopPropagation(); close()"
     >
-      <header>
+      @if (loading()) {
+        <div class="dialog-preparing-status">
+          <span role="status">{{ "Common.Loading" | translate }}</span>
+          <button
+            class="dialog-close"
+            autofocus
+            type="button"
+            [attr.aria-label]="'Preview.Close' | translate"
+            (click)="close()"
+          >
+            <cedar-icon name="close" />
+          </button>
+        </div>
+      }
+      <header class="dialog-heading" [inert]="loading()">
         <h2>{{ name }}</h2>
         <button
-          autofocus
+          class="dialog-close"
           type="button"
           [attr.aria-label]="'Preview.Close' | translate"
-        [cedarTooltip]="'Preview.Close' | translate"
+          [cedarTooltip]="'Preview.Close' | translate"
           (click)="close()"
         >
           <cedar-icon name="close" />
         </button>
       </header>
       <section
+        [inert]="loading()"
         tabindex="0"
         [attr.aria-label]="'Preview.Label' | translate"
         [attr.aria-busy]="loading()"
       >
-        @if (loading()) {
-          <p role="status">{{ "Common.Loading" | translate }}</p>
-        }
         @if (error()) {
           <p role="alert">{{ "Preview.Unavailable" | translate }}</p>
         }
-        <div #mount [hidden]="loading() || error()"></div>
+        <div #mount [hidden]="error()"></div>
       </section>
     </dialog>
   `,
@@ -80,6 +95,7 @@ export class ArtifactPreview implements AfterViewInit, OnDestroy {
   private readonly api = inject(Backend);
   private readonly loader = inject(CeeLoader);
   private readonly i18n = inject(I18n);
+  private readonly injector = inject(Injector);
   readonly loading = signal(true);
   readonly error = signal(false);
   private alive = true;
@@ -92,9 +108,22 @@ export class ArtifactPreview implements AfterViewInit, OnDestroy {
     if (!this.alive) return;
     clearTimeout(this.timer);
     this.error.set(true);
-    this.loading.set(false);
     this.mount.nativeElement.replaceChildren();
+    this.reveal();
   };
+  private reveal() {
+    if (!this.loading()) return;
+    this.loading.set(false);
+    afterNextRender(
+      () => {
+        if (this.alive)
+          this.dialog.nativeElement
+            .querySelector<HTMLButtonElement>("header button")
+            ?.focus();
+      },
+      { injector: this.injector },
+    );
+  }
   async ngAfterViewInit() {
     this.dialog.nativeElement.showModal();
     this.timer = setTimeout(this.fail, 30000);
@@ -138,7 +167,7 @@ export class ArtifactPreview implements AfterViewInit, OnDestroy {
         ready: () => {
           if (!this.alive || this.error()) return;
           clearTimeout(this.timer);
-          this.loading.set(false);
+          this.reveal();
         },
         error: this.fail,
       };

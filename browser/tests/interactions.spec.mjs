@@ -413,7 +413,10 @@ test("folder separators have no surrounding spacing in navigation, details and d
     .locator(".resource-menu")
     .getByRole("button", { name: "Move", exact: true })
     .click();
-  await unspaced(page.locator("dialog .breadcrumbs .breadcrumb-separator"), 3);
+  await unspaced(page.locator("dialog .breadcrumbs .breadcrumb-separator"), 2);
+  await expect(page.locator("dialog .breadcrumbs button")).toHaveText([
+    "All", "Users", "My workspace",
+  ]);
   await expect(
     page.locator("dialog .breadcrumbs button").filter({ hasText: "/" }),
   ).toHaveCount(0);
