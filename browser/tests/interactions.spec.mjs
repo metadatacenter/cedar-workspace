@@ -148,14 +148,22 @@ test("unsaved metadata cannot be lost by leaving, and read-only mode cannot save
   await page.goto("/instances/edit/instance");
   const input = page.getByLabel("Instance name", { exact: true });
   await expect(input).toHaveValue("Study record");
+  const saveState = page.locator('.metadata-save-status');
+  const indicator = () => saveState.evaluate(el => {
+    const style = getComputedStyle(el, '::before');
+    return {content: style.content, fill: style.backgroundColor, border: style.borderTopColor, width: style.borderTopWidth};
+  });
+  await expect(saveState).toHaveText('Saved');
+  expect(await indicator()).toEqual({content: '""', fill:'rgba(0, 0, 0, 0)', border:'rgb(234, 179, 8)', width:'2px'});
+  await expect(page.locator('label[for="instance-name"]')).toHaveCSS('font-weight', '500');
   await input.fill("Working record");
   await expect(page.locator(".metadata-save-status")).toHaveClass(/is-dirty/);
   expect(await page.locator(".metadata-save-status").evaluate((el) =>
     getComputedStyle(el, "::before").backgroundColor)).toBe("rgb(234, 179, 8)");
   await expect(page.locator(".metadata-toolbar")).toContainText(
-    "Unsaved changes",
+    "Modified",
   );
-  await page.getByRole("button", { name: "Workspace", exact: true }).click();
+  await page.getByRole("button", { name: "Back to Workspace", exact: true }).click();
   await page
     .locator(".confirmation-dialog")
     .getByRole("button", { name: "Cancel" })
@@ -164,9 +172,11 @@ test("unsaved metadata cannot be lost by leaving, and read-only mode cannot save
   await input.fill("Study record");
   await expect(page.locator(".metadata-toolbar")).toContainText("Saved");
   await expect(page.locator(".metadata-save-status")).not.toHaveClass(/is-dirty/);
+  expect((await indicator()).fill).toBe('rgba(0, 0, 0, 0)');
   api.readonly = true;
   await page.reload();
   await expect(input).toHaveAttribute("readonly", "");
+  expect((await indicator()).content).toBe('none');
   await expect(
     page.getByRole("button", { name: "Save", exact: true }),
   ).toHaveCount(0);

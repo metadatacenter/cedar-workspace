@@ -1,0 +1,22 @@
+@use "@org.metadatacenter/cedar-design-tokens/controls";
+
+:host {
+  display: inline-flex;
+  flex: none;
+}
+a,
+button {
+  @include controls.action-states;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cedar-space-2);
+  min-height: var(--cedar-control-height-default);
+  padding: var(--cedar-space-2) var(--cedar-space-3);
+  border: 0;
+  border-radius: var(--cedar-control-radius-default);
+  color: var(--cedar-color-primary);
+  background: transparent;
+  font-size: var(--cedar-font-size);
+  font-weight: var(--cedar-font-weight-regular);
+  text-decoration: none;
+}

@@ -1,4 +1,5 @@
 import { Toast } from "./toast";
+import { WorkspaceReturn } from "./workspace-return";
 import { Confirmation } from "./confirmation";
 import { Icon } from "./icon";
 import {
@@ -107,7 +108,7 @@ export const leaveMetadata: CanDeactivateFn<MetadataEditor> = (editor) =>
 
 @Component({
   selector: "cedar-metadata-page",
-  imports: [Toast, Icon, FormsModule, TranslatePipe],
+  imports: [Toast, WorkspaceReturn, Icon, FormsModule, TranslatePipe],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: "./metadata-editor.html",
 })
@@ -249,7 +250,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     if (this.loading()) return "Common.Loading";
     if (this.saving()) return "Common.Saving";
     if (!this.writable()) return "Metadata.ReadOnly";
-    return this.dirty() ? "Metadata.UnsavedChanges" : "Metadata.SavedStatus";
+    return this.dirty() ? "Metadata.ModifiedStatus" : "Metadata.SavedStatus";
   }
   get missingRequired() {
     const q = this.quality();

@@ -155,13 +155,6 @@
       "value": "34px",
       "count": 1
     },
-    "fc261cdae8399864332a": {
-      "file": "src/app/groups.scss",
-      "rule": "spacing",
-      "property": "margin-left",
-      "value": "10px",
-      "count": 1
-    },
     "fc4e7ed700484ce1f273": {
       "file": "src/app/groups.scss",
       "rule": "spacing",

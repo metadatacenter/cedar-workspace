@@ -1,6 +1,7 @@
 {
   "Common": {
     "Workspace": "Munkaterület",
+    "BackToWorkspace": "Vissza a munkaterületre",
     "Loading": "Betöltés…",
     "Saving": "Mentés…",
     "Working": "Folyamatban…",
@@ -307,7 +308,6 @@
     }
   },
   "Groups": {
-    "BackToWorkspace": "Vissza a munkaterületre",
     "Title": "Csoportok",
     "Intro": "A csoport felhasználók elnevezett gyűjteménye. A csoportadminisztrátorok módosíthatják a nevét, a tagságát és az adminisztrátorait.",
     "Reload": "Csoport újratöltése",
@@ -355,7 +355,7 @@
   },
   "Metadata": {
     "ReadOnly": "Csak olvasható",
-    "UnsavedChanges": "Nem mentett módosítások",
+    "ModifiedStatus": "Módosítva",
     "SavedStatus": "Mentve",
     "Name": "Példány neve",
     "ReadOnlyAccess": "Ezekhez a metaadatokhoz csak olvasási hozzáférése van.",

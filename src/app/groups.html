@@ -63,14 +63,8 @@
   </details>
 </header>
 <div id="groups-page">
-  <div class="navbar-back">
-    <a
-      href="/dashboard"
-      [attr.aria-label]="'Groups.BackToWorkspace' | translate"
-      ><cedar-icon name="back" /><span class="document-title"
-        >{{'Groups.Title' | translate}}</span
-      ></a
-    >
+  <div class="workspace-return-bar">
+    <cedar-workspace-return />
   </div>
   <main class="groups-content">
     <header class="groups-page-header">

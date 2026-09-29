@@ -8,23 +8,6 @@
   min-height: 100vh;
   background: var(--cedar-color-on-primary);
 
-  .navbar-back {
-    padding: var(--cedar-space-4) var(--cedar-space-6);
-    background: var(--cedar-color-on-primary);
-    border-bottom: 1px solid var(--cedar-control-border-authoring);
-
-    .back-arrow-click {
-      align-items: center;
-      cursor: pointer;
-    }
-
-    .document-title {
-      margin-left: 10px;
-      font-size: var(--cedar-font-size-element-heading);
-      font-weight: var(--cedar-font-weight-regular);
-    }
-  }
-
   .groups-content {
     width: calc(100% - 32px);
     max-width: 900px;
@@ -397,12 +380,6 @@
   button {
     min-height: 0;
     border-radius: 0;
-  }
-  .navbar-back a {
-    display: inline-flex;
-    align-items: center;
-    color: var(--cedar-text-primary);
-    text-decoration: none;
   }
   .form-control {
     display: block;

@@ -1,5 +1,6 @@
 import { Tooltip } from "./tooltip";
 import { Toast } from "./toast";
+import { WorkspaceReturn } from "./workspace-return";
 import { Confirmation } from "./confirmation";
 import { Component, OnInit, inject, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
@@ -35,6 +36,7 @@ export const userName = (u: GroupUser, i18n: Pick<I18n, "t">) =>
   imports: [
     Tooltip,
     Toast,
+    WorkspaceReturn,
     FormsModule,
     NgTemplateOutlet,
     Icon,

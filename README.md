@@ -191,6 +191,12 @@ deployment and authenticated smokes before accepting the release in an environme
 
 ## Confirmations and success feedback
 
+Use `WorkspaceReturn` for the Workspace back control on instance, Groups and
+account pages. It owns the localized label, arrow, typography and spacing; editors
+use its guarded button mode to retain unsaved-change confirmation and disable it
+while saving. Instance save status uses an outlined yellow circle for Saved and a
+filled circle for Modified, with localized text as well as the visual indicator.
+
 Workspace overlay spacing is owned by `src/_overlay-spacing.scss`. Action,
 deletion and confirmation dialogs use its `.dialog-stack` layout: 12px between
 sections (`--cedar-space-3`), 4px within a

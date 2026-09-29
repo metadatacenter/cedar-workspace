@@ -115,6 +115,12 @@ for (const readonly of [false, true]) {
       await expect(page.locator(".metadata-toolbar")).toHaveScreenshot(
         `metadata-toolbar-${readonly}.png`,
       );
+    if (!readonly) {
+      await page.getByLabel('Instance name').fill('Modified study');
+      await expect(page.locator('.metadata-save-status')).toHaveText('Modified');
+      if (process.env.WORKSPACE_VISUAL)
+        await expect(page.locator('.metadata-toolbar')).toHaveScreenshot('metadata-toolbar-modified.png');
+    }
   });
 }
 

@@ -1,6 +1,7 @@
 {
   "Common": {
     "Workspace": "Workspace",
+    "BackToWorkspace": "Back to Workspace",
     "Loading": "Loading…",
     "Saving": "Saving…",
     "Working": "Working…",
@@ -307,7 +308,6 @@
     }
   },
   "Groups": {
-    "BackToWorkspace": "Back to Workspace",
     "Title": "Groups",
     "Intro": "A group is a named collection of users. Group Administrators can change its name, membership and administrators.",
     "Reload": "Reload group",
@@ -355,7 +355,7 @@
   },
   "Metadata": {
     "ReadOnly": "Read only",
-    "UnsavedChanges": "Unsaved changes",
+    "ModifiedStatus": "Modified",
     "SavedStatus": "Saved",
     "Name": "Instance name",
     "ReadOnlyAccess": "You have read-only access to this metadata.",
