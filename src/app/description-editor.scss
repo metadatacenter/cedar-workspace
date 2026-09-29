@@ -11,6 +11,10 @@ label,
 textarea {
   display: block;
   width: 100%;
+  field-sizing: content;
+  min-height: calc(2lh + 2 * var(--cedar-space-2) + 2px);
+  max-height: calc(8lh + 2 * var(--cedar-space-2) + 2px);
+  overflow-y: auto;
   @include patterns.info-description-resize;
 }
 p {

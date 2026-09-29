@@ -14,6 +14,7 @@ export interface Resource {
   "pav:version"?: string;
   "bibo:status"?: string;
   ownedByUserName?: string;
+  ownedBy?: string;
   createdByUserName?: string;
   lastUpdatedByUserName?: string;
   isOpen?: boolean;

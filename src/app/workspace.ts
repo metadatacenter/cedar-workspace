@@ -186,9 +186,17 @@ export class Workspace {
   readonly can = can;
   readonly actions = (r: Resource) => actions(r, this.i18n);
   attribution(userId?: string, name?: string): string {
-    if (userId && userId === this.api.profile?.["@id"])
+    if (this.isCurrentUser(userId))
       return this.i18n.t("Dashboard.ByYou");
     return name ? this.i18n.t("Dashboard.By", { name }) : "";
+  }
+  ownerName(r: Resource): string {
+    return this.isCurrentUser(r.ownedBy)
+      ? this.i18n.t("Dashboard.You")
+      : r.ownedByUserName || "—";
+  }
+  private isCurrentUser(userId?: string): boolean {
+    return !!userId && userId === this.api.profile?.["@id"];
   }
   /** A role as the server states it, translated when Workspace knows it. */
   role(r: Resource) {
@@ -445,6 +453,12 @@ export class Workspace {
       this.selected.set(undefined);
       if (ids.length) this.right.set(true);
     }
+  }
+  doubleClickItem(r: Resource, event: MouseEvent) {
+    const target = event.target as Element;
+    if (this.loading() || this.moving() || target.closest("a,button,input,.row-actions")) return;
+    if (r.resourceType === "folder" || target === event.currentTarget || target.closest(".explorer-name"))
+      this.openItem(r["@id"]);
   }
   openItem(id: string) {
     const r = this.rows().find((r) => r["@id"] === id);

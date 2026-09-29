@@ -41,6 +41,26 @@ async function setup(page, extra = []) {
   await expect(page.getByRole("button", { name: "Grid view", exact: true })).toHaveAttribute("aria-pressed", "true");
   return moved;
 }
+for (const grid of [true, false]) {
+  for (const target of [".resource-icon", ".explorer-modified", "td:first-child"]) {
+    test(`double-clicking folder ${target} opens it in ${grid ? "grid" : "list"} view`, async ({page, api}) => {
+      await setup(page);
+      if (!grid) await page.getByRole("button", {name: "List view", exact: true}).click();
+      const folderRow = page.locator('[data-resource-id="destination"]');
+      await folderRow.locator(target).click();
+      await expect(folderRow).toHaveAttribute("aria-selected", "true");
+      await expect(page).not.toHaveURL(/folderId=destination/);
+      await folderRow.locator(target).dblclick();
+      await expect(page).toHaveURL(/folderId=destination/);
+    });
+  }
+}
+test("double-clicking folder actions does not open the folder", async ({page, api}) => {
+  await setup(page);
+  await page.getByRole("button", {name: "Actions for Archive", exact: true}).dblclick();
+  await expect(page).not.toHaveURL(/folderId=destination/);
+});
+
 test("grid retains compact sizing, range and list selection, and moves a group with revisions", async ({
   page,
   api,

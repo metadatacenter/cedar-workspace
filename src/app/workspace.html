@@ -339,7 +339,7 @@
             (cdkDragStarted)="startDrag(r)"
             (cdkDragMoved)="dragMove($event)"
             (cdkDragEnded)="endDrag($event,explorer)"
-            (dblclick)="$event.target === $event.currentTarget ? openItem(r['@id']) : null"
+            (dblclick)="doubleClickItem(r, $event)"
           >
             <ng-template cdkDragPreview
               ><div class="explorer-drag-preview">
@@ -375,7 +375,6 @@
               @if(grid()){<span
                 class="explorer-name"
                 [cedarTooltip]="title(r)"
-                (dblclick)="openItem(r['@id'])"
                 >{{title(r)}}</span
               >} @else if(r.resourceType==='folder') {
               <a
@@ -575,7 +574,7 @@
         }
       </dd>
       <dt>{{'Common.Owner' | translate}}</dt>
-      <dd>{{r.ownedByUserName || '—'}}</dd>
+      <dd>{{ownerName(r)}}</dd>
       <dt>{{'Dashboard.Created' | translate}}</dt>
       <dd>
         <time

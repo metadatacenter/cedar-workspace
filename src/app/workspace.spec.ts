@@ -94,6 +94,23 @@ describe("Angular Workspace", () => {
     expect(f.componentInstance.attribution(undefined, "Same Name")).toBe("by Same Name");
     expect(f.componentInstance.attribution()).toBe("");
   });
+  it("shows you for the current owner while preserving other and unknown owners", async () => {
+    api.profile["@id"] = "https://metadatacenter.org/users/me";
+    const f = await render();
+    for (const [ownedBy, ownedByUserName, expected] of [
+      [api.profile["@id"], "Same Name", "you"],
+      [api.profile["@id"], undefined, "you"],
+      ["https://metadatacenter.org/users/other", "Same Name", "Same Name"],
+      [undefined, "Same Name", "Same Name"],
+      [undefined, undefined, "—"],
+    ]) {
+      f.componentInstance.selected.set({ ...template, ownedBy, ownedByUserName });
+      f.detectChanges();
+      const label = [...(f.nativeElement as HTMLElement).querySelectorAll(".information dt")]
+        .find((el) => el.textContent?.trim() === "Owner");
+      expect(label?.nextElementSibling?.textContent?.trim()).toBe(expected);
+    }
+  });
   it("shows one friendly modified column and retains its timestamp for hover", async () => {
     const f = await render();
     const stamp = new Date(f.componentInstance.now() - 180_000).toISOString();
@@ -153,8 +170,8 @@ describe("Angular Workspace", () => {
       ] as HTMLElement[];
       expect(tabs.map((tab) => tab.textContent?.trim())).toEqual(
         resourceType === "folder" || resourceType === "instance"
-          ? ["Info"]
-          : ["Info", "Version"],
+          ? ["Details"]
+          : ["Details", "Version"],
       );
       expect(tabs[0].getAttribute("aria-selected")).toBe("true");
       if (tabs.length === 2) {

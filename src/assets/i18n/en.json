@@ -174,12 +174,13 @@
     "CollapseInformation": "Collapse information",
     "ExpandInformation": "Expand information",
     "Details": "Resource details",
-    "Info": "Info",
+    "Info": "Details",
     "Location": "Location",
     "CopyLocation": "Copy location",
     "Created": "Created",
     "By": "by {{name}}",
     "ByYou": "by you",
+    "You": "you",
     "Access": "Access",
     "DerivedFrom": "Derived from",
     "Modified": "Modified",
@@ -224,7 +225,7 @@
   "ResourceDialog": {
     "Headings": {
       "NewFolder": "New folder",
-      "Rename": "Rename / description",
+      "Rename": "Rename",
       "Copy": "Copy",
       "Move": "Move",
       "Delete": "Delete",

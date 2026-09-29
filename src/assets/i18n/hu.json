@@ -174,12 +174,13 @@
     "CollapseInformation": "Adatok összecsukása",
     "ExpandInformation": "Adatok kinyitása",
     "Details": "Erőforrás részletei",
-    "Info": "Adatok",
+    "Info": "Részletek",
     "Location": "Hely",
     "CopyLocation": "Hely másolása",
     "Created": "Létrehozva",
     "By": "{{name}} által",
     "ByYou": "általad",
+    "You": "te",
     "Access": "Hozzáférés",
     "DerivedFrom": "Származtatva ebből",
     "Modified": "Módosítva",
@@ -224,7 +225,7 @@
   "ResourceDialog": {
     "Headings": {
       "NewFolder": "Új mappa",
-      "Rename": "Átnevezés / leírás",
+      "Rename": "Átnevezés",
       "Copy": "Másolás",
       "Move": "Áthelyezés",
       "Delete": "Törlés",

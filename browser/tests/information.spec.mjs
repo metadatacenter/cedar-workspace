@@ -128,6 +128,34 @@ for (const readonly of [false, true]) {
   });
 }
 
+test("description fits its content up to eight lines and shrinks after editing", async ({page, api}) => {
+  const text = Array.from({length: 5}, (_, i) => `Description line ${i + 1}`).join('\n');
+  await page.route('**/templates/template', route => route.fulfill({
+    json: {...resource, 'schema:description': text},
+    headers: {etag: '"fixture-revision"'},
+  }));
+  await dashboard(page);
+  await page.locator('tbody tr').first().press('Enter');
+  const edit = page.getByRole('textbox', {name: 'Description', exact: true});
+  await expect(edit).toHaveValue(text);
+  const size = () => edit.evaluate(el => ({
+    height: el.getBoundingClientRect().height,
+    scroll: el.scrollHeight,
+    client: el.clientHeight,
+    min: parseFloat(getComputedStyle(el).minHeight),
+    max: parseFloat(getComputedStyle(el).maxHeight),
+  }));
+  await expect.poll(async () => (await size()).height).toBeGreaterThan((await size()).min);
+  expect((await size()).scroll).toBeLessThanOrEqual((await size()).client + 1);
+  await edit.fill(Array.from({length: 12}, () => 'A line').join('\n'));
+  await expect.poll(async () => (await size()).height).toBeCloseTo((await size()).max, 0);
+  expect((await size()).scroll).toBeGreaterThan((await size()).client);
+  await edit.fill('Short description');
+  await expect.poll(async () => (await size()).height).toBeCloseTo((await size()).min, 0);
+  await edit.fill('Words that wrap across the description panel. '.repeat(12));
+  await expect.poll(async () => (await size()).height).toBeCloseTo((await size()).max, 0);
+});
+
 test("inline description keeps edits on conflict and cancel reloads the current revision", async ({page, api}) => {
   await dashboard(page);
   await page.locator('tbody tr').first().press('Enter');
