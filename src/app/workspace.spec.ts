@@ -29,7 +29,7 @@ describe("Angular Workspace", () => {
     init: ReturnType<typeof vi.fn>;
     request: ReturnType<typeof vi.fn>;
     report: ReturnType<typeof vi.fn>;
-    profile: { homeFolderId: string };
+    profile: { homeFolderId: string; "@id"?: string };
     config: Config;
   };
   beforeEach(() => {
@@ -68,6 +68,32 @@ describe("Angular Workspace", () => {
     f.detectChanges();
     return f;
   }
+  it("identifies the current creator and modifier by ID, not display name", async () => {
+    api.profile["@id"] = "https://metadatacenter.org/users/me";
+    const f = await render();
+    const resource: Resource = {
+      ...template,
+      "pav:createdBy": api.profile["@id"],
+      "oslc:modifiedBy": "https://metadatacenter.org/users/other",
+      createdByUserName: "Same Name",
+      lastUpdatedByUserName: "Same Name",
+    };
+    f.componentInstance.selected.set(resource);
+    f.detectChanges();
+    const bylines = () =>
+      [...(f.nativeElement as HTMLElement).querySelectorAll(".information dd small")]
+        .map((el) => el.textContent?.trim());
+    expect(bylines()).toEqual(["by you", "by Same Name"]);
+    f.componentInstance.selected.set({
+      ...resource,
+      "oslc:modifiedBy": api.profile["@id"],
+      lastUpdatedByUserName: undefined,
+    });
+    f.detectChanges();
+    expect(bylines()).toEqual(["by you", "by you"]);
+    expect(f.componentInstance.attribution(undefined, "Same Name")).toBe("by Same Name");
+    expect(f.componentInstance.attribution()).toBe("");
+  });
   it("shows one friendly modified column and retains its timestamp for hover", async () => {
     const f = await render();
     const stamp = new Date(f.componentInstance.now() - 180_000).toISOString();

@@ -583,8 +583,7 @@
           [cedarTooltip]="r['pav:createdOn'] || null"
           >{{r['pav:createdOn']|friendlyDate:now()}}</time
         ><small
-          >{{r.createdByUserName?('Dashboard.By' | translate: {name:
-          r.createdByUserName}):''}}</small
+          >{{attribution(r['pav:createdBy'], r.createdByUserName)}}</small
         >
       </dd>
       <dt>{{'Common.LastModified' | translate}}</dt>
@@ -594,8 +593,7 @@
           [cedarTooltip]="r['pav:lastUpdatedOn'] || null"
           >{{r['pav:lastUpdatedOn']|friendlyDate:now()}}</time
         ><small
-          >{{r.lastUpdatedByUserName?('Dashboard.By' | translate: {name:
-          r.lastUpdatedByUserName}):''}}</small
+          >{{attribution(r['oslc:modifiedBy'], r.lastUpdatedByUserName)}}</small
         >
       </dd>
       <dt>{{'Dashboard.Access' | translate}}</dt>

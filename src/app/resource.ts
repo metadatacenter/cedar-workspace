@@ -8,6 +8,8 @@ export interface Resource {
   name?: string;
   "schema:description"?: string;
   "pav:createdOn"?: string;
+  "pav:createdBy"?: string;
+  "oslc:modifiedBy"?: string;
   "pav:lastUpdatedOn"?: string;
   "pav:version"?: string;
   "bibo:status"?: string;

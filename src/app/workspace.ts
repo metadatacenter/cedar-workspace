@@ -185,6 +185,11 @@ export class Workspace {
   readonly title = (r: Resource) => title(r, this.i18n.t("Common.Untitled"));
   readonly can = can;
   readonly actions = (r: Resource) => actions(r, this.i18n);
+  attribution(userId?: string, name?: string): string {
+    if (userId && userId === this.api.profile?.["@id"])
+      return this.i18n.t("Dashboard.ByYou");
+    return name ? this.i18n.t("Dashboard.By", { name }) : "";
+  }
   /** A role as the server states it, translated when Workspace knows it. */
   role(r: Resource) {
     const role = r.currentUserPermissions?.role;
