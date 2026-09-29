@@ -356,7 +356,7 @@
     "ReadOnly": "Read only",
     "UnsavedChanges": "Unsaved changes",
     "SavedStatus": "Saved",
-    "Name": "Metadata Name",
+    "Name": "Instance name",
     "ReadOnlyAccess": "You have read-only access to this metadata.",
     "ErrorsRegion": "Metadata errors",
     "ErrorsOne": "{{count}} error — review before saving",

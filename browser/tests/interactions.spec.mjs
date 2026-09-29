@@ -141,7 +141,7 @@ test("unsaved metadata cannot be lost by leaving, and read-only mode cannot save
   api,
 }) => {
   await page.goto("/instances/edit/instance");
-  const input = page.getByLabel("Metadata Name", { exact: true });
+  const input = page.getByLabel("Instance name", { exact: true });
   await expect(input).toHaveValue("Study record");
   await input.fill("Working record");
   await expect(page.locator(".metadata-save-status")).toHaveClass(/is-dirty/);
@@ -465,7 +465,7 @@ test("metadata errors and nonblocking warnings share centered, expandable summar
   api,
 }) => {
   await page.goto("/instances/edit/instance");
-  await expect(page.getByLabel("Metadata name")).toHaveValue("Study record");
+  await expect(page.getByLabel("Instance name")).toHaveValue("Study record");
   await page.evaluate(() => {
     const cee = document.querySelector("cedar-embeddable-editor");
     cee.dataQualityReport = {

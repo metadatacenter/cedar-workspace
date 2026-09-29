@@ -107,7 +107,7 @@ for (const readonly of [false, true]) {
   }) => {
     api.readonly = readonly;
     await page.goto("/instances/edit/instance");
-    await expect(page.getByLabel("Metadata name")).toHaveValue("Study record");
+    await expect(page.getByLabel("Instance name")).toHaveValue("Study record");
     await expect(page.locator(".metadata-toolbar")).toContainText(
       readonly ? "Read only" : "Saved",
     );

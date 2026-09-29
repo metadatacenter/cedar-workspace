@@ -126,7 +126,7 @@ for (const [key, label] of Object.entries({
 for (const kind of ["errors", "warnings"])
   scenarios["metadata-" + kind] = async (page) => {
     await page.goto("/instances/edit/instance");
-    await expect(page.getByLabel("Metadata name")).toHaveValue("Study record");
+    await expect(page.getByLabel("Instance name")).toHaveValue("Study record");
     await page.evaluate(() => {
       const editor = document.querySelector("cedar-embeddable-editor");
       editor.dataQualityReport = {

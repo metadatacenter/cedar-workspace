@@ -449,7 +449,7 @@
               <button
                 (click)="toggleMenu(r, $event)"
                 [attr.aria-expanded]="menu()===r['@id']"
-                [cedarTooltip]="'Dashboard.ActionsFor' | translate: {name: title(r)}"
+                [cedarTooltip]="'Dashboard.Actions' | translate"
                 [attr.aria-label]="'Dashboard.ActionsFor' | translate: {name: title(r)}"
               >
                 <cedar-icon name="more" />

@@ -356,7 +356,7 @@
     "ReadOnly": "Csak olvasható",
     "UnsavedChanges": "Nem mentett módosítások",
     "SavedStatus": "Mentve",
-    "Name": "Metaadatok neve",
+    "Name": "Példány neve",
     "ReadOnlyAccess": "Ezekhez a metaadatokhoz csak olvasási hozzáférése van.",
     "ErrorsRegion": "Metaadathibák",
     "ErrorsOne": "{{count}} hiba – mentés előtt ellenőrizze",

@@ -8,7 +8,7 @@ test("help appears promptly, stays hoverable, and Escape preserves selection", a
   const trigger = card.locator(".row-actions > button");
   await trigger.hover();
   const tip = page.getByRole("tooltip");
-  await expect(tip).toContainText("Study metadata", { timeout: 700 });
+  await expect(tip).toHaveText("Actions", { timeout: 700 });
   await expect(trigger).not.toHaveAttribute("title");
   await expect(trigger).toHaveAttribute("aria-describedby", await tip.getAttribute("id"));
   await tip.hover();
