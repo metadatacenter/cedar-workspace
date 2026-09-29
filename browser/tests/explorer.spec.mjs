@@ -81,13 +81,86 @@ test("grid retains compact sizing, range and list selection, and moves a group w
     destination = await rows.first().boundingBox();
   await page.mouse.move(source.x + 20, source.y + 85);
   await page.mouse.down();
+  await page.mouse.move(source.x + 25, source.y + 80, { steps: 3 });
+  await expect(page.locator("body")).toHaveClass(/explorer-dragging/);
+  await expect(page.locator("body")).not.toHaveClass(/explorer-can-drop/);
+  await expect(rows.first()).toHaveClass(/explorer-drop-eligible/);
   await page.mouse.move(destination.x + 40, destination.y + 80, { steps: 12 });
   await expect(page.locator(".cdk-drag-preview")).toHaveCount(1);
+  const preview = page.locator('cedar-drag-preview');
+  await expect(preview).toContainText('3 selected');
+  await expect(preview.locator('.item')).toHaveCount(3);
+  await expect(preview).toContainText('Move here: Archive');
+  await expect(page.locator('body')).toHaveClass(/explorer-can-drop/);
   await expect(rows.first()).toHaveClass(/explorer-drop-target/);
+  await expect(rows.first()).toContainText('Move here');
+  if (process.env.WORKSPACE_VISUAL)
+    await expect(page).toHaveScreenshot('drag-selection.png');
   await page.mouse.up();
   await expect.poll(() => moved.size).toBe(3);
   await expect(rows).toHaveCount(1);
+  await expect(rows.first()).toHaveClass(/explorer-move-complete/);
+  await expect(page.locator('.cdk-drag-preview')).toHaveCount(0);
+  await expect(page.locator('body')).not.toHaveClass(/explorer-dragging/);
+  await expect(rows.first()).not.toHaveClass(/explorer-move-complete/, {timeout: 3000});
 });
+for (const grid of [true, false]) {
+  test(`dropping outside a folder cancels a single-item drag in ${grid ? 'grid' : 'list'}`, async ({page, api}) => {
+    const moved = await setup(page);
+    if (!grid) await page.getByRole('button', {name: 'List view', exact: true}).click();
+    const source = page.locator('[data-resource-id="a"]');
+    const box = await source.boundingBox();
+    await page.mouse.move(box.x + 20, box.y + box.height - 10);
+    await page.mouse.down();
+    const target = await page.locator('[data-resource-id="b"]').boundingBox();
+    await page.mouse.move(target.x + 20, target.y + target.height - 10, {steps: 12});
+    await expect(page.locator('cedar-drag-preview')).toContainText('Sample a');
+    await expect(page.locator('cedar-drag-preview')).toContainText('Drag onto a folder');
+    await expect(page.locator('cedar-drag-preview .count')).toHaveCount(0);
+    await expect(page.locator('body')).toHaveCSS('cursor', 'not-allowed');
+    await page.mouse.up();
+    await expect(page.locator('cedar-drag-preview')).toHaveCount(0);
+    await expect(page.locator('body')).not.toHaveClass(/explorer-dragging/);
+    expect(moved.size).toBe(0);
+    await expect(source).toHaveClass(/selected/);
+  });
+}
+test("dragging suppresses existing, underlying and copy-control tooltips until release", async ({page, api}) => {
+  const moved = await setup(page);
+  const source = page.locator('[data-resource-id="a"]');
+  await source.click({position: {x: 20, y: 90}});
+  const copy = page.getByRole('button', {name: 'Copy identifier', exact: true});
+  await expect(copy).toBeVisible();
+  await source.locator('.resource-icon').hover();
+  await expect(page.getByRole('tooltip')).toHaveText('Instance');
+  const start = await source.locator('.resource-icon').boundingBox();
+  await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
+  await page.mouse.down();
+  for (const control of [
+    page.locator('[data-resource-id="destination"] .resource-icon'),
+    page.getByRole('button', {name: 'Actions for Archive', exact: true}),
+    page.getByRole('button', {name: 'Refresh workspace', exact: true}),
+    copy,
+  ]) {
+    const box = await control.boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {steps: 8});
+    await expect(page.locator('body')).toHaveClass(/explorer-dragging/);
+    // Wait beyond the normal tooltip delay while the pointer stays over the control.
+    await page.waitForTimeout(400);
+    await expect(page.getByRole('tooltip')).toHaveCount(0);
+  }
+  await page.mouse.up();
+  await expect(page.locator('body')).not.toHaveClass(/explorer-dragging/);
+  await page.waitForTimeout(400);
+  await expect(page.getByRole('tooltip')).toHaveCount(0);
+  expect(moved.size).toBe(0);
+  await page.mouse.move(0, 0);
+  await copy.hover();
+  await expect(page.getByRole('tooltip')).toHaveText('Copy identifier');
+  await page.getByRole('button', {name: 'Refresh workspace', exact: true}).hover();
+  await expect(page.getByRole('tooltip')).toHaveText('Refresh workspace');
+});
+
 test("marquee selects cards and keyboard extends selection without opening a resource", async ({
   page,
   api,

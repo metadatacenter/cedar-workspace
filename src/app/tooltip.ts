@@ -6,6 +6,7 @@ import {
   inject,
   input,
 } from "@angular/core";
+import { TooltipController } from "./tooltip-controller";
 
 /** Shared, local help: no browser-dependent native-title delay or network request. */
 @Directive({
@@ -20,6 +21,7 @@ import {
   },
 })
 export class Tooltip {
+  private readonly controller = inject(TooltipController);
   readonly cedarTooltip = input<string | null | undefined>("");
   private readonly host =
     inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
@@ -33,13 +35,14 @@ export class Tooltip {
   constructor() {
     effect(() => {
       this.cedarTooltip();
+      this.controller.suppressed();
       this.hide();
     });
     inject(DestroyRef).onDestroy(() => this.hide());
   }
 
   enter(event: PointerEvent) {
-    if (event.pointerType === "touch") return;
+    if (event.pointerType === "touch" || this.controller.suppressed()) return;
     this.cancelTimer();
     this.timer = setTimeout(() => this.show(), 250);
   }
@@ -62,7 +65,7 @@ export class Tooltip {
   private show() {
     this.cancelTimer();
     const text = this.cedarTooltip();
-    if (!text || !this.host.isConnected || this.tip) return;
+    if (!text || !this.host.isConnected || this.tip || this.controller.suppressed()) return;
     Tooltip.active?.hide();
     Tooltip.active = this;
     const tip = document.createElement("span");

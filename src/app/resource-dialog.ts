@@ -214,7 +214,9 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
         if (result.failed.length) {
           this.resources = result.failed.map((f) => f.resource);
           this.error.set(
-            this.i18n.t("Explorer.Moved", { count: result.moved.length }) +
+            this.i18n.t(result.moved.length === 1 ? "Explorer.MovedOne" : "Explorer.Moved", {
+              count: result.moved.length,
+            }) +
               " " +
               result.failed
                 .map((f) => this.title(f.resource) + ": " + f.message)

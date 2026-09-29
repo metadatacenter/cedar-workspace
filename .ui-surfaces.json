@@ -446,6 +446,12 @@
       "parent": "workspace.main-panel"
     },
     {
+      "id": "workspace.drag-preview",
+      "name": "Drag Preview",
+      "section": "Workspace",
+      "parent": "workspace.main-panel"
+    },
+    {
       "id": "workspace.information-panel",
       "name": "Information Panel",
       "section": "Workspace",

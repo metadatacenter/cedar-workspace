@@ -193,6 +193,8 @@
           [attr.aria-current]="last?'page':null"
           [attr.data-drop-id]="p['@id']"
           [class.explorer-drop-target]="dropTarget()===p['@id']"
+            [class.explorer-drop-eligible]="validDropIds().has(p['@id'])"
+            [class.explorer-move-complete]="movedTarget()===p['@id']"
           >{{title(p)==='/'?('Common.All' | translate):title(p)}}</a
         >@if(!last){<span class="breadcrumb-separator" aria-hidden="true"
           >/</span
@@ -312,6 +314,8 @@
             [attr.data-resource-id]="r['@id']"
             [attr.data-drop-id]="r.resourceType==='folder'?r['@id']:null"
             [class.explorer-drop-target]="dropTarget()===r['@id']"
+            [class.explorer-drop-eligible]="validDropIds().has(r['@id'])"
+            [class.explorer-move-complete]="movedTarget()===r['@id']"
             tabindex="0"
             cdkDrag
             [cdkDragDisabled]="loading() || moving() || !can(r,'moveResource') || (selectionIds().includes(r['@id']) && !canMoveSelection())"
@@ -321,12 +325,9 @@
             (cdkDragEnded)="endDrag($event,explorer)"
             (dblclick)="doubleClickItem(r, $event)"
           >
-            <ng-template cdkDragPreview
-              ><div class="explorer-drag-preview">
-                {{'Explorer.Selected' | translate:{count:selectionIds().length}
-                }}
-              </div></ng-template
-            >
+            <ng-template cdkDragPreview>
+              <cedar-drag-preview [resources]="dragging()" [destination]="dropName()" />
+            </ng-template>
             <td>
               <span class="explorer-heading">
                 <span
@@ -387,6 +388,9 @@
                 <cedar-icon name="preview" />
               </button>
               }
+              @if(r.resourceType === 'folder' && dropTarget() === r['@id']) {
+              <span class="explorer-drop-hint"><cedar-icon name="folder" size="small" />{{'Explorer.MoveHere' | translate}}</span>
+              } @else {
               <span class="explorer-modified">
                 @if(grid()){<span class="explorer-kind"
                   >{{'ResourceTypes.' + r.resourceType | translate}} · </span
@@ -397,6 +401,7 @@
                   >{{r['pav:lastUpdatedOn'] | friendlyDate:now()}}</time
                 >
               </span>
+              }
             </td>
             <td class="row-actions" (click)="$event.stopPropagation()">
               @if(r.isOpen){<a

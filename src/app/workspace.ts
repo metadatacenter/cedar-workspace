@@ -1,3 +1,5 @@
+import { DragPreview } from "./drag-preview";
+import { TooltipController } from "./tooltip-controller";
 import { Tooltip } from "./tooltip";
 import {
   CdkDropList,
@@ -29,6 +31,7 @@ import {
   ElementRef,
   Injector,
   computed,
+  effect,
 } from "@angular/core";
 import { FriendlyDatePipe } from "./friendly-date";
 import { TitleCasePipe } from "@angular/common";
@@ -151,6 +154,7 @@ export function actions(r: Resource, i18n: Pick<I18n, "t">): Action[] {
 @Component({
   selector: "cedar-workspace-page",
   imports: [
+    DragPreview,
     Tooltip,
     ArtifactPreview,
     CdkDropList,
@@ -174,6 +178,7 @@ export function actions(r: Resource, i18n: Pick<I18n, "t">): Action[] {
   templateUrl: "./workspace.html",
 })
 export class Workspace {
+  private readonly tooltips = inject(TooltipController);
   private readonly i18n = inject(I18n);
   readonly cedarVersion = window.cedarVersion || this.i18n.t("Common.Unknown");
   readonly api = inject(Backend);
@@ -231,7 +236,20 @@ export class Workspace {
   readonly cutItems = signal<Resource[]>([]);
   readonly moveDialog = signal<Resource[] | null>(null);
   readonly dropTarget = signal("");
-  private dragging: Resource[] = [];
+  readonly dragging = signal<Resource[]>([]);
+  readonly validDropIds = computed(() => new Set(
+    [...this.rows(), ...this.path()].filter(target =>
+      target["@id"] !== this.folder &&
+      validMoveShape(this.dragging(), target) &&
+      (can(target, "moveIntoFolder") || this.path().some(p => p["@id"] === target["@id"]))
+    ).map(target => target["@id"]),
+  ));
+  readonly dropName = computed(() => {
+    const target = [...this.rows(), ...this.path()].find(r => r["@id"] === this.dropTarget());
+    return target ? this.title(target) : "";
+  });
+  readonly movedTarget = signal("");
+  private movedTimer?: ReturnType<typeof setTimeout>;
   private moves = inject(ResourceMoves);
   readonly canMoveSelection = computed(
     () =>
@@ -257,10 +275,17 @@ export class Workspace {
   private listRead = 0;
   private detailRead = 0;
   constructor() {
+    effect(() => {
+      document.body.classList.toggle("explorer-dragging", this.dragging().length > 0);
+      document.body.classList.toggle("explorer-can-drop", !!this.dropTarget());
+    });
     const clock = setInterval(() => this.now.set(Date.now()), 60_000);
     void this.start();
     this.destroy.onDestroy(() => {
       clearInterval(clock);
+      clearTimeout(this.movedTimer);
+      this.tooltips.resume();
+      document.body.classList.remove("explorer-dragging", "explorer-can-drop");
       this.listRead++;
       this.detailRead++;
     });
@@ -465,9 +490,12 @@ export class Workspace {
     if (r) void this.act("open", r);
   }
   startDrag(r: Resource) {
+    this.tooltips.suspend();
     this.menu.set(null);
     if (!this.selectionIds().includes(r["@id"])) this.setSelection([r["@id"]]);
-    this.dragging = [...this.selection()];
+    clearTimeout(this.movedTimer);
+    this.movedTarget.set("");
+    this.dragging.set([...this.selection()]);
   }
   dragMove(event: CdkDragMove) {
     const element = document
@@ -477,26 +505,16 @@ export class Workspace {
       )
       ?.closest<HTMLElement>("[data-drop-id]");
     const id = element?.dataset["dropId"];
-    const target = [...this.rows(), ...this.path()].find(
-      (r) => r["@id"] === id,
-    );
-    this.dropTarget.set(
-      target &&
-        validMoveShape(this.dragging, target) &&
-        (can(target, "moveIntoFolder") ||
-          this.path().some((p) => p["@id"] === id)) &&
-        id !== this.folder
-        ? id!
-        : "",
-    );
+    this.dropTarget.set(id && this.validDropIds().has(id) ? id : "");
   }
   endDrag(event: CdkDragEnd, explorer: ExplorerSelection) {
     const target = this.dropTarget(),
-      resources = this.dragging;
+      resources = this.dragging();
     this.dropTarget.set("");
-    this.dragging = [];
+    this.dragging.set([]);
     event.source.reset();
     explorer.ignoreClick();
+    this.tooltips.resume();
     if (target) void this.moveItems(resources, target);
   }
   cutSelection() {
@@ -512,13 +530,20 @@ export class Workspace {
         items.filter((r) => !result.moved.includes(r["@id"])),
       );
       await this.load(true);
+      if (result.moved.length) {
+        clearTimeout(this.movedTimer);
+        this.movedTarget.set(target);
+        this.movedTimer = setTimeout(() => this.movedTarget.set(""), 1600);
+      }
       this.selectionIds.set(
         result.failed
           .map((f) => f.resource["@id"])
           .filter((id) => this.rows().some((r) => r["@id"] === id)),
       );
       this.notice.set(
-        this.i18n.t("Explorer.Moved", { count: result.moved.length }),
+        this.i18n.t(result.moved.length === 1 ? "Explorer.MovedOne" : "Explorer.Moved", {
+          count: result.moved.length,
+        }),
       );
       if (result.failed.length)
         this.error.set(

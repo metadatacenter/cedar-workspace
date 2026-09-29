@@ -460,6 +460,9 @@
     }
   },
   "Explorer": {
+    "MoveHere": "Áthelyezés ide",
+    "DragToFolder": "Húzd egy mappára",
+    "MoveTo": "Áthelyezés ide: {{name}}",
     "Selected": "{{count}} kijelölve",
     "Clear": "Kijelölés törlése",
     "Cut": "Kivágás",
@@ -468,6 +471,7 @@
     "List": "Listanézet",
     "Grid": "Rácsnézet",
     "MoveDenied": "Már nincs jogosultsága az elem áthelyezésére.",
+    "MovedOne": "{{count}} elem áthelyezve.",
     "Moved": "{{count}} elem áthelyezve."
   },
   "FolderDeletion": {

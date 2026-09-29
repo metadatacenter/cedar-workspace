@@ -460,6 +460,9 @@
     }
   },
   "Explorer": {
+    "MoveHere": "Move here",
+    "DragToFolder": "Drag onto a folder",
+    "MoveTo": "Move here: {{name}}",
     "Selected": "{{count}} selected",
     "Clear": "Clear selection",
     "Cut": "Cut",
@@ -468,6 +471,7 @@
     "List": "List view",
     "Grid": "Grid view",
     "MoveDenied": "You no longer have permission to move this item.",
+    "MovedOne": "Moved {{count}} item.",
     "Moved": "Moved {{count}} items."
   },
   "FolderDeletion": {
