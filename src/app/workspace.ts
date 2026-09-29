@@ -621,11 +621,19 @@ export class Workspace {
       this.fail(e);
     }
   }
+  navigationQuery(destination: Record<string, string> = {}) {
+    // Sorting is a view preference; location, search, filters and paging are not.
+    return {
+      ...(this.params.has("sort") ? { sort: this.sort } : {}),
+      ...(this.params.get("folders") === "first" ? { folders: "first" } : {}),
+      ...destination,
+    };
+  }
   submitSearch() {
     void this.router.navigate(["/dashboard"], {
-      queryParams: this.search.trim()
+      queryParams: this.navigationQuery(this.search.trim()
         ? { search: this.search.trim() }
-        : { folderId: this.folder },
+        : { folderId: this.folder }),
     });
   }
   get filters(): ListingFilters {
@@ -724,7 +732,7 @@ export class Workspace {
       if (id === "open" || id === "populate") {
         if (r.resourceType === "folder")
           void this.router.navigate(["/dashboard"], {
-            queryParams: { folderId: r["@id"] },
+            queryParams: this.navigationQuery({ folderId: r["@id"] }),
           });
         else location.assign(this.link(r, id === "populate"));
         return;

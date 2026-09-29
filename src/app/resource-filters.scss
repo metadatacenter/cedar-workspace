@@ -145,6 +145,7 @@ footer span {
   pointer-events: none;
 }
 .version-filter select {
+  @include controls.action-states;
   position: absolute;
   inset: 0;
   width: 100%;

@@ -28,6 +28,10 @@ test("artifact commands support keyboard navigation, Escape, and return focus", 
   expect(
     await page.evaluate(() => !!document.activeElement?.closest("dialog")),
   ).toBe(true);
+  await expect(page.getByRole("tooltip")).toHaveText("Close permissions");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
+  await expect(dialog).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
   await expect(trigger).toBeFocused();

@@ -1,3 +1,4 @@
+import { Tooltip } from "./tooltip";
 import {
   AfterViewInit,
   Component,
@@ -34,7 +35,7 @@ export function previewElement(element: CeeJsonObject): CeeJsonObject {
 
 @Component({
   selector: "cedar-artifact-preview",
-  imports: [Icon, TranslatePipe],
+  imports: [Tooltip, Icon, TranslatePipe],
   template: `
     <dialog
       #dialog
@@ -48,6 +49,7 @@ export function previewElement(element: CeeJsonObject): CeeJsonObject {
           autofocus
           type="button"
           [attr.aria-label]="'Preview.Close' | translate"
+        [cedarTooltip]="'Preview.Close' | translate"
           (click)="close()"
         >
           <cedar-icon name="close" />

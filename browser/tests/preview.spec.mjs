@@ -69,8 +69,13 @@ for (const kind of ['template','element','field','instance']) {
     expect((await dialog.boundingBox()).height).toBeLessThan(500);
     expect(page.url()).toBe(before);
     expect(requests.every(r=>r.method==='GET')).toBe(true);
+    if (await page.getByRole('tooltip').count()) await page.keyboard.press('Escape');
     if (['instance','element'].includes(kind) && process.env.WORKSPACE_VISUAL) await expect(dialog).toHaveScreenshot(`${kind}-preview.png`);
     await dialog.getByRole('button',{name:'Close preview'}).focus();
+    if (await page.getByRole('tooltip').count()) {
+      await page.keyboard.press('Escape');
+      await expect(dialog).toBeVisible();
+    }
     await page.keyboard.press('Escape');
     await expect(dialog).toHaveCount(0);
     await expect(button).toBeFocused();
@@ -112,6 +117,7 @@ test('preview fits a narrow screen without scaling its fonts', async ({page,api}
   expect(await dialog.locator('section').evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
   await expect(dialog.getByRole('textbox',{name:'Specimen name'})).toHaveCSS('font-size','14px');
   expect((await dialog.boundingBox()).height).toBeLessThan(500);
+  if (await page.getByRole('tooltip').count()) await page.keyboard.press('Escape');
   if (process.env.WORKSPACE_VISUAL) await expect(dialog).toHaveScreenshot('instance-preview-mobile.png');
   await page.getByRole('button',{name:'Close preview'}).click();
   await expect(button).toBeFocused();
@@ -171,6 +177,7 @@ for (const [name, type] of [['nihField', 'NIH Grant ID'], ['attributeField', 'At
     await expect(dialog.locator('section > p')).toHaveCount(0);
     if (name === 'nihField') await expect(field.locator('.cee-spec-box')).toHaveText('NIH Grant ID');
     expect((await dialog.boundingBox()).height).toBeLessThan(400);
+    if (await page.getByRole('tooltip').count()) await page.keyboard.press('Escape');
     if (process.env.WORKSPACE_VISUAL) await expect(dialog).toHaveScreenshot(`${name}-preview.png`);
   });
 }

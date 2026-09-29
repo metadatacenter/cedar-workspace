@@ -1,6 +1,66 @@
 import { test, expect, dashboard, resource } from "./fixtures.mjs";
 import AxeBuilder from "@axe-core/playwright";
 
+test('version choice shares the filter hover surface', async ({page, api}) => {
+  await dashboard(page);
+  const type = page.locator('cedar-filter-chip').first().getByRole('button');
+  await type.hover();
+  const hover = await type.evaluate(el => getComputedStyle(el).backgroundColor);
+  const version = page.getByRole('combobox', {name: 'Version', exact: true});
+  const normal = await version.evaluate(el => getComputedStyle(el).backgroundColor);
+  for (const value of ['all', 'latest']) {
+    await version.selectOption(value);
+    await version.hover();
+    await expect(version).toHaveCSS('background-color', hover);
+    expect(hover).not.toBe(normal);
+    await page.mouse.move(0, 0);
+    await expect(version).toHaveCSS('background-color', normal);
+  }
+});
+
+for (const grid of [true, false]) {
+  test(`folder grouping survives folder navigation and refresh in ${grid ? 'grid' : 'list'} view`, async ({page, api}) => {
+    const home = {...resource, '@id': 'home', resourceType: 'folder', 'schema:name': 'Home folder'};
+    const child = {...resource, '@id': 'child', resourceType: 'folder', 'schema:name': 'Child folder'};
+    const requests = [];
+    await page.route('**/api/resource/folders/**', route => {
+      const url = new URL(route.request().url());
+      if (url.pathname.includes('/contents')) {
+        requests.push(url);
+        const resources = url.searchParams.get('sort')?.startsWith('foldersFirst,') ? [child, resource] : [resource, child];
+        return route.fulfill({json: {resources, totalCount: 2, pathInfo: url.pathname.includes('/child/') ? [home, child] : [home]}});
+      }
+      return route.fulfill({json: url.pathname.includes('/child') ? child : home, headers: {etag: '"folder-revision"'}});
+    });
+    await page.goto('/dashboard?sort=-name&folders=first');
+    if (!grid) await page.getByRole('button', {name: 'List view', exact: true}).click();
+    const assertGrouping = async () => {
+      await expect(page).toHaveURL(/folders=first/);
+      await expect.poll(() => requests.at(-1)?.searchParams.get('sort')).toBe('foldersFirst,-name');
+      await expect(page.locator('.explorer-item').first()).toHaveAttribute('data-resource-id', 'child');
+    };
+    await assertGrouping();
+    const enter = async () => {
+      if (grid) await page.locator('[data-resource-id="child"] .resource-icon').dblclick();
+      else await page.locator('[data-resource-id="child"]').getByRole('link', {name: 'Child folder', exact: true}).click();
+      await expect(page).toHaveURL(/folderId=child/);
+      await assertGrouping();
+    };
+    await enter();
+    await page.locator('[data-drop-id="home"]').click();
+    await expect(page).toHaveURL(/folderId=home/);
+    await assertGrouping();
+    await enter();
+    await page.getByRole('link', {name: 'Home', exact: true}).click();
+    await expect(page).not.toHaveURL(/folderId=child/);
+    await assertGrouping();
+    await page.getByRole('button', {name: 'Refresh workspace', exact: true}).click();
+    await assertGrouping();
+    await page.reload();
+    await assertGrouping();
+  });
+}
+
 test("sort menu, column arrows, folder grouping and URL stay synchronized", async ({ page, api }) => {
   const requests = [];
   page.on("request", (request) => {

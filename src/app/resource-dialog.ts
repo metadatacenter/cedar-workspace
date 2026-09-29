@@ -1,3 +1,4 @@
+import { Tooltip } from "./tooltip";
 import { ResourceMoves, validMoveTarget } from "./resource-moves";
 import { Confirmation } from "./confirmation";
 import { DialogKeyboard } from "./dialog-keyboard";
@@ -22,7 +23,7 @@ import { Resource, Listing, title, can } from "./resource";
 import { I18n } from "./i18n";
 @Component({
   selector: "cedar-resource-dialog",
-  imports: [DialogKeyboard, Icon, FormsModule, TranslatePipe],
+  imports: [Tooltip, DialogKeyboard, Icon, FormsModule, TranslatePipe],
   templateUrl: "./resource-dialog.html",
 })
 export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {

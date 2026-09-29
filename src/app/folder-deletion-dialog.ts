@@ -1,3 +1,4 @@
+import { Tooltip } from "./tooltip";
 import {
   AfterViewInit,
   Component,
@@ -47,7 +48,7 @@ interface DeletionOutcome {
 }
 @Component({
   selector: "cedar-folder-deletion-dialog",
-  imports: [DialogKeyboard, Icon, TranslatePipe],
+  imports: [Tooltip, DialogKeyboard, Icon, TranslatePipe],
   templateUrl: "./folder-deletion-dialog.html",
   styles: [
     `

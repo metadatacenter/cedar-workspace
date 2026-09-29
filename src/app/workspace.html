@@ -1,6 +1,7 @@
 <header class="topbar">
   <a
-    href="/dashboard"
+    routerLink="/dashboard"
+    [queryParams]="navigationQuery()"
     class="brand"
     [attr.aria-label]="'Header.Brand' | translate"
     ><img src="/img/cedar-mark.png" alt="" /><span class="brand-label"
@@ -19,12 +20,14 @@
       name="search"
       [(ngModel)]="search"
       [placeholder]="'Header.SearchPlaceholder' | translate"
-    /><button [attr.aria-label]="'Header.Search' | translate" type="submit">
+    /><button [attr.aria-label]="'Header.Search' | translate"
+      [cedarTooltip]="'Header.Search' | translate" type="submit">
       <cedar-icon name="search" />
     </button>
   </form>
   <details class="header-menu">
-    <summary [attr.aria-label]="'Header.UserMenu' | translate">
+    <summary [attr.aria-label]="'Header.UserMenu' | translate"
+      [cedarTooltip]="'Header.UserMenu' | translate">
       <cedar-icon name="user" />
     </summary>
     <nav>
@@ -41,7 +44,8 @@
     </nav>
   </details>
   <details class="header-menu">
-    <summary [attr.aria-label]="'Header.MoreMenu' | translate">
+    <summary [attr.aria-label]="'Header.MoreMenu' | translate"
+      [cedarTooltip]="'Header.MoreMenu' | translate">
       <cedar-icon name="more" />
     </summary>
     <nav>
@@ -78,6 +82,7 @@
   <button
     (click)="error.set('')"
     [attr.aria-label]="'Dashboard.DismissError' | translate"
+      [cedarTooltip]="'Dashboard.DismissError' | translate"
   >
     <cedar-icon name="close" />
   </button>
@@ -101,6 +106,7 @@
       (click)="left.set(!left())"
       [attr.aria-expanded]="left()"
       [attr.aria-label]="(left()?'Dashboard.CollapseNavigation':'Dashboard.ExpandNavigation') | translate"
+      [cedarTooltip]="(left()?'Dashboard.CollapseNavigation':'Dashboard.ExpandNavigation') | translate"
     >
       <cedar-icon [name]="left()?'left':'right'" />
     </button>
@@ -119,43 +125,44 @@
           (click)="openNew('new-folder')"
           [disabled]="!can(currentFolder(),'createInFolder')"
         >
-          {{'ResourceTypes.folder' | translate}}
+          <cedar-icon name="folder" />{{'ResourceTypes.folder' | translate}}
         </button>
         @if(can(currentFolder(),'createInFolder')){
         <a [href]="createLink('fields')"
-          >{{'ResourceTypes.field' | translate}}</a
+          ><cedar-icon name="field" />{{'ResourceTypes.field' | translate}}</a
         ><a [href]="createLink('elements')"
-          >{{'ResourceTypes.element' | translate}}</a
+          ><cedar-icon name="element" />{{'ResourceTypes.element' | translate}}</a
         ><a id="button-create-template" [href]="createLink('templates')"
-          >{{'ResourceTypes.template' | translate}}</a
+          ><cedar-icon name="template" />{{'ResourceTypes.template' | translate}}</a
         >
-        } @else {<button disabled>{{'ResourceTypes.field' | translate}}</button
-        ><button disabled>{{'ResourceTypes.element' | translate}}</button
-        ><button disabled>{{'ResourceTypes.template' | translate}}</button>}
+        } @else {<button disabled><cedar-icon name="field" />{{'ResourceTypes.field' | translate}}</button
+        ><button disabled><cedar-icon name="element" />{{'ResourceTypes.element' | translate}}</button
+        ><button disabled><cedar-icon name="template" />{{'ResourceTypes.template' | translate}}</button>}
       </nav>
     </details>
     <nav class="destinations">
       <a
         routerLink="/dashboard"
+        [queryParams]="navigationQuery()"
         [class.active]="!params.has('sharing')&&!params.has('search')&&!params.has('viewMode')"
         ><cedar-icon name="home" />{{'Common.Home' | translate}}</a
       >
       <a
         routerLink="/dashboard"
-        [queryParams]="{sharing:'shared-with-me'}"
+        [queryParams]="navigationQuery({sharing:'shared-with-me'})"
         [class.active]="params.get('sharing')==='shared-with-me'"
         ><cedar-icon name="groups" />{{'Dashboard.SharedWithMe' | translate}}</a
       >
       <a
         routerLink="/dashboard"
-        [queryParams]="{sharing:'shared-with-everybody'}"
+        [queryParams]="navigationQuery({sharing:'shared-with-everybody'})"
         [class.active]="params.get('sharing')==='shared-with-everybody'"
         ><cedar-icon name="groups" />{{'Dashboard.SharedWithEveryone' |
         translate}}</a
       >
       <a
         routerLink="/dashboard"
-        [queryParams]="{viewMode:'view-special-folders'}"
+        [queryParams]="navigationQuery({viewMode:'view-special-folders'})"
         [class.active]="params.has('viewMode')"
         ><cedar-icon name="groups" />{{'Dashboard.CommunityFolders' |
         translate}}</a
@@ -182,7 +189,7 @@
           >{{'Dashboard.CommunityFolders' | translate}}</span
         >} @else { @for(p of path();track p['@id'];let last=$last){<a
           routerLink="/dashboard"
-          [queryParams]="{folderId:p['@id']}"
+          [queryParams]="navigationQuery({folderId:p['@id']})"
           [attr.aria-current]="last?'page':null"
           [attr.data-drop-id]="p['@id']"
           [class.explorer-drop-target]="dropTarget()===p['@id']"
@@ -194,6 +201,7 @@
       <button
         (click)="load(true)"
         [attr.aria-label]="'Dashboard.Refresh' | translate"
+      [cedarTooltip]="'Dashboard.Refresh' | translate"
         [disabled]="loading()"
       >
         <cedar-icon name="refresh" />
@@ -215,6 +223,7 @@
           (click)="grid.set(false)"
           [attr.aria-pressed]="!grid()"
           [attr.aria-label]="'Explorer.List' | translate"
+      [cedarTooltip]="'Explorer.List' | translate"
         >
           <cedar-icon name="list" size="small" />
         </button>
@@ -222,6 +231,7 @@
           (click)="grid.set(true)"
           [attr.aria-pressed]="grid()"
           [attr.aria-label]="'Explorer.Grid' | translate"
+      [cedarTooltip]="'Explorer.Grid' | translate"
         >
           <cedar-icon name="grid" size="small" />
         </button>
@@ -349,7 +359,7 @@
               >} @else if(r.resourceType==='folder') {
               <a
                 routerLink="/dashboard"
-                [queryParams]="{folderId:r['@id']}"
+                [queryParams]="navigationQuery({folderId:r['@id']})"
                 (click)="$event.stopPropagation()"
                 >{{title(r)}}</a
               >
@@ -477,6 +487,7 @@
       (click)="right.set(!right())"
       [attr.aria-expanded]="right()"
       [attr.aria-label]="(right()?'Dashboard.CollapseInformation':'Dashboard.ExpandInformation') | translate"
+      [cedarTooltip]="(right()?'Dashboard.CollapseInformation':'Dashboard.ExpandInformation') | translate"
     >
       <cedar-icon [name]="right()?'right':'left'" />
     </button>
@@ -531,7 +542,7 @@
         <span
           >@for(p of r.pathInfo;track p['@id'];let last=$last){@if(!last){<a
             routerLink="/dashboard"
-            [queryParams]="{folderId:p['@id']}"
+            [queryParams]="navigationQuery({folderId:p['@id']})"
             >{{title(p)==='/'?('Common.All' | translate):title(p)}}</a
           ><span class="breadcrumb-separator" aria-hidden="true">/</span
           >}}</span

@@ -1,5 +1,31 @@
 import { test, expect, dashboard, action } from "./fixtures.mjs";
 
+test("workspace icon tooltip text follows Hungarian localization", async ({page, api}) => {
+  await page.addInitScript(() => Object.defineProperty(navigator, 'languages', {get: () => ['hu-HU']}));
+  await page.goto('/dashboard');
+  for (const label of ['Listanézet', 'Rácsnézet', 'Munkaterület frissítése']) {
+    await page.getByRole('button', {name: label, exact: true}).hover();
+    await expect(page.getByRole('tooltip')).toHaveText(label, {timeout: 700});
+    await page.keyboard.press('Escape');
+  }
+});
+
+test("workspace icon controls expose prompt localized help", async ({page, api}) => {
+  await dashboard(page);
+  for (const label of ["Search", "User menu", "More menu", "Collapse navigation", "Refresh workspace", "List view", "Grid view", "Collapse information"]) {
+    const control = page.locator(`[aria-label="${label}"]`).first();
+    await control.hover();
+    await expect(page.getByRole("tooltip")).toHaveText(label, {timeout: 700});
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('tooltip')).toHaveCount(0);
+  }
+  await action(page, 'Rename');
+  await page.getByRole('button', {name: 'Close dialog', exact: true}).hover();
+  await expect(page.getByRole('tooltip')).toHaveText('Close dialog', {timeout: 700});
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toBeVisible();
+});
+
 test("help appears promptly, stays hoverable, and Escape preserves selection", async ({ page, api }) => {
   await dashboard(page);
   await page.getByRole("button", { name: "Grid view", exact: true }).click();

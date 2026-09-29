@@ -138,13 +138,20 @@ test("description fits its content up to eight lines and shrinks after editing",
   await page.locator('tbody tr').first().press('Enter');
   const edit = page.getByRole('textbox', {name: 'Description', exact: true});
   await expect(edit).toHaveValue(text);
-  const size = () => edit.evaluate(el => ({
-    height: el.getBoundingClientRect().height,
-    scroll: el.scrollHeight,
-    client: el.clientHeight,
-    min: parseFloat(getComputedStyle(el).minHeight),
-    max: parseFloat(getComputedStyle(el).maxHeight),
-  }));
+  const size = () => edit.evaluate(el => {
+    const style = getComputedStyle(el);
+    const inset = style.boxSizing === 'content-box'
+      ? ['paddingTop', 'paddingBottom', 'borderTopWidth', 'borderBottomWidth']
+          .reduce((sum, key) => sum + parseFloat(style[key]), 0)
+      : 0;
+    return {
+      height: el.getBoundingClientRect().height,
+      scroll: el.scrollHeight,
+      client: el.clientHeight,
+      min: parseFloat(style.minHeight) + inset,
+      max: parseFloat(style.maxHeight) + inset,
+    };
+  });
   await expect.poll(async () => (await size()).height).toBeGreaterThan((await size()).min);
   expect((await size()).scroll).toBeLessThanOrEqual((await size()).client + 1);
   await edit.fill(Array.from({length: 12}, () => 'A line').join('\n'));

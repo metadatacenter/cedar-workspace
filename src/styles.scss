@@ -168,6 +168,15 @@ textarea {
 .header-menu nav cedar-icon {
   flex-shrink: 0;
 }
+.new-menu nav a,
+.new-menu nav button {
+  display: flex;
+  align-items: center;
+  gap: var(--cedar-space-3);
+}
+.new-menu nav cedar-icon {
+  flex-shrink: 0;
+}
 .workspace {
   // CEE compact controls plus one small gutter per side, including in table cells.
   --cedar-table-cell-padding-block: var(--cedar-space-1);
