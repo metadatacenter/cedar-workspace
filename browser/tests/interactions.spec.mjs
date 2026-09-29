@@ -1,4 +1,5 @@
 import { test, expect, dashboard, action } from "./fixtures.mjs";
+import { tokenStyles, feedbackSpacing } from './overlay-spacing.mjs';
 
 test("artifact commands support keyboard navigation, Escape, and return focus", async ({
   page,
@@ -266,6 +267,7 @@ test("group members are removed immediately without confirmation and show a succ
   await expect(page.locator(".confirmation-dialog")).toHaveCount(0);
   await expect(page.locator(".groups-member-row")).toHaveCount(1);
   await expect(page.getByRole("status")).toHaveText("Group members saved.");
+  await tokenStyles(page.locator('.toast'), feedbackSpacing);
   expect(api.requests.filter((r) => r.method === "PUT")).toHaveLength(1);
   if (process.env.WORKSPACE_VISUAL)
     await expect(page.locator(".toast")).toHaveScreenshot(

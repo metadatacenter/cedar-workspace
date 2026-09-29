@@ -1,5 +1,6 @@
 import { test, expect, dashboard, action, resource } from "./fixtures.mjs";
 import AxeBuilder from "@axe-core/playwright";
+import { tokenStyles, menuItemSpacing } from './overlay-spacing.mjs';
 
 const owner = { "@id": "owner", firstName: "Alex", lastName: "Researcher" };
 const user = { "@id": "collaborator", firstName: "Sam", lastName: "Curator" };
@@ -16,6 +17,7 @@ test("principal picker keeps pointer and keyboard selection readable and synchro
   const team = page.getByRole("option", { name: "Research team (Group)", exact: true });
   const sam = page.getByRole("option", { name: "Sam Curator", exact: true });
   await expect(team).toHaveAttribute("aria-selected", "true");
+  await tokenStyles(page.locator('cedar-group-picker [role="option"]'), menuItemSpacing);
   await sam.hover();
   await expect(sam).toHaveAttribute("aria-selected", "true");
   await expect(team).toHaveAttribute("aria-selected", "false");

@@ -63,16 +63,11 @@ export class Confirmation {
   }`,
   styles: [
     `
-      @use "@org.metadatacenter/cedar-design-tokens/patterns";
       dialog {
-        @include patterns.dialog-surface;
         width: min(460px, calc(100vw - 32px));
       }
       p {
         line-height: var(--cedar-control-line-height-default);
-      }
-      footer {
-        @include patterns.dialog-actions;
       }
     `,
   ],

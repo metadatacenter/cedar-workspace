@@ -1,5 +1,7 @@
 @use "@org.metadatacenter/cedar-design-tokens/controls";
 @use "@org.metadatacenter/cedar-design-tokens/patterns";
+@use "../overlay-spacing";
+@include overlay-spacing.filter-popover;
 :host {
   display: block;
   position: relative;
@@ -26,7 +28,6 @@
 }
 .type-options {
   display: grid;
-  padding: var(--cedar-space-3);
 }
 .type-options label {
   @include patterns.menu-item;
@@ -48,7 +49,6 @@ input[type="checkbox"] {
 }
 .presets {
   display: grid;
-  padding-block: var(--cedar-space-2);
   border-right: 1px solid var(--cedar-border-rule);
 }
 .presets button {
@@ -68,16 +68,12 @@ input[type="checkbox"] {
   color: var(--cedar-text-selected);
 }
 .range {
-  padding: var(--cedar-space-4);
   display: flex;
   flex-direction: column;
-  gap: var(--cedar-space-4);
 }
 .range label {
   display: flex;
-  margin: 0;
   flex-direction: column;
-  gap: var(--cedar-space-2);
 }
 .range input {
   min-width: 0;
@@ -94,8 +90,6 @@ input[type="checkbox"] {
 footer {
   display: flex;
   align-items: center;
-  gap: var(--cedar-space-2);
-  padding: var(--cedar-space-3);
   border-top: 1px solid var(--cedar-border-rule);
 }
 footer span {
@@ -111,9 +105,6 @@ footer span {
   .presets {
     border-right: 0;
     border-bottom: 1px solid var(--cedar-border-rule);
-  }
-  .range {
-    padding: var(--cedar-space-3);
   }
   .popover {
     max-height: 70vh;

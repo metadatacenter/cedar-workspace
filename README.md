@@ -191,14 +191,26 @@ deployment and authenticated smokes before accepting the release in an environme
 
 ## Confirmations and success feedback
 
-Action, deletion and confirmation dialogs use the central `.dialog-stack` layout
-in `src/styles.scss`: 16px between sections (`--cedar-space-4`), 8px within a
-destination picker (`--cedar-space-2`), and no vertical margins on direct children.
+Workspace overlay spacing is owned by `src/_overlay-spacing.scss`. Action,
+deletion and confirmation dialogs use its `.dialog-stack` layout: 12px between
+sections (`--cedar-space-3`), 4px within a
+destination picker (`--cedar-space-1`), and no vertical margins on direct children.
 Use nested stacks for forms and scrollable bodies; do not add paragraph, label or
-footer margins on top. Outer padding and control/table sizes retain their shared
-tokens. Permissions and preview dialogs retain their compact, divided sections.
-The browser surface suite measures actual gaps and margins in addition to the
-shared surface contract (which checks color and radius, not internal layout).
+footer margins on top. Vertical outer padding is 16px (`--cedar-space-4`), with
+the shared 24px horizontal padding. Picker breadcrumbs use 24px navigation targets
+without form-button padding; form controls and table rows keep their normal sizes.
+Permissions, Preview and filter popovers consume dedicated recipes from that same
+file; their compact divided sections do not need form-dialog spacing. Tooltips and
+toasts share its feedback recipe. Menus and suggestion rows use the design-token
+package's menu sizing. Component styles own positioning, scrolling and responsive
+structure, not independent section padding or paragraph margins.
+
+The browser surface suite checks every registered dialog and menu at desktop and
+narrow widths: padding, actual gaps, accumulated margins and menu-row sizing. A
+new dialog must choose a tested spacing recipe. Copy also has a total-height budget
+for an empty destination, and deliberately injected overrides prove the guards
+fail. Tooltip, toast and suggestion-list tests cover their spacing too. These
+checks supplement the shared surface contract, which checks color and radius.
 
 Use the shared `Confirmation` service for in-app confirmation, awaiting its result
 before writing and rechecking the target and permissions afterward. The root outlet

@@ -27,30 +27,7 @@ import { Icon } from "./icon";
       </button>
     </div>
   }`,
-  styles: [
-    `
-      .toast {
-        position: fixed;
-        z-index: var(--cedar-layer-overlay);
-        right: var(--cedar-space-4);
-        bottom: var(--cedar-space-4);
-        max-width: calc(100vw - 32px);
-        display: flex;
-        align-items: center;
-        gap: var(--cedar-space-2);
-        padding: var(--cedar-space-2) var(--cedar-space-3);
-        color: var(--cedar-status-success-text);
-        background: var(--cedar-status-success-surface);
-        border: 1px solid var(--cedar-border-rule);
-        border-radius: var(--cedar-control-radius-default);
-        box-shadow: var(--cedar-menu-shadow);
-      }
-      button {
-        color: inherit;
-        flex-shrink: 0;
-      }
-    `,
-  ],
+  styleUrl: "./toast.scss",
 })
 export class Toast {
   readonly message = input("");

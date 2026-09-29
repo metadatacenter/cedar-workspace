@@ -1,4 +1,5 @@
 import { test, expect, dashboard, action } from "./fixtures.mjs";
+import { tokenStyles, feedbackSpacing } from './overlay-spacing.mjs';
 
 test("workspace icon tooltip text follows Hungarian localization", async ({page, api}) => {
   await page.addInitScript(() => Object.defineProperty(navigator, 'languages', {get: () => ['hu-HU']}));
@@ -6,6 +7,7 @@ test("workspace icon tooltip text follows Hungarian localization", async ({page,
   for (const label of ['Listanézet', 'Rácsnézet', 'Munkaterület frissítése']) {
     await page.getByRole('button', {name: label, exact: true}).hover();
     await expect(page.getByRole('tooltip')).toHaveText(label, {timeout: 700});
+    await tokenStyles(page.getByRole('tooltip'), feedbackSpacing);
     await page.keyboard.press('Escape');
   }
 });

@@ -1,0 +1,21 @@
+@use "../overlay-spacing";
+
+.toast {
+  @include overlay-spacing.feedback;
+  position: fixed;
+  z-index: var(--cedar-layer-overlay);
+  right: var(--cedar-space-4);
+  bottom: var(--cedar-space-4);
+  max-width: calc(100vw - 32px);
+  display: flex;
+  align-items: center;
+  color: var(--cedar-status-success-text);
+  background: var(--cedar-status-success-surface);
+  border: 1px solid var(--cedar-border-rule);
+  border-radius: var(--cedar-control-radius-default);
+  box-shadow: var(--cedar-menu-shadow);
+}
+button {
+  color: inherit;
+  flex-shrink: 0;
+}

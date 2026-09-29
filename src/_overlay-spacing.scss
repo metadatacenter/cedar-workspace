@@ -1,0 +1,107 @@
+// Workspace overlay spacing recipes. Keep these values here, not in individual
+// dialog/popover styles. Rendered contracts in browser/tests/surfaces.spec.mjs
+// cover each recipe at desktop and narrow widths, including accumulated margins.
+
+@mixin action-dialogs {
+  dialog.action-dialog,
+  dialog.dialog-stack {
+    padding-block: var(--cedar-space-4);
+  }
+  .dialog-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--cedar-space-3);
+  }
+  .dialog-stack > * {
+    margin-block: 0;
+  }
+  dialog.dialog-stack:not([open]) {
+    display: none;
+  }
+  .folder-picker {
+    gap: var(--cedar-space-1);
+  }
+  .folder-picker .breadcrumbs button {
+    // Inline navigation targets do not need form-button padding.
+    min-height: var(--cedar-space-6);
+    padding: 0;
+  }
+}
+
+@mixin permissions-dialog {
+  .permissions-header {
+    padding: var(--cedar-space-3) var(--cedar-space-4);
+  }
+  .permissions-body {
+    padding: 0 var(--cedar-space-4);
+  }
+  .folder-notice {
+    margin: var(--cedar-space-2) 0 var(--cedar-space-1);
+    padding: var(--cedar-space-3);
+  }
+  .access-panel {
+    padding: var(--cedar-space-2) 0;
+  }
+  h2 {
+    margin: 0 var(--cedar-control-height-default) var(--cedar-space-1) 0;
+  }
+  h3 {
+    margin: 0 0 var(--cedar-space-1);
+  }
+  p {
+    margin: 0 0 var(--cedar-space-2);
+  }
+  footer {
+    margin-top: 0;
+    padding: var(--cedar-space-2) var(--cedar-space-4);
+  }
+}
+
+@mixin preview-dialog {
+  header {
+    padding: var(--cedar-space-1) var(--cedar-space-3);
+  }
+  section {
+    padding: var(--cedar-space-2) var(--cedar-space-3);
+  }
+  section > p {
+    margin: 0;
+  }
+  @media (max-width: 600px) {
+    header,
+    section {
+      padding: var(--cedar-space-3);
+    }
+  }
+}
+
+@mixin filter-popover {
+  .type-options {
+    padding: var(--cedar-space-3);
+  }
+  .presets {
+    padding-block: var(--cedar-space-2);
+  }
+  .range {
+    padding: var(--cedar-space-4);
+    gap: var(--cedar-space-4);
+  }
+  .range label {
+    margin: 0;
+    gap: var(--cedar-space-2);
+  }
+  footer {
+    gap: var(--cedar-space-2);
+    padding: var(--cedar-space-3);
+  }
+  @container (max-width: 520px) {
+    .range {
+      padding: var(--cedar-space-3);
+    }
+  }
+}
+
+@mixin feedback {
+  padding: var(--cedar-space-2) var(--cedar-space-3);
+  gap: var(--cedar-space-2);
+}

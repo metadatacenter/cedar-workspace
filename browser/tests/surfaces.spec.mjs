@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { test, expect, dashboard, action, resource } from "./fixtures.mjs";
 import { surfaceCases, checkSurface } from "./surface-contracts.generated.mjs";
+import { tokenStyles, menuItemSpacing } from './overlay-spacing.mjs';
 import { deletionPlan, deletionOwnerRefusal, openFolderDeletion } from "./folder-deletion-fixture.mjs";
 const registry = JSON.parse(
   readFileSync(new URL("../../.ui-surfaces.json", import.meta.url), "utf8"),
@@ -151,12 +152,18 @@ for (const kind of ['confirmation', 'permissions', 'references']) {
 // Token adoption alone cannot catch two valid margins accumulating into an
 // oversized gap. Check the rendered rhythm, including nested form/body stacks.
 async function checkDialogSpacing(dialog) {
+  const padding = await dialog.evaluate(element => {
+    const style = getComputedStyle(element);
+    return {top: style.paddingTop, bottom: style.paddingBottom, expected: style.getPropertyValue('--cedar-space-4').trim()};
+  });
+  expect(padding.top, 'dialog vertical padding').toBe(padding.expected);
+  expect(padding.bottom, 'dialog vertical padding').toBe(padding.expected);
   const stacks = await dialog.evaluate(element => {
     const containers = [...element.querySelectorAll('.dialog-stack')];
     if (element.matches('.dialog-stack')) containers.unshift(element);
     return containers.map(container => {
       const style = getComputedStyle(container);
-      const token = container.matches('.folder-picker') ? '--cedar-space-2' : '--cedar-space-4';
+      const token = container.matches('.folder-picker') ? '--cedar-space-1' : '--cedar-space-3';
       const children = [...container.children].filter(child => child.getBoundingClientRect().height > 0);
       return {
         name: container.className,
@@ -182,6 +189,51 @@ const stackedDialogs = new Set([
   'confirmation', 'recursive-delete-owner', 'recursive-delete-confirmation',
   'recursive-delete-permissions', 'recursive-delete-references',
 ]);
+
+async function checkOverlaySpacing(page, surface) {
+  const target = page.locator(surface.selector);
+  if (stackedDialogs.has(surface.scenario)) return checkDialogSpacing(target);
+  if (surface.contract === 'menu') {
+    await tokenStyles(target, {'padding-top': '--cedar-menu-padding', 'padding-bottom': '--cedar-menu-padding'});
+    await tokenStyles(target.locator('button, a'), menuItemSpacing);
+    return;
+  }
+  const block = token => ({'padding-top': token, 'padding-bottom': token});
+  switch (surface.scenario) {
+    case 'permissions':
+      await tokenStyles(target.locator('header'), block('--cedar-space-3'));
+      await tokenStyles(target.locator('.permissions-body'), block('0px'));
+      await tokenStyles(target.locator('.access-panel'), block('--cedar-space-2'));
+      await tokenStyles(target.locator('footer'), {...block('--cedar-space-2'), 'margin-top': '0px'});
+      await tokenStyles(target.locator('h3'), {'margin-top':'0px', 'margin-bottom':'--cedar-space-1'});
+      break;
+    case 'preview': {
+      const narrow = page.viewportSize().width <= 600;
+      await tokenStyles(target, block('0px'));
+      await tokenStyles(target.locator('header'), block(narrow ? '--cedar-space-3' : '--cedar-space-1'));
+      await tokenStyles(target.locator('section'), block(narrow ? '--cedar-space-3' : '--cedar-space-2'));
+      break;
+    }
+    case 'type-filter':
+    case 'date-filter':
+      await tokenStyles(target.locator('footer'), block('--cedar-space-3'));
+      if (surface.scenario === 'type-filter') {
+        await tokenStyles(target.locator('.type-options'), block('--cedar-space-3'));
+        await tokenStyles(target.locator('.type-options label'), {...menuItemSpacing, 'margin-top':'0px', 'margin-bottom':'0px'});
+      } else {
+        await tokenStyles(target.locator('.presets'), block('--cedar-space-2'));
+        await tokenStyles(target.locator('.presets button'), menuItemSpacing);
+        const width = await page.locator('cedar-resource-filters').evaluate(element => element.clientWidth);
+        await tokenStyles(target.locator('.range'), {...block(width <= 520 ? '--cedar-space-3' : '--cedar-space-4'), 'row-gap':'--cedar-space-4'});
+        await tokenStyles(target.locator('.range label'), {'margin-top':'0px', 'margin-bottom':'0px', 'row-gap':'--cedar-space-2'});
+      }
+      break;
+    default:
+      // A new dialog must choose a spacing recipe instead of silently escaping
+      // the internal-layout checks behind the generic color/radius contract.
+      expect(surface.contract, `Missing spacing coverage: ${surface.id}`).not.toBe('dialog');
+  }
+}
 for (const { surface, state, width, title } of surfaceCases(
   registry,
   scenarios,
@@ -190,17 +242,24 @@ for (const { surface, state, width, title } of surfaceCases(
     await page.setViewportSize({ width, height: 1000 });
     await scenarios[surface.scenario](page);
     await checkSurface(page, surface, state, expect, testInfo);
-    if (stackedDialogs.has(surface.scenario))
-      await checkDialogSpacing(page.locator(surface.selector));
+    await checkOverlaySpacing(page, surface);
   });
 
 test('dialog spacing follows host tokens and rejects accumulated margins', async ({ page, api }) => {
   await scenarios.copy(page);
   const dialog = page.locator('cedar-resource-dialog dialog');
-  await dialog.evaluate(element => element.style.setProperty('--cedar-space-4', '18px'));
+  await dialog.evaluate(element => element.style.setProperty('--cedar-space-3', '14px'));
   await checkDialogSpacing(dialog);
   await dialog.locator('.resource-dialog-resource').evaluate(element => element.style.marginBottom = '24px');
   await expect(checkDialogSpacing(dialog)).rejects.toThrow('must not accumulate child margins');
+});
+
+test('sectioned dialog spacing rejects component overrides', async ({page, api}) => {
+  await scenarios.permissions(page);
+  const surface = registry.surfaces.find(surface => surface.scenario === 'permissions');
+  await checkOverlaySpacing(page, surface);
+  await page.locator(`${surface.selector} header`).evaluate(element => element.style.paddingTop = '48px');
+  await expect(checkOverlaySpacing(page, surface)).rejects.toThrow('padding-top must follow overlay spacing');
 });
 
 test("surface contracts detect computed-style drift and honor host tokens", async ({

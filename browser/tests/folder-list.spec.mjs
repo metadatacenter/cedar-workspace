@@ -101,6 +101,38 @@ test('folder list fits a narrow dialog and remains accessible', async ({page, ap
   if (process.env.WORKSPACE_VISUAL) await expect(dialog).toHaveScreenshot('folder-copy-narrow.png');
 });
 
+for (const width of [1440, 375]) {
+  test(`Copy keeps an empty destination compact at ${width}`, async ({page, api}) => {
+    await page.setViewportSize({width, height:900});
+    await openPicker(page);
+    await page.route('**/folders/archive/contents?*', route => route.fulfill({json: {
+      resources: [], totalCount: 0,
+      pathInfo: [folder('all', 'All'), folder('users', 'Users'), home, children[0]],
+    }}));
+    const dialog = page.locator('cedar-resource-dialog dialog');
+    await dialog.locator('cedar-folder-list').getByRole('button', {name:'Archive', exact:true}).click();
+    await expect(dialog.getByRole('cell', {name:'No subfolders', exact:true})).toBeVisible();
+    const breadcrumb = dialog.locator('.breadcrumbs');
+    const buttons = breadcrumb.getByRole('button');
+    for (const button of await buttons.all()) {
+      const bounds = await button.boundingBox();
+      // Inline navigation must not inherit the 36px form-button height/padding.
+      expect(bounds.height).toBe(24);
+      await expect(button).toHaveCSS('padding-top', '0px');
+      await expect(button).toHaveCSS('padding-bottom', '0px');
+    }
+    const box = await dialog.boundingBox();
+    // A content budget catches whitespace growth even when every value is a token.
+    expect(box.height).toBeLessThanOrEqual(width === 1440 ? 380 : 420);
+    await expect(dialog).toHaveCSS('padding-top', '16px');
+    await expect(dialog).toHaveCSS('padding-bottom', '16px');
+    await expect(dialog.getByRole('button', {name:'Save', exact:true})).toBeEnabled();
+    await page.mouse.move(0, 0);
+    if (process.env.WORKSPACE_VISUAL) await expect(dialog).toHaveScreenshot(`folder-copy-empty-${width}.png`);
+    expect((await new AxeBuilder({page}).include('cedar-resource-dialog').withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze()).violations).toEqual([]);
+  });
+}
+
 for (const action of ['Move', 'Copy', 'Create Draft']) {
   for (const exit of ['Cancel', 'Close', 'Escape']) {
     test(`${action} cancels destination browsing through ${exit} without a discard prompt or write`, async ({page, api}) => {

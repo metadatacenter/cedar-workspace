@@ -1,4 +1,5 @@
 @use "@org.metadatacenter/cedar-design-tokens/patterns";
+@use "../overlay-spacing";
 
 :host {
   display: inline-flex;
@@ -7,12 +8,12 @@
 }
 [role="tooltip"] {
   @include patterns.menu-surface;
+  @include overlay-spacing.feedback;
   position: fixed;
   z-index: var(--cedar-layer-tooltip);
   visibility: hidden;
   width: max-content;
   max-width: calc(100vw - 2 * var(--cedar-space-6));
-  padding: var(--cedar-space-2) var(--cedar-space-3);
   font-size: var(--cedar-font-size);
   font-weight: var(--cedar-font-weight-regular);
   color: var(--cedar-text-primary);

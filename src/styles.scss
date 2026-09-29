@@ -1,4 +1,5 @@
 @use "sass:meta";
+@use "./overlay-spacing";
 @use "@org.metadatacenter/cedar-design-tokens/patterns";
 @use "@org.metadatacenter/cedar-design-tokens/motion";
 @use "@org.metadatacenter/cedar-design-tokens/controls";
@@ -566,20 +567,7 @@ dialog h2 {
 dialog footer {
   justify-content: flex-end;
 }
-// The container owns vertical spacing; paragraph, label and footer margins must
-// not accumulate. Nested stacks use the same rhythm without adding outer space.
-.dialog-stack {
-  display: flex;
-  flex-direction: column;
-  gap: var(--cedar-space-4);
-}
-.dialog-stack > * {
-  margin-block: 0;
-}
-// Do not override the native display:none on a closed dialog.
-dialog.dialog-stack:not([open]) {
-  display: none;
-}
+@include overlay-spacing.action-dialogs;
 fieldset {
   min-width: 0;
   border: 0;
@@ -595,12 +583,6 @@ label {
 .check {
   flex-direction: row;
   align-items: center;
-}
-.folder-picker {
-  gap: var(--cedar-space-2);
-}
-.folder-picker .breadcrumbs button {
-  padding-inline: 0;
 }
 .grant {
   display: flex;
@@ -977,6 +959,7 @@ th,
 
 .workspace-tooltip {
   @include patterns.menu-surface;
+  @include overlay-spacing.feedback;
   position: fixed;
   z-index: var(--cedar-layer-tooltip);
   visibility: hidden;
@@ -986,7 +969,6 @@ th,
   overflow: auto;
   overflow-wrap: anywhere;
   white-space: normal;
-  padding: var(--cedar-space-2) var(--cedar-space-3);
   font-family: var(--cedar-font-family);
   font-size: var(--cedar-font-size);
   font-weight: var(--cedar-font-weight-regular);
