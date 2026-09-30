@@ -72,6 +72,13 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   private etag: string | null = null;
   private alive = true;
   private originalFocus = document.activeElement as HTMLElement | null;
+  get headingIcon() {
+    return ({
+      "new-folder": "folder", rename: "edit", copy: "copy", move: "move",
+      delete: this.resource?.resourceType ?? "delete", publish: "publish",
+      draft: "new-record", "make-open": "globe", "make-not-open": "lock",
+    } as Record<string, string>)[this.action] ?? "info";
+  }
   get heading() {
     const key = (
       {

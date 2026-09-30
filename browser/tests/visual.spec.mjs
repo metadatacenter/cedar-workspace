@@ -77,11 +77,11 @@ test("artifact menu and resource dialog", async ({ page, api }) => {
     "Study metadata",
   );
   await expect(
-    page.locator('#dialog-title cedar-icon[name="edit"] svg'),
+    page.locator('#dialog-title svg[data-cedar-icon="edit"]'),
   ).toBeVisible();
   await expect(page.getByLabel("Description", { exact: true })).toHaveCSS(
     "resize",
-    "none",
+    "vertical",
   );
   if (process.env.WORKSPACE_VISUAL)
     await expect(page.locator("dialog[open]")).toHaveScreenshot(

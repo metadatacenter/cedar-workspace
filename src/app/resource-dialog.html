@@ -13,7 +13,7 @@
   <form class="dialog-stack" (ngSubmit)="submit()">
     <header class="dialog-heading">
       <h2 id="dialog-title" class="resource-dialog-title">
-        @if(action === "rename"){<cedar-icon name="edit" />} {{heading}}
+        <cedar-icon [name]="headingIcon" /> {{heading}}
       </h2>
       <button
         class="dialog-close"

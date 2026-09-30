@@ -65,7 +65,7 @@ textarea {
   background: var(--cedar-color-on-primary);
 }
 textarea {
-  resize: none;
+  resize: vertical;
 }
 .topbar {
   min-height: 80px;

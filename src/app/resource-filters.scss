@@ -39,6 +39,8 @@
   cursor: pointer;
 }
 input[type="checkbox"] {
+  margin-left: auto;
+  flex: none;
   min-height: 0;
   width: var(--cedar-icon-size-small);
   height: var(--cedar-icon-size-small);
