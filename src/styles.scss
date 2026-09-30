@@ -195,38 +195,47 @@ textarea {
   min-height: calc(100vh - 80px);
 }
 .workspace.left-collapsed {
-  grid-template-columns: 44px minmax(0, 1fr) 340px;
+  grid-template-columns: 0 minmax(0, 1fr) 340px;
 }
 .workspace.right-collapsed {
-  grid-template-columns: 250px minmax(0, 1fr) 44px;
+  grid-template-columns: 250px minmax(0, 1fr) 0;
 }
 .workspace.left-collapsed.right-collapsed {
-  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  grid-template-columns: 0 minmax(0, 1fr) 0;
+}
+.workspace > main {
+  grid-column: 2;
+}
+.workspace > .information {
+  grid-column: 3;
 }
 .navigation {
   position: relative;
   padding: var(--cedar-space-2) var(--cedar-space-4) var(--cedar-space-4);
   border-right: 1px solid var(--cedar-border-rule-light);
 }
-.collapse {
-  position: absolute;
-  right: 4px;
-  top: var(--cedar-space-2);
+.panel-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--cedar-font-size-heading);
+  flex: none;
   padding: 0;
-  width: 32px;
+  width: var(--cedar-control-height-authoring);
+  min-height: var(--cedar-control-height-authoring);
+  color: var(--cedar-text-muted);
+}
+.panel-toggle:hover,
+.panel-toggle[aria-expanded="true"] {
+  color: var(--cedar-color-primary);
+  background: var(--cedar-surface-authoring);
 }
 .left-collapsed .navigation,
 .right-collapsed .information {
-  padding: 0;
+  display: none;
 }
 .new-menu {
   margin-top: 0;
   position: relative;
-  // As wide as its button. A full-width box sat over the collapse arrow and took its clicks.
   width: fit-content;
 }
 .primary {
@@ -423,10 +432,6 @@ tr.selected:hover {
 .information .identifiers {
   font-size: var(--cedar-font-size);
 }
-.information > .collapse {
-  left: var(--cedar-space-1);
-  right: auto;
-}
 .badge {
   font-size: var(--cedar-font-size);
   color: var(--cedar-text-muted);
@@ -621,10 +626,10 @@ label {
     grid-template-columns: 200px minmax(0, 1fr) 280px;
   }
   .workspace.left-collapsed {
-    grid-template-columns: 44px minmax(0, 1fr) 280px;
+    grid-template-columns: 0 minmax(0, 1fr) 280px;
   }
   .workspace.right-collapsed {
-    grid-template-columns: 200px minmax(0, 1fr) 44px;
+    grid-template-columns: 200px minmax(0, 1fr) 0;
   }
   .brand {
     width: 176px;
@@ -660,15 +665,9 @@ label {
     margin-top: var(--cedar-space-4);
   }
   .workspace main {
-    width: calc(100% - 44px);
-  }
-  .information {
     width: 100%;
   }
-  .right-collapsed .information {
-    width: 44px;
-  }
-  .workspace:not(.right-collapsed) main {
+  .information {
     width: 100%;
   }
   .paging {

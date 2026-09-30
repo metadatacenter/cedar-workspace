@@ -1,4 +1,16 @@
 <header class="topbar">
+  <button
+    type="button"
+    class="panel-toggle"
+    (click)="left.set(!left())"
+    [disabled]="!ready()"
+    [attr.aria-expanded]="left()"
+    aria-controls="workspace-navigation"
+    [attr.aria-label]="(left()?'Dashboard.CollapseNavigation':'Dashboard.ExpandNavigation') | translate"
+    [cedarTooltip]="(left()?'Dashboard.CollapseNavigation':'Dashboard.ExpandNavigation') | translate"
+  >
+    <cedar-icon name="panel-left" />
+  </button>
   <a
     routerLink="/dashboard"
     [queryParams]="navigationQuery()"
@@ -75,6 +87,18 @@
       /></a>
     </nav>
   </details>
+  <button
+    type="button"
+    class="panel-toggle"
+    (click)="right.set(!right())"
+    [disabled]="!ready()"
+    [attr.aria-expanded]="right()"
+    aria-controls="workspace-information"
+    [attr.aria-label]="(right()?'Dashboard.CollapseInformation':'Dashboard.ExpandInformation') | translate"
+    [cedarTooltip]="(right()?'Dashboard.CollapseInformation':'Dashboard.ExpandInformation') | translate"
+  >
+    <cedar-icon name="panel-right" />
+  </button>
 </header>
 @if(error()){
 <div class="alert" role="alert">
@@ -99,17 +123,9 @@
 >
   <aside
     class="navigation"
+    id="workspace-navigation"
     [attr.aria-label]="'Dashboard.Navigation' | translate"
   >
-    <button
-      class="collapse"
-      (click)="left.set(!left())"
-      [attr.aria-expanded]="left()"
-      [attr.aria-label]="(left()?'Dashboard.CollapseNavigation':'Dashboard.ExpandNavigation') | translate"
-      [cedarTooltip]="(left()?'Dashboard.CollapseNavigation':'Dashboard.ExpandNavigation') | translate"
-    >
-      <cedar-icon [name]="left()?'left':'right'" />
-    </button>
     @if(left()){
     <details class="new-menu">
       <summary
@@ -485,17 +501,9 @@
   </main>
   <aside
     class="information"
+    id="workspace-information"
     [attr.aria-label]="'Dashboard.Information' | translate"
   >
-    <button
-      class="collapse"
-      (click)="right.set(!right())"
-      [attr.aria-expanded]="right()"
-      [attr.aria-label]="(right()?'Dashboard.CollapseInformation':'Dashboard.ExpandInformation') | translate"
-      [cedarTooltip]="(right()?'Dashboard.CollapseInformation':'Dashboard.ExpandInformation') | translate"
-    >
-      <cedar-icon [name]="right()?'right':'left'" />
-    </button>
     @if(right()){ @if(selected();as r){
     <h1>
       <cedar-icon [name]="r.resourceType" size="large" /><span
