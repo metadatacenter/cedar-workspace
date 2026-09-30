@@ -245,12 +245,19 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     );
     this.notice.set("");
   };
+  get hasUnsavedContent() {
+    return this.dirty() || !this.saved;
+  }
   /** The translation key for the toolbar's save status. */
   get saveStatus() {
     if (this.loading()) return "Common.Loading";
     if (this.saving()) return "Common.Saving";
     if (!this.writable()) return "Metadata.ReadOnly";
-    return this.dirty() ? "Metadata.ModifiedStatus" : "Metadata.SavedStatus";
+    return this.dirty()
+      ? "Metadata.ModifiedStatus"
+      : this.saved
+        ? "Metadata.SavedStatus"
+        : "Metadata.NotSavedStatus";
   }
   get missingRequired() {
     const q = this.quality();

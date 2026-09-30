@@ -128,6 +128,22 @@ describe("Modern metadata host", () => {
     expect(host.loading()).toBe(false);
     expect(host.dirty()).toBe(false);
   });
+  it("distinguishes a new untouched draft from persisted content", async () => {
+    await host.ngAfterViewInit();
+    expect(host.saveStatus).toBe("Metadata.NotSavedStatus");
+    expect(host.hasUnsavedContent).toBe(true);
+    host.name = "Changed";
+    host.changed();
+    expect(host.saveStatus).toBe("Metadata.ModifiedStatus");
+    await host.save();
+    expect(host.saveStatus).toBe("Metadata.SavedStatus");
+    expect(host.hasUnsavedContent).toBe(false);
+  });
+  it("shows saved for an existing unchanged artifact", async () => {
+    await edit();
+    expect(host.saveStatus).toBe("Metadata.SavedStatus");
+    expect(host.hasUnsavedContent).toBe(false);
+  });
   it("passes the active language to CEE with English as its fallback", async () => {
     await host.ngAfterViewInit();
     expect(cee.config.defaultLanguage).toBe("en");

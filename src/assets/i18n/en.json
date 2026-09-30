@@ -360,6 +360,7 @@
   "Metadata": {
     "ReadOnly": "Read only",
     "ModifiedStatus": "Modified",
+    "NotSavedStatus": "Not saved",
     "SavedStatus": "Saved",
     "Name": "Instance name",
     "ReadOnlyAccess": "You have read-only access to this metadata.",

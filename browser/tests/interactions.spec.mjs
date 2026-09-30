@@ -522,3 +522,23 @@ test("metadata errors and nonblocking warnings share centered, expandable summar
     page.getByRole("button", { name: "Save", exact: true }),
   ).toBeEnabled();
 });
+
+test("new metadata stays not saved until persisted", async ({ page, api }) => {
+  await page.route(/\/template-instances(?:\?|$)/, route => route.fulfill({
+    json: { ...route.request().postDataJSON(), "@id": "instance" },
+    headers: { ETag: '\"saved-revision\"' },
+  }));
+  await page.goto("/instances/create/template");
+  const state = page.locator(".metadata-save-status");
+  await expect(state).toHaveText("Not saved");
+  await expect(state).toHaveClass(/is-dirty/);
+  const name = page.getByLabel("Instance name", { exact: true });
+  const original = await name.inputValue();
+  await name.fill("Changed draft");
+  await expect(state).toHaveText("Modified");
+  await name.fill(original);
+  await expect(state).toHaveText("Not saved");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(state).toHaveText("Saved");
+  await expect(state).not.toHaveClass(/is-dirty/);
+});
