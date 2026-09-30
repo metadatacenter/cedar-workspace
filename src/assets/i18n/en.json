@@ -484,7 +484,6 @@
     "Warning": "This permanently deletes the selected folder and all of its contents. This cannot be undone.",
     "Refused": "This folder cannot be deleted. Nothing will be deleted until all the blockers below are resolved.",
     "Counts": "Inventory by resource type",
-    "IncludesRoot": "Folder count includes the selected folder and every subfolder.",
     "Permissions": "Items without delete permission: {{count}}.",
     "Protected": "{{count}} home or system folders cannot be deleted.",
     "Outside": "Templates with outside instances: {{templates}} ({{instances}} instances). These templates cannot be deleted.",
@@ -516,6 +515,7 @@
     "AccessDenied": "You no longer have permission to access or delete this folder.",
     "Missing": "This folder no longer exists or is no longer accessible.",
     "CountLabels": {
+      "subfolder": "Subfolders",
       "folder": "Folders",
       "template": "Templates",
       "element": "Elements",

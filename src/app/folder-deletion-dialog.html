@@ -51,7 +51,7 @@
       class="deletion-counts"
       [attr.aria-label]="'FolderDeletion.Counts' | translate"
     >
-      @for(type of resourceTypes; track type.value) {
+      @for(type of artifactTypes; track type.value) {
       <li>
         <strong
           >{{ 'FolderDeletion.CountLabels.' + type.value | translate }}</strong
@@ -63,14 +63,15 @@
           >{{ 'FolderDeletion.CountLabels.referenced' | translate }}</strong
         >: {{ inventory.templatesWithInstances }}
       </li>
+      <li>
+        <strong>{{ 'FolderDeletion.CountLabels.subfolder' | translate }}</strong>: {{ subfolderCount() }}
+      </li>
     </ul>
+    @if(inventory.templatesWithInstances && !inventory.templatesWithOutsideInstances) {
     <p class="inventory-explanation">
-      <span>{{ 'FolderDeletion.IncludesRoot' | translate }}</span>
-      @if(inventory.templatesWithInstances &&
-      !inventory.templatesWithOutsideInstances) {
-      <span> {{ 'FolderDeletion.Inside' | translate }}</span>
-      }
+      {{ 'FolderDeletion.Inside' | translate }}
     </p>
+    }
     @if(inventory.restrictedItems) {
     <p class="alert" role="alert">
       {{ 'FolderDeletion.Permissions' | translate: {count:

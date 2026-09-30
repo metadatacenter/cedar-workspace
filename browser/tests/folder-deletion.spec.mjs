@@ -9,11 +9,11 @@ test('recursive delete inventories every type and sends only the confirmed token
   });
   await expect(dialog.getByText('All instances of these templates are inside this folder and will be deleted first.')).toBeVisible();
   const counts = dialog.locator('.deletion-counts li');
-  await expect(counts).toHaveText(['Folders: 2', 'Templates: 1', 'Elements: 1', 'Fields: 1', 'Instances: 2', 'Templates with instances: 1']);
-  await expect(counts.locator('strong')).toHaveText(['Folders', 'Templates', 'Elements', 'Fields', 'Instances', 'Templates with instances']);
+  await expect(counts).toHaveText(['Templates: 1', 'Elements: 1', 'Fields: 1', 'Instances: 2', 'Templates with instances: 1', 'Subfolders: 1']);
+  await expect(counts.locator('strong')).toHaveText(['Templates', 'Elements', 'Fields', 'Instances', 'Templates with instances', 'Subfolders']);
   const lines = await counts.evaluateAll(items => items.map(item => item.getBoundingClientRect().top));
   expect(new Set(lines).size).toBe(6);
-  await expect(dialog.locator('.inventory-explanation')).toContainText('Folder count includes the selected folder and every subfolder.');
+  await expect(dialog).not.toContainText('Folder count includes');
   await expect(dialog.locator('.inventory-explanation')).toContainText('All instances of these templates are inside this folder and will be deleted first.');
   expect(submitted).toBeNull();
   const inventory = dialog.getByText('View complete inventory', {exact: true});
@@ -26,6 +26,15 @@ test('recursive delete inventories every type and sends only the confirmed token
   await dialog.getByRole('button', {name: 'Delete folder and contents', exact: true}).click();
   await expect(dialog).not.toBeVisible();
   expect(submitted).toEqual({token: deletionPlan.token});
+});
+test('an empty folder has zero subfolders and no inventory explanation', async ({page, api}) => {
+  const plan = structuredClone(deletionPlan);
+  plan.counts = {folder: 1, template: 0, element: 0, field: 0, instance: 0};
+  plan.items = [plan.items[0]];
+  plan.templatesWithInstances = 0;
+  const dialog = await openFolderDeletion(page, plan);
+  await expect(dialog.locator('.deletion-counts li').last()).toHaveText('Subfolders: 0');
+  await expect(dialog.locator('.inventory-explanation')).toHaveCount(0);
 });
 for (const blocker of ['permission', 'references']) {
   test(`recursive delete refuses ${blocker} blockers without issuing a deletion`, async ({page, api}) => {

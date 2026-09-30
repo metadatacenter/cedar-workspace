@@ -435,14 +435,13 @@ export class Workspace {
             buttons.length;
     buttons[next]?.focus();
   }
-  async select(r: Resource, reveal = true) {
+  async select(r: Resource) {
     const read = ++this.detailRead;
     this.selectionIds.set([r["@id"]]);
     this.selected.set(r);
     this.instances.set([]);
     this.instanceTotal.set(0);
     this.tab = "info";
-    if (reveal) this.right.set(true);
     try {
       const { data } = await this.api.report(r);
       if (read === this.detailRead) {
@@ -467,7 +466,6 @@ export class Workspace {
     } else {
       this.detailRead++;
       this.selected.set(undefined);
-      if (ids.length) this.right.set(true);
     }
   }
   doubleClickItem(r: Resource, event: MouseEvent) {

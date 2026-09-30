@@ -125,6 +125,7 @@ interface DeletionOutcome {
 })
 export class FolderDeletionDialog implements AfterViewInit, OnDestroy {
   readonly resourceTypes = resourceTypes;
+  readonly artifactTypes = resourceTypes.filter((type) => type.value !== "folder");
   @Input({ required: true }) resource!: Resource;
   @Output() closed = new EventEmitter<void>();
   @Output() saved = new EventEmitter<void>();
@@ -133,6 +134,7 @@ export class FolderDeletionDialog implements AfterViewInit, OnDestroy {
   private readonly api = inject(Backend);
   private readonly i18n = inject(I18n);
   readonly plan = signal<DeletionPlan | null>(null);
+  readonly subfolderCount = computed(() => Math.max(0, (this.plan()?.counts.folder ?? 0) - 1));
   private readonly itemsById = computed(
     () =>
       new Map(

@@ -484,7 +484,6 @@
     "Warning": "Ez véglegesen törli a kijelölt mappát és annak teljes tartalmát. Ez a művelet nem vonható vissza.",
     "Refused": "Ez a mappa nem törölhető. Semmi nem törlődik, amíg az alábbi akadályok fennállnak.",
     "Counts": "Leltár erőforrástípusonként",
-    "IncludesRoot": "A mappák száma a kiválasztott mappát és minden almappát tartalmazza.",
     "Permissions": "{{count}} elem törléséhez nincs jogosultsága.",
     "Protected": "{{count}} saját vagy rendszermappa nem törölhető.",
     "Outside": "{{templates}} sablonhoz {{instances}} példány tartozik a mappán kívül. Ezek a sablonok nem törölhetők.",
@@ -516,6 +515,7 @@
     "AccessDenied": "Már nincs jogosultsága a mappa elérésére vagy törlésére.",
     "Missing": "Ez a mappa már nem létezik, vagy már nem érhető el.",
     "CountLabels": {
+      "subfolder": "Almappák",
       "folder": "Mappák",
       "template": "Sablonok",
       "element": "Elemek",

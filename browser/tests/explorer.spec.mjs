@@ -42,6 +42,15 @@ async function setup(page, extra = []) {
   return moved;
 }
 for (const grid of [true, false]) {
+  test(`folder double-click works with information collapsed in ${grid ? "grid" : "list"} view`, async ({page, api}) => {
+    await setup(page);
+    if (!grid) await page.getByRole("button", {name: "List view", exact: true}).click();
+    await page.getByRole("button", {name: "Collapse information", exact: true}).click();
+    const row = page.locator('[data-resource-id="destination"]');
+    await row.locator(grid ? ".explorer-name" : ".resource-icon").dblclick();
+    await expect(page).toHaveURL(/folderId=destination/);
+    await expect(page.getByRole("button", {name: "Expand information", exact: true})).toBeVisible();
+  });
   for (const target of [".resource-icon", ".explorer-modified", "td:first-child"]) {
     test(`double-clicking folder ${target} opens it in ${grid ? "grid" : "list"} view`, async ({page, api}) => {
       await setup(page);
@@ -55,6 +64,24 @@ for (const grid of [true, false]) {
     });
   }
 }
+test("selection updates details but only the toggle opens information", async ({page, api}) => {
+  await setup(page);
+  const info = page.getByRole("complementary", {name: "Resource information"});
+  await page.getByRole("button", {name: "Collapse information", exact: true}).click();
+  await page.locator('[data-resource-id="a"] .explorer-name').click();
+  await expect(info).toBeHidden();
+  await page.locator('[data-resource-id="b"] .explorer-name').click({modifiers: ["ControlOrMeta"]});
+  await expect(page.locator('.explorer-item[aria-selected="true"]')).toHaveCount(2);
+  await expect(info).toBeHidden();
+  await page.locator('[data-resource-id="b"]').press("Space");
+  await expect(info).toBeHidden();
+  await page.getByRole("button", {name: "Expand information", exact: true}).click();
+  await expect(info).toBeVisible();
+  await expect(info.locator("h1")).toHaveText("Sample b");
+  await page.locator('[data-resource-id="a"] .explorer-name').click();
+  await expect(info).toBeVisible();
+  await expect(info.locator("h1")).toHaveText("Sample a");
+});
 test("double-clicking folder actions does not open the folder", async ({page, api}) => {
   await setup(page);
   await page.getByRole("button", {name: "Actions for Archive", exact: true}).dblclick();
