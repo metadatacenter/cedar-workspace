@@ -8,13 +8,6 @@
       "value": "40px auto",
       "count": 1
     },
-    "2a553765ba8fd69be9ff": {
-      "file": "src/app/groups.scss",
-      "rule": "spacing",
-      "property": "margin",
-      "value": "0 22px -1px 0",
-      "count": 1
-    },
     "2b84a49f998e00abd6d5": {
       "file": "src/styles.scss",
       "rule": "geometry",

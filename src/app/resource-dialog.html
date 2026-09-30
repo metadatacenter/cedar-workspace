@@ -43,7 +43,7 @@
     }
     <fieldset class="dialog-stack" [disabled]="busy()">
       @if(['new-folder','rename','copy'].includes(action)){<label
-        ><span class="field-label">{{'Common.Name' | translate}}</span><input
+        ><span class="field-label">{{(action === 'copy' ? 'ResourceDialog.NameOfCopy' : 'Common.Name') | translate}}</span><input
           spellcheck="false"
           [attr.aria-invalid]="submitted && nameError ? true : null"
           [attr.aria-describedby]="submitted && nameError ? 'name-error' : null"

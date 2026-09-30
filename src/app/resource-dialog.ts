@@ -136,7 +136,9 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
       const r = this.resource;
       this.target = this.folder;
       if (r) {
-        this.name = this.title(r);
+        this.name = this.action === "copy"
+          ? this.i18n.t("ResourceDialog.CopyName", { name: this.title(r) })
+          : this.title(r);
         this.description = r["schema:description"] || "";
         this.version = r["pav:version"] || "0.0.1";
         if (

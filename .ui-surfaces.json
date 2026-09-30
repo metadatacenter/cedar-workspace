@@ -52,6 +52,19 @@
       "parent": "workspace.groups"
     },
     {
+      "id": "workspace.delete-group-tab",
+      "name": "Delete Group",
+      "section": "Management",
+      "parent": "workspace.groups",
+      "source": [
+        {
+          "file": "src/app/groups.html",
+          "anchor": "id=\"delete-group-panel\""
+        }
+      ],
+      "test": "browser/tests/group-tabs.spec.mjs"
+    },
+    {
       "id": "workspace.logout",
       "name": "Logout",
       "section": "Management"
@@ -118,7 +131,7 @@
     },
     {
       "id": "workspace.more-menu-hot-dogs",
-      "name": "More Menu (“Hot Dogs”)",
+      "name": "Actions Menu (“Hot Dogs”)",
       "section": "Menus",
       "parent": "workspace.workspace",
       "contract": "menu",
@@ -465,19 +478,13 @@
     },
     {
       "id": "workspace.info-tab",
-      "name": "Info Tab",
+      "name": "Details Tab",
       "section": "Workspace",
       "parent": "workspace.information-panel"
     },
     {
       "id": "workspace.version-tab",
       "name": "Version Tab",
-      "section": "Workspace",
-      "parent": "workspace.information-panel"
-    },
-    {
-      "id": "workspace.multiple-selection-summary",
-      "name": "Multiple-Selection Summary",
       "section": "Workspace",
       "parent": "workspace.information-panel"
     },

@@ -52,7 +52,7 @@ const scenarios = {
   },
   "more-menu": async (page) => {
     await dashboard(page);
-    await page.getByLabel("More menu", { exact: true }).click();
+    await page.getByLabel("Actions menu", { exact: true }).click();
   },
   "new-menu": async (page) => {
     await dashboard(page);

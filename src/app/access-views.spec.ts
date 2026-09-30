@@ -88,7 +88,7 @@ describe("Groups legacy view contracts", () => {
       request,
     };
   }
-  it("is a standalone Groups page with a workspace back link and separate Manage/Create panels", async () => {
+  it("is a standalone Groups page with a workspace back link and separate Manage/Create/Delete panels", async () => {
     const { el, fixture } = await render();
     expect(el.querySelector("h1")?.textContent).toBe("Groups");
     expect(el.querySelector(".account-nav")).toBeNull();
@@ -105,8 +105,12 @@ describe("Groups legacy view contracts", () => {
     await fixture.whenStable();
     expect(el.querySelector("#new-group-name")).not.toBeNull();
     expect(el.querySelector("#manage-groups-panel")).toBeNull();
+    (el.querySelector("#delete-group-tab") as HTMLButtonElement).click();
+    await fixture.whenStable();
+    expect(el.querySelector("#delete-group-panel")).not.toBeNull();
+    expect(el.querySelector("#create-group-panel")).toBeNull();
   });
-  it("renders the complete editor on Create with bin actions and last-administrator protection", async () => {
+  it("renders the Create editor with member removal and last-administrator protection, without group deletion", async () => {
     const { host, el, fixture } = await render();
     host.activeTab = "create";
     host.createdGroup = group;
@@ -133,7 +137,7 @@ describe("Groups legacy view contracts", () => {
         '[data-cedar-help="Assign another Group Administrator before removing this member."]',
       ),
     ).not.toBeNull();
-    expect(el.querySelector('[aria-label="Delete group"] svg')).not.toBeNull();
+    expect(el.querySelector('[aria-label="Delete group"] svg')).toBeNull();
     expect(
       el.querySelector('[aria-label="Remove Grace Hopper from the group"] svg'),
     ).not.toBeNull();

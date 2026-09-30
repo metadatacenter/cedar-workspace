@@ -38,8 +38,8 @@
     </nav>
   </details>
   <details class="header-menu">
-    <summary [attr.aria-label]="'Header.MoreMenu' | translate"
-        [cedarTooltip]="'Header.MoreMenu' | translate">
+    <summary [attr.aria-label]="'Header.ActionsMenu' | translate"
+        [cedarTooltip]="'Header.ActionsMenu' | translate">
       <cedar-icon name="more" />
     </summary>
     <nav>
@@ -113,6 +113,18 @@
       >
         {{'Groups.Create' | translate}}
       </button>
+      <button
+        id="delete-group-tab"
+        class="groups-tab"
+        role="tab"
+        aria-controls="delete-group-panel"
+        [attr.aria-selected]="activeTab === 'delete'"
+        [class.active]="activeTab === 'delete'"
+        [disabled]="busy() || selecting()"
+        (click)="selectTab('delete')"
+      >
+        {{'Groups.Delete' | translate}}
+      </button>
     </div>
     @if(activeTab === 'create') {
     <section
@@ -153,6 +165,34 @@
       </div>
       }
     </section>
+    } @else if(activeTab === 'delete') {
+    <section
+      id="delete-group-panel"
+      role="tabpanel"
+      aria-labelledby="delete-group-tab"
+    >
+      <div class="groups-card groups-create-card">
+        <div>
+          <h2>{{'Groups.DeleteHeading' | translate}}</h2>
+          <p>{{'Groups.DeleteIntro' | translate}}</p>
+        </div>
+        <cedar-group-picker
+          class="groups-create-form"
+          id="delete-group-picker"
+          [label]="'Groups.GroupName' | translate"
+          [placeholder]="'Groups.SearchGroups' | translate"
+          [options]="groupOptions"
+          [clearOnPick]="true"
+          [disabled]="busy() || selecting()"
+          (picked)="chooseGroup($event)"
+        />
+      </div>
+      @if(selected()) {
+      <div class="groups-card groups-created-group">
+        <ng-container *ngTemplateOutlet="details; context: { $implicit: true }" />
+      </div>
+      }
+    </section>
     } @else {
     <section
       id="manage-groups-panel"
@@ -182,7 +222,7 @@
     } }
   </main>
 </div>
-<ng-template #details>
+<ng-template #details let-deleting>
   @if(selected(); as g) {
   <div class="groups-selected">
     @if(g.specialGroup || !canAdmin) {
@@ -192,7 +232,7 @@
       </p>
     </div>
     }
-    <form class="groups-details-form" (ngSubmit)="save()">
+    <form class="groups-details-form" (ngSubmit)="!deleting && save()">
       <div class="groups-field">
         <label for="group-name">{{'Common.Name' | translate}}</label>
         <input
@@ -200,7 +240,9 @@
           id="group-name"
           class="form-control"
           name="editName"
-          [(ngModel)]="editName"
+          [ngModel]="deleting ? groupName(g) : editName"
+          (ngModelChange)="editName = $event"
+          [readOnly]="!!deleting"
           [disabled]="!canAdmin || busy()"
           required
         />
@@ -215,13 +257,16 @@
           class="form-control"
           rows="1"
           name="editDescription"
-          [(ngModel)]="editDescription"
+          [ngModel]="deleting ? (g['schema:description'] || '') : editDescription"
+          (ngModelChange)="editDescription = $event"
+          [readOnly]="!!deleting"
           [disabled]="!canAdmin || busy()"
-          [placeholder]="canAdmin ? ('Groups.OptionalDescription' | translate) : ''"
+          [placeholder]="canAdmin && !deleting ? ('Groups.OptionalDescription' | translate) : ''"
         ></textarea>
       </div>
       @if(canAdmin) {
       <div class="groups-details-actions">
+        @if(deleting) {
         <button
           type="button"
           class="btn groups-delete-button"
@@ -232,15 +277,18 @@
         >
           <ng-container *ngTemplateOutlet="trash" />
         </button>
+        } @else {
         <button
           class="btn btn-primary groups-primary-action"
           [disabled]="busy() || !editName.trim()"
         >
           {{'Common.Save' | translate}}
         </button>
+        }
       </div>
       }
     </form>
+    @if(!deleting) {
     <div class="groups-members-section">
       <div class="groups-members-heading">
         <div>
@@ -332,6 +380,7 @@
         } }
       </div>
     </div>
+    }
   </div>
   }
 </ng-template>

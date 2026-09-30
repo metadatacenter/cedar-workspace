@@ -174,6 +174,7 @@ for (const width of [1440, 375]) {
       .getByRole("button", { name: "Create group", exact: true })
       .click();
     await expect(page.locator(".groups-member-row")).toHaveCount(2);
+    await expect(page.getByRole("button", { name: "Delete group", exact: true })).toHaveCount(0);
     await expect(page.getByRole("status")).toHaveText("Group created.");
     await expect(page.locator(".groups-create-card")).toHaveCSS(
       "padding-top",
@@ -183,13 +184,19 @@ for (const width of [1440, 375]) {
       "padding-bottom",
       "8px",
     );
+    const section = await page.locator(".groups-create-card").boundingBox();
+    const nameLabel = await page.locator('label[for="group-name"]').boundingBox();
+    const tabs = await page.locator(".groups-tabs").boundingBox();
+    // Check the composed gap: individually valid margins and padding must not add up.
+    expect(nameLabel.y - section.y - section.height).toBe(8);
+    expect(section.y - tabs.y - tabs.height).toBe(0);
     await expect(page.locator(".groups-details-form")).toHaveCSS(
       "margin-bottom",
-      "8px",
+      "0px",
     );
     await expect(page.locator(".groups-tabs")).toHaveCSS(
       "margin-bottom",
-      "8px",
+      "0px",
     );
     await expect(page.locator(".toast")).toHaveCSS("padding-top", "8px");
     await expect(page.locator("#group-name")).toHaveCSS("height", "36px");
@@ -221,7 +228,7 @@ test("permissions uses compact section gaps and rows", async ({
 });
 
 for (const route of ["dashboard", "groups"]) {
-  for (const menuName of ["User menu", "More menu"]) {
+  for (const menuName of ["User menu", "Actions menu"]) {
     test(`${route} ${menuName} has shared icons on every item`, async ({
       page,
       api,

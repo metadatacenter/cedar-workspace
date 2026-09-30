@@ -44,8 +44,8 @@
     </nav>
   </details>
   <details class="header-menu">
-    <summary [attr.aria-label]="'Header.MoreMenu' | translate"
-      [cedarTooltip]="'Header.MoreMenu' | translate">
+    <summary [attr.aria-label]="'Header.ActionsMenu' | translate"
+      [cedarTooltip]="'Header.ActionsMenu' | translate">
       <cedar-icon name="more" />
     </summary>
     <nav>
@@ -496,20 +496,7 @@
     >
       <cedar-icon [name]="right()?'right':'left'" />
     </button>
-    @if(right()){ @if(selectionIds().length > 1){
-    <h1>{{'Explorer.Selected' | translate:{count:selectionIds().length} }}</h1>
-    <ul class="explorer-selected-names">
-      @for(item of selection();track item['@id']){
-      <li>
-        <cedar-icon [name]="item.resourceType" /><span
-          >{{title(item)}}<small
-            >{{'ResourceTypes.'+item.resourceType | translate}}</small
-          ></span
-        >
-      </li>
-      }
-    </ul>
-    } @else if(selected();as r){
+    @if(right()){ @if(selected();as r){
     <h1>
       <cedar-icon [name]="r.resourceType" size="large" /><span
         >{{title(r)}}</span

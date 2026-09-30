@@ -14,7 +14,7 @@ test("workspace icon tooltip text follows Hungarian localization", async ({page,
 
 test("workspace icon controls expose prompt localized help", async ({page, api}) => {
   await dashboard(page);
-  for (const label of ["Search", "User menu", "More menu", "Collapse navigation", "Refresh workspace", "List view", "Grid view", "Collapse information"]) {
+  for (const label of ["Search", "User menu", "Actions menu", "Collapse navigation", "Refresh workspace", "List view", "Grid view", "Collapse information"]) {
     const control = page.locator(`[aria-label="${label}"]`).first();
     await control.hover();
     await expect(page.getByRole("tooltip")).toHaveText(label, {timeout: 700});

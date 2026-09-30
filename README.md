@@ -3,7 +3,7 @@
 CEDAR's split Workspace frontend. `/` and `/dashboard` run a standalone Angular
 22 application with Angular routing, signals, forms and shared CEDAR design tokens.
 Workspace provides list and compact grid views, search, folder navigation, collapsible
-side panels, Info/Version tabs, Type and Last modified filters, version filtering,
+side panels, Details/Version tabs, Type and Last modified filters, version filtering,
 and resource action dialogs.
 
 Template, element and field authoring opens the configured CED/CEFD Designer host;
@@ -12,7 +12,9 @@ metadata creation/editing opens the standalone Angular CEE host at
 
 The four account routes are also Angular: Profile provides account details and masked
 API-key management; Settings saves the date format used by Workspace; Groups manages
-details and membership with separate revision tokens; Privacy retains the existing
+details and membership with separate revision tokens. Its Delete group tab reviews
+saved details and confirms deletion; Manage and Create keep group deletion out of
+their editing controls. Privacy retains the existing
 policy wording. No AngularJS runtime or styles load on any of these routes.
 Messaging has been removed; its old URL returns to Workspace.
 Logout also runs in Angular and does not depend on the profile service.

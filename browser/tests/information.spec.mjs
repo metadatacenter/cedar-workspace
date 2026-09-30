@@ -45,6 +45,7 @@ for (const readonly of [false, true]) {
     const info = page.getByRole("complementary", {
       name: "Resource information",
     });
+    await expect(info.getByRole("tab").first()).toHaveText("Details");
     await expect(
       info.getByRole("link", { name: "Source template", exact: true }),
     ).toHaveAttribute("href", /source-template/);

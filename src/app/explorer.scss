@@ -147,22 +147,6 @@ body.explorer-dragging.explorer-can-drop * {
   border: 1px solid var(--cedar-color-primary) !important;
   background: var(--cedar-selection-marquee-surface) !important;
 }
-.explorer-selected-names {
-  list-style: none;
-  padding: 0;
-}
-.explorer-selected-names li {
-  display: flex;
-  gap: calc(var(--cedar-space-2) + var(--cedar-space-1) / 2);
-  padding: var(--cedar-space-3) 0;
-  border-bottom: 1px solid var(--cedar-border-rule);
-}
-.explorer-selected-names small {
-  display: block;
-  color: var(--cedar-text-muted);
-  margin-top: var(--cedar-space-1);
-}
-
 .explorer-grid .explorer-schema {
   padding-block: calc(var(--cedar-space-1) + var(--cedar-space-1) / 2);
   gap: calc(var(--cedar-space-1) / 2);

@@ -110,6 +110,9 @@ test("grid retains compact sizing, range and list selection, and moves a group w
   await rows.nth(1).click({ position: { x: 20, y: 90 } });
   await rows.nth(3).click({ position: { x: 20, y: 90 }, modifiers: ["Shift"] });
   await expect(page.locator(".explorer-item.selected")).toHaveCount(3);
+  const info = page.getByRole("complementary", { name: "Resource information" });
+  await expect(info.getByRole("heading")).toHaveCount(0);
+  await expect(info.getByText("Select an item to see its details", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "List view", exact: true }).click();
   await expect(page.locator(".explorer-item.selected")).toHaveCount(3);
   await page.getByRole("button", { name: "Grid view", exact: true }).click();

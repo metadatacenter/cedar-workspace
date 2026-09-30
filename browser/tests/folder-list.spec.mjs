@@ -225,7 +225,7 @@ for (const action of ['Move', 'Copy', 'Create Draft']) {
 }
 
 for (const [action, field, value, original] of [
-  ['Copy', 'Name', 'New copy name', 'Study metadata'],
+  ['Copy', 'Name of copy', 'New copy name', 'Study metadata (copy)'],
   ['Create Draft', 'Version', '2.0.0', '1.0.0'],
 ]) {
   test(`${action} still protects edited content after browsing and recognises a revert`, async ({page, api}) => {

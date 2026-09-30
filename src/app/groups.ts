@@ -67,7 +67,7 @@ export class Groups implements OnInit {
   groupEtag: string | null = null;
   memberEtag: string | null = null;
   private generation = 0;
-  activeTab: "manage" | "create" = "manage";
+  activeTab: "manage" | "create" | "delete" = "manage";
   createdGroup: Group | null = null;
   search = "";
   get groupOptions() {
@@ -90,7 +90,7 @@ export class Groups implements OnInit {
     const group = this.groups().find((g) => g["@id"] === id);
     if (group) await this.select(group);
   }
-  async selectTab(tab: "manage" | "create") {
+  async selectTab(tab: "manage" | "create" | "delete") {
     if (this.busy() || this.selecting()) return;
     if (
       tab === "create" &&
