@@ -36,3 +36,12 @@ section {
     max-height: calc(100dvh - 2 * var(--cedar-space-2));
   }
 }
+
+.try-out {
+  flex-shrink: 0;
+}
+.try-out-notice {
+  text-align: center;
+  color: var(--cedar-text-muted);
+  margin: 0 0 var(--cedar-space-3);
+}

@@ -259,3 +259,35 @@ test('moving the preview heading preserves nested element structure', async ({pa
   await nested.locator('mat-expansion-panel-header').click();
   await expect(nested.locator('.cee-spec-box')).not.toBeVisible();
 });
+
+for (const kind of ['template', 'element', 'field', 'instance']) {
+  test(`trying a ${kind} is editable, disposable and never writes an artifact`, async ({page, api}) => {
+    const {button, requests} = await setup(page, kind);
+    await button.click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', {name:'Try out', exact:true}).click();
+    await expect(dialog.locator('section')).toHaveAttribute('aria-busy', 'false');
+    await expect(dialog.getByRole('status')).toContainText('nothing is saved');
+    await expect(dialog.locator('.try-out-notice')).toHaveCSS('text-align', 'center');
+    const viewer = dialog.locator(kind === 'field' ? 'cedar-embeddable-field' : 'cedar-embeddable-editor');
+    const input = viewer.getByRole('textbox', {name:'Specimen name', exact:true});
+    await expect(input).toBeEditable();
+    await input.fill('Disposable experiment');
+    await expect(input).toHaveValue('Disposable experiment');
+    await expect(dialog.getByRole('button', {name:/save|download/i})).toHaveCount(0);
+    await dialog.getByRole('button', {name:'Back to preview', exact:true}).click();
+    await expect(dialog.locator('section')).toHaveAttribute('aria-busy', 'false');
+    if (kind === 'instance') await expect(input).toHaveValue('Collected specimen');
+    else await expect(viewer.locator('.cee-spec-box')).toContainText('80');
+    await dialog.getByRole('button', {name:'Try out', exact:true}).click();
+    await expect(input).toBeEditable();
+    await expect(input).not.toHaveValue('Disposable experiment');
+    await input.fill('Discard on close');
+    await dialog.getByRole('button', {name:'Close preview', exact:true}).click();
+    await button.click();
+    await dialog.getByRole('button', {name:'Try out', exact:true}).click();
+    await expect(input).toBeEditable();
+    await expect(input).not.toHaveValue('Discard on close');
+    expect(requests.every(request => request.method === 'GET')).toBe(true);
+  });
+}

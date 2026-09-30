@@ -204,6 +204,9 @@
     "Label": "Preview",
     "For": "Preview {{name}}",
     "Close": "Close preview",
+    "TryOut": "Try out",
+    "Back": "Back to preview",
+    "Unsaved": "Try it out — nothing is saved. Leaving this mode discards your entries.",
     "Unavailable": "This preview could not be loaded. Close it and try again."
   },
   "ResourceActions": {

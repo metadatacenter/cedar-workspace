@@ -62,6 +62,11 @@ export function previewElement(element: CeeJsonObject): CeeJsonObject {
       }
       <header class="dialog-heading" [inert]="loading()">
         <h2>{{ name }}</h2>
+        @if (!loading() && !error()) {
+          <button class="try-out" type="button" (click)="toggleTryOut()">
+            {{ (trying() ? "Preview.Back" : "Preview.TryOut") | translate }}
+          </button>
+        }
         <button
           class="dialog-close"
           type="button"
@@ -81,6 +86,11 @@ export function previewElement(element: CeeJsonObject): CeeJsonObject {
         @if (error()) {
           <p role="alert">{{ "Preview.Unavailable" | translate }}</p>
         }
+        @if (trying() && !error()) {
+          <p class="try-out-notice" role="status">
+            {{ "Preview.Unsaved" | translate }}
+          </p>
+        }
         <div #mount [hidden]="error()"></div>
       </section>
     </dialog>
@@ -98,6 +108,12 @@ export class ArtifactPreview implements AfterViewInit, OnDestroy {
   private readonly injector = inject(Injector);
   readonly loading = signal(true);
   readonly error = signal(false);
+  readonly trying = signal(false);
+  private source?: {
+    artifact: CeeJsonObject;
+    template: CeeJsonObject;
+    config: CeeConfig;
+  };
   private alive = true;
   private timer?: ReturnType<typeof setTimeout>;
   private originalFocus = document.activeElement as HTMLElement | null;
@@ -118,7 +134,7 @@ export class ArtifactPreview implements AfterViewInit, OnDestroy {
       () => {
         if (this.alive)
           this.dialog.nativeElement
-            .querySelector<HTMLButtonElement>("header button")
+            .querySelector<HTMLButtonElement>("header button.dialog-close")
             ?.focus();
       },
       { injector: this.injector },
@@ -158,44 +174,62 @@ export class ArtifactPreview implements AfterViewInit, OnDestroy {
       } else if (this.resource.resourceType === "element")
         template = previewElement(artifact);
       if (!this.alive || this.error()) return;
-      const field = this.resource.resourceType === "field";
-      const tag = field ? "cedar-embeddable-field" : "cedar-embeddable-editor";
-      if (!customElements.get(tag)) throw new Error();
-      const viewer = document.createElement(tag) as
-        CedarEmbeddableEditorElement | CedarEmbeddableFieldElement;
-      viewer.eventHandler = {
-        ready: () => {
-          if (!this.alive || this.error()) return;
-          clearTimeout(this.timer);
-          this.reveal();
-        },
-        error: this.fail,
-      };
-      // Apply read-only configuration before any artifact input, even if host config is editable.
-      viewer.config = {
-        ...config,
-        readOnlyMode: true,
-        previewMode: true,
-        trustTemplateRichText: false,
-        showDownloadMenu: false,
-        showExpandCollapseAll: false,
-        showTemplateDescription: true,
-        defaultLanguage: this.i18n.language,
-        fallbackLanguage,
-      };
-      this.mount.nativeElement.replaceChildren(viewer);
-      if (field) {
-        (viewer as CedarEmbeddableFieldElement).fieldObject = artifact;
-      } else if (this.resource.resourceType === "instance") {
-        (viewer as CedarEmbeddableEditorElement).templateAndInstanceObject = {
-          templateObject: template,
-          instanceObject: artifact,
-        };
-      } else (viewer as CedarEmbeddableEditorElement).templateObject = template;
+      this.source = { artifact, template, config };
+      this.mountViewer();
     } catch {
       this.fail();
     }
   }
+  toggleTryOut() {
+    if (!this.alive || !this.source || this.loading() || this.error()) return;
+    this.trying.update((value) => !value);
+    this.loading.set(true);
+    this.timer = setTimeout(this.fail, 30000);
+    try {
+      this.mountViewer();
+    } catch {
+      this.fail();
+    }
+  }
+  private mountViewer() {
+    // Each mode starts from an isolated copy; trial edits never alter the fetched artifact.
+    const { artifact, template, config } = structuredClone(this.source!);
+    const field = this.resource.resourceType === "field";
+    const tag = field ? "cedar-embeddable-field" : "cedar-embeddable-editor";
+    if (!customElements.get(tag)) throw new Error();
+    const viewer = document.createElement(tag) as
+      CedarEmbeddableEditorElement | CedarEmbeddableFieldElement;
+    viewer.eventHandler = {
+      ready: () => {
+        if (!this.alive || this.error()) return;
+        clearTimeout(this.timer);
+        this.reveal();
+      },
+      error: this.fail,
+    };
+    // Configure a fresh editor before inputs. No persistence handlers are attached.
+    viewer.config = {
+      ...config,
+      readOnlyMode: !this.trying(),
+      previewMode: true,
+      trustTemplateRichText: false,
+      showDownloadMenu: false,
+      showExpandCollapseAll: false,
+      showTemplateDescription: true,
+      defaultLanguage: this.i18n.language,
+      fallbackLanguage,
+    };
+    this.mount.nativeElement.replaceChildren(viewer);
+    if (field) {
+      (viewer as CedarEmbeddableFieldElement).fieldObject = artifact;
+    } else if (this.resource.resourceType === "instance") {
+      (viewer as CedarEmbeddableEditorElement).templateAndInstanceObject = {
+        templateObject: template,
+        instanceObject: artifact,
+      };
+    } else (viewer as CedarEmbeddableEditorElement).templateObject = template;
+  }
+
   close() {
     this.dispose();
     this.dialog.nativeElement.close();

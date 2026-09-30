@@ -204,6 +204,9 @@
     "Label": "Előnézet",
     "For": "Előnézet: {{name}}",
     "Close": "Előnézet bezárása",
+    "TryOut": "Kipróbálás",
+    "Back": "Vissza az előnézethez",
+    "Unsaved": "Próbálja ki — semmit sem mentünk. A mód elhagyásakor a beírt adatok elvesznek.",
     "Unavailable": "Az előnézet nem tölthető be. Zárja be, és próbálja újra."
   },
   "ResourceActions": {
