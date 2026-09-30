@@ -288,6 +288,7 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
           name: this.principalName(grant.node),
           resource: this.title(this.resource),
         }),
+        "permissions",
       ))
     )
       return;

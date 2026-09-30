@@ -34,7 +34,8 @@ const textAttributes = [
 // Errors are included because every caught error is shown through an error
 // signal; the server's own messages arrive at run time and are not literals.
 const sinkCalls = [
-  { name: "confirm", pattern: /\bconfirm\s*\(/g },
+  // Confirmation renders its first argument; the second is an icon registry key.
+  { name: "confirm", pattern: /\bconfirm\s*\(/g, firstArgumentOnly: true },
   { name: "error.set", pattern: /\berror\.set\s*\(/g },
   { name: "notice.set", pattern: /\bnotice\.set\s*\(/g },
   { name: "failedChange.set", pattern: /\bfailedChange\.set\s*\(/g },
@@ -318,6 +319,8 @@ function scanTypeScript(code, report) {
       } else {
         const end = skipBalanced(code, start - 1, "(", ")");
         expression = code.slice(start, end - 1);
+        if (sink.firstArgumentOnly)
+          expression = topLevelArguments(expression)[0] ?? "";
         if (sink.skipCallbacks)
           expression = topLevelArguments(expression)
             .filter((argument) => !argument.includes("=>"))

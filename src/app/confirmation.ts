@@ -8,17 +8,20 @@ import {
   viewChild,
 } from "@angular/core";
 import { TranslatePipe } from "@ngx-translate/core";
+import { Icon } from "./icon";
 import { DialogKeyboard } from "./dialog-keyboard";
 
 @Injectable({ providedIn: "root" })
 export class Confirmation {
   readonly message = signal("");
+  readonly icon = signal("warning");
   private resolve?: (accepted: boolean) => void;
   private returnFocus: HTMLElement | null = null;
-  confirm(message: string): Promise<boolean> {
+  confirm(message: string, icon = "warning"): Promise<boolean> {
     // A second activation must not replace a decision already in progress.
     if (this.resolve) return Promise.resolve(false);
     this.returnFocus = document.activeElement as HTMLElement | null;
+    this.icon.set(icon);
     this.message.set(message);
     return new Promise((resolve) => {
       this.resolve = resolve;
@@ -38,7 +41,7 @@ export class Confirmation {
 
 @Component({
   selector: "cedar-confirmation",
-  imports: [DialogKeyboard, TranslatePipe],
+  imports: [DialogKeyboard, TranslatePipe, Icon],
   template: `@if (confirmation.message()) {
     <dialog
       #dialog
@@ -51,7 +54,11 @@ export class Confirmation {
       "
     >
       <h2 id="confirmation-title">{{ "Confirmation.Title" | translate }}</h2>
-      <p id="confirmation-message">{{ confirmation.message() }}</p>
+      <p id="confirmation-message">
+        <cedar-icon [name]="confirmation.icon()" /><span>{{
+          confirmation.message()
+        }}</span>
+      </p>
       <footer>
         <button autofocus (click)="decide(false)">
           {{ "Common.Cancel" | translate }}</button
@@ -67,7 +74,14 @@ export class Confirmation {
         width: min(460px, calc(100vw - 32px));
       }
       p {
+        display: flex;
+        align-items: center;
+        gap: var(--cedar-space-2);
         line-height: var(--cedar-control-line-height-default);
+      }
+      cedar-icon {
+        flex-shrink: 0;
+        color: var(--cedar-color-primary);
       }
     `,
   ],

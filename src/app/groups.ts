@@ -321,6 +321,7 @@ export class Groups implements OnInit {
       this.busy() ||
       !(await this.confirmation.confirm(
         this.i18n.t("Groups.ConfirmDelete", { name: this.groupName(g) }),
+        "groups",
       ))
     )
       return;
@@ -369,6 +370,7 @@ export class Groups implements OnInit {
             : "Groups.ConfirmMakeAdministrator",
           { name: this.userName(m.user) },
         ),
+        "user",
       ))
     )
       return;
