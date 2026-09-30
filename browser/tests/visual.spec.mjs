@@ -81,7 +81,7 @@ test("artifact menu and resource dialog", async ({ page, api }) => {
   ).toBeVisible();
   await expect(page.getByLabel("Description", { exact: true })).toHaveCSS(
     "resize",
-    "vertical",
+    "none",
   );
   if (process.env.WORKSPACE_VISUAL)
     await expect(page.locator("dialog[open]")).toHaveScreenshot(
