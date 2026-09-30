@@ -205,13 +205,16 @@ textarea {
 }
 .navigation {
   position: relative;
-  padding: var(--cedar-space-4);
+  padding: var(--cedar-space-2) var(--cedar-space-4) var(--cedar-space-4);
   border-right: 1px solid var(--cedar-border-rule-light);
 }
 .collapse {
   position: absolute;
   right: 4px;
-  top: 4px;
+  top: var(--cedar-space-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: var(--cedar-font-size-heading);
   padding: 0;
   width: 32px;
@@ -232,6 +235,12 @@ textarea {
   padding: var(--cedar-space-2) var(--cedar-space-4);
   display: inline-block;
   list-style: none;
+}
+.new-menu summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cedar-space-1);
+  min-height: var(--cedar-control-height-default);
 }
 .new-menu summary span {
   padding-left: var(--cedar-space-3);
@@ -266,6 +275,9 @@ main {
   min-height: var(--cedar-control-height-default);
 }
 .table-toolbar > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: var(--cedar-space-1);
   min-width: 28px;
   flex-shrink: 0;
