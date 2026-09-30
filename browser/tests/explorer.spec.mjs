@@ -381,3 +381,17 @@ test("card icons share colour, spacing and the right-hand column", async ({page,
   const entries = page.locator('.resource-menu button');
   await expect(entries).toHaveText(['Open', 'Permissions…', 'Move', 'Rename', 'Delete', 'Enable Openview', 'Disable Openview', 'Open in OpenView']);
 });
+
+for (const target of ['.explorer-name', '.resource-icon']) {
+  test(`Shift-click selects a range through grid ${target}`, async ({ page, api }) => {
+    await setup(page);
+    const rows = page.locator('.explorer-item');
+    await rows.nth(1).locator(target).click();
+    await rows.nth(3).locator(target).click({ modifiers: ['Shift'] });
+    await expect(page.locator('.explorer-item.selected')).toHaveCount(3);
+    await rows.nth(2).locator(target).click({ modifiers: ['Shift'] });
+    await expect(page.locator('.explorer-item.selected')).toHaveCount(2);
+    await rows.nth(0).locator(target).click({ modifiers: ['Shift'] });
+    await expect(page.locator('.explorer-item.selected')).toHaveCount(2);
+  });
+}
