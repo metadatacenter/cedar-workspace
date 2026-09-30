@@ -212,6 +212,7 @@ export class ArtifactPreview implements AfterViewInit, OnDestroy {
       ...config,
       readOnlyMode: !this.trying(),
       previewMode: true,
+      suppressEmptyFieldErrors: true,
       trustTemplateRichText: false,
       showDownloadMenu: false,
       showExpandCollapseAll: false,
