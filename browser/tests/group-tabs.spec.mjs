@@ -30,6 +30,10 @@ for (const width of [1440, 375]) {
     expect(card.y + card.height - details.y - details.height).toBe(9);
     expect(Math.abs(input.x + input.width - binIcon.x - binIcon.width)).toBeLessThanOrEqual(1);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    // Loading disables the picker and can clear WebKit focus. Capture a known state.
+    await expect(search).toBeEnabled();
+    await search.focus();
+    await expect(search).toBeFocused();
     await page.mouse.move(0, 0);
     if (process.env.WORKSPACE_VISUAL)
       await expect(page.locator(".groups-content")).toHaveScreenshot(`groups-delete-${width}.png`);
