@@ -23,7 +23,7 @@
       <cedar-icon name="folder" />{{ name }}
     </p>
     @if(busy()) {
-    <p role="status">
+    <p role="status" [class.sr-only]="deleting()">
       {{ (deleting() ? 'FolderDeletion.Deleting' : 'FolderDeletion.Checking') |
       translate }}
     </p>
@@ -127,11 +127,9 @@
     <button autofocus type="button" [disabled]="deleting()" (click)="close()">
       {{ 'Common.Cancel' | translate }}
     </button>
-    @if(!busy()) {
-    <button type="button" (click)="load()">
+    <button type="button" [disabled]="busy()" (click)="load()">
       {{ 'FolderDeletion.Refresh' | translate }}
     </button>
-    }
     <button
       class="primary"
       type="button"

@@ -194,10 +194,15 @@ export class FolderDeletionDialog implements AfterViewInit, OnDestroy {
         { token: plan.token },
       );
       if (!this.alive) return;
+      if (response.data.status === "completed") {
+        // Close before notifying the parent: success must never render the stopped outcome.
+        this.dialog.nativeElement.close();
+        this.saved.emit();
+        return;
+      }
       this.plan.set(null);
       this.outcome.set(response.data);
-      if (response.data.status === "completed") this.saved.emit();
-      else this.changed.emit();
+      this.changed.emit();
     } catch (e) {
       if (!this.alive) return;
       // A timeout may have followed a successful delete. Never repeat the confirmed request;

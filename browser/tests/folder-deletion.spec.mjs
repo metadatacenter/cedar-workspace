@@ -122,3 +122,27 @@ test('deletion inventory shares Workspace row density while allowing wrapped con
   expect((await rows.nth(1).boundingBox()).height).toBeGreaterThan(referenceHeight);
   await expect(rows.nth(1).locator('td').last()).toHaveText('Eligible');
 });
+
+test('pending deletion keeps the dialog and action positions steady', async ({page, api}) => {
+  let finish;
+  const response = new Promise(resolve => { finish = resolve; });
+  const dialog = await openFolderDeletion(page, deletionPlan, async route => {
+    await response;
+    return route.fulfill({json: {status: 'completed', deleted: deletionPlan.counts, remaining: 0}});
+  });
+  const remove = dialog.getByRole('button', {name: 'Delete folder and contents', exact: true});
+  const refresh = dialog.getByRole('button', {name: 'Refresh inventory', exact: true});
+  const before = await dialog.boundingBox();
+  const buttonBefore = await remove.boundingBox();
+  await remove.click();
+  await expect(remove).toBeDisabled();
+  await expect(refresh).toBeVisible();
+  await expect(refresh).toBeDisabled();
+  expect(await dialog.boundingBox()).toEqual(before);
+  expect(await remove.boundingBox()).toEqual(buttonBefore);
+  await expect(dialog.getByRole('list', {name: 'Inventory by resource type'})).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeVisible();
+  finish();
+  await expect(dialog).not.toBeVisible();
+});

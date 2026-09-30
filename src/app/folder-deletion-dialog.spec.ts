@@ -96,3 +96,19 @@ for (const language of ["en", "hu"] as const) {
     });
   });
 }
+
+it("closes a completed deletion without rendering a stopped outcome", async () => {
+  const { host, request } = setup("en");
+  const close = vi.fn();
+  host.dialog = { nativeElement: { close } } as unknown as typeof host.dialog;
+  host.plan.set(plan);
+  request.mockResolvedValue({data: {status: "completed", deleted: counts, remaining: 0}});
+  const saved = vi.fn(() => {
+    expect(close).toHaveBeenCalledOnce();
+    expect(host.outcome()).toBeNull();
+    expect(host.plan()).toBe(plan);
+  });
+  host.saved.subscribe(saved);
+  await host.confirm();
+  expect(saved).toHaveBeenCalledOnce();
+});
