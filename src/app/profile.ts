@@ -145,6 +145,7 @@ export class Profile implements OnInit {
               : "Account.Profile.ConfirmRegenerate",
           ),
           "lock",
+          action === "delete" ? "delete" : "",
         )))
     )
       return;

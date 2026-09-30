@@ -15,13 +15,19 @@ import { DialogKeyboard } from "./dialog-keyboard";
 export class Confirmation {
   readonly message = signal("");
   readonly icon = signal("warning");
+  readonly headingIcon = signal("");
   private resolve?: (accepted: boolean) => void;
   private returnFocus: HTMLElement | null = null;
-  confirm(message: string, icon = "warning"): Promise<boolean> {
+  confirm(
+    message: string,
+    icon = "warning",
+    headingIcon = "",
+  ): Promise<boolean> {
     // A second activation must not replace a decision already in progress.
     if (this.resolve) return Promise.resolve(false);
     this.returnFocus = document.activeElement as HTMLElement | null;
     this.icon.set(icon);
+    this.headingIcon.set(headingIcon);
     this.message.set(message);
     return new Promise((resolve) => {
       this.resolve = resolve;
@@ -53,7 +59,12 @@ export class Confirmation {
         $event.preventDefault(); $event.stopPropagation(); decide(false)
       "
     >
-      <h2 id="confirmation-title">{{ "Confirmation.Title" | translate }}</h2>
+      <h2 id="confirmation-title" class="resource-dialog-title">
+        @if (confirmation.headingIcon()) {
+          <cedar-icon [name]="confirmation.headingIcon()" />
+        }
+        {{ "Confirmation.Title" | translate }}
+      </h2>
       <p id="confirmation-message">
         <cedar-icon [name]="confirmation.icon()" /><span>{{
           confirmation.message()

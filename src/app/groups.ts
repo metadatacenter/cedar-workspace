@@ -322,6 +322,7 @@ export class Groups implements OnInit {
       !(await this.confirmation.confirm(
         this.i18n.t("Groups.ConfirmDelete", { name: this.groupName(g) }),
         "groups",
+        "delete",
       ))
     )
       return;

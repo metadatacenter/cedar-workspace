@@ -75,7 +75,7 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   get headingIcon() {
     return ({
       "new-folder": "folder", rename: "edit", copy: "copy", move: "move",
-      delete: this.resource?.resourceType ?? "delete", publish: "publish",
+      delete: "delete", publish: "publish",
       draft: "new-record", "make-open": "globe", "make-not-open": "lock",
     } as Record<string, string>)[this.action] ?? "info";
   }
