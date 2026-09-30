@@ -65,7 +65,7 @@ textarea {
   background: var(--cedar-color-on-primary);
 }
 textarea {
-  resize: vertical;
+  resize: none;
 }
 .topbar {
   min-height: 80px;
@@ -988,7 +988,7 @@ th,
   @include patterns.menu-surface;
   @include overlay-spacing.feedback;
   // Small help labels need less elevation than an interactive dropdown menu.
-  box-shadow: 0 2px 4px rgb(0 0 0 / 10%);
+  box-shadow: var(--cedar-tooltip-shadow);
   position: fixed;
   z-index: var(--cedar-layer-tooltip);
   visibility: hidden;
