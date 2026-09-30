@@ -253,7 +253,7 @@ describe("Permissions legacy view contracts", () => {
   it("opens a native Permissions dialog with one user/group flow, the resource context, and role vocabulary", async () => {
     const { el, host } = await render();
     expect(el.querySelector("dialog")?.open).toBe(true);
-    expect(el.querySelector("h2")?.textContent).toBe("Permissions");
+    expect(el.querySelector("h2")?.textContent?.trim()).toBe("Permissions");
     expect(el.querySelector(".resource-name")?.textContent).toBe("Study");
     expect(el.querySelectorAll("cedar-group-picker")).toHaveLength(1);
     expect(el.textContent).toContain("Add users or groups");
