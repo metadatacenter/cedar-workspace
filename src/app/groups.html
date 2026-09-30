@@ -26,39 +26,50 @@
     </summary>
     <nav>
       <a href="/profile"
-        ><span>{{'Header.Profile' | translate}}</span
-        ><cedar-icon name="user" /></a
+        ><cedar-icon name="user" /><span
+          >{{'Header.Profile' | translate}}</span
+        ></a
       ><a href="/settings"
-        ><span>{{'Header.Settings' | translate}}</span
-        ><cedar-icon name="tuning" /></a
+        ><cedar-icon name="tuning" /><span
+          >{{'Header.Settings' | translate}}</span
+        ></a
       ><a href="/logout"
-        ><span>{{'Header.Logout' | translate}}</span
-        ><cedar-icon name="sign-out"
-      /></a>
+        ><cedar-icon name="sign-out" /><span
+          >{{'Header.Logout' | translate}}</span
+        ></a
+      >
     </nav>
   </details>
   <details class="header-menu">
-    <summary [attr.aria-label]="'Header.ActionsMenu' | translate"
-        [cedarTooltip]="'Header.ActionsMenu' | translate">
+    <summary
+      [attr.aria-label]="'Header.ActionsMenu' | translate"
+      [cedarTooltip]="'Header.ActionsMenu' | translate"
+    >
       <cedar-icon name="more" />
     </summary>
     <nav>
       <a href="/groups"
-        ><span>{{'Header.Groups' | translate}}</span
-        ><cedar-icon name="groups" /></a
+        ><cedar-icon name="groups" /><span
+          >{{'Header.Groups' | translate}}</span
+        ></a
       ><a href="/privacy"
-        ><span>{{'Header.Privacy' | translate}}</span
-        ><cedar-icon name="permissions"
-      /></a>
+        ><cedar-icon name="permissions" /><span
+          >{{'Header.Privacy' | translate}}</span
+        ></a
+      >
       <a
         href="https://metadatacenter.org/help/#subscribe"
         target="_blank"
         rel="noopener"
-        ><span>{{'Header.Help' | translate}}</span><cedar-icon name="external"
-      /></a>
+        ><cedar-icon name="external" /><span
+          >{{'Header.Help' | translate}}</span
+        ></a
+      >
       <a href="https://metadatacenter.org/#about" target="_blank" rel="noopener"
-        ><span>{{'Header.About' | translate}}</span><cedar-icon name="external"
-      /></a>
+        ><cedar-icon name="external" /><span
+          >{{'Header.About' | translate}}</span
+        ></a
+      >
     </nav>
   </details>
 </header>
@@ -189,7 +200,9 @@
       </div>
       @if(selected()) {
       <div class="groups-card groups-created-group">
-        <ng-container *ngTemplateOutlet="details; context: { $implicit: true }" />
+        <ng-container
+          *ngTemplateOutlet="details; context: { $implicit: true }"
+        />
       </div>
       }
     </section>

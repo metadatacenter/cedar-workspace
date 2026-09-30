@@ -94,7 +94,9 @@ test("artifact menu and resource dialog", async ({ page, api }) => {
     openDialog.getByRole("button", { name: "Ok", exact: true }),
   ).toBeEnabled();
   await expect(
-    openDialog.locator('.resource-dialog-resource svg[data-cedar-icon="artifact-template"]'),
+    openDialog.locator(
+      '.resource-dialog-resource svg[data-cedar-icon="artifact-template"]',
+    ),
   ).toBeVisible();
   if (process.env.WORKSPACE_VISUAL)
     await expect(openDialog).toHaveScreenshot("make-open-dialog.png");
@@ -116,10 +118,14 @@ for (const readonly of [false, true]) {
         `metadata-toolbar-${readonly}.png`,
       );
     if (!readonly) {
-      await page.getByLabel('Instance name').fill('Modified study');
-      await expect(page.locator('.metadata-save-status')).toHaveText('Modified');
+      await page.getByLabel("Instance name").fill("Modified study");
+      await expect(page.locator(".metadata-save-status")).toHaveText(
+        "Modified",
+      );
       if (process.env.WORKSPACE_VISUAL)
-        await expect(page.locator('.metadata-toolbar')).toHaveScreenshot('metadata-toolbar-modified.png');
+        await expect(page.locator(".metadata-toolbar")).toHaveScreenshot(
+          "metadata-toolbar-modified.png",
+        );
     }
   });
 }
@@ -174,7 +180,9 @@ for (const width of [1440, 375]) {
       .getByRole("button", { name: "Create group", exact: true })
       .click();
     await expect(page.locator(".groups-member-row")).toHaveCount(2);
-    await expect(page.getByRole("button", { name: "Delete group", exact: true })).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Delete group", exact: true }),
+    ).toHaveCount(0);
     await expect(page.getByRole("status")).toHaveText("Group created.");
     await expect(page.locator(".groups-create-card")).toHaveCSS(
       "padding-top",
@@ -185,7 +193,9 @@ for (const width of [1440, 375]) {
       "8px",
     );
     const section = await page.locator(".groups-create-card").boundingBox();
-    const nameLabel = await page.locator('label[for="group-name"]').boundingBox();
+    const nameLabel = await page
+      .locator('label[for="group-name"]')
+      .boundingBox();
     const tabs = await page.locator(".groups-tabs").boundingBox();
     // Check the composed gap: individually valid margins and padding must not add up.
     expect(nameLabel.y - section.y - section.height).toBe(8);
@@ -271,6 +281,28 @@ for (const route of ["dashboard", "groups"]) {
           "true",
         );
       }
+      const placement = await menu.locator("nav a").evaluateAll((links) =>
+        links.map((link) => {
+          const icon = link.querySelector("cedar-icon");
+          const label = link.querySelector("span");
+          return {
+            left:
+              icon.getBoundingClientRect().right <=
+              label.getBoundingClientRect().left,
+            color: getComputedStyle(icon).color,
+          };
+        }),
+      );
+      expect(placement.every((item) => item.left)).toBe(true);
+      const primary = await menu.evaluate((node) => {
+        const probe = document.createElement("span");
+        probe.style.color = "var(--cedar-color-primary)";
+        node.append(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return color;
+      });
+      expect(placement.every((item) => item.color === primary)).toBe(true);
       if (process.env.WORKSPACE_VISUAL)
         await expect(menu.locator("nav")).toHaveScreenshot(
           `${route}-${menuName.replace(" ", "-")}.png`,

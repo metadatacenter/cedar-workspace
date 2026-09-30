@@ -161,12 +161,12 @@ textarea {
   @include patterns.menu-item;
   width: 100%;
 }
-// Keep menu labels and decorative icons aligned as in the legacy header.
+// Existing menu icons lead their labels and follow the active theme.
 .header-menu nav a,
 .header-menu nav button {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: var(--cedar-space-3);
 }
 .header-menu nav cedar-icon {
@@ -1001,4 +1001,13 @@ th,
   font-weight: var(--cedar-font-weight-regular);
   line-height: var(--cedar-control-line-height-default);
   color: var(--cedar-text-primary);
+}
+
+// Only existing menu glyphs are themed; labels keep their text color.
+.header-menu nav cedar-icon,
+.new-menu nav cedar-icon,
+.resource-menu cedar-icon,
+cedar-sort-menu [role="menuitemradio"] cedar-icon,
+cedar-resource-filters .popover cedar-icon {
+  color: var(--cedar-color-primary);
 }

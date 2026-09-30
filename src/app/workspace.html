@@ -32,59 +32,75 @@
       name="search"
       [(ngModel)]="search"
       [placeholder]="'Header.SearchPlaceholder' | translate"
-    /><button [attr.aria-label]="'Header.Search' | translate"
-      [cedarTooltip]="'Header.Search' | translate" type="submit">
+    /><button
+      [attr.aria-label]="'Header.Search' | translate"
+      [cedarTooltip]="'Header.Search' | translate"
+      type="submit"
+    >
       <cedar-icon name="search" />
     </button>
   </form>
   <details class="header-menu">
-    <summary [attr.aria-label]="'Header.UserMenu' | translate"
-      [cedarTooltip]="'Header.UserMenu' | translate">
+    <summary
+      [attr.aria-label]="'Header.UserMenu' | translate"
+      [cedarTooltip]="'Header.UserMenu' | translate"
+    >
       <cedar-icon name="user" />
     </summary>
     <nav>
       <a href="/profile"
-        ><span>{{'Header.Profile' | translate}}</span
-        ><cedar-icon name="user" /></a
+        ><cedar-icon name="user" /><span
+          >{{'Header.Profile' | translate}}</span
+        ></a
       ><a href="/settings"
-        ><span>{{'Header.Settings' | translate}}</span
-        ><cedar-icon name="tuning" /></a
+        ><cedar-icon name="tuning" /><span
+          >{{'Header.Settings' | translate}}</span
+        ></a
       ><a routerLink="/logout"
-        ><span>{{'Header.Logout' | translate}}</span
-        ><cedar-icon name="sign-out"
-      /></a>
+        ><cedar-icon name="sign-out" /><span
+          >{{'Header.Logout' | translate}}</span
+        ></a
+      >
     </nav>
   </details>
   <details class="header-menu">
-    <summary [attr.aria-label]="'Header.ActionsMenu' | translate"
-      [cedarTooltip]="'Header.ActionsMenu' | translate">
+    <summary
+      [attr.aria-label]="'Header.ActionsMenu' | translate"
+      [cedarTooltip]="'Header.ActionsMenu' | translate"
+    >
       <cedar-icon name="more" />
     </summary>
     <nav>
       <a href="/groups"
-        ><span>{{'Header.Groups' | translate}}</span
-        ><cedar-icon name="groups" /></a
+        ><cedar-icon name="groups" /><span
+          >{{'Header.Groups' | translate}}</span
+        ></a
       ><a href="/privacy"
-        ><span>{{'Header.Privacy' | translate}}</span
-        ><cedar-icon name="permissions" /></a
+        ><cedar-icon name="permissions" /><span
+          >{{'Header.Privacy' | translate}}</span
+        ></a
       >@if(ready() && api.monitoringAllowed){<a
         [href]="api.config.monitoringFrontend"
         target="_blank"
         rel="noopener"
-        ><span>{{'Header.Monitoring' | translate}}</span
-        ><cedar-icon name="activity" /></a
+        ><cedar-icon name="activity" /><span
+          >{{'Header.Monitoring' | translate}}</span
+        ></a
       >}<a
         href="https://metadatacenter.org/help/#subscribe"
         target="_blank"
         rel="noopener"
-        ><span>{{'Header.Help' | translate}}</span
-        ><cedar-icon name="external" /></a
+        ><cedar-icon name="external" /><span
+          >{{'Header.Help' | translate}}</span
+        ></a
       ><a
         href="https://metadatacenter.org/#about"
         target="_blank"
         rel="noopener"
-        ><span>{{'Header.About' | translate}}</span><cedar-icon name="external"
-      /></a>
+        ><cedar-icon name="external" /><span
+          >{{'Header.About' | translate}}</span
+        ></a
+      >
     </nav>
   </details>
   <button
@@ -106,7 +122,7 @@
   <button
     (click)="error.set('')"
     [attr.aria-label]="'Dashboard.DismissError' | translate"
-      [cedarTooltip]="'Dashboard.DismissError' | translate"
+    [cedarTooltip]="'Dashboard.DismissError' | translate"
   >
     <cedar-icon name="close" />
   </button>
@@ -147,13 +163,19 @@
         <a [href]="createLink('fields')"
           ><cedar-icon name="field" />{{'ResourceTypes.field' | translate}}</a
         ><a [href]="createLink('elements')"
-          ><cedar-icon name="element" />{{'ResourceTypes.element' | translate}}</a
+          ><cedar-icon name="element" />{{'ResourceTypes.element' |
+          translate}}</a
         ><a id="button-create-template" [href]="createLink('templates')"
-          ><cedar-icon name="template" />{{'ResourceTypes.template' | translate}}</a
+          ><cedar-icon name="template" />{{'ResourceTypes.template' |
+          translate}}</a
         >
-        } @else {<button disabled><cedar-icon name="field" />{{'ResourceTypes.field' | translate}}</button
-        ><button disabled><cedar-icon name="element" />{{'ResourceTypes.element' | translate}}</button
-        ><button disabled><cedar-icon name="template" />{{'ResourceTypes.template' | translate}}</button>}
+        } @else {<button disabled>
+          <cedar-icon name="field" />{{'ResourceTypes.field' | translate}}</button
+        ><button disabled>
+          <cedar-icon name="element" />{{'ResourceTypes.element' | translate}}</button
+        ><button disabled>
+          <cedar-icon name="template" />{{'ResourceTypes.template' | translate}}</button
+        >}
       </nav>
     </details>
     <nav class="destinations">
@@ -209,8 +231,8 @@
           [attr.aria-current]="last?'page':null"
           [attr.data-drop-id]="p['@id']"
           [class.explorer-drop-target]="dropTarget()===p['@id']"
-            [class.explorer-drop-eligible]="validDropIds().has(p['@id'])"
-            [class.explorer-move-complete]="movedTarget()===p['@id']"
+          [class.explorer-drop-eligible]="validDropIds().has(p['@id'])"
+          [class.explorer-move-complete]="movedTarget()===p['@id']"
           >{{title(p)==='/'?('Common.All' | translate):title(p)}}</a
         >@if(!last){<span class="breadcrumb-separator" aria-hidden="true"
           >/</span
@@ -219,7 +241,7 @@
       <button
         (click)="load(true)"
         [attr.aria-label]="'Dashboard.Refresh' | translate"
-      [cedarTooltip]="'Dashboard.Refresh' | translate"
+        [cedarTooltip]="'Dashboard.Refresh' | translate"
         [disabled]="loading()"
       >
         <cedar-icon name="refresh" />
@@ -241,7 +263,7 @@
           (click)="grid.set(false)"
           [attr.aria-pressed]="!grid()"
           [attr.aria-label]="'Explorer.List' | translate"
-      [cedarTooltip]="'Explorer.List' | translate"
+          [cedarTooltip]="'Explorer.List' | translate"
         >
           <cedar-icon name="list" size="small" />
         </button>
@@ -249,7 +271,7 @@
           (click)="grid.set(true)"
           [attr.aria-pressed]="grid()"
           [attr.aria-label]="'Explorer.Grid' | translate"
-      [cedarTooltip]="'Explorer.Grid' | translate"
+          [cedarTooltip]="'Explorer.Grid' | translate"
         >
           <cedar-icon name="grid" size="small" />
         </button>
@@ -342,7 +364,10 @@
             (dblclick)="doubleClickItem(r, $event)"
           >
             <ng-template cdkDragPreview>
-              <cedar-drag-preview [resources]="dragging()" [destination]="dropName()" />
+              <cedar-drag-preview
+                [resources]="dragging()"
+                [destination]="dropName()"
+              />
             </ng-template>
             <td>
               <span class="explorer-heading">
@@ -369,9 +394,7 @@
                 </span>
                 }
               </span>
-              @if(grid()){<span
-                class="explorer-name"
-                [cedarTooltip]="title(r)"
+              @if(grid()){<span class="explorer-name" [cedarTooltip]="title(r)"
                 >{{title(r)}}</span
               >} @else if(r.resourceType==='folder') {
               <a
@@ -403,9 +426,11 @@
               >
                 <cedar-icon name="preview" />
               </button>
-              }
-              @if(r.resourceType === 'folder' && dropTarget() === r['@id']) {
-              <span class="explorer-drop-hint"><cedar-icon name="folder" size="small" />{{'Explorer.MoveHere' | translate}}</span>
+              } @if(r.resourceType === 'folder' && dropTarget() === r['@id']) {
+              <span class="explorer-drop-hint"
+                ><cedar-icon name="folder" size="small" />{{'Explorer.MoveHere'
+                | translate}}</span
+              >
               } @else {
               <span class="explorer-modified">
                 @if(grid()){<span class="explorer-kind"
@@ -562,9 +587,7 @@
           [attr.datetime]="r['pav:createdOn'] || null"
           [cedarTooltip]="r['pav:createdOn'] || null"
           >{{r['pav:createdOn']|friendlyDate:now()}}</time
-        ><small
-          >{{attribution(r['pav:createdBy'], r.createdByUserName)}}</small
-        >
+        ><small>{{attribution(r['pav:createdBy'], r.createdByUserName)}}</small>
       </dd>
       <dt>{{'Common.LastModified' | translate}}</dt>
       <dd>
