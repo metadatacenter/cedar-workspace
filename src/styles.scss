@@ -987,6 +987,8 @@ th,
 .workspace-tooltip {
   @include patterns.menu-surface;
   @include overlay-spacing.feedback;
+  // Small help labels need less elevation than an interactive dropdown menu.
+  box-shadow: 0 2px 4px rgb(0 0 0 / 10%);
   position: fixed;
   z-index: var(--cedar-layer-tooltip);
   visibility: hidden;
