@@ -82,7 +82,9 @@ textarea {
   display: flex;
   align-items: center;
   gap: var(--cedar-space-3);
-  width: 230px;
+  // The search keeps the same distance from the brand's text as from the user menu's glyph.
+  // On that side, the menu's padding and the glyph's own inset add up to about this much.
+  padding-inline-end: var(--cedar-space-3);
   flex-shrink: 0;
   color: var(--cedar-text-title);
   font-weight: var(--cedar-font-weight-medium);
@@ -618,9 +620,6 @@ label {
   .workspace.right-collapsed {
     grid-template-columns: 200px minmax(0, 1fr) 0;
   }
-  .brand {
-    width: 176px;
-  }
   main {
     padding: var(--cedar-space-3);
   }
@@ -632,9 +631,6 @@ label {
   .topbar {
     gap: var(--cedar-space-2);
     padding: var(--cedar-space-2);
-  }
-  .brand {
-    width: auto;
   }
   .brand span {
     display: none;
