@@ -6,7 +6,18 @@
     {
       "id": "workspace.profile",
       "name": "Profile",
-      "section": "Management"
+      "section": "Management",
+      "contract": "page",
+      "scenario": "profile-page",
+      "selector": "cedar-workspace",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/profile.html",
+          "anchor": "class=\"account-card\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.permissions",
@@ -27,17 +38,50 @@
     {
       "id": "workspace.privacy",
       "name": "Privacy",
-      "section": "Management"
+      "section": "Management",
+      "contract": "page",
+      "scenario": "privacy-page",
+      "selector": "cedar-workspace",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/privacy.html",
+          "anchor": "class=\"account-card account-policy\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.settings",
       "name": "Settings",
-      "section": "Management"
+      "section": "Management",
+      "contract": "page",
+      "scenario": "settings-page",
+      "selector": "cedar-workspace",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/settings.html",
+          "anchor": "class=\"account-card\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.groups",
       "name": "Groups",
-      "section": "Management"
+      "section": "Management",
+      "contract": "page",
+      "scenario": "groups-page",
+      "selector": "cedar-workspace",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/groups.html",
+          "anchor": "id=\"groups-page\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.manage-groups",
@@ -131,7 +175,7 @@
     },
     {
       "id": "workspace.more-menu-hot-dogs",
-      "name": "Actions Menu (“Hot Dogs”)",
+      "name": "Actions Menu (\u201cHot Dogs\u201d)",
       "section": "Menus",
       "parent": "workspace.workspace",
       "contract": "menu",
@@ -392,7 +436,18 @@
     {
       "id": "workspace.metadata-editor-cee",
       "name": "Metadata Editor / CEE",
-      "section": "Confirmation / Warning / Error"
+      "section": "Confirmation / Warning / Error",
+      "contract": "page",
+      "scenario": "metadata-editor-page",
+      "selector": "cedar-workspace",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/metadata-editor.html",
+          "anchor": "class=\"metadata-toolbar\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.discard-unsaved-metadata-changes",
@@ -432,7 +487,18 @@
     {
       "id": "workspace.workspace-view-40",
       "name": "Workspace",
-      "section": "Workspace"
+      "section": "Workspace",
+      "contract": "page",
+      "scenario": "dashboard-page",
+      "selector": "cedar-workspace",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/workspace.html",
+          "anchor": "class=\"workspace\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.header",
@@ -651,9 +717,7 @@
       "contract": "dialog",
       "scenario": "selection-delete",
       "selector": "cedar-folder-deletion-dialog dialog",
-      "states": [
-        "open"
-      ],
+      "states": ["open"],
       "source": [
         {
           "file": "src/app/folder-deletion-dialog.html",
@@ -670,9 +734,7 @@
       "contract": "dialog",
       "scenario": "selection-delete-simple",
       "selector": "cedar-folder-deletion-dialog dialog",
-      "states": [
-        "open"
-      ],
+      "states": ["open"],
       "source": [
         {
           "file": "src/app/folder-deletion-dialog.html",

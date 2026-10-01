@@ -96,7 +96,20 @@ const scenarios = {
       .getByRole("button", { name: "Preview Study metadata", exact: true })
       .click();
   },
+  "dashboard-page": async (page) => dashboard(page),
+  // The page's embedded editor is skipped here; CEE's own repository checks it.
+  "metadata-editor-page": async (page) => {
+    await page.goto("/instances/edit/instance");
+    await expect(page.getByLabel("Instance name", { exact: true })).toBeVisible();
+  },
 };
+// Each account page waits for its heading and for its content to finish loading.
+for (const route of ["groups", "profile", "settings", "privacy"])
+  scenarios[`${route}-page`] = async (page) => {
+    await page.goto("/" + route);
+    await expect(page.getByRole("heading", { name: route[0].toUpperCase() + route.slice(1), exact: true })).toBeVisible();
+    await expect(page.getByText("Loading…", { exact: true })).toHaveCount(0);
+  };
 for (const [key, label] of Object.entries({
   rename: "Rename",
   copy: "Copy",
