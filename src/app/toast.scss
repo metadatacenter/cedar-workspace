@@ -9,6 +9,7 @@
   max-width: calc(100vw - 32px);
   display: flex;
   align-items: center;
+  --cedar-icon-color: var(--cedar-status-success-text);
   color: var(--cedar-status-success-text);
   background: var(--cedar-status-success-surface);
   border: 1px solid var(--cedar-border-rule);

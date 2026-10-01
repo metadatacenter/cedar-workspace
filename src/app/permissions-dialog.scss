@@ -171,11 +171,11 @@ select.readonly-role:disabled {
   height: 34px;
   margin-right: var(--cedar-space-3);
   border-radius: 50%;
-  background: var(--cedar-surface-panel);
-  color: var(--cedar-text-muted);
+  background: transparent;
+  color: var(--cedar-color-primary);
 }
 .avatar.group {
-  background: var(--cedar-surface-tinted);
+  background: transparent;
   color: var(--cedar-color-primary);
 }
 .type-cell {

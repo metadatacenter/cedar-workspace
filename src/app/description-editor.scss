@@ -33,5 +33,6 @@ p {
   @include controls.primary-action;
 }
 [role="alert"] {
+  --cedar-icon-color: var(--cedar-color-error);
   color: var(--cedar-color-error);
 }

@@ -225,11 +225,21 @@ export class Workspace {
   );
   readonly moving = signal(false);
   readonly cutItems = signal<Resource[]>([]);
+  openSelectionDeletion(event: Event) {
+    this.reviewDeletion(this.selection(), event.currentTarget as HTMLElement);
+  }
+  private reviewDeletion(resources: Resource[], trigger: HTMLElement | null) {
+    trigger?.focus();
+    this.deletionSelection.set([...resources]);
+  }
+  readonly deletionSelection = signal<Resource[] | null>(null);
   readonly moveDialog = signal<Resource[] | null>(null);
+  readonly deleteDrop = signal(false);
   readonly dropTarget = signal("");
   readonly dragging = signal<Resource[]>([]);
   readonly validDropIds = computed(() => new Set(
     [...this.rows(), ...this.path()].filter(target =>
+      this.dragging().every(r => can(r, "moveResource")) &&
       target["@id"] !== this.folder &&
       validMoveShape(this.dragging(), target) &&
       (can(target, "moveIntoFolder") || this.path().some(p => p["@id"] === target["@id"]))
@@ -247,6 +257,10 @@ export class Workspace {
       this.selection().length > 0 &&
       this.selection().every((r) => can(r, "moveResource")),
   );
+  canDrag(r: Resource) {
+    const items = this.selectionIds().includes(r["@id"]) ? this.selection() : [r];
+    return items.length > 0 && items.every(item => can(item, "moveResource") || can(item, "deleteResource"));
+  }
   readonly selected = signal<Resource | undefined>(undefined);
   readonly instances = signal<Resource[]>([]);
   readonly instanceTotal = signal(0);
@@ -268,7 +282,7 @@ export class Workspace {
   constructor() {
     effect(() => {
       document.body.classList.toggle("explorer-dragging", this.dragging().length > 0);
-      document.body.classList.toggle("explorer-can-drop", !!this.dropTarget());
+      document.body.classList.toggle("explorer-can-drop", !!this.dropTarget() || this.deleteDrop());
     });
     const clock = setInterval(() => this.now.set(Date.now()), 60_000);
     void this.start();
@@ -479,6 +493,8 @@ export class Workspace {
     if (r) void this.act("open", r);
   }
   startDrag(r: Resource) {
+    this.deleteDrop.set(false);
+    this.dropTarget.set("");
     this.tooltips.suspend();
     this.menu.set(null);
     if (!this.selectionIds().includes(r["@id"])) this.setSelection([r["@id"]]);
@@ -492,19 +508,24 @@ export class Workspace {
         event.pointerPosition.x - window.scrollX,
         event.pointerPosition.y - window.scrollY,
       )
-      ?.closest<HTMLElement>("[data-drop-id]");
+      ?.closest<HTMLElement>("[data-drop-id], .selection-delete");
+    const deleteTarget = !!element?.matches(".selection-delete:not(:disabled)") && this.dragging().length > 0;
+    this.deleteDrop.set(deleteTarget);
     const id = element?.dataset["dropId"];
     this.dropTarget.set(id && this.validDropIds().has(id) ? id : "");
   }
   endDrag(event: CdkDragEnd, explorer: ExplorerSelection) {
     const target = this.dropTarget(),
+      deleting = this.deleteDrop(),
       resources = this.dragging();
+    this.deleteDrop.set(false);
     this.dropTarget.set("");
     this.dragging.set([]);
     event.source.reset();
     explorer.ignoreClick();
     this.tooltips.resume();
-    if (target) void this.moveItems(resources, target);
+    if (deleting) this.reviewDeletion(resources, this.host.nativeElement.querySelector(".selection-delete"));
+    else if (target) void this.moveItems(resources, target);
   }
   cutSelection() {
     if (this.canMoveSelection()) this.cutItems.set([...this.selection()]);

@@ -642,6 +642,44 @@
         }
       ],
       "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.selection-delete-confirmation",
+      "name": "Selected Items Delete / Confirmation",
+      "section": "Confirmation / Warning / Error",
+      "parent": "workspace.workspace-management",
+      "contract": "dialog",
+      "scenario": "selection-delete",
+      "selector": "cedar-folder-deletion-dialog dialog",
+      "states": [
+        "open"
+      ],
+      "source": [
+        {
+          "file": "src/app/folder-deletion-dialog.html",
+          "anchor": "aria-labelledby=\"folder-deletion-title\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.item-delete-confirmation",
+      "name": "Selected Items Delete / Simple Confirmation",
+      "section": "Confirmation / Warning / Error",
+      "parent": "workspace.workspace-management",
+      "contract": "dialog",
+      "scenario": "selection-delete-simple",
+      "selector": "cedar-folder-deletion-dialog dialog",
+      "states": [
+        "open"
+      ],
+      "source": [
+        {
+          "file": "src/app/folder-deletion-dialog.html",
+          "anchor": "aria-labelledby=\"folder-deletion-title\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     }
   ]
 }

@@ -23,7 +23,6 @@
 }
 .section-label {
   padding: var(--cedar-menu-item-padding-block) var(--cedar-menu-item-padding-inline);
-  color: var(--cedar-text-muted);
   font-size: var(--cedar-font-size);
 }
 [role="menuitemradio"] {
@@ -33,12 +32,9 @@
   width: 100%;
   gap: var(--cedar-space-4);
   border-radius: 0;
-  color: var(--cedar-text-primary);
-  font-weight: var(--cedar-font-weight-regular);
 }
 [aria-checked="true"] {
   background: var(--cedar-surface-selected);
-  color: var(--cedar-text-selected);
 }
 .unchecked {
   visibility: hidden;

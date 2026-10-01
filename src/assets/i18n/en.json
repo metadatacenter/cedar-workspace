@@ -465,7 +465,7 @@
   },
   "Explorer": {
     "MoveHere": "Move here",
-    "DragToFolder": "Drag onto a folder",
+    "DragToFolder": "Drag onto a folder or the trash icon",
     "MoveTo": "Move here: {{name}}",
     "Selected": "{{count}} selected",
     "Clear": "Clear selection",
@@ -524,5 +524,25 @@
       "instance": "Instances",
       "referenced": "Templates with instances"
     }
+  },
+  "SelectionDeletion": {
+    "Action": "Delete ({{count}})",
+    "Title": "Delete selected items ({{count}})?",
+    "Selected": "Selected items",
+    "Warning": "This permanently deletes the selected items and all contents of the selected folders. This cannot be undone.",
+    "Refused": "Nothing will be deleted until every selected item and folder can be deleted. Resolve the blockers below and refresh the inventory.",
+    "Total": "Total items to delete: {{count}}. Includes folders and all nested contents. Overlapping selections are counted once.",
+    "Folders": "Each folder is checked separately. A template with instances outside its folder blocks deletion, even when those instances are in another selected folder.",
+    "Inside": "Instances within each folder will be deleted before the templates they use.",
+    "References": "Templates with instances outside their deletion folder, or individually selected templates with instances: {{templates}} ({{instances}} instances). Delete those instances first, then review a new inventory.",
+    "DeleteContents": "Delete selected items and contents",
+    "Delete": "Delete selected items",
+    "InventoryUnavailable": "The complete selection could not be checked. Nothing can be deleted until all inventories, permissions and revisions are available. Close and review your selection, or refresh the inventory.",
+    "Uncertain": "Deletion stopped. Some items may already have been deleted; confirmed counts are shown below. No further selected items were attempted. Review what remains and refresh the inventory before confirming again.",
+    "SimpleConfirm": "Do you want to delete these {{count}} items?",
+    "CheckingItems": "Checking delete permissions…",
+    "ItemReferences": "Selected templates still have {{instances}} instances. Delete those instances first.",
+    "Retry": "Check again",
+    "DropToConfirm": "Drop to confirm deletion"
   }
 }

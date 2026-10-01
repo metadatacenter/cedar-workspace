@@ -254,6 +254,11 @@
         (versionChange)="setVersion($event)"
         (change)="changeFilters($event)"
       />
+      @if(selection().length) {
+      <button class="selection-delete" [class.explorer-drop-eligible]="dragging().length > 0 && !deleteDrop()" [class.explorer-delete-target]="deleteDrop()" [attr.aria-label]="'SelectionDeletion.Action' | translate: {count: selection().length}" type="button" (click)="openSelectionDeletion($event)" [disabled]="loading() || moving()">
+        <cedar-icon name="delete" />
+      </button>
+      }
       <div
         class="explorer-view-switch"
         role="group"
@@ -356,7 +361,7 @@
             [class.explorer-move-complete]="movedTarget()===r['@id']"
             tabindex="0"
             cdkDrag
-            [cdkDragDisabled]="loading() || moving() || !can(r,'moveResource') || (selectionIds().includes(r['@id']) && !canMoveSelection())"
+            [cdkDragDisabled]="loading() || moving() || !canDrag(r)"
             [cdkDragStartDelay]="{mouse:0,touch:180}"
             (cdkDragStarted)="startDrag(r)"
             (cdkDragMoved)="dragMove($event)"
@@ -367,6 +372,7 @@
               <cedar-drag-preview
                 [resources]="dragging()"
                 [destination]="dropName()"
+                [deleteTarget]="deleteDrop()"
               />
             </ng-template>
             <td>
@@ -748,3 +754,12 @@ d.resource) {
   [resource]="item"
   (closed)="preview.set(null)"
 />}
+
+@if(deletionSelection(); as items) {
+<cedar-folder-deletion-dialog
+  [resources]="items"
+  (closed)="deletionSelection.set(null)"
+  (changed)="load(true)"
+  (saved)="deletionSelection.set(null); selectionIds.set([]); saved()"
+/>
+}

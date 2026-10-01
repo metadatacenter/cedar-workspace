@@ -46,6 +46,11 @@ for (const readonly of [false, true]) {
       name: "Resource information",
     });
     await expect(info.getByRole("tab").first()).toHaveText("Details");
+    const titleTop = (await info.locator("h1").boundingBox()).y;
+    for (const selector of [".table-toolbar", "#button-create"]) {
+      const rowTop = (await page.locator(selector).boundingBox()).y;
+      expect(Math.abs(titleTop - rowTop), "Info title aligns with neighbouring top rows").toBeLessThanOrEqual(1);
+    }
     await expect(
       info.getByRole("link", { name: "Source template", exact: true }),
     ).toHaveAttribute("href", /source-template/);

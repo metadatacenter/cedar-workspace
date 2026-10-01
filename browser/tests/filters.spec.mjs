@@ -9,9 +9,17 @@ test("Type applies multiple selections, cancels drafts, clears independently and
   const type = page.getByRole("button", { name: "Type", exact: true });
   await type.click();
   const popup = page.getByRole("dialog", { name: "Filter by type" });
-  await expect(popup.getByRole('checkbox')).toHaveCount(5);
-  for (const [index, name] of ['Folder', 'Template', 'Element', 'Field', 'Instance'].entries()) {
-    await expect(popup.getByRole('checkbox').nth(index)).toHaveAccessibleName(name);
+  await expect(popup.getByRole("checkbox")).toHaveCount(5);
+  for (const [index, name] of [
+    "Folder",
+    "Template",
+    "Element",
+    "Field",
+    "Instance",
+  ].entries()) {
+    await expect(popup.getByRole("checkbox").nth(index)).toHaveAccessibleName(
+      name,
+    );
   }
   await popup.getByLabel("Folder", { exact: true }).check();
   await popup.getByLabel("Template", { exact: true }).check();
@@ -127,10 +135,46 @@ for (const width of [1440, 375]) {
         fullPage: true,
       });
     await page.getByRole("button", { name: "Apply", exact: true }).click();
-    await expect(page.getByRole("button", { name: "Type", exact: true }))
-      .toHaveText("Folder, Instance");
-    expect(await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    )).toBe(true);
+    await expect(
+      page.getByRole("button", { name: "Type", exact: true }),
+    ).toHaveText("Folder, Instance");
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
   });
 }
+
+test("mobile date filter keeps actions visible while contents scroll and after resize", async ({
+  page,
+  api,
+}) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await dashboard(page);
+  const trigger = page
+    .locator("cedar-resource-filters")
+    .getByRole("button", { name: "Last modified", exact: true });
+  await trigger.click();
+  const popup = page.getByRole("dialog", { name: "Filter by last modified" });
+  for (const height of [800, 700]) {
+    await page.setViewportSize({ width: 375, height });
+    await expect(
+      popup.getByRole("button", { name: "Apply", exact: true }),
+    ).toBeInViewport({ ratio: 1 });
+    await expect
+      .poll(() =>
+        popup
+          .locator(".date-body")
+          .evaluate((el) => el.scrollHeight > el.clientHeight),
+      )
+      .toBe(true);
+  }
+  await popup
+    .getByRole("button", { name: "Custom date range", exact: true })
+    .click();
+  await popup.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(popup).toBeHidden();
+  await expect(trigger).toBeFocused();
+  await expect(trigger).toHaveText("Last modified");
+});

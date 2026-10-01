@@ -1,3 +1,4 @@
+import { selectionFixture, selectDeletion } from "./selection-deletion-fixture.mjs";
 import { readFileSync } from "node:fs";
 import { test, expect, dashboard, action, resource } from "./fixtures.mjs";
 import { surfaceCases, checkSurface } from "./surface-contracts.generated.mjs";
@@ -140,6 +141,8 @@ for (const kind of ["errors", "warnings"])
       editor.dispatchEvent(new CustomEvent("change"));
     });
   };
+scenarios['selection-delete-simple'] = async page => { await selectionFixture(page); await selectDeletion(page, ['instance1','separate']); };
+scenarios['selection-delete'] = async page => { await selectionFixture(page); await selectDeletion(page); };
 scenarios['recursive-delete-owner'] = page => openFolderDeletion(page, deletionOwnerRefusal);
 for (const kind of ['confirmation', 'permissions', 'references']) {
   scenarios['recursive-delete-' + kind] = async page => {
@@ -186,7 +189,7 @@ async function checkDialogSpacing(dialog) {
 
 const stackedDialogs = new Set([
   'new-folder', 'rename', 'copy', 'move', 'publish', 'draft', 'delete', 'make-open',
-  'confirmation', 'recursive-delete-owner', 'recursive-delete-confirmation',
+  'selection-delete-simple', 'selection-delete', 'confirmation', 'recursive-delete-owner', 'recursive-delete-confirmation',
   'recursive-delete-permissions', 'recursive-delete-references',
 ]);
 

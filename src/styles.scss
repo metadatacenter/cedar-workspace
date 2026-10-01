@@ -6,6 +6,7 @@
 @use "@org.metadatacenter/cedar-design-tokens/fonts/roboto-400";
 @use "@org.metadatacenter/cedar-design-tokens/fonts/roboto-500";
 @import "@org.metadatacenter/cedar-design-tokens/custom-properties.css";
+@import "@org.metadatacenter/cedar-design-tokens/icon-contract.css";
 @import "@org.metadatacenter/cedar-design-tokens/native-choices.css";
 * {
   box-sizing: border-box;
@@ -412,8 +413,7 @@ tr.selected:hover {
   position: relative;
   background: var(--cedar-color-on-primary);
   border-left: 1px solid var(--cedar-border-rule);
-  padding: var(--cedar-control-height-default) var(--cedar-space-4)
-    var(--cedar-space-4);
+  padding: var(--cedar-space-2) var(--cedar-space-4) var(--cedar-space-4);
   overflow-wrap: anywhere;
 }
 .information h1 {
@@ -546,6 +546,7 @@ dd small {
   align-items: center;
 }
 .alert {
+  --cedar-icon-color: var(--cedar-status-error-text);
   color: var(--cedar-status-error-text);
   background: var(--cedar-status-error-surface);
 }
@@ -669,6 +670,7 @@ label {
   }
   .information {
     width: 100%;
+    padding-top: var(--cedar-control-height-default);
   }
   .paging {
     gap: var(--cedar-space-1);
@@ -1005,11 +1007,37 @@ th,
   color: var(--cedar-text-primary);
 }
 
-// Only existing menu glyphs are themed; labels keep their text color.
+// Menu glyphs and labels share the active theme; filter icons follow it too.
 .header-menu nav cedar-icon,
 .new-menu nav cedar-icon,
 .resource-menu cedar-icon,
 cedar-sort-menu [role="menuitemradio"] cedar-icon,
 cedar-resource-filters .popover cedar-icon {
   color: var(--cedar-color-primary);
+}
+
+// Shared semantic destructive roles; ordinary control/focus geometry remains centralized.
+.destructive-action {
+  color: var(--cedar-text-destructive);
+  background: var(--cedar-status-error-surface);
+  &:hover:not(:disabled), &:active:not(:disabled) {
+    color: var(--cedar-status-error-surface);
+    background: var(--cedar-text-destructive);
+  }
+}
+.selection-delete {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cedar-space-2);
+  &:hover:not(:disabled), &:active:not(:disabled) {
+    color: var(--cedar-text-destructive);
+    background: var(--cedar-status-error-surface);
+  }
+}
+
+.selection-delete.explorer-delete-target {
+  outline: var(--cedar-focus-ring-width) solid var(--cedar-text-destructive);
+  outline-offset: var(--cedar-focus-ring-offset);
+  color: var(--cedar-text-destructive);
+  background: var(--cedar-status-error-surface);
 }

@@ -395,3 +395,25 @@ for (const target of ['.explorer-name', '.resource-icon']) {
     await expect(page.locator('.explorer-item.selected')).toHaveCount(2);
   });
 }
+
+for (const grid of [true, false]) {
+  // List names retain native link navigation; the icon and row space select.
+  for (const target of grid ? ['name', 'icon', 'body'] : ['icon', 'body']) {
+    test(`Shift-click ${target} extends selection in ${grid ? 'grid' : 'list'} without opening an item`, async ({page, api}) => {
+      await setup(page);
+      if (!grid) await page.getByRole('button', {name:'List view',exact:true}).click();
+      const first = page.locator('[data-resource-id="a"]');
+      const last = page.locator('[data-resource-id="c"]');
+      await first.locator(grid ? '.explorer-name' : '.resource-icon').click();
+      await expect(first).toHaveAttribute('aria-selected', 'true');
+      const url = page.url();
+      const endpoint = target === 'name' ? last.locator(grid ? '.explorer-name' : 'a').first()
+        : target === 'icon' ? last.locator('.resource-icon') : last.locator('td').nth(1);
+      await endpoint.click({modifiers:['Shift']});
+      await expect(page.locator('.explorer-item.selected')).toHaveCount(3);
+      await expect(page.getByRole('button', {name:'Delete (3)',exact:true})).toBeVisible();
+      expect(page.url()).toBe(url);
+      expect(page.context().pages()).toHaveLength(1);
+    });
+  }
+}

@@ -465,7 +465,7 @@
   },
   "Explorer": {
     "MoveHere": "Áthelyezés ide",
-    "DragToFolder": "Húzd egy mappára",
+    "DragToFolder": "Húzd egy mappára vagy a kuka ikonra",
     "MoveTo": "Áthelyezés ide: {{name}}",
     "Selected": "{{count}} kijelölve",
     "Clear": "Kijelölés törlése",
@@ -524,5 +524,25 @@
       "instance": "Példányok",
       "referenced": "Példányokkal rendelkező sablonok"
     }
+  },
+  "SelectionDeletion": {
+    "Action": "Törlés ({{count}})",
+    "Title": "Törli a kijelölt elemeket ({{count}})?",
+    "Selected": "Kijelölt elemek",
+    "Warning": "Ez véglegesen törli a kijelölt elemeket és a kijelölt mappák teljes tartalmát. A művelet nem vonható vissza.",
+    "Refused": "Semmi sem törlődik, amíg nem törölhető minden kijelölt elem és mappa. Szüntesse meg az alábbi akadályokat, majd frissítse a leltárt.",
+    "Total": "Törlendő elemek összesen: {{count}}. A mappákat és teljes tartalmukat is tartalmazza. Az átfedő kijelölések csak egyszer szerepelnek.",
+    "Folders": "A rendszer minden mappát külön ellenőriz. A mappán kívüli példányokkal rendelkező sablon megakadályozza a törlést akkor is, ha a példányok másik kijelölt mappában vannak.",
+    "Inside": "Az egyes mappákban a példányok a hozzájuk tartozó sablonok előtt törlődnek.",
+    "References": "A törlendő mappájukon kívüli példányokkal rendelkező, illetve egyenként kijelölt, példányokkal rendelkező sablonok: {{templates}} ({{instances}} példány). Először törölje a példányokat, majd ellenőrizze az új leltárt.",
+    "DeleteContents": "Kijelölt elemek és tartalmuk törlése",
+    "Delete": "Kijelölt elemek törlése",
+    "InventoryUnavailable": "A teljes kijelölés nem ellenőrizhető. A törléshez minden leltárnak, jogosultságnak és verziónak elérhetőnek kell lennie. Zárja be az ablakot és ellenőrizze a kijelölést, vagy frissítse a leltárt.",
+    "Uncertain": "A törlés leállt. Egyes elemek már törlődhettek; az igazolt számok alább láthatók. A rendszer nem kísérelte meg a további kijelölt elemek törlését. Ellenőrizze a megmaradt elemeket és frissítse a leltárt az újabb megerősítés előtt.",
+    "SimpleConfirm": "Törölni szeretné ezt a(z) {{count}} elemet?",
+    "CheckingItems": "Törlési jogosultságok ellenőrzése…",
+    "ItemReferences": "A kijelölt sablonokhoz még {{instances}} példány tartozik. Először törölje ezeket a példányokat.",
+    "Retry": "Újraellenőrzés",
+    "DropToConfirm": "Ejtse ide a törlés megerősítéséhez"
   }
 }

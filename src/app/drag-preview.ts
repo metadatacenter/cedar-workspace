@@ -18,9 +18,11 @@ import { Resource, title } from "./resource";
         @if(resources().length > 1) {
           <span class="count">{{'Explorer.Selected' | translate:{count:resources().length} }}</span>
         }
-        <div class="destination" [class.ready]="destination()">
-          <cedar-icon name="folder" size="small" />
-          <span>{{destination() ? ('Explorer.MoveTo' | translate:{name:destination()}) : ('Explorer.DragToFolder' | translate)}}</span>
+        <div class="destination" [class.ready]="destination()" [class.delete-target]="deleteTarget()">
+          @if (deleteTarget() || destination()) {
+            <cedar-icon [name]="deleteTarget() ? 'delete' : 'folder'" size="small" />
+          }
+          <span>{{deleteTarget() ? ('SelectionDeletion.DropToConfirm' | translate) : destination() ? ('Explorer.MoveTo' | translate:{name:destination()}) : ('Explorer.DragToFolder' | translate)}}</span>
         </div>
       </div>
     </div>
@@ -30,5 +32,6 @@ import { Resource, title } from "./resource";
 export class DragPreview {
   readonly resources = input.required<Resource[]>();
   readonly destination = input("");
+  readonly deleteTarget = input(false);
   readonly title = title;
 }

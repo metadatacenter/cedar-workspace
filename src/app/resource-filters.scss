@@ -22,9 +22,17 @@
   min-width: 280px;
   max-width: 100%;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: min(70vh, var(--filter-available-height, 70vh));
 }
 .date {
   width: 640px;
+}
+.type-options,
+.date-body {
+  min-height: 0;
+  overflow-y: auto;
 }
 .type-options {
   display: grid;
@@ -58,7 +66,6 @@ input[type="checkbox"] {
   display: flex;
   align-items: center;
   gap: var(--cedar-space-3);
-  color: var(--cedar-text-primary);
   border-radius: 0;
 }
 .check {
@@ -67,7 +74,6 @@ input[type="checkbox"] {
 }
 .presets button.selected {
   background: var(--cedar-surface-selected);
-  color: var(--cedar-text-selected);
 }
 .range {
   display: flex;
@@ -90,6 +96,7 @@ input[type="checkbox"] {
   margin: 0;
 }
 footer {
+  flex: none;
   display: flex;
   align-items: center;
   border-top: 1px solid var(--cedar-border-rule);
@@ -107,10 +114,6 @@ footer span {
   .presets {
     border-right: 0;
     border-bottom: 1px solid var(--cedar-border-rule);
-  }
-  .popover {
-    max-height: 70vh;
-    overflow-y: auto;
   }
 }
 

@@ -1,3 +1,9 @@
+import {
+  SelectionInventoryError,
+  SelectionDeletion,
+  SelectionPlan,
+  emptyCounts,
+} from "./selection-deletion";
 import { Tooltip } from "./tooltip";
 import { resourceTypes } from "./listing-filters";
 import {
@@ -41,7 +47,7 @@ export interface DeletionPlan {
   templatesWithOutsideInstances: number;
   instancesOutside: number;
 }
-interface DeletionOutcome {
+export interface DeletionOutcome {
   status: "completed" | "changed" | "blocked" | "stopped";
   deleted: Record<ResourceType, number>;
   remaining: number;
@@ -56,6 +62,10 @@ interface DeletionOutcome {
     `
       dialog {
         width: min(48rem, calc(100vw - 2 * var(--cedar-space-4)));
+      }
+      dialog.simple-confirmation {
+        width: fit-content;
+        max-width: calc(100vw - 2 * var(--cedar-space-4));
       }
       footer {
         flex-wrap: wrap;
@@ -95,7 +105,8 @@ interface DeletionOutcome {
         overflow-wrap: anywhere;
       }
       th {
-        padding: var(--cedar-table-cell-padding-block) var(--cedar-table-cell-padding-inline);
+        padding: var(--cedar-table-cell-padding-block)
+          var(--cedar-table-cell-padding-inline);
         overflow-wrap: normal;
       }
       .inventory-name {
@@ -125,8 +136,33 @@ interface DeletionOutcome {
 })
 export class FolderDeletionDialog implements AfterViewInit, OnDestroy {
   readonly resourceTypes = resourceTypes;
-  readonly artifactTypes = resourceTypes.filter((type) => type.value !== "folder");
-  @Input({ required: true }) resource!: Resource;
+  readonly artifactTypes = resourceTypes.filter(
+    (type) => type.value !== "folder",
+  );
+  @Input() resource!: Resource;
+  @Input() resources: Resource[] = [];
+  private readonly selectionDeletion = inject(SelectionDeletion);
+  private prepared: SelectionPlan | null = null;
+  private completedIds = new Set<string>();
+  readonly confirmedCounts = signal(emptyCounts());
+  get bulk() {
+    return this.resources.length > 0;
+  }
+  get selectedFolderCount() {
+    return this.resources.filter((r) => r.resourceType === "folder").length;
+  }
+  get simpleConfirmation() {
+    return this.bulk && this.selectedFolderCount === 0;
+  }
+  get selectedNames() {
+    return this.resources.map((r) => ({
+      resource: r,
+      name: title(r, this.i18n.t("Common.Untitled")),
+    }));
+  }
+  readonly totalCount = computed(() =>
+    Object.values(this.plan()?.counts ?? {}).reduce((n, count) => n + count, 0),
+  );
   @Output() closed = new EventEmitter<void>();
   @Output() saved = new EventEmitter<void>();
   @Output() changed = new EventEmitter<void>();
@@ -134,7 +170,9 @@ export class FolderDeletionDialog implements AfterViewInit, OnDestroy {
   private readonly api = inject(Backend);
   private readonly i18n = inject(I18n);
   readonly plan = signal<DeletionPlan | null>(null);
-  readonly subfolderCount = computed(() => Math.max(0, (this.plan()?.counts.folder ?? 0) - 1));
+  readonly subfolderCount = computed(() =>
+    Math.max(0, (this.plan()?.counts.folder ?? 0) - 1),
+  );
   private readonly itemsById = computed(
     () =>
       new Map(
@@ -173,10 +211,30 @@ export class FolderDeletionDialog implements AfterViewInit, OnDestroy {
     this.error.set("");
     this.plan.set(null);
     try {
+      if (this.bulk) {
+        this.prepared = null;
+        const prepared = await this.selectionDeletion.prepare(
+          this.resources.filter((r) => !this.completedIds.has(r["@id"])),
+        );
+        if (this.alive) {
+          this.prepared = prepared;
+          this.plan.set(prepared.inventory);
+        }
+        return;
+      }
       const response = await this.api.request<DeletionPlan>(this.path);
       if (this.alive) this.plan.set(response.data);
     } catch (e) {
-      if (this.alive) this.error.set(this.errorMessage(e, false));
+      if (this.alive)
+        this.error.set(
+          e instanceof SelectionInventoryError
+            ? title(e.resource, this.i18n.t("Common.Untitled")) +
+                ": " +
+                this.errorMessage(e.failure, false)
+            : this.bulk
+              ? this.i18n.t("SelectionDeletion.InventoryUnavailable")
+              : this.errorMessage(e, false),
+        );
     } finally {
       if (this.alive) this.busy.set(false);
     }
@@ -184,6 +242,10 @@ export class FolderDeletionDialog implements AfterViewInit, OnDestroy {
   async confirm() {
     const plan = this.plan();
     if (this.busy() || !plan?.allowed) return;
+    if (this.bulk) {
+      await this.confirmSelection();
+      return;
+    }
     this.busy.set(true);
     this.deleting.set(true);
     this.error.set("");
@@ -210,6 +272,53 @@ export class FolderDeletionDialog implements AfterViewInit, OnDestroy {
       this.plan.set(null);
       this.error.set(this.errorMessage(e, true));
       this.changed.emit();
+    } finally {
+      if (this.alive) {
+        this.busy.set(false);
+        this.deleting.set(false);
+      }
+    }
+  }
+  private async confirmSelection() {
+    if (!this.prepared) return;
+    const prepared = this.prepared;
+    this.prepared = null; // Each confirmation is consumed once, even if the response is lost.
+    this.busy.set(true);
+    this.deleting.set(true);
+    this.error.set("");
+    this.outcome.set(null);
+    try {
+      for (const root of prepared.roots) {
+        const result = await this.selectionDeletion.execute(root);
+        if (!this.alive) return;
+        const counts = { ...this.confirmedCounts() };
+        for (const type of this.resourceTypes)
+          counts[type.value] += result.deleted[type.value];
+        this.confirmedCounts.set(counts);
+        if (result.status !== "completed") {
+          this.plan.set(null);
+          this.outcome.set({ ...result, deleted: counts });
+          this.changed.emit();
+          return;
+        }
+        this.completedIds.add(root.resource["@id"]);
+        root.plan?.items.forEach((item) => {
+          if (item.id) this.completedIds.add(item.id);
+        });
+      }
+      this.dialog.nativeElement.close();
+      this.saved.emit();
+    } catch (e) {
+      if (this.alive) {
+        this.plan.set(null);
+        this.error.set(this.i18n.t("SelectionDeletion.Uncertain"));
+        this.outcome.set({
+          status: "stopped",
+          deleted: this.confirmedCounts(),
+          remaining: 0,
+        });
+        this.changed.emit();
+      }
     } finally {
       if (this.alive) {
         this.busy.set(false);
