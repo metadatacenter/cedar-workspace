@@ -23,9 +23,9 @@ export async function tokenStyles(locator, rules) {
 }
 
 export const menuItemSpacing = {
-  'min-height': '--cedar-menu-item-height',
-  'padding-top': '--cedar-menu-item-padding-block',
-  'padding-bottom': '--cedar-menu-item-padding-block',
+  'min-height': '--cedar-control-height-default',
+  'padding-top': '--cedar-space-2',
+  'padding-bottom': '--cedar-space-2',
 };
 
 export const feedbackSpacing = {

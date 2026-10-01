@@ -10,7 +10,7 @@
 .multiple::before {
   background: var(--cedar-surface-raised);
   border: 1px solid var(--cedar-color-primary);
-  border-radius: var(--cedar-control-radius-default);
+  border-radius: var(--cedar-radius);
 }
 .multiple::before {
   content: "";
@@ -22,7 +22,7 @@
   position: relative;
   padding: var(--cedar-space-3);
   color: var(--cedar-text-primary);
-  box-shadow: var(--cedar-drag-preview-shadow);
+  box-shadow: var(--cedar-shadow-overlay);
 }
 .item,
 .destination {
@@ -46,9 +46,9 @@ cedar-icon {
   display: inline-block;
   margin-top: var(--cedar-space-2);
   padding: var(--cedar-space-1) var(--cedar-space-2);
-  border-radius: var(--cedar-control-radius-default);
+  border-radius: var(--cedar-radius);
   background: var(--cedar-surface-selected);
-  color: var(--cedar-text-selected);
+  color: var(--cedar-text-primary);
 }
 .destination {
   margin-top: var(--cedar-space-3);
@@ -63,5 +63,5 @@ cedar-icon {
 
 .delete-target,
 .delete-target cedar-icon {
-  color: var(--cedar-text-destructive);
+  color: var(--cedar-status-error-text);
 }

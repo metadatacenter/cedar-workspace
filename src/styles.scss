@@ -44,7 +44,7 @@ summary {
 button {
   min-height: var(--cedar-control-height-default);
   border: 0;
-  border-radius: var(--cedar-control-radius-default);
+  border-radius: var(--cedar-radius);
   padding: var(--cedar-space-2) var(--cedar-space-3);
   background: transparent;
   color: var(--cedar-color-primary);
@@ -59,7 +59,7 @@ input,
 select,
 textarea {
   border: 1px solid var(--cedar-control-border-default);
-  border-radius: var(--cedar-control-radius-default);
+  border-radius: var(--cedar-radius);
   min-height: var(--cedar-control-height-default);
   padding: var(--cedar-space-2);
   color: var(--cedar-text-primary);
@@ -84,7 +84,7 @@ textarea {
   gap: var(--cedar-space-3);
   width: 230px;
   flex-shrink: 0;
-  color: var(--cedar-color-artifact-title);
+  color: var(--cedar-text-title);
   font-weight: var(--cedar-font-weight-medium);
 }
 .brand:hover {
@@ -94,7 +94,7 @@ textarea {
   width: var(--cedar-control-height-default);
   height: var(--cedar-control-height-default);
   object-fit: contain;
-  background: var(--cedar-color-component-title);
+  background: var(--cedar-text-title);
   border-radius: 50%;
 }
 .search {
@@ -103,7 +103,7 @@ textarea {
   max-width: 1100px;
   min-width: 0;
   border: 1px solid var(--cedar-control-border-default);
-  border-radius: calc(var(--cedar-control-radius-default) * 4);
+  border-radius: var(--cedar-radius-pill);
 }
 .search:focus-within {
   @include controls.focus-ring;
@@ -127,8 +127,8 @@ textarea {
   color: var(--cedar-text-muted);
 }
 .search button {
-  border-radius: 0 calc(var(--cedar-control-radius-default) * 4)
-    calc(var(--cedar-control-radius-default) * 4) 0;
+  border-radius: 0 var(--cedar-radius-pill)
+    var(--cedar-radius-pill) 0;
   color: inherit;
   font-size: var(--cedar-font-size-heading);
 }
@@ -182,14 +182,6 @@ textarea {
 .new-menu nav cedar-icon {
   flex-shrink: 0;
 }
-.workspace,
-.resource-list {
-  // CEE compact controls plus one small gutter per side, including in table cells.
-  --cedar-table-cell-padding-block: var(--cedar-space-1);
-  --cedar-table-row-height: calc(
-    var(--cedar-control-height-default) + 2 * var(--cedar-space-1)
-  );
-}
 .workspace {
   display: grid;
   grid-template-columns: 250px minmax(0, 1fr) 340px;
@@ -213,7 +205,7 @@ textarea {
 .navigation {
   position: relative;
   padding: var(--cedar-space-2) var(--cedar-space-4) var(--cedar-space-4);
-  border-right: 1px solid var(--cedar-border-rule-light);
+  border-right: 1px solid var(--cedar-border-rule);
 }
 .panel-toggle {
   display: inline-flex;
@@ -228,7 +220,7 @@ textarea {
 .panel-toggle:hover,
 .panel-toggle[aria-expanded="true"] {
   color: var(--cedar-color-primary);
-  background: var(--cedar-surface-authoring);
+  background: var(--cedar-surface-subtle);
 }
 .left-collapsed .navigation,
 .right-collapsed .information {
@@ -241,7 +233,7 @@ textarea {
 }
 .primary {
   @include controls.primary-action;
-  border-radius: var(--cedar-control-radius-default);
+  border-radius: var(--cedar-radius);
   padding: var(--cedar-space-2) var(--cedar-space-4);
   display: inline-block;
   list-style: none;
@@ -318,7 +310,6 @@ h6,
 strong,
 b,
 .destinations .active,
-.tabs [aria-selected="true"],
 .account-card dt,
 .account-group-list [aria-current="true"],
 .account-nav [aria-current="page"],
@@ -334,7 +325,7 @@ th:first-child {
   width: 62%;
 }
 th button {
-  padding: var(--cedar-space-1) var(--cedar-table-cell-padding-inline);
+  padding: var(--cedar-space-1) var(--cedar-space-3);
 }
 td {
   @include patterns.table-cell;
@@ -352,12 +343,12 @@ td:not(:first-child) {
   white-space: nowrap;
 }
 tbody tr:hover {
-  background: var(--cedar-surface-row-hover);
+  background: var(--cedar-surface-subtle);
 }
 tr.selected,
 tr.selected:hover {
   background: var(--cedar-surface-selected);
-  color: var(--cedar-text-selected);
+  color: var(--cedar-text-primary);
 }
 .resource-icon {
   display: inline-block;
@@ -431,17 +422,13 @@ tr.selected:hover {
   margin-right: var(--cedar-space-3);
 }
 .tabs {
-  display: flex;
+  @include patterns.tabs;
+  flex-wrap: nowrap;
   margin-top: var(--cedar-space-2);
-  border-bottom: 1px solid var(--cedar-border-rule);
 }
 .tabs button {
+  @include patterns.tab;
   flex: 1;
-  border-radius: 0;
-}
-.tabs [aria-selected="true"] {
-  border-bottom: 2px solid var(--cedar-color-primary);
-  margin-bottom: -1px;
 }
 dl {
   display: grid;
@@ -452,7 +439,7 @@ dt,
 dd {
   margin: 0;
   padding: var(--cedar-space-4) 0;
-  border-bottom: 1px solid var(--cedar-border-rule-light);
+  border-bottom: 1px solid var(--cedar-border-rule);
 }
 .information dl {
   display: grid;
@@ -463,7 +450,7 @@ dd {
 .information dd {
   margin: 0;
   padding: var(--cedar-space-2) 0;
-  border-bottom: 1px solid var(--cedar-border-rule-light);
+  border-bottom: 1px solid var(--cedar-border-rule);
 }
 .information dt {
   @include patterns.field-label($size: body);
@@ -493,7 +480,7 @@ dd small {
 .information .info-section {
   margin: 0;
   padding: var(--cedar-space-2) 0;
-  border-bottom: 1px solid var(--cedar-border-rule-light);
+  border-bottom: 1px solid var(--cedar-border-rule);
 }
 .info-section .description-heading {
   @include patterns.field-label($size: body);
@@ -544,8 +531,8 @@ dd small {
   background: var(--cedar-status-error-surface);
 }
 .notice {
-  color: var(--cedar-status-info-text);
-  background: var(--cedar-status-info-surface);
+  color: var(--cedar-color-primary-strong);
+  background: var(--cedar-surface-selected);
 }
 .sr-only {
   position: absolute;
@@ -566,7 +553,7 @@ dialog footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--cedar-dialog-action-gap);
+  gap: var(--cedar-space-3);
 }
 dialog h2 {
   @include patterns.artifact-title;
@@ -599,8 +586,8 @@ fieldset {
 label {
   display: flex;
   flex-direction: column;
-  gap: var(--cedar-form-label-gap);
-  margin: var(--cedar-form-field-gap) 0;
+  gap: var(--cedar-space-2);
+  margin: var(--cedar-space-4) 0;
 }
 .check {
   flex-direction: row;
@@ -632,7 +619,7 @@ label {
     padding: var(--cedar-space-3);
   }
   td {
-    padding-inline: var(--cedar-table-cell-padding-inline-authoring);
+    padding-inline: var(--cedar-space-2);
   }
 }
 @media (max-width: 760px) {
@@ -800,7 +787,7 @@ td:first-child a {
   font-size: var(--cedar-font-size-element-heading);
 }
 .account-card h3 {
-  font-size: var(--cedar-font-size-lead);
+  font-size: var(--cedar-font-size);
 }
 .account-card dt {
   margin-top: var(--cedar-space-3);
@@ -876,7 +863,7 @@ td:first-child a {
   text-decoration: underline;
 }
 .account-policy {
-  line-height: 1.6;
+  line-height: var(--cedar-control-line-height-default);
 }
 .account-policy li {
   margin-bottom: var(--cedar-space-3);
@@ -899,7 +886,7 @@ textarea {
   padding: 0;
   margin-bottom: var(--cedar-space-4);
   border: 1px solid var(--cedar-border-rule);
-  border-radius: var(--cedar-control-radius-authoring);
+  border-radius: var(--cedar-radius);
   overflow: hidden;
 }
 .account-section-heading {
@@ -908,8 +895,8 @@ textarea {
   gap: var(--cedar-space-2);
   margin: 0;
   padding: var(--cedar-space-3) var(--cedar-space-4);
-  color: var(--cedar-color-artifact-title);
-  background: var(--cedar-surface-panel);
+  color: var(--cedar-text-title);
+  background: var(--cedar-surface-subtle);
   border-bottom: 1px solid var(--cedar-border-rule);
 }
 
@@ -983,7 +970,7 @@ th,
   @include patterns.menu-surface;
   @include overlay-spacing.feedback;
   // Small help labels need less elevation than an interactive dropdown menu.
-  box-shadow: var(--cedar-tooltip-shadow);
+  box-shadow: var(--cedar-shadow-overlay);
   position: fixed;
   z-index: var(--cedar-layer-tooltip);
   visibility: hidden;
@@ -1011,11 +998,11 @@ cedar-resource-filters .popover cedar-icon {
 
 // Shared semantic destructive roles; ordinary control/focus geometry remains centralized.
 .destructive-action {
-  color: var(--cedar-text-destructive);
+  color: var(--cedar-status-error-text);
   background: var(--cedar-status-error-surface);
   &:hover:not(:disabled), &:active:not(:disabled) {
     color: var(--cedar-status-error-surface);
-    background: var(--cedar-text-destructive);
+    background: var(--cedar-status-error-text);
   }
 }
 .selection-delete {
@@ -1023,14 +1010,14 @@ cedar-resource-filters .popover cedar-icon {
   align-items: center;
   gap: var(--cedar-space-2);
   &:hover:not(:disabled), &:active:not(:disabled) {
-    color: var(--cedar-text-destructive);
+    color: var(--cedar-status-error-text);
     background: var(--cedar-status-error-surface);
   }
 }
 
 .selection-delete.explorer-delete-target {
-  outline: var(--cedar-focus-ring-width) solid var(--cedar-text-destructive);
+  outline: var(--cedar-focus-ring-width) solid var(--cedar-status-error-text);
   outline-offset: var(--cedar-focus-ring-offset);
-  color: var(--cedar-text-destructive);
+  color: var(--cedar-status-error-text);
   background: var(--cedar-status-error-surface);
 }

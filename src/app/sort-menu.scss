@@ -19,10 +19,10 @@
   padding-block: var(--cedar-space-2);
 }
 [role="group"] + [role="group"] {
-  border-top: 1px solid var(--cedar-overlay-border);
+  border-top: 1px solid var(--cedar-border-rule);
 }
 .section-label {
-  padding: var(--cedar-menu-item-padding-block) var(--cedar-menu-item-padding-inline);
+  padding: var(--cedar-space-2) var(--cedar-space-3);
   font-size: var(--cedar-font-size);
 }
 [role="menuitemradio"] {

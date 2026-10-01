@@ -53,7 +53,7 @@ for(const width of [1440,375]) test(`selection confirmation layout, central styl
   await expect(dialog.getByRole('button',{name:'Delete selected items and contents'})).toBeInViewport();
   expect((await new AxeBuilder({page}).include('cedar-folder-deletion-dialog').analyze()).violations).toEqual([]);
   const color=await dialog.locator('.destructive-action').evaluate(el=>{
-    const probe=document.createElement('span');probe.style.color='var(--cedar-text-destructive)';el.append(probe);
+    const probe=document.createElement('span');probe.style.color='var(--cedar-status-error-text)';el.append(probe);
     const colors={actual:getComputedStyle(el).color,expected:getComputedStyle(probe).color};probe.remove();return colors;
   });
   expect(color.actual).toBe(color.expected);

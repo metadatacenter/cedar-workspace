@@ -197,7 +197,7 @@ async function checkOverlaySpacing(page, surface) {
   const target = page.locator(surface.selector);
   if (stackedDialogs.has(surface.scenario)) return checkDialogSpacing(target);
   if (surface.contract === 'menu') {
-    await tokenStyles(target, {'padding-top': '--cedar-menu-padding', 'padding-bottom': '--cedar-menu-padding'});
+    await tokenStyles(target, {'padding-top': '--cedar-space-1', 'padding-bottom': '--cedar-space-1'});
     await tokenStyles(target.locator('button, a'), menuItemSpacing);
     return;
   }
@@ -302,7 +302,7 @@ test("surface contracts detect computed-style drift and honor host tokens", asyn
   await scenarios["artifact-menu"](page);
   const menu = page.locator(surface.selector);
   await menu.evaluate((element) =>
-    element.style.setProperty("--cedar-overlay-surface", "rgb(210, 220, 230)"),
+    element.style.setProperty("--cedar-surface-raised", "rgb(210, 220, 230)"),
   );
   await checkSurface(page, surface, "open", expect, testInfo);
   await menu.evaluate(

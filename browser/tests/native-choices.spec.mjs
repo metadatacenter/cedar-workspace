@@ -49,7 +49,7 @@ test('new native checkbox and radio controls inherit tokens in every state', asy
     const host = document.querySelector('cedar-workspace');
     // A different host palette proves this is token consumption, not a matching hex.
     host.style.setProperty('--cedar-color-primary', 'rgb(120, 40, 90)');
-    host.style.setProperty('--cedar-focus-ring-color', 'rgb(120, 40, 90)');
+    host.style.setProperty('--cedar-color-primary', 'rgb(120, 40, 90)');
     const form = document.createElement('form');
     form.id = 'native-choice-contract';
     for (const type of ['checkbox','radio']) for (const state of ['checked','unchecked','disabled']) {

@@ -17,7 +17,7 @@
   display: flex;
   margin-left: auto;
   border: 1px solid var(--cedar-border-rule);
-  border-radius: calc(var(--cedar-control-radius-default) * 1.25);
+  border-radius: var(--cedar-radius);
   overflow: hidden;
 }
 .explorer-view-switch button {
@@ -109,7 +109,7 @@ body.explorer-dragging.explorer-can-drop * {
   display: flex;
   align-items: center;
   background: inherit;
-  border-radius: var(--cedar-control-radius-default);
+  border-radius: var(--cedar-radius);
 }
 .explorer-grid .row-actions > a {
   margin: 0;
@@ -123,7 +123,7 @@ body.explorer-dragging.explorer-can-drop * {
 }
 .selecto-selection {
   border: 1px solid var(--cedar-color-primary) !important;
-  background: var(--cedar-selection-marquee-surface) !important;
+  background: color-mix(in srgb, var(--cedar-color-primary) 13%, transparent) !important;
 }
 .explorer-grid .explorer-schema {
   padding-block: calc(var(--cedar-space-1) + var(--cedar-space-1) / 2);
@@ -137,7 +137,7 @@ body.explorer-dragging.explorer-can-drop * {
   max-height: 36px;
 }
 .explorer-grid .explorer-schema td:nth-child(2) {
-  line-height: var(--cedar-font-size-lead);
+  line-height: var(--cedar-font-size);
   flex-shrink: 0;
 }
 .explorer-grid .explorer-heading {

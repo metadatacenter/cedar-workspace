@@ -1,7 +1,7 @@
 .chip {
   display: inline-flex;
   border: 1px solid var(--cedar-control-border-default);
-  border-radius: calc(var(--cedar-control-radius-default) * 3);
+  border-radius: var(--cedar-radius-pill);
   overflow: hidden;
 }
 button {
@@ -13,10 +13,10 @@ button {
 }
 .active {
   background: var(--cedar-surface-selected);
-  border-color: var(--cedar-border-selected);
+  border-color: var(--cedar-color-primary);
 }
 .active button {
-  color: var(--cedar-text-selected);
+  color: var(--cedar-text-primary);
 }
 .clear {
   border-left: 1px solid var(--cedar-border-rule);

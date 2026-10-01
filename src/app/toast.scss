@@ -13,8 +13,8 @@
   color: var(--cedar-status-success-text);
   background: var(--cedar-status-success-surface);
   border: 1px solid var(--cedar-border-rule);
-  border-radius: var(--cedar-control-radius-default);
-  box-shadow: var(--cedar-menu-shadow);
+  border-radius: var(--cedar-radius);
+  box-shadow: var(--cedar-shadow-overlay);
 }
 button {
   color: inherit;

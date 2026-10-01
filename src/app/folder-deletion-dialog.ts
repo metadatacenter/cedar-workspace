@@ -105,8 +105,8 @@ export interface DeletionOutcome {
         overflow-wrap: anywhere;
       }
       th {
-        padding: var(--cedar-table-cell-padding-block)
-          var(--cedar-table-cell-padding-inline);
+        padding: var(--cedar-space-2)
+          var(--cedar-space-3);
         overflow-wrap: normal;
       }
       .inventory-name {
