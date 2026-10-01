@@ -217,6 +217,7 @@ for (const [name, type] of [['nihField', 'NIH Grant ID'], ['attributeField', 'At
     await expect(dialog.locator('[aria-busy]')).toHaveAttribute('aria-busy','false');
     const field = dialog.locator('cedar-embeddable-field');
     await expect(field.locator('.cee-field-type')).toHaveText(type);
+    await expect(field.locator('.cee-field-type [data-field-type-icon]')).toBeVisible();
     await expect(field.locator('.cee-field-spec-description')).toHaveText('A description supplied by the field artifact.');
     await expect(dialog.locator('section > p')).toHaveCount(0);
     if (name === 'nihField') await expect(field.locator('.cee-spec-box')).toBeEmpty();
