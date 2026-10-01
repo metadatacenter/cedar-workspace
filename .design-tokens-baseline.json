@@ -50,13 +50,6 @@
       "value": "6px var(--cedar-space-3)",
       "count": 1
     },
-    "83217a98e37a1664b642": {
-      "file": "src/app/group-picker.ts",
-      "rule": "spacing",
-      "property": "margin",
-      "value": "0 0 6px",
-      "count": 1
-    },
     "83401d2f75884e06f84b": {
       "file": "src/app/permissions-dialog.scss",
       "rule": "geometry",

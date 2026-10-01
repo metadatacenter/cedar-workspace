@@ -539,6 +539,7 @@
     "Delete": "Kijelölt elemek törlése",
     "InventoryUnavailable": "A teljes kijelölés nem ellenőrizhető. A törléshez minden leltárnak, jogosultságnak és verziónak elérhetőnek kell lennie. Zárja be az ablakot és ellenőrizze a kijelölést, vagy frissítse a leltárt.",
     "Uncertain": "A törlés leállt. Egyes elemek már törlődhettek; az igazolt számok alább láthatók. A rendszer nem kísérelte meg a további kijelölt elemek törlését. Ellenőrizze a megmaradt elemeket és frissítse a leltárt az újabb megerősítés előtt.",
+    "SimpleConfirmOne": "Törölni szeretné ezt az egy elemet?",
     "SimpleConfirm": "Törölni szeretné ezt a(z) {{count}} elemet?",
     "CheckingItems": "Törlési jogosultságok ellenőrzése…",
     "ItemReferences": "A kijelölt sablonokhoz még {{instances}} példány tartozik. Először törölje ezeket a példányokat.",

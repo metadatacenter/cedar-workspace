@@ -64,18 +64,12 @@ import { TranslatePipe } from "@ngx-translate/core";
       <p role="status">{{ "GroupPicker.NoMatches" | translate }}</p>
     }
   `,
+  styleUrl: "./group-picker.scss",
   styles: [
     `
       :host {
         display: block;
         position: relative;
-      }
-      label {
-        display: block;
-        margin: 0 0 6px;
-        color: var(--cedar-text-muted);
-        font-size: var(--cedar-font-size);
-        font-weight: var(--cedar-font-weight-medium);
       }
       input {
         display: block;

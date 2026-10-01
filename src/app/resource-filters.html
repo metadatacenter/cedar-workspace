@@ -24,6 +24,7 @@
         'Common.AllVersions') | translate}}</span
       >
       <select
+        data-cedar-select-icon
         [attr.aria-label]="'Common.Version' | translate"
         [ngModel]="version()"
         (ngModelChange)="versionChange.emit($event)"

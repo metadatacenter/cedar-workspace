@@ -154,6 +154,9 @@ export class FolderDeletionDialog implements AfterViewInit, OnDestroy {
   get simpleConfirmation() {
     return this.bulk && this.selectedFolderCount === 0;
   }
+  get simpleCount() {
+    return this.plan() ? this.totalCount() : this.resources.length;
+  }
   get selectedNames() {
     return this.resources.map((r) => ({
       resource: r,

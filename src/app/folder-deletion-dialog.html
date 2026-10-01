@@ -27,8 +27,8 @@
   <section class="deletion-body dialog-stack">
     @if(simpleConfirmation) {
     <p id="simple-deletion-message">
-      {{ 'SelectionDeletion.SimpleConfirm' | translate: {count: plan() ?
-      totalCount() : resources.length} }}
+      {{ (simpleCount === 1 ? 'SelectionDeletion.SimpleConfirmOne' :
+      'SelectionDeletion.SimpleConfirm') | translate: {count: simpleCount} }}
     </p>
     } @else if(bulk) {
     <ul

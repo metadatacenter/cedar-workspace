@@ -276,7 +276,7 @@ main {
   padding: var(--cedar-space-2) var(--cedar-space-4) var(--cedar-space-4);
 }
 .table-toolbar .breadcrumbs {
-  font-size: var(--cedar-font-size-element-heading);
+  @include patterns.breadcrumbs($size: heading);
 }
 .table-toolbar {
   display: flex;
@@ -293,16 +293,10 @@ main {
   flex-shrink: 0;
 }
 .breadcrumbs {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  row-gap: var(--cedar-space-2);
-  color: var(--cedar-text-muted);
+  @include patterns.breadcrumbs;
 }
 .breadcrumb-separator {
-  display: inline-block;
-  margin-inline: 0;
-  color: var(--cedar-text-muted);
+  @include patterns.breadcrumb-separator;
 }
 .table-scroll {
   position: relative;
@@ -324,7 +318,6 @@ h6,
 strong,
 b,
 .destinations .active,
-.breadcrumbs [aria-current],
 .tabs [aria-selected="true"],
 .account-card dt,
 .account-group-list [aria-current="true"],

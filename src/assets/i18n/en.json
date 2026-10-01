@@ -539,6 +539,7 @@
     "Delete": "Delete selected items",
     "InventoryUnavailable": "The complete selection could not be checked. Nothing can be deleted until all inventories, permissions and revisions are available. Close and review your selection, or refresh the inventory.",
     "Uncertain": "Deletion stopped. Some items may already have been deleted; confirmed counts are shown below. No further selected items were attempted. Review what remains and refresh the inventory before confirming again.",
+    "SimpleConfirmOne": "Do you want to delete this one item?",
     "SimpleConfirm": "Do you want to delete these {{count}} items?",
     "CheckingItems": "Checking delete permissions…",
     "ItemReferences": "Selected templates still have {{instances}} instances. Delete those instances first.",

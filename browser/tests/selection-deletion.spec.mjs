@@ -5,7 +5,7 @@ import { selectionFixture, selectDeletion, selectionResources } from './selectio
 for(const grid of [true,false]) test(`selection delete reviews nested folders and artifacts once in ${grid?'grid':'list'}`,async({page,api})=>{
   const writes=await selectionFixture(page);
   await expect(page.getByRole('button',{name:/^Delete \(/})).toHaveCount(0);
-  if(!grid) await page.getByRole('button',{name:'List view',exact:true}).click();
+  if(!grid) await showList(page);
   const dialog=await selectDeletion(page);
   await expect(dialog).toHaveAccessibleName('Delete selected items (4)?');
   await expect(dialog.getByRole('list',{name:'Selected items'})).toContainText('Study folder');
@@ -105,13 +105,23 @@ test('simple item confirmation still refuses missing delete permission',async({p
   expect(writes).toHaveLength(0);
 });
 
+// Angular renders the list a frame after the click resolves. A drag measured before that render
+// presses where the table header now sits, which starts a marquee instead of a drag.
+async function showList(page) {
+  const list=page.getByRole('button',{name:'List view',exact:true});
+  await list.click();
+  await expect(list).toHaveAttribute('aria-pressed','true');
+  await expect(page.locator('.explorer-grid')).toHaveCount(0);
+}
+
 async function dragToBin(page, sourceId, selectedIds = []) {
   for (const [index,id] of selectedIds.entries()) {
     await page.locator(`[data-resource-id="${id}"] .resource-icon`).click({modifiers:index ? ['ControlOrMeta'] : []});
   }
   const row=page.locator(`[data-resource-id="${sourceId}"]`);
+  // Hovering waits until the icon is stable and receives the pointer; measure it only then.
+  await row.locator('.resource-icon').hover();
   const source=await row.locator('.resource-icon').boundingBox();
-  await page.mouse.move(source.x+source.width/2,source.y+source.height/2);
   await page.mouse.down();
   await page.mouse.move(source.x+source.width/2+10,source.y+source.height/2+10,{steps:3});
   await expect(page.locator('body')).toHaveClass(/explorer-dragging/);
@@ -130,7 +140,7 @@ async function dragToBin(page, sourceId, selectedIds = []) {
 for (const grid of [true,false]) {
   for(const kind of ['single','multiple','folders']) test(`dropping ${kind} on the bin opens the usual confirmation in ${grid?'grid':'list'}`,async({page,api})=>{
     const writes=await selectionFixture(page);
-    if(!grid) await page.getByRole('button',{name:'List view',exact:true}).click();
+    if(!grid) await showList(page);
     const ids=kind==='single' ? [] : kind==='multiple' ? ['instance1','separate'] : ['folder','separate'];
     await dragToBin(page,kind==='folders' ? 'folder':'instance1',ids);
     if(process.env.WORKSPACE_VISUAL && grid && kind==='folders') await expect(page).toHaveScreenshot('bin-drop.png');
@@ -142,7 +152,7 @@ for (const grid of [true,false]) {
     const confirm=dialog.getByRole('button',{name:kind==='folders'?'Delete selected items and contents':'Delete',exact:true});
     await expect(confirm).toBeEnabled();
     if(kind==='folders') await expect(dialog).toContainText('Total items to delete: 8.');
-    else await expect(dialog).toContainText(`Do you want to delete these ${kind==='single'?1:2} items?`);
+    else await expect(dialog).toContainText(kind==='single' ? 'Do you want to delete this one item?' : 'Do you want to delete these 2 items?');
     expect(writes).toHaveLength(0);
     await dialog.getByRole('button',{name:'Cancel',exact:true}).click();
     await expect(page.locator('.selection-delete')).toBeFocused();
