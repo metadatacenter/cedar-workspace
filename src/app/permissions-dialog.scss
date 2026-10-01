@@ -30,7 +30,7 @@ h2 {
 .resource-context {
   display: flex;
   align-items: center;
-  gap: var(--cedar-space-3);
+  gap: var(--cedar-space-2);
 }
 .resource-context > div {
   min-width: 0;
@@ -38,9 +38,6 @@ h2 {
 .resource-avatar {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: var(--cedar-control-height-default);
   color: var(--cedar-color-primary);
   flex-shrink: 0;
 }
@@ -210,7 +207,7 @@ select.readonly-role:disabled {
 }
 footer {
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
   border-top: 1px solid var(--cedar-border-rule);
 }
 footer button {
