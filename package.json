@@ -43,7 +43,7 @@
     "@angular/platform-browser": "22.2.0",
     "@angular/router": "22.2.0",
     "@ngx-translate/core": "^18.0.0",
-    "@org.metadatacenter/cedar-design-tokens": "0.1.0-dev.20261001.fad5a5dd",
+    "@org.metadatacenter/cedar-design-tokens": "0.1.0-dev.20261001.af8f325e",
     "cedar-embeddable-editor": "npm:@org.metadatacenter/cedar-embeddable-editor@2.0.19-dev.20261001.8b4b89ff",
     "rxjs": "~7.8.2",
     "selecto": "1.26.3",
