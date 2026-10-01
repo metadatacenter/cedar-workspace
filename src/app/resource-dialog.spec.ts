@@ -92,6 +92,51 @@ describe("Conditional action dialogs", () => {
       expect(api.snapshot).toHaveBeenCalledWith(resource, false);
     },
   );
+  it("starts a draft at the next patch and refuses a version that does not raise it", async () => {
+    const d = dialog("draft");
+    d.resource = { ...resource, "pav:version": "1.2.3" };
+    api.request.mockResolvedValue({
+      data: { resources: [], totalCount: 0, pathInfo: [] },
+    });
+    await d.load();
+    d.target = "home";
+    d.targetResource = {
+      "@id": "home",
+      resourceType: "folder",
+      currentUserPermissions: { capabilities: ["copyIntoFolder"] },
+    };
+    expect(d.destinationAllowed).toBe(true);
+    expect(d.version).toEqual([1, 2, 4]);
+    expect(d.versionError).toBe("");
+    d.version = [1, 2, 3];
+    expect(d.versionError).toBe("Use a version later than 1.2.3.");
+    api.request.mockClear();
+    await d.submit();
+    expect(api.request).not.toHaveBeenCalled();
+    d.version = [2, 0, 0];
+    await d.submit();
+    expect(api.request).toHaveBeenCalledWith(
+      "/command/create-draft-artifact",
+      "POST",
+      expect.objectContaining({ "@id": "id", newVersion: "2.0.0" }),
+    );
+  });
+  it("publishes at the current version or later", async () => {
+    const d = dialog("publish");
+    d.resource = { ...resource, "pav:version": "0.3.0" };
+    await d.load();
+    expect(d.version).toEqual([0, 3, 0]);
+    expect(d.versionError).toBe("");
+    d.version = [0, 2, 9];
+    expect(d.versionError).toBe("Use version 0.3.0 or later.");
+    d.version = [1, 0, 0];
+    await d.submit();
+    expect(api.request).toHaveBeenCalledWith(
+      "/command/publish-artifact",
+      "POST",
+      { "@id": "id", newVersion: "1.0.0" },
+    );
+  });
   it("blocks duplicate submissions while a write is pending", async () => {
     const d = dialog();
     await d.load();

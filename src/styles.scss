@@ -593,6 +593,12 @@ label {
   flex-direction: row;
   align-items: center;
 }
+// A field of several controls cannot sit in one label, so it takes the label's layout.
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cedar-space-2);
+}
 .grant {
   display: flex;
   gap: var(--cedar-space-2);

@@ -5,6 +5,14 @@ import { DialogKeyboard } from "./dialog-keyboard";
 import { Icon } from "./icon";
 import { FolderList, FolderSort } from "./folder-list";
 import {
+  Version,
+  VersionPicker,
+  compareVersions,
+  formatVersion,
+  parseVersion,
+  stepVersion,
+} from "./version-picker";
+import {
   AfterViewInit,
   Component,
   ElementRef,
@@ -31,6 +39,7 @@ import { I18n } from "./i18n";
     DialogKeyboard,
     Icon,
     FolderList,
+    VersionPicker,
     FormsModule,
     TranslatePipe,
   ],
@@ -60,7 +69,7 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   submitted = false;
   name = "";
   description = "";
-  version = "";
+  version: Version = [0, 0, 1];
   target = "";
   targetResource?: Resource;
   targetOffset = 0;
@@ -147,7 +156,11 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
           ? this.i18n.t("ResourceDialog.CopyName", { name: this.title(r) })
           : this.title(r);
         this.description = r["schema:description"] || "";
-        this.version = r["pav:version"] || "0.0.1";
+        const current = parseVersion(r["pav:version"]);
+        // A draft starts at the next patch, the first version it may take.
+        if (current)
+          this.version =
+            this.action === "draft" ? stepVersion(current, 2, 1) : current;
         if (
           ["rename", "move", "delete", "make-open", "make-not-open"].includes(
             this.action,
@@ -242,11 +255,17 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
       ? this.i18n.t("ResourceDialog.NameRequired")
       : "";
   }
+  /** The resource server refuses a draft that does not raise the version and a publication that lowers it. */
   get versionError() {
-    return ["publish", "draft"].includes(this.action) &&
-      !/^\d+\.\d+\.\d+$/.test(this.version)
-      ? this.i18n.t("ResourceDialog.VersionFormat")
-      : "";
+    const current = parseVersion(this.resource?.["pav:version"]);
+    if (!current) return "";
+    const order = compareVersions(this.version, current);
+    const version = formatVersion(current);
+    if (this.action === "draft" && order <= 0)
+      return this.i18n.t("ResourceDialog.VersionAfter", { version });
+    if (this.action === "publish" && order < 0)
+      return this.i18n.t("ResourceDialog.VersionNotBefore", { version });
+    return "";
   }
   async submit() {
     if (this.busy() || !this.destinationAllowed) return;
@@ -332,13 +351,13 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
         case "publish":
           await this.api.request("/command/publish-artifact", "POST", {
             "@id": id,
-            newVersion: this.version,
+            newVersion: formatVersion(this.version),
           });
           break;
         case "draft":
           await this.api.request("/command/create-draft-artifact", "POST", {
             "@id": id,
-            newVersion: this.version,
+            newVersion: formatVersion(this.version),
             folderId: this.target,
             propagateSharing: this.propagate,
             newFolderName: this.newFolderName || null,

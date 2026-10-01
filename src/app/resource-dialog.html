@@ -62,16 +62,13 @@
           [(ngModel)]="description"
           rows="3"
         ></textarea></label
-      >} @if(['publish','draft'].includes(action)){<label
-        ><span class="field-label">{{'Common.Version' | translate}}</span><input
-          spellcheck="false"
-          [attr.aria-invalid]="submitted && versionError ? true : null"
-          [attr.aria-describedby]="submitted && versionError ? 'version-error' : null"
-          name="version"
-          [(ngModel)]="version"
-          required
-          pattern="[0-9]+\.[0-9]+\.[0-9]+"
-      /></label>
+      >} @if(['publish','draft'].includes(action)){<div class="field"
+        ><span id="version-label" class="field-label">{{'Common.Version' | translate}}</span><cedar-version-picker
+          labelledBy="version-label"
+          [describedBy]="submitted && versionError ? 'version-error' : ''"
+          [invalid]="submitted && !!versionError"
+          [(value)]="version"
+      /></div>
       @if(submitted && versionError){
       <p id="version-error" class="field-error" role="alert">
         {{versionError}}

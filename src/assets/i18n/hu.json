@@ -259,7 +259,13 @@
     "NoRevision": "A szerver nem küldött egyidejűség-ellenőrző azonosítót. Mentés előtt nyissa meg újra ezt a párbeszédablakot.",
     "UnknownAction": "Ismeretlen művelet.",
     "NameRequired": "Adjon meg egy nevet.",
-    "VersionFormat": "Adjon meg egy verziót, például 1.0.0."
+    "VersionAfter": "Adjon meg a(z) {{version}} verziónál későbbi verziót.",
+    "VersionNotBefore": "Adjon meg {{version}} vagy annál későbbi verziót."
+  },
+  "VersionPicker": {
+    "Major": "Főverzió",
+    "Minor": "Alverzió",
+    "Patch": "Javítás"
   },
   "Permissions": {
     "Close": "Jogosultságok bezárása",
