@@ -134,10 +134,8 @@
       <p>
         {{'ResourceDialog.ConfirmDelete.' + resource?.resourceType | translate}}
       </p>
-      } @if(action==='make-open'){
-      <p>{{'ResourceDialog.WillBeOpen' | translate}}</p>
-      } @if(action==='make-not-open'){
-      <p>{{'ResourceDialog.WillNotBeOpen' | translate}}</p>
+      } @if(action==='make-open' || action==='make-not-open'){
+      <p>{{openViewMessage()}}</p>
       }
     </fieldset>
     <footer>

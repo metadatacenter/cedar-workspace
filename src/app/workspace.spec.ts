@@ -276,6 +276,31 @@ describe("Angular Workspace", () => {
       ).toBe(offered);
     });
   }
+  it("says in the information panel which open folder keeps a resource in OpenView", async () => {
+    const f = await render();
+    const shared: Resource = {
+      "@id": "shared",
+      resourceType: "folder",
+      "schema:name": "Shared",
+      isOpen: true,
+    };
+    const section = () =>
+      [...(f.nativeElement as HTMLElement).querySelectorAll(".info-section")].find(
+        (s) => s.querySelector(".description-heading")?.textContent?.trim() === "OpenView",
+      );
+    f.componentInstance.selected.set({ ...template, pathInfo: [folder, template] });
+    f.detectChanges();
+    expect(section()).toBeUndefined();
+    f.componentInstance.selected.set({
+      ...template,
+      isOpenImplicitly: true,
+      pathInfo: [folder, shared, template],
+    });
+    f.detectChanges();
+    expect(section()?.textContent?.replace(/\s+/g, " ").trim()).toBe(
+      "OpenView Available through the open folder “Shared”.",
+    );
+  });
   it("exposes the artifact action set and gates it using the server capabilities", () => {
     const list = actions(template, TestBed.inject(I18n));
     expect(list.find((a) => a.id === "permissions")).toEqual({

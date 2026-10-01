@@ -92,6 +92,58 @@ describe("Conditional action dialogs", () => {
       expect(api.snapshot).toHaveBeenCalledWith(resource, false);
     },
   );
+  // Inside an open folder a resource stays in OpenView whatever its own flag says,
+  // so the confirmation names the folders that keep it there.
+  const shared: Resource = {
+    "@id": "shared",
+    resourceType: "folder",
+    "schema:name": "Shared",
+    isOpen: true,
+  };
+  const archive: Resource = {
+    "@id": "archive",
+    resourceType: "folder",
+    "schema:name": "Archive",
+    isOpen: true,
+  };
+  const home: Resource = { "@id": "home", resourceType: "folder", "schema:name": "Home" };
+  it.each([
+    ["make-not-open", [home], "This item will no longer be available through OpenView."],
+    ["make-open", [home], "This item will be available through OpenView."],
+    [
+      "make-not-open",
+      [home, shared],
+      "This item stays available through OpenView while the folder “Shared” is open. Disable Openview on that folder to remove it.",
+    ],
+    [
+      "make-open",
+      [home, shared],
+      "This item is already available through OpenView because the folder “Shared” is open. Enabling it keeps it available if Openview is later disabled on that folder.",
+    ],
+    [
+      "make-not-open",
+      [archive, shared],
+      "This item stays available through OpenView while the folders “Archive”, “Shared” are open. Disable Openview on those folders to remove it.",
+    ],
+  ] as const)(
+    "confirms %s for a resource below %j by what will happen",
+    async (action, above, message) => {
+      api.snapshot.mockResolvedValue({
+        data: { ...resource, pathInfo: [...above, resource] },
+        etag: '"read-revision"',
+      });
+      const d = dialog(action);
+      await d.load();
+      expect(d.openViewMessage()).toBe(message);
+    },
+  );
+  it("says only that a folder above keeps it open before its path has been read", () => {
+    const d = dialog("make-not-open");
+    d.resource = { ...resource, isOpenImplicitly: true };
+    expect(d.openViewMessage()).toBe(
+      "This item stays available through OpenView while a folder above it is open. Disable Openview on that folder to remove it.",
+    );
+  });
   it("starts a draft at the next patch and refuses a version that does not raise it", async () => {
     const d = dialog("draft");
     d.resource = { ...resource, "pav:version": "1.2.3" };

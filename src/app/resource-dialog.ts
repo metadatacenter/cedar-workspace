@@ -30,7 +30,14 @@ import {
 import { FormsModule } from "@angular/forms";
 import { TranslatePipe } from "@ngx-translate/core";
 import { Backend } from "./backend.service";
-import { Resource, Listing, title, can } from "./resource";
+import {
+  Resource,
+  Listing,
+  title,
+  can,
+  openThroughAFolder,
+  openThroughText,
+} from "./resource";
 import { I18n } from "./i18n";
 @Component({
   selector: "cedar-resource-dialog",
@@ -59,6 +66,28 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild("dialog", { static: true }) dialog!: ElementRef<HTMLDialogElement>;
   readonly api = inject(Backend);
   readonly title = (r: Resource) => title(r, this.i18n.t("Common.Untitled"));
+  // The path the confirmation read, which is fresher than the one the menu had.
+  private openViewPath?: Resource[];
+  // What changing the resource's own OpenView flag will do. Inside an open folder
+  // it stays in OpenView either way, and the confirmation says so.
+  openViewMessage(): string {
+    const enabling = this.action === "make-open";
+    const r = this.resource && {
+      ...this.resource,
+      pathInfo: this.openViewPath ?? this.resource.pathInfo,
+    };
+    if (r && openThroughAFolder(r))
+      return openThroughText(
+        r,
+        this.i18n,
+        enabling
+          ? "ResourceDialog.AlreadyOpenThrough"
+          : "ResourceDialog.StaysOpenThrough",
+      );
+    return this.i18n.t(
+      enabling ? "ResourceDialog.WillBeOpen" : "ResourceDialog.WillNotBeOpen",
+    );
+  }
   readonly can = can;
   readonly busy = signal(true);
   readonly preparing = signal(true);
@@ -171,6 +200,7 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
             this.action === "delete" || this.action === "rename",
           );
           this.etag = reply.etag;
+          this.openViewPath = reply.data.pathInfo;
           this.name = this.title({ ...r, ...reply.data });
           this.description = reply.data["schema:description"] || "";
         }

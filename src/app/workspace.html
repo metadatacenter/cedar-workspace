@@ -657,6 +657,11 @@
       <div class="description-heading">{{'Dashboard.Doi' | translate}}</div>
       <a [href]="r.doi" target="_blank" rel="noopener">{{r.doi}}</a>
     </section>
+    } @if(openViewEnabled && openThroughAFolder(r)){
+    <section class="info-section">
+      <div class="description-heading">{{'Dashboard.OpenView' | translate}}</div>
+      {{openThrough(r)}}
+    </section>
     } @if(r.numberOfInstances!==undefined || instances().length){
     <section class="info-section instances-section">
       <div class="description-heading">
