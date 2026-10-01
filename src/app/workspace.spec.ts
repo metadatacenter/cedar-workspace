@@ -250,6 +250,32 @@ describe("Angular Workspace", () => {
     expect(window.location.href).toBe(before);
     expect(f.componentInstance.rows()).toBe(rows);
   });
+  // OpenView serves a resource made open and anything inside an open folder. The
+  // listing says which through isOpen and isOpenImplicitly.
+  for (const [label, state, offered] of [
+    ["made open", { isOpen: true }, true],
+    ["inside an open folder", { isOpenImplicitly: true }, true],
+    ["neither made open nor inside an open folder", {}, false],
+  ] as const) {
+    it(`${offered ? "offers" : "does not offer"} OpenView for a resource ${label}`, async () => {
+      const listed: Resource = { ...template, ...state };
+      api.request.mockImplementation(async (path: string) => ({
+        data:
+          path.includes("/contents") || path.includes("/search")
+            ? { resources: [listed], totalCount: 1, pathInfo: [folder] }
+            : folder,
+      }));
+      const f = await render();
+      const link = (f.nativeElement as HTMLElement).querySelector(
+        'a[href^="https://openview.example/"]',
+      );
+      expect(link !== null).toBe(offered);
+      expect(
+        actions(listed, TestBed.inject(I18n)).find((a) => a.id === "openview")
+          ?.enabled,
+      ).toBe(offered);
+    });
+  }
   it("exposes the artifact action set and gates it using the server capabilities", () => {
     const list = actions(template, TestBed.inject(I18n));
     expect(list.find((a) => a.id === "permissions")).toEqual({

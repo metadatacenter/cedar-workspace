@@ -451,7 +451,7 @@
               }
             </td>
             <td class="row-actions" (click)="$event.stopPropagation()">
-              @if(r.isOpen){<a
+              @if(inOpenView(r)){<a
                 [href]="openView(r)"
                 target="_blank"
                 rel="noopener"

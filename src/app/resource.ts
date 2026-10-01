@@ -18,6 +18,7 @@ export interface Resource {
   createdByUserName?: string;
   lastUpdatedByUserName?: string;
   isOpen?: boolean;
+  isOpenImplicitly?: boolean;
   pathInfo?: Resource[];
   versions?: Resource[];
   numberOfInstances?: number;
@@ -59,6 +60,9 @@ export const collections: Record<ResourceType, string> = {
 // the translated word instead.
 export const title = (r: Resource, untitled = "Untitled") =>
   r["schema:name"] || r.name || untitled;
+// OpenView serves a resource made open and anything inside an open folder, so
+// either one offers the link.
+export const inOpenView = (r: Resource) => !!r.isOpen || !!r.isOpenImplicitly;
 export const can = (r: Resource | undefined, action: string) =>
   !!r &&
   [

@@ -45,6 +45,7 @@ import {
   Listing,
   title,
   can,
+  inOpenView,
   listingPath,
   resourceLink,
   collections,
@@ -125,7 +126,7 @@ export function actions(r: Resource, i18n: Pick<I18n, "t">): Action[] {
     {
       id: "openview",
       label: label("ResourceActions.OpenInOpenView"),
-      enabled: window.makeOpenEnabled !== false && !!r.isOpen,
+      enabled: window.makeOpenEnabled !== false && inOpenView(r),
     },
   ].filter((action) => {
     // Applicability comes from the resource kind; capabilities still gate valid actions.
@@ -180,6 +181,7 @@ export class Workspace {
   private injector = inject(Injector);
   readonly title = (r: Resource) => title(r, this.i18n.t("Common.Untitled"));
   readonly can = can;
+  readonly inOpenView = inOpenView;
   readonly actions = (r: Resource) => actions(r, this.i18n);
   attribution(userId?: string, name?: string): string {
     if (this.isCurrentUser(userId))
