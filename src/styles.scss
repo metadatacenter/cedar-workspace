@@ -1001,7 +1001,7 @@ cedar-resource-filters .popover cedar-icon {
   color: var(--cedar-status-error-text);
   background: var(--cedar-status-error-surface);
   &:hover:not(:disabled), &:active:not(:disabled) {
-    color: var(--cedar-status-error-surface);
+    color: var(--cedar-color-on-primary);
     background: var(--cedar-status-error-text);
   }
 }
@@ -1020,4 +1020,10 @@ cedar-resource-filters .popover cedar-icon {
   outline-offset: var(--cedar-focus-ring-offset);
   color: var(--cedar-status-error-text);
   background: var(--cedar-status-error-surface);
+}
+
+// A section inside a dialog is headed at the element-heading step, as account sections are.
+.folder-picker h3 {
+  font-size: var(--cedar-font-size-element-heading);
+  line-height: var(--cedar-line-height-heading);
 }
