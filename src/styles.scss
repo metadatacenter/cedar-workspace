@@ -404,6 +404,8 @@ tr.selected:hover {
 }
 .information h1 {
   @include patterns.artifact-title;
+  // The panel names the selected item beside a page that already has a title, so a section heading's size.
+  font-size: var(--cedar-font-size-element-heading);
   display: flex;
   align-items: flex-start;
   gap: var(--cedar-space-2);
@@ -411,7 +413,8 @@ tr.selected:hover {
 }
 .information h1 cedar-icon {
   flex: none;
-  margin-top: var(--cedar-space-1);
+  // One line tall, so the icon centres on the first line and a long name wraps beneath the text.
+  height: 1lh;
 }
 .information dt,
 .information small,
