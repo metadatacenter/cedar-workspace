@@ -207,7 +207,9 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   private savedHere = false;
   private etag: string | null = null;
   private baseline = "";
-  private baselineName = "";
+  // The name as it was typed when the page last matched the server, whitespace and all: the
+  // name saved is trimmed, but an edit the user can see is an edit.
+  private baselineText = "";
   private alive = true;
   private updatingAddress = false;
   private get cee() {
@@ -293,7 +295,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
       if (!this.alive) return;
       this.baseline = metadataKey(this.cee.currentMetadata);
-      this.baselineName = this.chosenName();
+      this.baselineText = this.name;
       this.cee.addEventListener("change", this.changed);
       this.refreshQuality();
       this.loading.set(false);
@@ -312,7 +314,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     this.refreshQuality();
     this.dirty.set(
       metadataKey(this.cee.currentMetadata) !== this.baseline ||
-        this.chosenName() !== this.baselineName,
+        this.name !== this.baselineText,
     );
     this.notice.set("");
   };
@@ -406,6 +408,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       const current = this.cee.currentMetadata;
       const baseline = metadataKey(current);
       const name = this.chosenName();
+      const text = this.name;
       const metadata: CeeJsonObject = structuredClone(current);
       metadata["schema:name"] = name;
       metadata["schema:isBasedOn"] = this.template["@id"];
@@ -432,7 +435,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       this.savedHere = true;
       this.etag = reply.etag;
       this.baseline = baseline;
-      this.baselineName = name;
+      this.baselineText = text;
       // Keep the CEE element, focus and any edits made while the save was pending.
       // Update the router as well as browser history: otherwise cancelling a
       // later navigation restores the original create URL. The same route

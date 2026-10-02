@@ -263,6 +263,25 @@ describe("Modern metadata host", () => {
     expect(api.request).not.toHaveBeenCalled();
     expect(host.error()).toContain("validator");
   });
+  it("counts a whitespace edit to the name as an edit, and saves the trimmed name", async () => {
+    await edit();
+    const typed = host.name;
+    host.name = typed + " ";
+    host.changed();
+    expect(host.dirty()).toBe(true);
+    host.name = typed;
+    host.changed();
+    expect(host.dirty()).toBe(false);
+    host.name = typed + " ";
+    host.changed();
+    api.request.mockResolvedValue({
+      data: { "@id": "instance-id" },
+      etag: '"i2"',
+    });
+    await host.save();
+    expect(api.request.mock.lastCall?.[2]?.["schema:name"]).toBe(typed.trim());
+    expect(host.dirty()).toBe(false);
+  });
   it("keeps edits made while a save is pending dirty and prevents double submission", async () => {
     await edit();
     let resolve!: (value: { data: object; etag: string }) => void;
