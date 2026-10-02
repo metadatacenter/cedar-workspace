@@ -186,7 +186,8 @@ test("inline description keeps edits on conflict and cancel reloads the current 
 });
 
 test("version details and instances have concise labels and identifier copy controls", async ({page, api}) => {
-  await page.route('**/templates/template/report', route => route.fulfill({json: {...resource, numberOfInstances: 1, versions: [{...resource, 'pav:version':'1.2.0', 'bibo:status':'bibo:published'}]}}));
+  const published = {...resource, 'pav:version':'1.2.0', 'bibo:status':'bibo:published'};
+  await page.route('**/templates/template/report', route => route.fulfill({json: {...published, numberOfInstances: 1, versions: [published]}}));
   await page.route('**/search?is_based_on=*', route => route.fulfill({json: {resources: [{...resource, '@id':'instance-id', resourceType:'instance'}], totalCount: 1}}));
   await page.addInitScript(() => Object.defineProperty(navigator, 'clipboard', {value: {writeText: async value => { window.copiedId = value; }}}));
   await dashboard(page);
@@ -199,6 +200,7 @@ test("version details and instances have concise labels and identifier copy cont
   await info.getByRole('tab', {name:'Version', exact:true}).click();
   await expect(info.locator('.version dt')).toHaveText(['Type', 'Version', 'Status']);
   await expect(info.locator('.version dd')).toHaveText(['Template', '1.2.0', 'Published · Latest version']);
+  await expect(info.locator('.latest-version')).toHaveCount(0);
   await expect(info.locator('.version a')).toHaveCount(0);
   await expect(info.locator('.version')).not.toContainText('Modified');
   // A template with no older version lists none.
@@ -237,24 +239,23 @@ test("a template whose instances the user cannot read says none is accessible, o
   await expect(section.locator('.instance-list, .instance-count')).toHaveCount(0);
 });
 
-for (const [title, flagged, status] of [
-  ['marks a single draft the report flags as latest', true, 'Draft · Latest version'],
-  // The first version listed is not the latest when the report says otherwise.
-  ['leaves unmarked a version the report says is not latest', false, 'Draft'],
+for (const [title, report, status] of [
+  ['marks the only version of a draft as latest', {versions: [{...resource}]}, 'Draft · Latest version'],
+  // Without a version history, the report's own flag decides.
+  ['leaves unmarked a version the report flags as not latest', {isLatestVersion: false}, 'Draft'],
 ]) test(`the Status line ${title}`, async ({page, api}) => {
-  const version = {...resource, 'pav:version': '0.0.1', 'bibo:status': 'bibo:draft', isLatestVersion: flagged};
-  await page.route('**/templates/template/report', route => route.fulfill({json: {...version, versions: [version]}}));
+  await page.route('**/templates/template/report', route => route.fulfill({json: {...resource, ...report}}));
   await dashboard(page);
   await page.locator('tbody tr').first().press('Enter');
   const info = page.getByRole('complementary', {name:'Resource information'});
   await info.getByRole('tab', {name:'Version', exact:true}).click();
-  await expect(info.locator('.version dd')).toHaveText(['Template', '0.0.1', status]);
+  await expect(info.locator('.version dd')).toHaveText(['Template', '1.0.0', status]);
 });
 
 test("derived-from and previous versions link to their artifacts beside copy controls", async ({page, api}) => {
   const version = (id, number, extra = {}) => ({...resource, '@id': id, 'pav:version': number, 'bibo:status': 'bibo:published', ...extra});
   await page.route('**/templates/template/report', route => route.fulfill({json: {
-    ...resource,
+    ...version('template', '2.0.0'),
     everybodyPermission: 'read',
     derivedFrom: {...resource, '@id': 'source', 'schema:name': 'Source template'},
     // Newest first, and including the template itself.
@@ -276,28 +277,33 @@ test("derived-from and previous versions link to their artifacts beside copy con
   await info.getByRole('button', {name: 'Copy identifier for Source template', exact: true}).click();
   await expect.poll(() => page.evaluate(() => window.copiedId)).toBe('source');
 
-  // A newer version than the one selected is named, with its version and status beside it.
-  const latest = info.locator('.latest-version');
-  await expect(latest.locator('.description-heading')).toHaveText('Latest version');
-  await expect(latest.locator('.detail-with-copy > span')).toHaveText('Study metadata · 3.0.0 · Published');
-  await expect(latest.getByRole('link')).toHaveText('Study metadata');
-  await expect(latest.getByRole('link')).toHaveAttribute('href', /\/templates\/edit\/newer\?/);
+  // The latest version is named on the Version tab, not here.
+  await expect(info.locator('.latest-version')).toHaveCount(0);
 
   // Shared with everyone, which the user's own role does not say.
   await expect(info.locator('dd').filter({hasText: 'Owner'}).locator('small')).toHaveText('Everyone can view');
 
   await info.getByRole('tab', {name: 'Version', exact: true}).click();
-  const newest = info.locator('.version').first().locator('dd');
-  await expect(newest.nth(1)).toHaveText('3.0.0');
-  await expect(newest.nth(2)).toHaveText('Published · Latest version');
-  await expect(info.locator('.version').nth(1)).not.toContainText('Latest');
+  // The tab describes the selected version alone, which is not the latest.
+  await expect(info.locator('.version')).toHaveCount(1);
+  await expect(info.locator('.version dd')).toHaveText(['Template', '2.0.0', 'Published']);
+  // A newer version is named with its version and status beside it, the name alone linked.
+  const latest = info.locator('.latest-version');
+  await expect(latest.locator('.description-heading')).toHaveText('Latest');
+  await expect(latest.locator('.detail-with-copy > span')).toHaveText('Study metadata · 3.0.0 · Published');
+  await expect(latest.getByRole('link')).toHaveText('Study metadata');
+  await expect(latest.getByRole('link')).toHaveAttribute('href', /\/templates\/edit\/newer\?/);
+  await latest.getByRole('button', {name: 'Copy identifier for Study metadata', exact: true}).click();
+  await expect.poll(() => page.evaluate(() => window.copiedId)).toBe('newer');
+  // Previous versions read the same way.
   const previous = info.locator('.previous-versions');
   await expect(previous.locator('.description-heading')).toHaveText('Previous versions');
+  await expect(previous.locator('.detail-with-copy > span')).toHaveText([
+    'Study metadata, first edition · 1.0.0 · Published',
+    'A version you cannot open · 0.9.0',
+  ]);
   await expect(previous.getByRole('link')).toHaveText(['Study metadata, first edition']);
   await expect(previous.getByRole('link')).toHaveAttribute('href', /\/templates\/edit\/older\?/);
-  await expect(previous).toContainText('A version you cannot open');
-  await expect(previous.locator('small')).toHaveText(['Version 1.0.0', 'Version 0.9.0']);
-  await expect(previous).not.toContainText('3.0.0');
   await previous.getByRole('button', {name: 'Copy identifier for Study metadata, first edition', exact: true}).click();
   await expect.poll(() => page.evaluate(() => window.copiedId)).toBe('older');
 });

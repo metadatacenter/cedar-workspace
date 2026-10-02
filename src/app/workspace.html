@@ -649,29 +649,6 @@
         />
       </div>
     </section>
-    } @if(latestVersion(r); as latest){
-    <section class="info-section latest-version">
-      <div class="description-heading">
-        {{'Dashboard.LatestVersion' | translate}}
-      </div>
-      <div class="detail-with-copy">
-        @if(latest.activeUserCanRead !== false){
-        <span
-          ><a [href]="link(latest)">{{title(latest)}}</a
-          >{{versionAndStatus(latest)}}</span
-        >
-        } @else {
-        <span
-          >{{'Dashboard.UnreadableVersion' | translate}}{{versionAndStatus(latest)}}</span
-        >
-        }
-        <cedar-copy-button
-          [label]="'Dashboard.CopyIdentifierFor' | translate: {name: latest.activeUserCanRead !== false ? title(latest) : (latest['pav:version'] || latest['@id'])}"
-          [help]="'Dashboard.CopyVersionIdentifier' | translate"
-          (copied)="copyId(latest['@id'])"
-        />
-      </div>
-    </section>
     } @if(r.trustedBy){
     <section class="info-section">
       <div class="description-heading">
@@ -742,24 +719,44 @@
     </section>
     } @else {
     <div role="tabpanel">
-      @for(v of r.versions?.length?r.versions:[r];track v['@id']){
       <article class="version">
         <dl>
-          @if($first){
           <dt>{{'Common.Type' | translate}}</dt>
           <dd>{{'ResourceTypes.' + r.resourceType | translate}}</dd>
-          }
           <dt>{{'Common.Version' | translate}}</dt>
           <dd>
-            {{v['pav:version'] || ('Dashboard.Unversioned' | translate)}}
+            {{r['pav:version'] || ('Dashboard.Unversioned' | translate)}}
           </dd>
           <dt>{{'Dashboard.Status' | translate}}</dt>
           <dd>
-            {{status(v)}}@if(isLatest(v, $first)){ ·
+            {{status(r)}}@if(isLatest(r)){ ·
             {{'Dashboard.LatestVersion' | translate}}}
           </dd>
         </dl>
       </article>
+      @if(latestVersion(r); as latest){
+      <section class="info-section latest-version">
+        <div class="description-heading">
+          {{'Dashboard.Latest' | translate}}
+        </div>
+        <div class="detail-with-copy">
+          @if(latest.activeUserCanRead !== false){
+          <span
+            ><a [href]="link(latest)">{{title(latest)}}</a
+            >{{versionAndStatus(latest)}}</span
+          >
+          } @else {
+          <span
+            >{{'Dashboard.UnreadableVersion' | translate}}{{versionAndStatus(latest)}}</span
+          >
+          }
+          <cedar-copy-button
+            [label]="'Dashboard.CopyIdentifierFor' | translate: {name: latest.activeUserCanRead !== false ? title(latest) : (latest['pav:version'] || latest['@id'])}"
+            [help]="'Dashboard.CopyVersionIdentifier' | translate"
+            (copied)="copyId(latest['@id'])"
+          />
+        </div>
+      </section>
       } @if(previousVersions(r); as previous){ @if(previous.length){
       <section class="info-section previous-versions">
         <div class="description-heading">
@@ -767,23 +764,22 @@
         </div>
         <div class="instance-list">
           @for(v of previous;track v['@id']){
-          <div>
-            <div class="detail-with-copy">
-              @if(v.activeUserCanRead !== false){
-              <a [href]="link(v)">{{title(v)}}</a>
-              } @else {
-              <span>{{'Dashboard.UnreadableVersion' | translate}}</span>
-              }
-              <cedar-copy-button
-                [label]="'Dashboard.CopyIdentifierFor' | translate: {name: v.activeUserCanRead !== false ? title(v) : (v['pav:version'] || v['@id'])}"
-                [help]="'Dashboard.CopyVersionIdentifier' | translate"
-                (copied)="copyId(v['@id'])"
-              />
-            </div>
-            <small
-              >{{'Common.Version' | translate}} {{v['pav:version'] ||
-              ('Dashboard.Unversioned' | translate)}}</small
+          <div class="detail-with-copy">
+            @if(v.activeUserCanRead !== false){
+            <span
+              ><a [href]="link(v)">{{title(v)}}</a
+              >{{versionAndStatus(v)}}</span
             >
+            } @else {
+            <span
+              >{{'Dashboard.UnreadableVersion' | translate}}{{versionAndStatus(v)}}</span
+            >
+            }
+            <cedar-copy-button
+              [label]="'Dashboard.CopyIdentifierFor' | translate: {name: v.activeUserCanRead !== false ? title(v) : (v['pav:version'] || v['@id'])}"
+              [help]="'Dashboard.CopyVersionIdentifier' | translate"
+              (copied)="copyId(v['@id'])"
+            />
           </div>
           }
         </div>

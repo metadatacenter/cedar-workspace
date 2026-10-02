@@ -811,13 +811,14 @@ export class Workspace {
     return " · " + parts.join(" · ");
   }
   /**
-   * Whether a version on the Version tab is the newest.
+   * Whether the artifact is the newest of its versions.
    *
-   * The report says so of each version; without that, the first of a list ordered
-   * newest first is.
+   * The version history settles it when the report includes one, so the Status line
+   * and the Latest entry cannot disagree; without a history, the report's own flag does.
    */
-  isLatest(v: Resource, first: boolean): boolean {
-    return Boolean(v["pav:version"]) && (v.isLatestVersion ?? first);
+  isLatest(r: Resource): boolean {
+    if (!r["pav:version"]) return false;
+    return r.versions?.length ? !this.latestVersion(r) : r.isLatestVersion !== false;
   }
   /** The newest version when it is not this one; the report lists versions newest first. */
   latestVersion(r: Resource): Resource | undefined {
