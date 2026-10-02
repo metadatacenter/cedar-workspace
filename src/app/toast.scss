@@ -1,0 +1,22 @@
+@use "../overlay-spacing";
+
+.toast {
+  @include overlay-spacing.feedback;
+  position: fixed;
+  z-index: var(--cedar-layer-overlay);
+  right: var(--cedar-space-4);
+  bottom: var(--cedar-space-4);
+  max-width: calc(100vw - 32px);
+  display: flex;
+  align-items: center;
+  --cedar-icon-color: var(--cedar-status-success-text);
+  color: var(--cedar-status-success-text);
+  background: var(--cedar-status-success-surface);
+  border: 1px solid var(--cedar-border-rule);
+  border-radius: var(--cedar-radius);
+  box-shadow: var(--cedar-shadow-overlay);
+}
+button {
+  color: inherit;
+  flex-shrink: 0;
+}

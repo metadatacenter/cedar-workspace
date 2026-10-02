@@ -1,0 +1,189 @@
+<dialog
+  class="dialog-stack"
+  [class.simple-confirmation]="simpleConfirmation"
+  #dialog
+  cedarDialogKeyboard
+  aria-labelledby="folder-deletion-title"
+  [attr.aria-describedby]="simpleConfirmation ? 'simple-deletion-message' : null"
+  (cancel)="$event.preventDefault(); $event.stopPropagation(); close()"
+>
+  <header class="dialog-heading">
+    <h2 id="folder-deletion-title" class="resource-dialog-title">
+      <cedar-icon name="delete" />{{ (bulk && !simpleConfirmation ?
+      'SelectionDeletion.Title' : 'FolderDeletion.Title') | translate: {count:
+      resources.length} }}
+    </h2>
+    <button
+      class="dialog-close"
+      type="button"
+      [disabled]="deleting()"
+      (click)="close()"
+      [attr.aria-label]="'ResourceDialog.Close' | translate"
+      [cedarTooltip]="'ResourceDialog.Close' | translate"
+    >
+      <cedar-icon name="close" />
+    </button>
+  </header>
+  <section class="deletion-body dialog-stack">
+    @if(simpleConfirmation) {
+    <p id="simple-deletion-message">
+      {{ (simpleCount === 1 ? 'SelectionDeletion.SimpleConfirmOne' :
+      'SelectionDeletion.SimpleConfirm') | translate: {count: simpleCount} }}
+    </p>
+    } @else if(bulk) {
+    <ul
+      class="deletion-counts"
+      [attr.aria-label]="'SelectionDeletion.Selected' | translate"
+    >
+      @for(item of selectedNames; track item.resource['@id']) {
+      <li class="resource-dialog-resource">
+        <cedar-icon [name]="item.resource.resourceType" />{{ item.name }}
+      </li>
+      }
+    </ul>
+    } @else {
+    <p class="resource-dialog-resource">
+      <cedar-icon name="folder" />{{ name }}
+    </p>
+    } @if(busy()) {
+    <p role="status" [class.sr-only]="deleting() || simpleConfirmation">
+      {{ (deleting() ? 'FolderDeletion.Deleting' : simpleConfirmation ?
+      'SelectionDeletion.CheckingItems' : 'FolderDeletion.Checking') | translate
+      }}
+    </p>
+    } @if(error()) {
+    <p class="alert" role="alert">{{ error() }}</p>
+    } @if(outcome(); as result) {
+    <p class="alert" role="alert">{{ 'FolderDeletion.Stopped' | translate }}</p>
+    <p>{{ outcomeMessage(result) }}</p>
+    <p>{{ 'FolderDeletion.DeletedSoFar' | translate }}</p>
+    @if(simpleConfirmation) {
+    <p>
+      {{ result.deleted.template + result.deleted.element + result.deleted.field
+      + result.deleted.instance }}
+    </p>
+    } @else {
+    <ul class="deletion-counts">
+      @for(type of resourceTypes; track type.value) {
+      <li>
+        <strong
+          >{{ 'FolderDeletion.CountLabels.' + type.value | translate }}</strong
+        >: {{ result.deleted[type.value] }}
+      </li>
+      }
+    </ul>
+    } } @if(plan(); as inventory) { @if(!simpleConfirmation) {
+    <p>
+      {{ (bulk ? (inventory.allowed ? 'SelectionDeletion.Warning' :
+      'SelectionDeletion.Refused') : (inventory.allowed ?
+      'FolderDeletion.Warning' : 'FolderDeletion.Refused')) | translate }}
+    </p>
+    @if(bulk) {
+    <p>{{ 'SelectionDeletion.Total' | translate: {count: totalCount()} }}</p>
+    @if(selectedFolderCount && inventory.templatesWithOutsideInstances) {
+    <p>{{ 'SelectionDeletion.Folders' | translate }}</p>
+    } }
+    <ul
+      class="deletion-counts"
+      [attr.aria-label]="'FolderDeletion.Counts' | translate"
+    >
+      @for(type of artifactTypes; track type.value) {
+      <li>
+        <strong
+          >{{ 'FolderDeletion.CountLabels.' + type.value | translate }}</strong
+        >: {{ inventory.counts[type.value] }}
+      </li>
+      }
+      <li>
+        <strong
+          >{{ 'FolderDeletion.CountLabels.referenced' | translate }}</strong
+        >: {{ inventory.templatesWithInstances }}
+      </li>
+      <li>
+        <strong
+          >{{ (bulk ? 'FolderDeletion.CountLabels.folder' :
+          'FolderDeletion.CountLabels.subfolder') | translate }}</strong
+        >: {{ bulk ? inventory.counts.folder : subfolderCount() }}
+      </li>
+    </ul>
+    @if(inventory.templatesWithInstances &&
+    !inventory.templatesWithOutsideInstances) {
+    <p class="inventory-explanation">
+      {{ (bulk ? 'SelectionDeletion.Inside' : 'FolderDeletion.Inside') |
+      translate }}
+    </p>
+    } } @if(inventory.restrictedItems) {
+    <p class="alert" role="alert">
+      {{ 'FolderDeletion.Permissions' | translate: {count:
+      inventory.restrictedItems} }}
+    </p>
+    } @if(inventory.protectedFolders) {
+    <p class="alert" role="alert">
+      {{ 'FolderDeletion.Protected' | translate: {count:
+      inventory.protectedFolders} }}
+    </p>
+    } @if(inventory.templatesWithOutsideInstances) {
+    <p class="alert" role="alert">
+      {{ (simpleConfirmation ? 'SelectionDeletion.ItemReferences' : bulk ?
+      'SelectionDeletion.References' : 'FolderDeletion.Outside') | translate:
+      {templates: inventory.templatesWithOutsideInstances, instances:
+      inventory.instancesOutside} }}
+    </p>
+    } @if(!simpleConfirmation) {
+    <details>
+      <summary tabindex="0">
+        {{ 'FolderDeletion.Inventory' | translate }}
+      </summary>
+      <div class="deletion-inventory" tabindex="0">
+        <table>
+          <thead>
+            <tr>
+              <th>{{ 'Common.Name' | translate }}</th>
+              <th>{{ 'FolderDeletion.Type' | translate }}</th>
+              <th>{{ 'FolderDeletion.Parent' | translate }}</th>
+              <th>{{ 'FolderDeletion.Check' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for(item of inventory.items; track $index) {
+            <tr>
+              <td>
+                <span class="inventory-name">
+                  <cedar-icon [name]="item.type" size="small" />
+                  <span>{{ itemName(item) }}</span>
+                </span>
+              </td>
+              <td>{{ 'ResourceTypes.' + item.type | translate }}</td>
+              <td>{{ parent(item) }}</td>
+              <td>{{ check(item) }}</td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </details>
+    } }
+  </section>
+  <footer>
+    <button autofocus type="button" [disabled]="deleting()" (click)="close()">
+      {{ 'Common.Cancel' | translate }}
+    </button>
+    @if(!simpleConfirmation || error() || outcome() || (plan() &&
+    !plan()?.allowed)) {
+    <button type="button" [disabled]="busy()" (click)="load()">
+      {{ (simpleConfirmation ? 'SelectionDeletion.Retry' :
+      'FolderDeletion.Refresh') | translate }}
+    </button>
+    }
+    <button
+      class="primary destructive-action"
+      type="button"
+      [disabled]="busy() || !plan()?.allowed"
+      (click)="confirm()"
+    >
+      {{ (simpleConfirmation ? 'ResourceActions.Delete' : bulk ?
+      'SelectionDeletion.DeleteContents' : 'FolderDeletion.Delete') | translate
+      }}
+    </button>
+  </footer>
+</dialog>

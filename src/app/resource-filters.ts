@@ -104,12 +104,26 @@ export class ResourceFilters {
     const value = this.value();
     this.draft.set({ ...value, types: [...value.types], ...dateBounds(value) });
     this.open.set(kind);
-    setTimeout(() =>
+    setTimeout(() => {
+      this.fitPopover();
       this.host.nativeElement
         .querySelector<HTMLElement>(
           '[role="dialog"] button, [role="dialog"] input',
         )
-        ?.focus(),
+        ?.focus();
+    });
+  }
+  @HostListener("window:resize")
+  fitPopover() {
+    const popup =
+      this.host.nativeElement.querySelector<HTMLElement>('[role="dialog"]');
+    if (!popup) return;
+    const gap =
+      parseFloat(getComputedStyle(popup).getPropertyValue("--cedar-space-2")) ||
+      8;
+    popup.style.setProperty(
+      "--filter-available-height",
+      `${Math.max(0, window.innerHeight - popup.getBoundingClientRect().top - gap)}px`,
     );
   }
   close(restore = true) {

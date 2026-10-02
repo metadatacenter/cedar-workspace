@@ -3,7 +3,7 @@
 CEDAR's split Workspace frontend. `/` and `/dashboard` run a standalone Angular
 22 application with Angular routing, signals, forms and shared CEDAR design tokens.
 Workspace provides list and compact grid views, search, folder navigation, collapsible
-side panels, Info/Version tabs, Type and Last modified filters, version filtering,
+side panels, Details/Version tabs, Type and Last modified filters, version filtering,
 and resource action dialogs.
 
 Template, element and field authoring opens the configured CED/CEFD Designer host;
@@ -12,7 +12,9 @@ metadata creation/editing opens the standalone Angular CEE host at
 
 The four account routes are also Angular: Profile provides account details and masked
 API-key management; Settings saves the date format used by Workspace; Groups manages
-details and membership with separate revision tokens; Privacy retains the existing
+details and membership with separate revision tokens. Its Delete group tab reviews
+saved details and confirms deletion; Manage and Create keep group deletion out of
+their editing controls. Privacy retains the existing
 policy wording. No AngularJS runtime or styles load on any of these routes.
 Messaging has been removed; its old URL returns to Workspace.
 Logout also runs in Angular and does not depend on the profile service.
@@ -53,8 +55,10 @@ The result toolbar switches between the existing list and 106px-high grid cards.
 Both views use the same server-sorted, filtered page and keep selection when switching.
 Click selects; Shift-click and Shift+arrows extend a range; Cmd/Ctrl-click toggles;
 Cmd/Ctrl+A selects the current page. Dragging blank space selects a rectangle.
-Grid names select on click and open on double-click or Enter. List links retain
-single-click navigation and row Enter retains selection.
+Grid cards select on click and open on double-click or Enter, including when the
+double-click lands on the icon, version, date or blank card space. Embedded action
+buttons retain their own behavior. List links retain single-click navigation and
+row Enter retains selection.
 
 Drag selected items onto a folder or breadcrumb, use Move to choose a destination,
 or Cut and Paste (also Cmd/Ctrl+X and Cmd/Ctrl+V). Moves recheck server permissions
@@ -190,6 +194,50 @@ deployment and authenticated smokes before accepting the release in an environme
 - New workspace development belongs in `src/`; do not add AngularJS UI.
 
 ## Confirmations and success feedback
+
+Use `WorkspaceReturn` for the Workspace back control on instance, Groups and
+account pages. It owns the localized label, arrow, typography and spacing; editors
+use its guarded button mode to retain unsaved-change confirmation and disable it
+while saving. Instance save status uses an outlined yellow circle for Saved and a
+filled circle for Modified, with localized text as well as the visual indicator.
+
+Workspace overlay spacing is owned by `src/_overlay-spacing.scss`. Action,
+deletion and confirmation dialogs use its `.dialog-stack` layout: 12px between
+sections (`--cedar-space-3`), 4px within a
+destination picker (`--cedar-space-1`), and no vertical margins on direct children.
+Use nested stacks for forms and scrollable bodies; do not add paragraph, label or
+footer margins on top. Vertical outer padding is 16px (`--cedar-space-4`), with
+the shared 24px horizontal padding. Picker breadcrumbs use 24px navigation targets
+without form-button padding; form controls and table rows keep their normal sizes.
+All dismissible dialog headings use `.dialog-heading` and `.dialog-close` from
+the same recipe. The close icon aligns with the title's vertical center and the
+content's right edge; its square hit target extends into the outer padding.
+Do not position close buttons independently or give them text-button padding.
+Form label text uses `.field-label` and the shared medium-weight label recipe;
+keep it separate from the input so entered values retain regular weight.
+The reusable destination folder list sizes its date column to its content, leaving
+the remaining width for folder names rather than reserving a percentage at the right.
+Action dialogs keep native modality and a loading status while preparing their
+initial data, then reveal the complete form and focus its first control after render.
+The shared `.is-preparing` presentation rule prevents intermediate disabled forms
+and partial folder lists from flashing onscreen. Escape can cancel this initial read;
+saving still blocks dismissal, and later folder browsing retains the visible dialog.
+Artifact previews use the same presentation rule until CEE/CEF signals readiness:
+the viewer lays out while unpainted, then its content and the resource title appear
+together. The loading status retains a close control and Escape cancellation.
+Permissions, Preview and filter popovers consume dedicated recipes from that same
+file; their compact divided sections do not need form-dialog spacing. Tooltips and
+toasts share its feedback recipe. Menus and suggestion rows use the design-token
+package's menu sizing. Component styles own positioning, scrolling and responsive
+structure, not independent section padding or paragraph margins.
+
+The browser surface suite checks every registered dialog and menu at desktop and
+narrow widths: padding, actual gaps, accumulated margins, close-button alignment,
+label weight and menu-row sizing. A
+new dialog must choose a tested spacing recipe. Copy also has a total-height budget
+for an empty destination, and deliberately injected overrides prove the guards
+fail. Tooltip, toast and suggestion-list tests cover their spacing too. These
+checks supplement the shared surface contract, which checks color and radius.
 
 Use the shared `Confirmation` service for in-app confirmation, awaiting its result
 before writing and rechecking the target and permissions afterward. The root outlet

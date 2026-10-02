@@ -91,14 +91,14 @@ form input {
 .account-key,
 .profile-example {
   padding: var(--cedar-space-3);
-  border: 1px solid var(--cedar-border-rule-light);
-  border-radius: var(--cedar-control-radius-authoring);
+  border: 1px solid var(--cedar-border-rule);
+  border-radius: var(--cedar-radius);
   margin-top: var(--cedar-space-3);
 }
 .account-key code {
   display: block;
   padding: var(--cedar-space-2);
-  background: var(--cedar-surface-panel);
+  background: var(--cedar-surface-subtle);
 }
 .profile-example header {
   display: flex;
@@ -119,5 +119,5 @@ form input {
 .profile-example pre {
   margin: var(--cedar-space-2) 0 0;
   padding: var(--cedar-space-3);
-  background: var(--cedar-surface-panel);
+  background: var(--cedar-surface-subtle);
 }

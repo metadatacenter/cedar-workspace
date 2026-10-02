@@ -1,4 +1,5 @@
-import { test, expect, dashboard, action } from "./fixtures.mjs";
+import { test, expect, dashboard, action, resource } from "./fixtures.mjs";
+import { tokenStyles, feedbackSpacing } from './overlay-spacing.mjs';
 
 test("artifact commands support keyboard navigation, Escape, and return focus", async ({
   page,
@@ -28,6 +29,10 @@ test("artifact commands support keyboard navigation, Escape, and return focus", 
   expect(
     await page.evaluate(() => !!document.activeElement?.closest("dialog")),
   ).toBe(true);
+  await expect(page.getByRole("tooltip")).toHaveText("Close permissions");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
+  await expect(dialog).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
   await expect(trigger).toBeFocused();
@@ -119,6 +124,7 @@ test("URL retains search, ordering and page through reload and Back", async ({
   api,
 }) => {
   await page.goto("/dashboard?search=study&sort=-name&offset=50");
+  await page.getByRole("button", { name: "List view", exact: true }).click();
   await expect(page.locator("th").first()).toHaveAttribute(
     "aria-sort",
     "descending",
@@ -140,27 +146,39 @@ test("unsaved metadata cannot be lost by leaving, and read-only mode cannot save
   api,
 }) => {
   await page.goto("/instances/edit/instance");
-  const input = page.getByLabel("Metadata Name", { exact: true });
+  const input = page.getByLabel("Instance name", { exact: true });
   await expect(input).toHaveValue("Study record");
+  const saveState = page.locator('.metadata-save-status');
+  const indicator = () => saveState.evaluate(el => {
+    const style = getComputedStyle(el, '::before');
+    return {content: style.content, fill: style.backgroundColor, border: style.borderTopColor, width: style.borderTopWidth};
+  });
+  // Read from the server and not yet saved here.
+  await expect(saveState).toHaveText('Unmodified');
+  // Nothing is unsaved, so the dot is hollow.
+  expect(await indicator()).toEqual({content: '""', fill: 'rgba(0, 0, 0, 0)', border: 'rgb(234, 179, 8)', width: '2px'});
+  await expect(page.locator('label[for="instance-name"]')).toHaveCSS('font-weight', '500');
   await input.fill("Working record");
   await expect(page.locator(".metadata-save-status")).toHaveClass(/is-dirty/);
   expect(await page.locator(".metadata-save-status").evaluate((el) =>
     getComputedStyle(el, "::before").backgroundColor)).toBe("rgb(234, 179, 8)");
   await expect(page.locator(".metadata-toolbar")).toContainText(
-    "Unsaved changes",
+    "Modified",
   );
-  await page.getByRole("button", { name: "Workspace", exact: true }).click();
+  await page.getByRole("button", { name: "Back to Workspace", exact: true }).click();
   await page
     .locator(".confirmation-dialog")
     .getByRole("button", { name: "Cancel" })
     .click();
   await expect(input).toHaveValue("Working record");
   await input.fill("Study record");
-  await expect(page.locator(".metadata-toolbar")).toContainText("Saved");
+  await expect(page.locator(".metadata-toolbar")).toContainText("Unmodified");
   await expect(page.locator(".metadata-save-status")).not.toHaveClass(/is-dirty/);
+  expect((await indicator()).fill).toBe('rgba(0, 0, 0, 0)');
   api.readonly = true;
   await page.reload();
   await expect(input).toHaveAttribute("readonly", "");
+  expect((await indicator()).content).toBe('none');
   await expect(
     page.getByRole("button", { name: "Save", exact: true }),
   ).toHaveCount(0);
@@ -240,6 +258,22 @@ test("New menu offers only supported creation actions", async ({
   await expect(page.locator('input[type="file"]')).toHaveCount(0);
 });
 
+test("the way back from a designer is the address the router wrote", async ({
+  page,
+  api,
+}) => {
+  await dashboard(page);
+  await page.goto("/dashboard?search=study:metadata");
+  await expect(page.getByText("Search results for “study:metadata”")).toBeVisible();
+  await page.getByRole("button", { name: "New", exact: true }).click();
+  const href = await page
+    .locator(".new-menu nav")
+    .getByRole("link", { name: "Template", exact: true })
+    .getAttribute("href");
+  expect(page.url()).toContain("search=study:metadata");
+  expect(new URL(href).searchParams.get("returnTo")).toBe(page.url());
+});
+
 test("group members are removed immediately without confirmation and show a success notice", async ({
   page,
   api,
@@ -261,6 +295,7 @@ test("group members are removed immediately without confirmation and show a succ
   await expect(page.locator(".confirmation-dialog")).toHaveCount(0);
   await expect(page.locator(".groups-member-row")).toHaveCount(1);
   await expect(page.getByRole("status")).toHaveText("Group members saved.");
+  await tokenStyles(page.locator('.toast'), feedbackSpacing);
   expect(api.requests.filter((r) => r.method === "PUT")).toHaveLength(1);
   if (process.env.WORKSPACE_VISUAL)
     await expect(page.locator(".toast")).toHaveScreenshot(
@@ -329,6 +364,7 @@ for (const [label, field] of [
     api,
   }) => {
     await page.goto("/dashboard?offset=50");
+    await page.getByRole("button", { name: "List view", exact: true }).click();
     const heading = page.getByRole("columnheader", {
       name: label,
       exact: true,
@@ -348,6 +384,7 @@ for (const [label, field] of [
       heading.locator('[data-cedar-icon="chevron-down"]'),
     ).toBeVisible();
     await page.reload();
+    await page.getByRole("button", { name: "List view", exact: true }).click();
     await expect(heading).toHaveAttribute("aria-sort", "descending");
     await expect(
       heading.locator('[data-cedar-icon="chevron-down"]'),
@@ -394,7 +431,10 @@ test("folder separators have no surrounding spacing in navigation, details and d
     .locator(".resource-menu")
     .getByRole("button", { name: "Move", exact: true })
     .click();
-  await unspaced(page.locator("dialog .breadcrumbs .breadcrumb-separator"), 3);
+  await unspaced(page.locator("dialog .breadcrumbs .breadcrumb-separator"), 2);
+  await expect(page.locator("dialog .breadcrumbs button")).toHaveText([
+    "All", "Users", "My workspace",
+  ]);
   await expect(
     page.locator("dialog .breadcrumbs button").filter({ hasText: "/" }),
   ).toHaveCount(0);
@@ -429,6 +469,22 @@ test("profile sections expose labelled copy actions for API examples", async ({
   expect(text).toContain("<API_KEY>");
 });
 
+test("the settings form label reads like the facts above it", async ({
+  page,
+  api,
+}) => {
+  await page.goto("/settings");
+  const style = (locator) =>
+    locator.evaluate((el) => {
+      const s = getComputedStyle(el);
+      return [s.fontSize, s.fontWeight, s.color];
+    });
+  await expect(page.locator("label[for=date-format]")).toBeVisible();
+  expect(await style(page.locator("label[for=date-format]"))).toEqual(
+    await style(page.locator(".account-facts dt").first()),
+  );
+});
+
 for (const route of ["settings", "privacy", "profile"]) {
   test(`${route} is a styled standalone account page`, async ({
     page,
@@ -460,9 +516,9 @@ for (const route of ["settings", "privacy", "profile"]) {
 test("metadata errors and nonblocking warnings share centered, expandable summaries", async ({
   page,
   api,
-}) => {
+}, testInfo) => {
   await page.goto("/instances/edit/instance");
-  await expect(page.getByLabel("Metadata name")).toHaveValue("Study record");
+  await expect(page.getByLabel("Instance name")).toHaveValue("Study record");
   await page.evaluate(() => {
     const cee = document.querySelector("cedar-embeddable-editor");
     cee.dataQualityReport = {
@@ -482,10 +538,30 @@ test("metadata errors and nonblocking warnings share centered, expandable summar
   await expect(
     page.getByRole("button", { name: "Save", exact: true }),
   ).toBeDisabled();
+  // A refused Save says why on hover.
+  await page.locator(".metadata-save-action").hover();
+  await expect(page.getByRole("tooltip")).toHaveText(
+    "Cannot save until errors are fixed",
+  );
+  await page.mouse.move(0, 0);
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
   await errors.locator("summary").click();
   await expect(errors.locator("li")).toBeVisible();
   await warnings.locator("summary").click();
   await expect(warnings.locator("li")).toBeVisible();
+  // Each listed problem leads to its field, wherever CEE has it, and reads as a line of text.
+  const link = errors.getByRole("button", { name: "Email: Enter a valid email." });
+  await expect(link).toHaveCSS("padding", "0px");
+  await expect(link).toHaveCSS("text-decoration-line", "underline");
+  await page
+    .locator(".metadata-content")
+    .screenshot({ path: testInfo.outputPath("metadata-problem-links.png") });
+  await link.click();
+  await warnings.getByRole("button", { name: "Title: A required value is missing." }).click();
+  expect(await page.evaluate(() => window.__ceeReveals)).toEqual([
+    { path: ["Email"], code: "email", message: "Enter a valid email." },
+    { path: ["Title"], code: "required", message: "A value is required." },
+  ]);
   await page
     .locator(".metadata-content")
     .screenshot({ path: "/tmp/metadata-validation-summaries.png" });
@@ -499,4 +575,79 @@ test("metadata errors and nonblocking warnings share centered, expandable summar
   await expect(
     page.getByRole("button", { name: "Save", exact: true }),
   ).toBeEnabled();
+  // An enabled Save needs no explanation.
+  await page.locator(".metadata-save-action").hover();
+  await page.waitForTimeout(400);
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
+});
+
+test("returning from the metadata editor selects the instance it opened", async ({ page, api }) => {
+  const instance = { ...resource, "@id": "instance", resourceType: "instance", "schema:name": "Study record" };
+  await page.route(/\/folders\/[^/]+\/contents/, (route) =>
+    route.fulfill({ json: { resources: [resource, instance], totalCount: 2, pathInfo: [] } }),
+  );
+  // The shared fixture answers every report with the template; this one is the instance's.
+  await page.route(/\/template-instances\/instance\/report/, (route) => route.fulfill({ json: instance }));
+  await page.goto("/dashboard");
+  const card = page.locator('[data-resource-id="instance"]');
+  await card.click({ position: { x: 8, y: 60 } });
+  await expect(card).toHaveAttribute("aria-selected", "true");
+  await card.dblclick({ position: { x: 8, y: 60 } });
+  await expect(page).toHaveURL(/\/instances\/edit\/instance/);
+  await expect(page.getByLabel("Instance name")).toHaveValue("Study record");
+  await page.locator("cedar-workspace-return").getByRole("button", { name: "Back to Workspace", exact: true }).click();
+  await expect(page).toHaveURL(/\/dashboard/);
+  await expect(card).toHaveAttribute("aria-selected", "true");
+  await expect(page).not.toHaveURL(/selected=/);
+});
+
+test("links in the Info panel return to the artifact whose panel held them", async ({ page, api }) => {
+  // An instance of the template that this folder does not hold.
+  const instance = { ...resource, "@id": "instance", resourceType: "instance", "schema:name": "Study record" };
+  await page.route(/\/search\?[^#]*is_based_on/, (route) =>
+    route.fulfill({ json: { resources: [instance], totalCount: 1, pathInfo: [] } }),
+  );
+  await page.goto("/dashboard");
+  const card = page.locator('[data-resource-id="template"]');
+  await card.click({ position: { x: 8, y: 60 } });
+  await expect(card).toHaveAttribute("aria-selected", "true");
+  const info = page.locator(".information");
+  const toInstance = info.getByRole("link", { name: "Study record", exact: true });
+  await expect(toInstance).toBeVisible();
+  const links = info.locator('a[href*="returnTo"]');
+  expect(await links.count()).toBeGreaterThan(1);
+  for (const href of await links.evaluateAll((all) => all.map((a) => a.href))) {
+    const back = new URL(new URL(href).searchParams.get("returnTo"));
+    expect(back.searchParams.get("selected"), href).toBe("template");
+  }
+  await toInstance.click();
+  await expect(page).toHaveURL(/\/instances\/edit\/instance/);
+  await expect(page.getByLabel("Instance name")).toHaveValue("Study record");
+  await page.locator("cedar-workspace-return").getByRole("button", { name: "Back to Workspace", exact: true }).click();
+  await expect(page).toHaveURL(/\/dashboard/);
+  await expect(card).toHaveAttribute("aria-selected", "true");
+  await expect(info).toContainText("Study metadata");
+});
+
+test("new metadata is unmodified until edited, and saved once persisted", async ({ page, api }) => {
+  await page.route(/\/template-instances(?:\?|$)/, route => route.fulfill({
+    json: { ...route.request().postDataJSON(), "@id": "instance" },
+    headers: { ETag: '\"saved-revision\"' },
+  }));
+  await page.goto("/instances/create/template");
+  const state = page.locator(".metadata-save-status");
+  await expect(state).toHaveText("Unmodified");
+  await expect(state).not.toHaveClass(/is-dirty/);
+  expect(await state.evaluate(el => getComputedStyle(el, "::before").backgroundColor)).toBe("rgba(0, 0, 0, 0)");
+  const name = page.getByLabel("Instance name", { exact: true });
+  const original = await name.inputValue();
+  await name.fill("Changed draft");
+  await expect(state).toHaveText("Modified");
+  await expect(state).toHaveClass(/is-dirty/);
+  await name.fill(original);
+  await expect(state).toHaveText("Unmodified");
+  await name.fill("Changed draft");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(state).toHaveText("Saved");
+  await expect(state).not.toHaveClass(/is-dirty/);
 });

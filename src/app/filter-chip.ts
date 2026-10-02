@@ -1,10 +1,11 @@
+import { Tooltip } from "./tooltip";
 import { Component, input, output } from "@angular/core";
 import { TranslatePipe } from "@ngx-translate/core";
 import { Icon } from "./icon";
 
 @Component({
   selector: "cedar-filter-chip",
-  imports: [Icon, TranslatePipe],
+  imports: [Tooltip, Icon, TranslatePipe],
   template: `<span class="chip" [class.active]="active()">
     <button
       type="button"
@@ -24,6 +25,7 @@ import { Icon } from "./icon";
         [attr.aria-label]="
           'Filters.ClearFilter' | translate: { name: label().toLowerCase() }
         "
+        [cedarTooltip]="'Filters.ClearFilter' | translate: { name: label().toLowerCase() }"
         (click)="clear.emit()"
       >
         <cedar-icon name="x" size="small" />

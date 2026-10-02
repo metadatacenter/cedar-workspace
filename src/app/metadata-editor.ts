@@ -1,6 +1,8 @@
 import { Toast } from "./toast";
+import { WorkspaceReturn } from "./workspace-return";
 import { Confirmation } from "./confirmation";
 import { Icon } from "./icon";
+import { Tooltip } from "./tooltip";
 import {
   AfterViewInit,
   Component,
@@ -26,6 +28,7 @@ import type {
   CeeConfig,
   CeeDataQualityReport,
   CeeJsonObject,
+  CeeValidationProblem,
 } from "cedar-embeddable-editor";
 import { Backend } from "./backend.service";
 import { CeeLoader } from "./cee-loader";
@@ -78,36 +81,103 @@ export function metadataKey(value: unknown): string {
       : v,
   );
 }
+// CEE shows one entry at a time of a repeated element or field, but a checkbox group or a
+// multiple-choice list shows all of its selections in one control.
+function pagesEntries(property: CeeJsonObject): boolean {
+  const items = property["items"] as CeeJsonObject | undefined;
+  if (property["type"] !== "array" || !items) return false;
+  const inputType = (items["_ui"] as CeeJsonObject | undefined)?.["inputType"];
+  return inputType !== "checkbox" && inputType !== "list";
+}
 // Resolve each property in its declaring parent, including repeated elements.
-// Use the same label precedence as CEE's rendered field headings.
+// Use the same label precedence as CEE's rendered field headings. A repeated element or
+// field is numbered by the entry the problem is in, so two entries holding the same bad
+// value read as two places.
 export function metadataFieldLabel(
   template: CeeJsonObject,
   path: string[],
+  occurrences: readonly number[] = [],
 ): string {
   let parent = template;
+  let entry = 0;
   return path
     .map((key) => {
       const properties = parent["properties"] as CeeJsonObject | undefined;
       const property = properties?.[key] as CeeJsonObject | undefined;
       if (!property) return /^\d+$/.test(key) ? `#${Number(key) + 1}` : key;
+      const index =
+        pagesEntries(property) && entry < occurrences.length
+          ? occurrences[entry++]
+          : undefined;
       const child =
         (property["items"] as CeeJsonObject | undefined) || property;
       const labels = (parent["_ui"] as CeeJsonObject | undefined)?.[
         "propertyLabels"
       ] as CeeJsonObject | undefined;
-      const label =
-        labels?.[key] ?? child["skos:prefLabel"] ?? child["schema:name"] ?? key;
+      // The parent's label for this use of the child counts only where it says something the key
+      // and the child's own name do not. Templates often repeat the key there.
+      const declared = labels?.[key];
+      const own = child["schema:name"];
+      const deployment =
+        declared == null || declared === key || declared === own
+          ? undefined
+          : declared;
+      const label = deployment ?? child["skos:prefLabel"] ?? own ?? key;
       parent = child;
-      return String(label);
+      return index === undefined ? String(label) : `${label} ${index + 1}`;
     })
-    .join(" / ");
+    .join(" · ");
+}
+// The minimum a repeated property declares, read where its declaring parent states it.
+function declaredMinItems(
+  template: CeeJsonObject,
+  path: string[],
+): number | undefined {
+  let parent = template;
+  let property: CeeJsonObject | undefined;
+  for (const key of path) {
+    const found = (parent["properties"] as CeeJsonObject | undefined)?.[key] as
+      CeeJsonObject | undefined;
+    if (!found) continue;
+    property = found;
+    parent = (found["items"] as CeeJsonObject | undefined) || found;
+  }
+  const min = property?.["minItems"];
+  return typeof min === "number" ? min : undefined;
+}
+// CEE describes its problems in English for diagnostics, so the page states the ones
+// it presents as warnings in the reader's language. Any other problem keeps CEE's text.
+export function metadataWarningMessage(
+  template: CeeJsonObject,
+  problem: CeeValidationProblem,
+  t: (key: string, params?: Record<string, unknown>) => string,
+): string {
+  switch (problem.code) {
+    case "required":
+      return t("Metadata.ProblemRequired");
+    case "minItems": {
+      const min = declaredMinItems(template, problem.path);
+      if (typeof problem.value === "number" && min !== undefined)
+        return t("Metadata.ProblemMinItems", { count: problem.value, min });
+    }
+  }
+  return problem.message || problem.code;
+}
+// Problems the instance may be saved with: a required value nobody has given, and a list
+// shorter than its minimum. Every other problem refuses Save.
+const WARNING_CODES = ["required", "minItems"];
+/** One line of the page's error or warning list, and the problem it leads to, if any. */
+export interface MetadataIssue {
+  label: string;
+  message: string;
+  problem?: CeeValidationProblem;
 }
 export const leaveMetadata: CanDeactivateFn<MetadataEditor> = (editor) =>
   editor.mayLeave();
 
 @Component({
   selector: "cedar-metadata-page",
-  imports: [Toast, Icon, FormsModule, TranslatePipe],
+  imports: [Toast, WorkspaceReturn, Icon, Tooltip, FormsModule, TranslatePipe],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: "./metadata-editor.html",
 })
@@ -133,9 +203,13 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   private folder = "";
   private template!: CeeJsonObject;
   private saved?: CeeJsonObject;
+  // Until it is edited, an instance is unmodified, whether read from the server or new; only a save made here is reported as saved.
+  private savedHere = false;
   private etag: string | null = null;
   private baseline = "";
-  private baselineName = "";
+  // The name as it was typed when the page last matched the server, whitespace and all: the
+  // name saved is trimmed, but an edit the user can see is an edit.
+  private baselineText = "";
   private alive = true;
   private updatingAddress = false;
   private get cee() {
@@ -221,7 +295,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
       if (!this.alive) return;
       this.baseline = metadataKey(this.cee.currentMetadata);
-      this.baselineName = this.chosenName();
+      this.baselineText = this.name;
       this.cee.addEventListener("change", this.changed);
       this.refreshQuality();
       this.loading.set(false);
@@ -240,7 +314,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     this.refreshQuality();
     this.dirty.set(
       metadataKey(this.cee.currentMetadata) !== this.baseline ||
-        this.chosenName() !== this.baselineName,
+        this.name !== this.baselineText,
     );
     this.notice.set("");
   };
@@ -249,7 +323,17 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     if (this.loading()) return "Common.Loading";
     if (this.saving()) return "Common.Saving";
     if (!this.writable()) return "Metadata.ReadOnly";
-    return this.dirty() ? "Metadata.UnsavedChanges" : "Metadata.SavedStatus";
+    return this.dirty()
+      ? "Metadata.ModifiedStatus"
+      : this.savedHere
+        ? "Metadata.SavedStatus"
+        : "Metadata.UnmodifiedStatus";
+  }
+  /** Save is refused because the page lists errors, rather than while it loads or saves. */
+  get saveRefused() {
+    return (
+      !this.loading() && !this.saving() && this.validationErrors.length > 0
+    );
   }
   get missingRequired() {
     const q = this.quality();
@@ -259,17 +343,17 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         (q?.nonNullRequiredFieldValueCount || 0),
     );
   }
-  get validationWarnings() {
+  get validationWarnings(): MetadataIssue[] {
     const q = this.quality();
     const problems = (q?.problems || []).filter((p) =>
-      ["required", "missingProperty", "minItems"].includes(p.code),
+      WARNING_CODES.includes(p.code),
     );
-    const items = problems.map((p) => ({
-      label:
-        metadataFieldLabel(this.template, p.path) ||
-        p.field ||
-        this.i18n.t("Metadata.Label"),
-      message: p.message || p.code,
+    const items: MetadataIssue[] = problems.map((p) => ({
+      label: this.issueLabel(p),
+      message: metadataWarningMessage(this.template, p, (key, params) =>
+        this.i18n.t(key, params),
+      ),
+      problem: p,
     }));
     if (this.missingRequired && !problems.some((p) => p.code === "required"))
       items.push({
@@ -280,18 +364,14 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       });
     return items;
   }
-  get validationErrors() {
+  get validationErrors(): MetadataIssue[] {
     const q = this.quality();
-    const items = (q?.problems || [])
-      .filter(
-        (p) => !["required", "missingProperty", "minItems"].includes(p.code),
-      )
+    const items: MetadataIssue[] = (q?.problems || [])
+      .filter((p) => !WARNING_CODES.includes(p.code))
       .map((p) => ({
-        label:
-          metadataFieldLabel(this.template, p.path) ||
-          p.field ||
-          this.i18n.t("Metadata.Label"),
+        label: this.issueLabel(p),
         message: p.message || p.code,
+        problem: p,
       }));
     if (
       q?.isValid === false &&
@@ -303,6 +383,17 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         message: this.i18n.t("Metadata.ReviewInvalid"),
       });
     return items;
+  }
+  private issueLabel(problem: CeeValidationProblem): string {
+    return (
+      metadataFieldLabel(this.template, problem.path, problem.occurrences) ||
+      problem.field ||
+      this.i18n.t("Metadata.Label")
+    );
+  }
+  /** Take the user to the field a listed problem is about, on whichever page and entry holds it. */
+  reveal(issue: MetadataIssue) {
+    if (issue.problem) void this.cee.reveal(issue.problem);
   }
   async save() {
     if (this.loading() || this.saving() || !this.writable()) return;
@@ -317,6 +408,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       const current = this.cee.currentMetadata;
       const baseline = metadataKey(current);
       const name = this.chosenName();
+      const text = this.name;
       const metadata: CeeJsonObject = structuredClone(current);
       metadata["schema:name"] = name;
       metadata["schema:isBasedOn"] = this.template["@id"];
@@ -340,9 +432,10 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       );
       if (!this.alive) return;
       this.saved = reply.data;
+      this.savedHere = true;
       this.etag = reply.etag;
       this.baseline = baseline;
-      this.baselineName = name;
+      this.baselineText = text;
       // Keep the CEE element, focus and any edits made while the save was pending.
       // Update the router as well as browser history: otherwise cancelling a
       // later navigation restores the original create URL. The same route

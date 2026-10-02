@@ -2,6 +2,7 @@ import {
   afterRenderEffect,
   Component,
   computed,
+  effect,
   DestroyRef,
   ElementRef,
   inject,
@@ -11,6 +12,7 @@ import {
   viewChild,
 } from "@angular/core";
 import { Icon } from "./icon";
+import { TooltipController } from "./tooltip-controller";
 
 @Component({
   selector: "cedar-copy-button",
@@ -40,6 +42,7 @@ import { Icon } from "./icon";
   styleUrl: "./copy-button.scss",
 })
 export class CopyButton {
+  private readonly controller = inject(TooltipController);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly tooltip = viewChild<ElementRef<HTMLElement>>("tooltip");
   private static nextId = 0;
@@ -51,9 +54,16 @@ export class CopyButton {
   readonly focused = signal(false);
   readonly dismissed = signal(false);
   readonly visible = computed(
-    () => !this.dismissed() && (this.hovered() || this.focused()),
+    () => !this.controller.suppressed() && !this.dismissed() && (this.hovered() || this.focused()),
   );
   constructor() {
+    effect(() => {
+      if (this.controller.suppressed()) {
+        this.hovered.set(false);
+        this.focused.set(false);
+        this.dismissed.set(true);
+      }
+    });
     // Fixed positioning escapes the Instances list's scrolling/clipping box.
     afterRenderEffect(() => {
       const tip = this.tooltip()?.nativeElement;
@@ -75,10 +85,12 @@ export class CopyButton {
     );
   }
   enter() {
+    if (this.controller.suppressed()) return;
     this.dismissed.set(false);
     this.hovered.set(true);
   }
   focus(event: FocusEvent) {
+    if (this.controller.suppressed()) return;
     this.dismissed.set(false);
     this.focused.set((event.target as HTMLElement).matches(":focus-visible"));
   }

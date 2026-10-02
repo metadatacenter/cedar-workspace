@@ -1,5 +1,8 @@
+@use "@org.metadatacenter/cedar-design-tokens/spacing";
 @use "@org.metadatacenter/cedar-design-tokens/controls";
 @use "@org.metadatacenter/cedar-design-tokens/patterns";
+@use "../overlay-spacing";
+@include overlay-spacing.filter-popover;
 :host {
   display: block;
   position: relative;
@@ -20,13 +23,20 @@
   min-width: 280px;
   max-width: 100%;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: min(70vh, var(--filter-available-height, 70vh));
 }
 .date {
   width: 640px;
 }
+.type-options,
+.date-body {
+  min-height: 0;
+  overflow-y: auto;
+}
 .type-options {
   display: grid;
-  padding: var(--cedar-space-3);
 }
 .type-options label {
   @include patterns.menu-item;
@@ -38,7 +48,8 @@
   cursor: pointer;
 }
 input[type="checkbox"] {
-  accent-color: var(--cedar-color-primary);
+  margin-left: auto;
+  flex: none;
   min-height: 0;
   width: var(--cedar-icon-size-small);
   height: var(--cedar-icon-size-small);
@@ -49,7 +60,6 @@ input[type="checkbox"] {
 }
 .presets {
   display: grid;
-  padding-block: var(--cedar-space-2);
   border-right: 1px solid var(--cedar-border-rule);
 }
 .presets button {
@@ -57,7 +67,6 @@ input[type="checkbox"] {
   display: flex;
   align-items: center;
   gap: var(--cedar-space-3);
-  color: var(--cedar-text-primary);
   border-radius: 0;
 }
 .check {
@@ -66,19 +75,14 @@ input[type="checkbox"] {
 }
 .presets button.selected {
   background: var(--cedar-surface-selected);
-  color: var(--cedar-text-selected);
 }
 .range {
-  padding: var(--cedar-space-4);
   display: flex;
   flex-direction: column;
-  gap: var(--cedar-space-4);
 }
 .range label {
   display: flex;
-  margin: 0;
   flex-direction: column;
-  gap: var(--cedar-space-2);
 }
 .range input {
   min-width: 0;
@@ -93,10 +97,9 @@ input[type="checkbox"] {
   margin: 0;
 }
 footer {
+  flex: none;
   display: flex;
   align-items: center;
-  gap: var(--cedar-space-2);
-  padding: var(--cedar-space-3);
   border-top: 1px solid var(--cedar-border-rule);
 }
 footer span {
@@ -113,13 +116,6 @@ footer span {
     border-right: 0;
     border-bottom: 1px solid var(--cedar-border-rule);
   }
-  .range {
-    padding: var(--cedar-space-3);
-  }
-  .popover {
-    max-height: 70vh;
-    overflow-y: auto;
-  }
 }
 
 .version-filter {
@@ -129,7 +125,7 @@ footer span {
   gap: 0;
   margin: 0;
   border: 1px solid var(--cedar-control-border-default);
-  border-radius: calc(var(--cedar-control-radius-default) * 3);
+  border-radius: var(--cedar-radius-pill);
   overflow: hidden;
   &:has(select:focus-visible) {
     @include controls.focus-ring;
@@ -146,6 +142,7 @@ footer span {
   pointer-events: none;
 }
 .version-filter select {
+  @include controls.action-states;
   position: absolute;
   inset: 0;
   width: 100%;
@@ -153,8 +150,7 @@ footer span {
   appearance: none;
   border: 0;
   border-radius: 0;
-  padding-inline: var(--cedar-space-3)
-    calc(2 * var(--cedar-space-3) + var(--cedar-icon-size-small));
+  @include spacing.apply(padding-inline, select-clearance);
   &:focus-visible {
     outline: none;
   }
@@ -162,7 +158,6 @@ footer span {
 .version-choice-label {
   visibility: hidden;
   white-space: nowrap;
-  padding-inline: var(--cedar-space-3)
-    calc(2 * var(--cedar-space-3) + var(--cedar-icon-size-small));
+  @include spacing.apply(padding-inline, select-clearance);
   min-height: var(--cedar-control-height-default);
 }

@@ -1,14 +1,12 @@
 import { Toast } from "./toast";
-import { Icon } from "./icon";
+import { WorkspaceReturn } from "./workspace-return";
 import { Component, Input } from "@angular/core";
 import { TranslatePipe } from "@ngx-translate/core";
 @Component({
-  imports: [Toast, Icon, TranslatePipe],
+  imports: [Toast, WorkspaceReturn, TranslatePipe],
   selector: "cedar-account-shell",
   template: ` <header class="account-header">
-      <a href="/dashboard"
-        ><cedar-icon name="back" /> {{ "Common.Workspace" | translate }}</a
-      >
+      <cedar-workspace-return />
       <h1>{{ title }}</h1>
     </header>
     <main class="account-content">

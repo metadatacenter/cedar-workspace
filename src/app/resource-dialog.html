@@ -1,19 +1,27 @@
 <dialog
+  class="action-dialog"
+  [class.is-preparing]="preparing()"
+  [attr.aria-busy]="preparing()"
   cedarDialogKeyboard
   #dialog
   aria-labelledby="dialog-title"
   (cancel)="$event.preventDefault(); close()"
 >
-  <form (ngSubmit)="submit()">
-    <header>
+  @if(preparing()) {
+  <p class="dialog-preparing-status" role="status">{{'Common.Loading' | translate}}</p>
+  }
+  <form class="dialog-stack" (ngSubmit)="submit()">
+    <header class="dialog-heading">
       <h2 id="dialog-title" class="resource-dialog-title">
-        @if(action === "rename"){<cedar-icon name="edit" />} {{heading}}
+        <cedar-icon [name]="headingIcon" /> {{heading}}
       </h2>
       <button
+        class="dialog-close"
         type="button"
         (click)="close()"
         [disabled]="busy()"
         [attr.aria-label]="'ResourceDialog.Close' | translate"
+        [cedarTooltip]="'ResourceDialog.Close' | translate"
       >
         <cedar-icon name="close" />
       </button>
@@ -33,9 +41,9 @@
     } @if(error()){
     <p class="alert" role="alert">{{error()}}</p>
     }
-    <fieldset [disabled]="busy()">
+    <fieldset class="dialog-stack" [disabled]="busy()">
       @if(['new-folder','rename','copy'].includes(action)){<label
-        >{{'Common.Name' | translate}}<input
+        ><span class="field-label">{{(action === 'copy' ? 'ResourceDialog.NameOfCopy' : 'Common.Name') | translate}}</span><input
           spellcheck="false"
           [attr.aria-invalid]="submitted && nameError ? true : null"
           [attr.aria-describedby]="submitted && nameError ? 'name-error' : null"
@@ -48,84 +56,66 @@
       @if(submitted && nameError){
       <p id="name-error" class="field-error" role="alert">{{nameError}}</p>
       } } @if(['new-folder','rename'].includes(action)){<label
-        >{{'Common.Description' | translate}}<textarea
+        ><span class="field-label">{{'Common.Description' | translate}}</span><textarea
           spellcheck="false"
           name="description"
           [(ngModel)]="description"
           rows="3"
         ></textarea></label
-      >} @if(['publish','draft'].includes(action)){<label
-        >{{'Common.Version' | translate}}<input
-          spellcheck="false"
-          [attr.aria-invalid]="submitted && versionError ? true : null"
-          [attr.aria-describedby]="submitted && versionError ? 'version-error' : null"
-          name="version"
-          [(ngModel)]="version"
-          required
-          pattern="[0-9]+\.[0-9]+\.[0-9]+"
-      /></label>
-      @if(submitted && versionError){
+      >} @if(action==='publish'){
+      <p>{{'ResourceDialog.ChoosePublicationVersion' | translate}}</p>
+      } @if(['publish','draft'].includes(action)){<div class="field"
+        ><span id="version-label" class="field-label">{{'Common.Version' | translate}}</span><cedar-version-picker
+          labelledBy="version-label"
+          [describedBy]="versionError ? 'version-error' : ''"
+          [invalid]="!!versionError"
+          [(value)]="version"
+      /></div>
+      @if(versionError){
       <p id="version-error" class="field-error" role="alert">
         {{versionError}}
       </p>
-      } } @if(action==='draft'){<label class="check"
-        ><input
-          spellcheck="false"
-          type="checkbox"
-          name="propagate"
-          [(ngModel)]="propagate"
-        />{{'ResourceDialog.KeepSharing' | translate}}</label
-      ><label
-        >{{'ResourceDialog.NewFolderName' | translate}}<input
-          spellcheck="false"
-          name="newFolderName"
-          [(ngModel)]="newFolderName" /></label
-      >} @if(choosesFolder){
+      } } @if(choosesFolder){
       <section
-        class="folder-picker"
+        class="folder-picker dialog-stack"
         [attr.aria-label]="'ResourceDialog.DestinationFolder' | translate"
       >
         <h3>{{'ResourceDialog.Destination' | translate}}</h3>
         <nav class="breadcrumbs">
-          <button type="button" (click)="browse(api.profile.homeFolderId)">
-            {{'Common.Home' | translate}}</button
-          >@for(p of path();track p['@id']){<span
+          @for(p of path();track p['@id'];let first=$first){@if(!first){<span
             class="breadcrumb-separator"
             aria-hidden="true"
             >/</span
-          ><button type="button" (click)="browse(p['@id'])">
+          >}<button type="button" (click)="browse(p['@id'])">
             {{title(p)==='/'?('Common.All' | translate):title(p)}}</button
           >}
         </nav>
-        <div class="folder-list">
-          @for(f of folders();track f['@id']){<button
+        <cedar-folder-list
+          [label]="'ResourceDialog.DestinationFolder' | translate"
+          [folders]="folders()"
+          [sort]="folderSort"
+          [busy]="busy()"
+          [disabledId]="resource?.['@id']"
+          (openFolder)="browse($event)"
+          (sortChange)="sortFolders($event)"
+        />
+        @if(targetTotal > 50){
+        <div class="paging">
+          <button
             type="button"
-            (click)="browse(f['@id'])"
-            [disabled]="f['@id']===resource?.['@id']"
+            (click)="browse(target,targetOffset-50)"
+            [disabled]="targetOffset===0"
           >
-            ▰ {{title(f)}}</button
-          >}@empty{
-          <p>{{'ResourceDialog.NoSubfolders' | translate}}</p>
-          }
+            {{'Common.Previous' | translate}}</button
+          ><button
+            type="button"
+            (click)="browse(target,targetOffset+50)"
+            [disabled]="targetOffset+folders().length>=targetTotal"
+          >
+            {{'Common.Next' | translate}}
+          </button>
         </div>
-        <button
-          type="button"
-          (click)="browse(target,targetOffset-50)"
-          [disabled]="targetOffset===0"
-        >
-          {{'Common.Previous' | translate}}</button
-        ><button
-          type="button"
-          (click)="browse(target,targetOffset+50)"
-          [disabled]="targetOffset+folders().length>=targetTotal"
-        >
-          {{'Common.Next' | translate}}
-        </button>
-        <p>
-          {{'ResourceDialog.Selected' | translate: {name:
-          targetResource?title(targetResource):('Common.Loading' | translate)}
-          }}
-        </p>
+        }
         @if(!destinationAllowed){
         <p>{{'ResourceDialog.DestinationNotAllowed' | translate}}</p>
         }
@@ -134,10 +124,8 @@
       <p>
         {{'ResourceDialog.ConfirmDelete.' + resource?.resourceType | translate}}
       </p>
-      } @if(action==='make-open'){
-      <p>{{'ResourceDialog.WillBeOpen' | translate}}</p>
-      } @if(action==='make-not-open'){
-      <p>{{'ResourceDialog.WillNotBeOpen' | translate}}</p>
+      } @if(action==='make-open' || action==='make-not-open'){
+      <p>{{openViewMessage()}}</p>
       }
     </fieldset>
     <footer>

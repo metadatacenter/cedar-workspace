@@ -1,9 +1,7 @@
 @use "@org.metadatacenter/cedar-design-tokens/patterns";
+@use "../overlay-spacing";
+@include overlay-spacing.permissions-dialog;
 :host {
-  --cedar-table-cell-padding-block: var(--cedar-space-1);
-  --cedar-table-row-height: calc(
-    var(--cedar-control-height-default) + 2 * var(--cedar-space-1)
-  );
   font-family: var(--cedar-font-family);
   font-size: var(--cedar-font-size);
   color: var(--cedar-text-primary);
@@ -15,35 +13,24 @@ dialog {
   margin: 40px auto;
   padding: 0;
   border: 0;
-  border-radius: var(--cedar-dialog-radius);
+  border-radius: var(--cedar-radius);
   color: var(--cedar-text-primary);
   background: var(--cedar-color-on-primary);
-  box-shadow: var(--cedar-dialog-shadow);
+  box-shadow: var(--cedar-shadow-dialog);
 }
 dialog::backdrop {
   background: var(--cedar-dialog-backdrop);
 }
 .permissions-header {
-  display: block;
-  position: relative;
-  padding: var(--cedar-space-3) var(--cedar-space-4);
   border-bottom: 1px solid var(--cedar-border-rule);
 }
 h2 {
-  margin: 0 var(--cedar-control-height-default) var(--cedar-space-1) 0;
   @include patterns.artifact-title;
-}
-.close {
-  position: absolute;
-  right: 20px;
-  top: 14px;
-  font-size: var(--cedar-font-size-heading);
-  color: var(--cedar-text-muted);
 }
 .resource-context {
   display: flex;
   align-items: center;
-  gap: var(--cedar-space-3);
+  gap: var(--cedar-space-2);
 }
 .resource-context > div {
   min-width: 0;
@@ -51,9 +38,6 @@ h2 {
 .resource-avatar {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
   color: var(--cedar-color-primary);
   flex-shrink: 0;
 }
@@ -61,7 +45,7 @@ h2 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: var(--cedar-font-size-lead);
+  font-size: var(--cedar-font-size);
   font-weight: var(--cedar-font-weight-medium);
 }
 .resource-type {
@@ -72,32 +56,26 @@ h2 {
 }
 .permissions-body {
   max-height: calc(100vh - 250px);
-  padding: 0 var(--cedar-space-4);
   overflow-y: auto;
 }
 .folder-notice {
   display: flex;
   gap: var(--cedar-space-3);
-  margin: var(--cedar-space-2) 0 var(--cedar-space-1);
-  padding: var(--cedar-space-3);
   border-left: 3px solid var(--cedar-color-primary);
-  background: var(--cedar-status-info-surface);
-  color: var(--cedar-status-info-text);
+  background: var(--cedar-surface-selected);
+  color: var(--cedar-color-primary-strong);
 }
 .access-panel {
-  padding: var(--cedar-space-2) 0;
   border-bottom: 1px solid var(--cedar-border-rule);
 }
 .access-panel:last-child {
   border-bottom: 0;
 }
 h3 {
-  margin: 0 0 var(--cedar-space-1);
   font-size: var(--cedar-font-size-element-heading);
   font-weight: var(--cedar-font-weight-medium);
 }
 p {
-  margin: 0 0 var(--cedar-space-2);
   color: var(--cedar-text-muted);
   font-size: var(--cedar-font-size);
   line-height: var(--cedar-control-line-height-authoring);
@@ -108,18 +86,18 @@ label {
 select {
   width: 100%;
   height: var(--cedar-control-height-default);
-  padding: 6px var(--cedar-space-3);
+  padding: var(--cedar-space-1) var(--cedar-space-3);
   border-color: var(--cedar-control-border-default);
 }
 select:disabled {
-  background: var(--cedar-control-readonly-surface);
-  color: var(--cedar-text-readonly);
+  background: var(--cedar-surface-subtle);
+  color: var(--cedar-text-muted);
 }
 // Viewing a role is readable content, even though its native select remains inert.
 select.readonly-role:disabled {
   opacity: 1;
-  color: var(--cedar-text-readonly);
-  background: var(--cedar-control-readonly-surface);
+  color: var(--cedar-text-muted);
+  background: var(--cedar-surface-subtle);
 }
 .add-controls {
   display: flex;
@@ -141,7 +119,7 @@ select.readonly-role:disabled {
   flex-wrap: wrap;
   justify-content: space-between;
   gap: var(--cedar-space-2) var(--cedar-space-6);
-  margin-top: var(--cedar-form-help-gap);
+  margin-top: var(--cedar-space-1);
   color: var(--cedar-text-muted);
   font-size: var(--cedar-font-size);
 }
@@ -154,8 +132,8 @@ select.readonly-role:disabled {
   display: flex;
   align-items: center;
   min-height: var(--cedar-table-row-height);
-  padding: var(--cedar-table-cell-padding-block)
-    var(--cedar-table-cell-padding-inline);
+  padding: var(--cedar-space-1)
+    var(--cedar-space-3);
   gap: var(--cedar-space-3);
 }
 .access-row + .access-row {
@@ -186,11 +164,11 @@ select.readonly-role:disabled {
   height: 34px;
   margin-right: var(--cedar-space-3);
   border-radius: 50%;
-  background: var(--cedar-surface-panel);
-  color: var(--cedar-text-muted);
+  background: transparent;
+  color: var(--cedar-color-primary);
 }
 .avatar.group {
-  background: var(--cedar-surface-tinted);
+  background: transparent;
   color: var(--cedar-color-primary);
 }
 .type-cell {
@@ -215,7 +193,6 @@ select.readonly-role:disabled {
   min-height: 0;
   margin: 0;
   padding: 0;
-  accent-color: var(--cedar-color-primary);
 }
 .action-cell {
   flex: 0 0 28px;
@@ -224,15 +201,13 @@ select.readonly-role:disabled {
   display: flex;
   justify-content: center;
   width: 28px;
-  min-height: 32px;
+  min-height: var(--cedar-control-height-authoring);
   padding: var(--cedar-space-1);
   color: var(--cedar-text-primary);
 }
 footer {
-  margin-top: 0;
   display: flex;
-  justify-content: center;
-  padding: var(--cedar-space-2) var(--cedar-space-4);
+  justify-content: flex-end;
   border-top: 1px solid var(--cedar-border-rule);
 }
 footer button {
@@ -250,13 +225,7 @@ footer button {
   dialog {
     width: calc(100% - 16px);
     max-height: calc(100vh - 16px);
-    margin: 8px auto;
-  }
-  .permissions-header,
-  .permissions-body,
-  footer {
-    padding-left: var(--cedar-space-4);
-    padding-right: var(--cedar-space-4);
+    margin: var(--cedar-space-2) auto;
   }
   .permissions-body {
     max-height: calc(100vh - 190px);

@@ -1,10 +1,11 @@
+import { Tooltip } from "./tooltip";
 import { Component, effect, input, signal } from "@angular/core";
 import { TranslatePipe } from "@ngx-translate/core";
 import { Icon } from "./icon";
 
 @Component({
   selector: "cedar-toast",
-  imports: [Icon, TranslatePipe],
+  imports: [Tooltip, Icon, TranslatePipe],
   template: `@if (message() && visible()) {
     <div
       class="toast"
@@ -19,36 +20,14 @@ import { Icon } from "./icon";
       <cedar-icon name="check" /><span>{{ message() }}</span>
       <button
         [attr.aria-label]="'Toast.Dismiss' | translate"
+        [cedarTooltip]="'Toast.Dismiss' | translate"
         (click)="dismiss()"
       >
         <cedar-icon name="close" />
       </button>
     </div>
   }`,
-  styles: [
-    `
-      .toast {
-        position: fixed;
-        z-index: var(--cedar-layer-overlay);
-        right: var(--cedar-space-4);
-        bottom: var(--cedar-space-4);
-        max-width: calc(100vw - 32px);
-        display: flex;
-        align-items: center;
-        gap: var(--cedar-space-2);
-        padding: var(--cedar-space-2) var(--cedar-space-3);
-        color: var(--cedar-status-success-text);
-        background: var(--cedar-status-success-surface);
-        border: 1px solid var(--cedar-border-rule);
-        border-radius: var(--cedar-control-radius-default);
-        box-shadow: var(--cedar-menu-shadow);
-      }
-      button {
-        color: inherit;
-        flex-shrink: 0;
-      }
-    `,
-  ],
+  styleUrl: "./toast.scss",
 })
 export class Toast {
   readonly message = input("");

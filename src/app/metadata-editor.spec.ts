@@ -12,6 +12,7 @@ import {
   MetadataEditor,
   metadataKey,
   metadataFieldLabel,
+  metadataWarningMessage,
   metadataRoute,
   workspaceReturn,
 } from "./metadata-editor";
@@ -128,6 +129,27 @@ describe("Modern metadata host", () => {
     expect(host.loading()).toBe(false);
     expect(host.dirty()).toBe(false);
   });
+  it("shows a new untouched instance as unmodified until it is edited", async () => {
+    await host.ngAfterViewInit();
+    expect(host.saveStatus).toBe("Metadata.UnmodifiedStatus");
+    expect(host.dirty()).toBe(false);
+    host.name = "Changed";
+    host.changed();
+    expect(host.saveStatus).toBe("Metadata.ModifiedStatus");
+    await host.save();
+    expect(host.saveStatus).toBe("Metadata.SavedStatus");
+    expect(host.dirty()).toBe(false);
+  });
+  it("shows an existing artifact as unmodified until it is saved here", async () => {
+    await edit();
+    expect(host.saveStatus).toBe("Metadata.UnmodifiedStatus");
+    expect(host.dirty()).toBe(false);
+    host.name = "Changed";
+    host.changed();
+    expect(host.saveStatus).toBe("Metadata.ModifiedStatus");
+    await host.save();
+    expect(host.saveStatus).toBe("Metadata.SavedStatus");
+  });
   it("passes the active language to CEE with English as its fallback", async () => {
     await host.ngAfterViewInit();
     expect(cee.config.defaultLanguage).toBe("en");
@@ -241,6 +263,25 @@ describe("Modern metadata host", () => {
     expect(api.request).not.toHaveBeenCalled();
     expect(host.error()).toContain("validator");
   });
+  it("counts a whitespace edit to the name as an edit, and saves the trimmed name", async () => {
+    await edit();
+    const typed = host.name;
+    host.name = typed + " ";
+    host.changed();
+    expect(host.dirty()).toBe(true);
+    host.name = typed;
+    host.changed();
+    expect(host.dirty()).toBe(false);
+    host.name = typed + " ";
+    host.changed();
+    api.request.mockResolvedValue({
+      data: { "@id": "instance-id" },
+      etag: '"i2"',
+    });
+    await host.save();
+    expect(api.request.mock.lastCall?.[2]?.["schema:name"]).toBe(typed.trim());
+    expect(host.dirty()).toBe(false);
+  });
   it("keeps edits made while a save is pending dirty and prevents double submission", async () => {
     await edit();
     let resolve!: (value: { data: object; etag: string }) => void;
@@ -297,6 +338,11 @@ describe("Modern metadata host", () => {
     host.changed();
     expect(host.validationWarnings).toHaveLength(1);
     expect(host.validationErrors).toHaveLength(1);
+    // Each listed problem leads to its field.
+    const reveal = vi.fn().mockResolvedValue(true);
+    Object.defineProperty(cee, "reveal", { value: reveal });
+    host.reveal(host.validationErrors[0]);
+    expect(reveal).toHaveBeenCalledWith(cee.dataQualityReport.problems[1]);
     api.request.mockClear();
     await host.save();
     expect(api.request).not.toHaveBeenCalled();
@@ -382,10 +428,10 @@ describe("metadata field labels", () => {
       },
     };
     expect(metadataFieldLabel(schema, ["samples", "0", "amount"])).toBe(
-      "Study samples / #1 / Sample weight",
+      "Study samples · #1 · Sample weight",
     );
     expect(metadataFieldLabel(schema, ["samples", "count"])).toBe(
-      "Study samples / Cell count",
+      "Study samples · Cell count",
     );
     expect(metadataFieldLabel(schema, ["unknown"])).toBe("unknown");
     expect(
@@ -394,5 +440,113 @@ describe("metadata field labels", () => {
         ["2026"],
       ),
     ).toBe("Annual count");
+  });
+  it("numbers the entry of each repeated element or field a problem is in", () => {
+    const schema = {
+      properties: {
+        samples: {
+          type: "array",
+          items: {
+            "schema:name": "Sample",
+            properties: {
+              tags: {
+                type: "array",
+                items: {
+                  "schema:name": "Tag",
+                  _ui: { inputType: "textfield" },
+                },
+              },
+              picks: {
+                type: "array",
+                items: {
+                  "schema:name": "Picks",
+                  _ui: { inputType: "checkbox" },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    expect(metadataFieldLabel(schema, ["samples", "tags"], [1, 2])).toBe(
+      "Sample 2 · Tag 3",
+    );
+    // A list of entries is named as a whole, so only the element is numbered.
+    expect(metadataFieldLabel(schema, ["samples", "tags"], [1])).toBe(
+      "Sample 2 · Tag",
+    );
+    // A checkbox group shows every selection at once and has no entries to number.
+    expect(metadataFieldLabel(schema, ["samples", "picks"], [0])).toBe(
+      "Sample 1 · Picks",
+    );
+    // A requirement any entry satisfies names no entry.
+    expect(metadataFieldLabel(schema, ["samples", "tags"], [])).toBe(
+      "Sample · Tag",
+    );
+  });
+  it("passes over a parent label that only repeats the key or the field's own name", () => {
+    const schema = {
+      _ui: {
+        propertyLabels: {
+          parent_sample_id: "parent_sample_id",
+          contributors_path: "contributors_path",
+        },
+      },
+      properties: {
+        parent_sample_id: {
+          "schema:name": "parent_sample_id",
+          "skos:prefLabel": "Parent sample ID",
+        },
+        contributors_path: { "schema:name": "contributors_path" },
+      },
+    };
+    expect(metadataFieldLabel(schema, ["parent_sample_id"])).toBe(
+      "Parent sample ID",
+    );
+    // With nothing more legible, the form shows the name, and so does the warning.
+    expect(metadataFieldLabel(schema, ["contributors_path"])).toBe(
+      "contributors_path",
+    );
+  });
+});
+
+describe("metadata warning messages", () => {
+  const template = {
+    properties: {
+      samples: {
+        type: "array",
+        minItems: 2,
+        items: { properties: { amount: { "schema:name": "Amount" } } },
+      },
+    },
+  };
+  const t = (key: string, params?: Record<string, unknown>) =>
+    `${key}${params ? " " + JSON.stringify(params) : ""}`;
+  const problem = (code: string, value: unknown, path = ["samples"]) => ({
+    code,
+    path,
+    occurrences: [],
+    field: path[path.length - 1],
+    inputType: null,
+    message: "CEE's English diagnostic",
+    value,
+  });
+
+  it("states the warnings it presents through the translation files", () => {
+    expect(metadataWarningMessage(template, problem("required", null), t)).toBe(
+      "Metadata.ProblemRequired",
+    );
+    expect(metadataWarningMessage(template, problem("minItems", 1), t)).toBe(
+      'Metadata.ProblemMinItems {"count":1,"min":2}',
+    );
+  });
+
+  it("keeps CEE's text for a problem it has no wording for", () => {
+    expect(
+      metadataWarningMessage(template, problem("minItems", 1, ["unknown"]), t),
+    ).toBe("CEE's English diagnostic");
+    expect(metadataWarningMessage(template, problem("pattern", "x"), t)).toBe(
+      "CEE's English diagnostic",
+    );
   });
 });

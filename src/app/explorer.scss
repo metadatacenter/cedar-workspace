@@ -1,24 +1,29 @@
+@use "@org.metadatacenter/cedar-design-tokens/spacing";
+@use "@org.metadatacenter/cedar-design-tokens/patterns";
+
 .explorer-toolbar {
   display: flex;
   align-items: center;
-  gap: var(--cedar-space-1);
-  min-height: calc(var(--cedar-control-height-default) + var(--cedar-space-1));
+  gap: var(--cedar-space-3);
+  padding-block: var(--cedar-space-3);
   flex-wrap: wrap;
   border-bottom: 1px solid var(--cedar-border-rule);
 }
-.explorer-toolbar > span {
-  color: var(--cedar-text-muted);
+.explorer-toolbar > cedar-resource-filters {
+  flex: 1 1 28rem;
+  min-width: 0;
+  margin: 0;
 }
 .explorer-view-switch {
   display: flex;
   margin-left: auto;
   border: 1px solid var(--cedar-border-rule);
-  border-radius: calc(var(--cedar-control-radius-default) * 1.25);
+  border-radius: var(--cedar-radius);
   overflow: hidden;
 }
 .explorer-view-switch button {
   min-width: 36px;
-  padding: calc(var(--cedar-space-1) * 1.25) var(--cedar-space-2);
+  @include spacing.apply(padding, view-switch);
   border-radius: 0;
 }
 .explorer-view-switch [aria-pressed="true"] {
@@ -35,9 +40,32 @@
   outline: 2px solid var(--cedar-color-primary) !important;
   background: var(--cedar-surface-selected) !important;
 }
+.explorer-drop-eligible:not(.explorer-drop-target) {
+  outline: 1px dashed var(--cedar-color-primary);
+  outline-offset: -1px;
+}
+.explorer-drop-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cedar-space-1);
+  color: var(--cedar-color-primary);
+}
+.explorer-move-complete {
+  outline: 2px solid var(--cedar-status-success-text);
+  outline-offset: -2px;
+  background: var(--cedar-status-success-surface) !important;
+}
+body.explorer-dragging,
+body.explorer-dragging * {
+  cursor: not-allowed !important;
+}
+body.explorer-dragging.explorer-can-drop,
+body.explorer-dragging.explorer-can-drop * {
+  cursor: grabbing !important;
+}
 .explorer-grid {
   min-height: calc(10 * var(--cedar-space-6));
-  padding: var(--cedar-space-3) calc(var(--cedar-space-1) / 4) calc(2 * var(--cedar-space-4));
+  @include spacing.apply(padding, resource-list-inset);
 }
 .explorer-grid table {
   min-width: 0;
@@ -47,20 +75,10 @@
   display: none;
 }
 .explorer-grid tbody {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr));
-  gap: calc(var(--cedar-space-2) + var(--cedar-space-1) / 2);
+  @include patterns.resource-grid;
 }
 .explorer-grid tr {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  height: calc(3 * var(--cedar-control-height-default) - var(--cedar-space-1) / 2);
-  padding: var(--cedar-space-2) calc(var(--cedar-space-3) + var(--cedar-space-1) / 2);
-  border: 1px solid var(--cedar-border-rule);
-  border-radius: calc(var(--cedar-control-radius-default) * 1.25);
-  gap: var(--cedar-space-1);
-  min-width: 0;
+  @include patterns.resource-card;
 }
 .explorer-grid tr.selected {
   border-color: var(--cedar-color-primary);
@@ -78,87 +96,117 @@
   max-width: none;
 }
 .explorer-grid .explorer-name {
-  white-space: normal;
-  overflow-wrap: anywhere;
-  line-height: var(--cedar-font-size-heading);
-  max-height: 40px;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  @include patterns.resource-card-name;
 }
 .explorer-grid td:nth-child(2) {
-  margin-top: auto;
-  color: var(--cedar-text-muted);
-  font-size: var(--cedar-font-size-small);
-  overflow: hidden;
-  text-overflow: ellipsis;
+  @include patterns.resource-card-meta;
 }
 .explorer-grid .row-actions {
   position: absolute;
-  right: 5px;
-  top: 4px;
+  right: var(--cedar-space-1);
+  gap: var(--cedar-space-1);
+  top: var(--cedar-space-2);
   display: flex;
   align-items: center;
   background: inherit;
-  border-radius: var(--cedar-control-radius-default);
+  border-radius: var(--cedar-radius);
 }
 .explorer-grid .row-actions > a {
   margin: 0;
 }
 .explorer-grid .row-actions button {
-  padding: calc(var(--cedar-space-1) / 2);
+  @include spacing.apply(padding, compact);
   min-height: var(--cedar-space-6);
-}
-.explorer-drag-preview {
-  background: var(--cedar-surface-raised);
-  color: var(--cedar-text-primary);
-  border: 1px solid var(--cedar-color-primary);
-  border-radius: calc(var(--cedar-control-radius-default) * 1.25);
-  padding: var(--cedar-space-3) var(--cedar-space-4);
-  box-shadow: var(--cedar-drag-preview-shadow);
 }
 .cdk-drag-preview {
   pointer-events: none !important;
 }
 .selecto-selection {
   border: 1px solid var(--cedar-color-primary) !important;
-  background: var(--cedar-selection-marquee-surface) !important;
+  background: color-mix(
+    in srgb,
+    var(--cedar-color-primary) 13%,
+    transparent
+  ) !important;
 }
-.explorer-selected-names {
-  list-style: none;
-  padding: 0;
-}
-.explorer-selected-names li {
-  display: flex;
-  gap: calc(var(--cedar-space-2) + var(--cedar-space-1) / 2);
-  padding: var(--cedar-space-3) 0;
-  border-bottom: 1px solid var(--cedar-border-rule);
-}
-.explorer-selected-names small {
-  display: block;
-  color: var(--cedar-text-muted);
-  margin-top: var(--cedar-space-1);
-}
-
 .explorer-grid .explorer-schema {
-  padding-block: calc(var(--cedar-space-1) + var(--cedar-space-1) / 2);
-  gap: calc(var(--cedar-space-1) / 2);
+  @include spacing.apply(padding-block, resource-card-inset);
+  @include spacing.apply(gap, compact);
 }
 .explorer-grid .explorer-schema td:first-child {
-  gap: calc(var(--cedar-space-1) / 2);
+  @include spacing.apply(gap, compact);
 }
 .explorer-grid .explorer-schema .explorer-name {
   line-height: var(--cedar-control-line-height-authoring);
   max-height: 36px;
 }
 .explorer-grid .explorer-schema td:nth-child(2) {
-  line-height: var(--cedar-font-size-lead);
+  line-height: var(--cedar-font-size);
   flex-shrink: 0;
+}
+.explorer-grid .explorer-heading {
+  @include patterns.resource-card-heading;
+  // The action group extends into the card's right gutter.
+  padding-right: var(--cedar-space-4);
+}
+.explorer-grid .explorer-heading .resource-icon {
+  @include patterns.resource-card-icon;
+}
+.explorer-grid tr:has(.row-actions > a) .explorer-heading {
+  @include spacing.apply(padding-right, resource-action-reserve);
+}
+.explorer-grid tr:has(.row-actions > a ~ a) .explorer-heading {
+  @include spacing.apply(padding-right, resource-two-action-reserve);
 }
 .explorer-release {
   display: block;
+  min-width: 0;
+  font-size: var(--cedar-font-size-small);
+  line-height: var(--cedar-font-size);
+  white-space: normal;
   color: var(--cedar-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.explorer-grid .row-actions > a,
+.explorer-grid .row-actions > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--cedar-space-6);
+  min-width: var(--cedar-space-6);
+  height: var(--cedar-space-6);
+  padding: 0;
+}
+.explorer-grid .explorer-schema .row-actions {
+  top: calc(var(--cedar-space-1) + var(--cedar-space-1) / 2);
+}
+
+// Balance the visible gaps around the clipboard and the narrow menu glyph.
+.explorer-grid .explorer-populate cedar-icon {
+  transform: translateX(calc(var(--cedar-space-1) / 2));
+}
+
+// Reserve the eye's space on the date row.
+.explorer-grid .explorer-modified {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.explorer-grid .explorer-item:has(.explorer-preview) .explorer-modified {
+  padding-right: var(--cedar-control-height-default);
+}
+.explorer-grid .explorer-preview {
+  position: absolute;
+  right: var(--cedar-space-1);
+  bottom: var(--cedar-space-1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--cedar-space-6);
+  min-width: var(--cedar-space-6);
+  min-height: var(--cedar-space-6);
+  height: var(--cedar-space-6);
+  padding: 0;
 }

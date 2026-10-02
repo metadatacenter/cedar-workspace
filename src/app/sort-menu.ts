@@ -1,3 +1,4 @@
+import { Tooltip } from "./tooltip";
 import {
   Component,
   ElementRef,
@@ -13,7 +14,7 @@ import { Icon } from "./icon";
 
 @Component({
   selector: "cedar-sort-menu",
-  imports: [Icon, TranslatePipe],
+  imports: [Tooltip, Icon, TranslatePipe],
   templateUrl: "./sort-menu.html",
   styleUrl: "./sort-menu.scss",
 })

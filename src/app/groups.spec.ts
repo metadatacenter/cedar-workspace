@@ -358,6 +358,7 @@ describe("Groups", () => {
     await host.toggleAdmin(admin);
     expect(TestBed.inject(Confirmation).confirm).toHaveBeenCalledWith(
       "Remove administrator access for Other?",
+      "user",
     );
     expect(host.members()).toEqual([me, other]);
     expect(host.notice()).toBe("Group members saved.");

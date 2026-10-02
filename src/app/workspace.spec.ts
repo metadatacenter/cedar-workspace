@@ -29,7 +29,7 @@ describe("Angular Workspace", () => {
     init: ReturnType<typeof vi.fn>;
     request: ReturnType<typeof vi.fn>;
     report: ReturnType<typeof vi.fn>;
-    profile: { homeFolderId: string };
+    profile: { homeFolderId: string; "@id"?: string };
     config: Config;
   };
   beforeEach(() => {
@@ -68,6 +68,49 @@ describe("Angular Workspace", () => {
     f.detectChanges();
     return f;
   }
+  it("identifies the current creator and modifier by ID, not display name", async () => {
+    api.profile["@id"] = "https://metadatacenter.org/users/me";
+    const f = await render();
+    const resource: Resource = {
+      ...template,
+      "pav:createdBy": api.profile["@id"],
+      "oslc:modifiedBy": "https://metadatacenter.org/users/other",
+      createdByUserName: "Same Name",
+      lastUpdatedByUserName: "Same Name",
+    };
+    f.componentInstance.selected.set(resource);
+    f.detectChanges();
+    const bylines = () =>
+      [...(f.nativeElement as HTMLElement).querySelectorAll(".information dd small")]
+        .map((el) => el.textContent?.trim());
+    expect(bylines()).toEqual(["by you", "by Same Name"]);
+    f.componentInstance.selected.set({
+      ...resource,
+      "oslc:modifiedBy": api.profile["@id"],
+      lastUpdatedByUserName: undefined,
+    });
+    f.detectChanges();
+    expect(bylines()).toEqual(["by you", "by you"]);
+    expect(f.componentInstance.attribution(undefined, "Same Name")).toBe("by Same Name");
+    expect(f.componentInstance.attribution()).toBe("");
+  });
+  it("shows you for the current owner while preserving other and unknown owners", async () => {
+    api.profile["@id"] = "https://metadatacenter.org/users/me";
+    const f = await render();
+    for (const [ownedBy, ownedByUserName, expected] of [
+      [api.profile["@id"], "Same Name", "you"],
+      [api.profile["@id"], undefined, "you"],
+      ["https://metadatacenter.org/users/other", "Same Name", "Same Name"],
+      [undefined, "Same Name", "Same Name"],
+      [undefined, undefined, "—"],
+    ]) {
+      f.componentInstance.selected.set({ ...template, ownedBy, ownedByUserName });
+      f.detectChanges();
+      const label = [...(f.nativeElement as HTMLElement).querySelectorAll(".information dt")]
+        .find((el) => el.textContent?.trim() === "Owner");
+      expect(label?.nextElementSibling?.textContent?.trim()).toBe(expected);
+    }
+  });
   it("shows one friendly modified column and retains its timestamp for hover", async () => {
     const f = await render();
     const stamp = new Date(f.componentInstance.now() - 180_000).toISOString();
@@ -80,7 +123,7 @@ describe("Angular Workspace", () => {
     const time = table.querySelector("time")!;
     expect(time.textContent?.trim()).toBe("3 minutes ago");
     expect(time.getAttribute("datetime")).toBe(stamp);
-    expect(time.getAttribute("title")).toBe(stamp);
+    expect(time.getAttribute("data-cedar-help")).toBe(stamp);
     const navigate = vi.spyOn(TestBed.inject(Router), "navigate");
     table
       .querySelectorAll("th button")[1]
@@ -110,9 +153,7 @@ describe("Angular Workspace", () => {
     f.detectChanges();
     expect(f.componentInstance.selected()).toBeUndefined();
     expect(el.querySelector(".information h1")).toBeNull();
-    expect(el.textContent).not.toMatch(
-      /Categories|Tile view|Filter by type/,
-    );
+    expect(el.textContent).not.toMatch(/Categories|Tile view|Filter by type/);
   });
   it.each(["folder", "instance", "template", "element", "field"] as const)(
     "shows Version only for versioned schema resources: %s",
@@ -129,8 +170,8 @@ describe("Angular Workspace", () => {
       ] as HTMLElement[];
       expect(tabs.map((tab) => tab.textContent?.trim())).toEqual(
         resourceType === "folder" || resourceType === "instance"
-          ? ["Info"]
-          : ["Info", "Version"],
+          ? ["Details"]
+          : ["Details", "Version"],
       );
       expect(tabs[0].getAttribute("aria-selected")).toBe("true");
       if (tabs.length === 2) {
@@ -209,7 +250,54 @@ describe("Angular Workspace", () => {
     expect(window.location.href).toBe(before);
     expect(f.componentInstance.rows()).toBe(rows);
   });
-  it("exposes the original action set and gates it using the server capabilities", () => {
+  // OpenView serves a resource made open and anything inside an open folder. The
+  // listing says which through isOpen and isOpenImplicitly.
+  for (const [label, state, offered] of [
+    ["made open", { isOpen: true }, true],
+    ["inside an open folder", { isOpenImplicitly: true }, true],
+    ["neither made open nor inside an open folder", {}, false],
+  ] as const) {
+    it(`${offered ? "offers" : "does not offer"} OpenView for a resource ${label}`, async () => {
+      const listed: Resource = { ...template, ...state };
+      api.request.mockImplementation(async (path: string) => ({
+        data:
+          path.includes("/contents") || path.includes("/search")
+            ? { resources: [listed], totalCount: 1, pathInfo: [folder] }
+            : folder,
+      }));
+      const f = await render();
+      const link = (f.nativeElement as HTMLElement).querySelector(
+        'a[href^="https://openview.example/"]',
+      );
+      expect(link !== null).toBe(offered);
+      expect(
+        actions(listed, TestBed.inject(I18n)).find((a) => a.id === "openview")
+          ?.enabled,
+      ).toBe(offered);
+    });
+  }
+  it("keeps OpenView out of the information panel, open itself or through a folder", async () => {
+    const f = await render();
+    const shared: Resource = {
+      "@id": "shared",
+      resourceType: "folder",
+      "schema:name": "Shared",
+      isOpen: true,
+    };
+    const headings = () =>
+      [...(f.nativeElement as HTMLElement).querySelectorAll(".info-section .description-heading")].map(
+        (h) => h.textContent?.trim(),
+      );
+    for (const selected of [
+      { ...template, isOpen: true, pathInfo: [folder, template] },
+      { ...template, isOpenImplicitly: true, pathInfo: [folder, shared, template] },
+    ]) {
+      f.componentInstance.selected.set(selected);
+      f.detectChanges();
+      expect(headings()).not.toContain("OpenView");
+    }
+  });
+  it("exposes the artifact action set and gates it using the server capabilities", () => {
     const list = actions(template, TestBed.inject(I18n));
     expect(list.find((a) => a.id === "permissions")).toEqual({
       id: "permissions",
@@ -223,15 +311,9 @@ describe("Angular Workspace", () => {
       "copy",
       "move",
       "rename",
-      "folder-id",
-      "parent-id",
-      "json",
-      "yaml",
-      "yamlc",
       "publish",
       "draft",
       "delete",
-      "datacite",
       "make-open",
       "make-not-open",
       "openview",
@@ -247,8 +329,8 @@ describe("Angular Workspace", () => {
     "folder",
   ] as const) {
     for (const editable of [false, true]) {
-      it(`renders the legacy menu for ${editable ? "editable" : "read-only"} ${resourceType} resources`, async () => {
-        vi.stubGlobal("dataciteEnabled", false);
+      it(`renders applicable menu actions for ${editable ? "editable" : "read-only"} ${resourceType} resources`, async () => {
+        vi.stubGlobal("dataciteEnabled", true);
         vi.stubGlobal("makeOpenEnabled", true);
         const f = await render();
         const resource: Resource = {
@@ -288,47 +370,38 @@ describe("Angular Workspace", () => {
           ).querySelectorAll<HTMLButtonElement>(".resource-menu button"),
         ];
         expect(buttons.map((b) => b.textContent?.trim())).toEqual([
-          "Populate",
+          ...(resourceType === "template" ? ["Populate"] : []),
           "Open",
           "Permissions…",
-          "Copy",
+          ...(resourceType !== "folder" ? ["Copy"] : []),
           "Move",
           "Rename",
-          "Copy Folder ID",
-          "Copy Parent Folder ID",
-          "Download JSON",
-          "Download YAML",
-          "Download Compact YAML",
-          ...(resourceType === "instance" ? [] : ["Publish", "Create Draft"]),
+          ...(["folder", "instance"].includes(resourceType)
+            ? []
+            : ["Publish", "Create Draft"]),
           "Delete",
-          "DataCite wizard",
-          "Make Open",
-          "Make Not Open",
+          "Enable Openview",
+          "Disable Openview",
           "Open in OpenView",
         ]);
         const disabled = (name: string) =>
           buttons.find((b) => b.textContent?.trim() === name)!.disabled;
         expect(disabled("Permissions…")).toBe(false);
-        expect(disabled("Copy")).toBe(!editable || resourceType === "folder");
-        expect(disabled("Populate")).toBe(
-          !editable || resourceType !== "template",
-        );
+        if (resourceType !== "folder") expect(disabled("Copy")).toBe(!editable);
+        if (resourceType === "template")
+          expect(disabled("Populate")).toBe(!editable);
         expect(disabled("Delete")).toBe(!editable);
-        expect(disabled("Download JSON")).toBe(resourceType === "folder");
-        expect(disabled("Copy Folder ID")).toBe(resourceType !== "folder");
-        expect(disabled("DataCite wizard")).toBe(true);
-        expect(disabled("Make Open")).toBe(!editable);
+        expect(disabled("Enable Openview")).toBe(!editable);
         const act = vi.spyOn(f.componentInstance, "act");
         buttons
-          .find((b) => b.textContent?.trim() === "DataCite wizard")!
-          .click();
+          .find((b) => b.textContent?.trim() === "Disable Openview")
+          ?.click();
         expect(act).not.toHaveBeenCalled();
       });
     }
   }
   it("shows published lifecycle actions from the fresh report and leaves disabled features visible", async () => {
     vi.stubGlobal("makeOpenEnabled", false);
-    vi.stubGlobal("dataciteEnabled", false);
     const f = await render();
     api.report.mockResolvedValue({
       data: {
@@ -356,10 +429,9 @@ describe("Angular Workspace", () => {
     expect(button("Create Draft").disabled).toBe(false);
     for (const label of [
       "Publish",
-      "Make Open",
-      "Make Not Open",
+      "Enable Openview",
+      "Disable Openview",
       "Open in OpenView",
-      "DataCite wizard",
     ])
       expect(button(label).disabled).toBe(true);
     window.dispatchEvent(new Event("resize"));

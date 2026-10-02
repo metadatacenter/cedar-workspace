@@ -83,7 +83,9 @@ export const test = base.extend({
       window.cedarEmbeddableEditorVersion = 'fixture';
       customElements.define('cedar-embeddable-editor', class extends HTMLElement {
         currentMetadata = {}; dataQualityReport = {isValid:true};
+        connectedCallback() { queueMicrotask(() => this.eventHandler?.ready?.()); }
         set templateAndInstanceObject(value) { this.currentMetadata = value.instanceObject; }
+        reveal(location) { (window.__ceeReveals ??= []).push(location); return Promise.resolve(true); }
       });
     `,
       }),
@@ -203,6 +205,8 @@ export const test = base.extend({
 export { expect };
 export async function dashboard(page) {
   await page.goto("/dashboard");
+  // These shared scenarios exercise the list; explorer scenarios cover the default grid.
+  await page.getByRole("button", { name: "List view", exact: true }).click();
   await expect(
     page.getByRole("link", { name: "Study metadata", exact: true }),
   ).toBeVisible();

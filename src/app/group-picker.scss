@@ -1,0 +1,6 @@
+@use "@org.metadatacenter/cedar-design-tokens/patterns";
+
+// The picker's label sits beside other form labels, so it takes their shared recipe and gap.
+label {
+  @include patterns.field-label($size: body);
+}

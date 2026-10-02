@@ -26,50 +26,56 @@
     </summary>
     <nav>
       <a href="/profile"
-        ><span>{{'Header.Profile' | translate}}</span
-        ><cedar-icon name="user" /></a
+        ><cedar-icon name="user" /><span
+          >{{'Header.Profile' | translate}}</span
+        ></a
       ><a href="/settings"
-        ><span>{{'Header.Settings' | translate}}</span
-        ><cedar-icon name="tuning" /></a
+        ><cedar-icon name="tuning" /><span
+          >{{'Header.Settings' | translate}}</span
+        ></a
       ><a href="/logout"
-        ><span>{{'Header.Logout' | translate}}</span
-        ><cedar-icon name="sign-out"
-      /></a>
+        ><cedar-icon name="sign-out" /><span
+          >{{'Header.Logout' | translate}}</span
+        ></a
+      >
     </nav>
   </details>
   <details class="header-menu">
-    <summary [attr.aria-label]="'Header.MoreMenu' | translate">
+    <summary
+      [attr.aria-label]="'Header.ActionsMenu' | translate"
+      [cedarTooltip]="'Header.ActionsMenu' | translate"
+    >
       <cedar-icon name="more" />
     </summary>
     <nav>
       <a href="/groups"
-        ><span>{{'Header.Groups' | translate}}</span
-        ><cedar-icon name="groups" /></a
+        ><cedar-icon name="groups" /><span
+          >{{'Header.Groups' | translate}}</span
+        ></a
       ><a href="/privacy"
-        ><span>{{'Header.Privacy' | translate}}</span
-        ><cedar-icon name="permissions"
-      /></a>
+        ><cedar-icon name="permissions" /><span
+          >{{'Header.Privacy' | translate}}</span
+        ></a
+      >
       <a
         href="https://metadatacenter.org/help/#subscribe"
         target="_blank"
         rel="noopener"
-        ><span>{{'Header.Help' | translate}}</span><cedar-icon name="external"
-      /></a>
+        ><cedar-icon name="external" /><span
+          >{{'Header.Help' | translate}}</span
+        ></a
+      >
       <a href="https://metadatacenter.org/#about" target="_blank" rel="noopener"
-        ><span>{{'Header.About' | translate}}</span><cedar-icon name="external"
-      /></a>
+        ><cedar-icon name="external" /><span
+          >{{'Header.About' | translate}}</span
+        ></a
+      >
     </nav>
   </details>
 </header>
 <div id="groups-page">
-  <div class="navbar-back">
-    <a
-      href="/dashboard"
-      [attr.aria-label]="'Groups.BackToWorkspace' | translate"
-      ><cedar-icon name="back" /><span class="document-title"
-        >{{'Groups.Title' | translate}}</span
-      ></a
-    >
+  <div class="workspace-return-bar">
+    <cedar-workspace-return />
   </div>
   <main class="groups-content">
     <header class="groups-page-header">
@@ -118,6 +124,18 @@
       >
         {{'Groups.Create' | translate}}
       </button>
+      <button
+        id="delete-group-tab"
+        class="groups-tab"
+        role="tab"
+        aria-controls="delete-group-panel"
+        [attr.aria-selected]="activeTab === 'delete'"
+        [class.active]="activeTab === 'delete'"
+        [disabled]="busy() || selecting()"
+        (click)="selectTab('delete')"
+      >
+        {{'Groups.Delete' | translate}}
+      </button>
     </div>
     @if(activeTab === 'create') {
     <section
@@ -158,6 +176,36 @@
       </div>
       }
     </section>
+    } @else if(activeTab === 'delete') {
+    <section
+      id="delete-group-panel"
+      role="tabpanel"
+      aria-labelledby="delete-group-tab"
+    >
+      <div class="groups-card groups-create-card">
+        <div>
+          <h2>{{'Groups.DeleteHeading' | translate}}</h2>
+          <p>{{'Groups.DeleteIntro' | translate}}</p>
+        </div>
+        <cedar-group-picker
+          class="groups-create-form"
+          id="delete-group-picker"
+          [label]="'Groups.GroupName' | translate"
+          [placeholder]="'Groups.SearchGroups' | translate"
+          [options]="groupOptions"
+          [clearOnPick]="true"
+          [disabled]="busy() || selecting()"
+          (picked)="chooseGroup($event)"
+        />
+      </div>
+      @if(selected()) {
+      <div class="groups-card groups-created-group">
+        <ng-container
+          *ngTemplateOutlet="details; context: { $implicit: true }"
+        />
+      </div>
+      }
+    </section>
     } @else {
     <section
       id="manage-groups-panel"
@@ -187,7 +235,7 @@
     } }
   </main>
 </div>
-<ng-template #details>
+<ng-template #details let-deleting>
   @if(selected(); as g) {
   <div class="groups-selected">
     @if(g.specialGroup || !canAdmin) {
@@ -197,7 +245,7 @@
       </p>
     </div>
     }
-    <form class="groups-details-form" (ngSubmit)="save()">
+    <form class="groups-details-form" (ngSubmit)="!deleting && save()">
       <div class="groups-field">
         <label for="group-name">{{'Common.Name' | translate}}</label>
         <input
@@ -205,7 +253,9 @@
           id="group-name"
           class="form-control"
           name="editName"
-          [(ngModel)]="editName"
+          [ngModel]="deleting ? groupName(g) : editName"
+          (ngModelChange)="editName = $event"
+          [readOnly]="!!deleting"
           [disabled]="!canAdmin || busy()"
           required
         />
@@ -220,32 +270,38 @@
           class="form-control"
           rows="1"
           name="editDescription"
-          [(ngModel)]="editDescription"
+          [ngModel]="deleting ? (g['schema:description'] || '') : editDescription"
+          (ngModelChange)="editDescription = $event"
+          [readOnly]="!!deleting"
           [disabled]="!canAdmin || busy()"
-          [placeholder]="canAdmin ? ('Groups.OptionalDescription' | translate) : ''"
+          [placeholder]="canAdmin && !deleting ? ('Groups.OptionalDescription' | translate) : ''"
         ></textarea>
       </div>
       @if(canAdmin) {
       <div class="groups-details-actions">
+        @if(deleting) {
         <button
           type="button"
           class="btn groups-delete-button"
           [disabled]="busy()"
           (click)="remove()"
           [attr.aria-label]="'Groups.Delete' | translate"
-          [title]="'Groups.Delete' | translate"
+          [cedarTooltip]="'Groups.Delete' | translate"
         >
           <ng-container *ngTemplateOutlet="trash" />
         </button>
+        } @else {
         <button
           class="btn btn-primary groups-primary-action"
           [disabled]="busy() || !editName.trim()"
         >
           {{'Common.Save' | translate}}
         </button>
+        }
       </div>
       }
     </form>
+    @if(!deleting) {
     <div class="groups-members-section">
       <div class="groups-members-heading">
         <div>
@@ -298,7 +354,7 @@
           </div>
           <label
             class="groups-admin-control"
-            [title]="onlyAdmin(m) ? ('Groups.LastAdministrator' | translate) : ''"
+            [cedarTooltip]="onlyAdmin(m) ? ('Groups.LastAdministrator' | translate) : ''"
           >
             <input
               spellcheck="false"
@@ -311,7 +367,7 @@
           </label>
           <span
             class="groups-remove-member-wrapper"
-            [title]="onlyAdmin(m) ? ('Groups.AssignAnother' | translate) : ''"
+            [cedarTooltip]="onlyAdmin(m) ? ('Groups.AssignAnother' | translate) : ''"
           >
             @if(canAdmin) {
             <button
@@ -337,6 +393,7 @@
         } }
       </div>
     </div>
+    }
   </div>
   }
 </ng-template>

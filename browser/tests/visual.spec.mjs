@@ -77,7 +77,7 @@ test("artifact menu and resource dialog", async ({ page, api }) => {
     "Study metadata",
   );
   await expect(
-    page.locator('#dialog-title cedar-icon[name="edit"] svg'),
+    page.locator('#dialog-title svg[data-cedar-icon="edit"]'),
   ).toBeVisible();
   await expect(page.getByLabel("Description", { exact: true })).toHaveCSS(
     "resize",
@@ -88,13 +88,15 @@ test("artifact menu and resource dialog", async ({ page, api }) => {
       "rename-dialog.png",
     );
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
-  await action(page, "Make Open");
+  await action(page, "Enable Openview");
   const openDialog = page.locator("dialog[open]");
   await expect(
     openDialog.getByRole("button", { name: "Ok", exact: true }),
   ).toBeEnabled();
   await expect(
-    openDialog.locator('.resource-dialog-resource svg[data-cedar-icon="artifact-template"]'),
+    openDialog.locator(
+      '.resource-dialog-resource svg[data-cedar-icon="artifact-template"]',
+    ),
   ).toBeVisible();
   if (process.env.WORKSPACE_VISUAL)
     await expect(openDialog).toHaveScreenshot("make-open-dialog.png");
@@ -107,14 +109,26 @@ for (const readonly of [false, true]) {
   }) => {
     api.readonly = readonly;
     await page.goto("/instances/edit/instance");
-    await expect(page.getByLabel("Metadata name")).toHaveValue("Study record");
+    await expect(page.getByLabel("Instance name")).toHaveValue("Study record");
     await expect(page.locator(".metadata-toolbar")).toContainText(
-      readonly ? "Read only" : "Saved",
+      readonly ? "Read only" : "Unmodified",
     );
+    // The editor names itself beside the way back, as the Template Designer does.
+    await expect(page.locator(".metadata-title")).toHaveText("Metadata Editor");
     if (process.env.WORKSPACE_VISUAL)
       await expect(page.locator(".metadata-toolbar")).toHaveScreenshot(
         `metadata-toolbar-${readonly}.png`,
       );
+    if (!readonly) {
+      await page.getByLabel("Instance name").fill("Modified study");
+      await expect(page.locator(".metadata-save-status")).toHaveText(
+        "Modified",
+      );
+      if (process.env.WORKSPACE_VISUAL)
+        await expect(page.locator(".metadata-toolbar")).toHaveScreenshot(
+          "metadata-toolbar-modified.png",
+        );
+    }
   });
 }
 
@@ -168,6 +182,9 @@ for (const width of [1440, 375]) {
       .getByRole("button", { name: "Create group", exact: true })
       .click();
     await expect(page.locator(".groups-member-row")).toHaveCount(2);
+    await expect(
+      page.getByRole("button", { name: "Delete group", exact: true }),
+    ).toHaveCount(0);
     await expect(page.getByRole("status")).toHaveText("Group created.");
     await expect(page.locator(".groups-create-card")).toHaveCSS(
       "padding-top",
@@ -177,13 +194,21 @@ for (const width of [1440, 375]) {
       "padding-bottom",
       "8px",
     );
+    const section = await page.locator(".groups-create-card").boundingBox();
+    const nameLabel = await page
+      .locator('label[for="group-name"]')
+      .boundingBox();
+    const tabs = await page.locator(".groups-tabs").boundingBox();
+    // Check the composed gap: individually valid margins and padding must not add up.
+    expect(nameLabel.y - section.y - section.height).toBe(8);
+    expect(section.y - tabs.y - tabs.height).toBe(0);
     await expect(page.locator(".groups-details-form")).toHaveCSS(
       "margin-bottom",
-      "8px",
+      "0px",
     );
     await expect(page.locator(".groups-tabs")).toHaveCSS(
       "margin-bottom",
-      "8px",
+      "0px",
     );
     await expect(page.locator(".toast")).toHaveCSS("padding-top", "8px");
     await expect(page.locator("#group-name")).toHaveCSS("height", "36px");
@@ -215,7 +240,7 @@ test("permissions uses compact section gaps and rows", async ({
 });
 
 for (const route of ["dashboard", "groups"]) {
-  for (const menuName of ["User menu", "More menu"]) {
+  for (const menuName of ["User menu", "Actions menu"]) {
     test(`${route} ${menuName} has shared icons on every item`, async ({
       page,
       api,
@@ -258,6 +283,28 @@ for (const route of ["dashboard", "groups"]) {
           "true",
         );
       }
+      const placement = await menu.locator("nav a").evaluateAll((links) =>
+        links.map((link) => {
+          const icon = link.querySelector("cedar-icon");
+          const label = link.querySelector("span");
+          return {
+            left:
+              icon.getBoundingClientRect().right <=
+              label.getBoundingClientRect().left,
+            color: getComputedStyle(icon).color,
+          };
+        }),
+      );
+      expect(placement.every((item) => item.left)).toBe(true);
+      const primary = await menu.evaluate((node) => {
+        const probe = document.createElement("span");
+        probe.style.color = "var(--cedar-color-primary)";
+        node.append(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return color;
+      });
+      expect(placement.every((item) => item.color === primary)).toBe(true);
       if (process.env.WORKSPACE_VISUAL)
         await expect(menu.locator("nav")).toHaveScreenshot(
           `${route}-${menuName.replace(" ", "-")}.png`,

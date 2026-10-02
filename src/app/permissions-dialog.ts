@@ -1,3 +1,4 @@
+import { Tooltip } from "./tooltip";
 import { Toast } from "./toast";
 import { Confirmation } from "./confirmation";
 import { DialogKeyboard } from "./dialog-keyboard";
@@ -49,6 +50,7 @@ export const principalName = (p: Principal, i18n: Pick<I18n, "t">) =>
 @Component({
   selector: "cedar-permissions-dialog",
   imports: [
+    Tooltip,
     Toast,
     DialogKeyboard,
     FormsModule,
@@ -286,6 +288,7 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
           name: this.principalName(grant.node),
           resource: this.title(this.resource),
         }),
+        "permissions",
       ))
     )
       return;

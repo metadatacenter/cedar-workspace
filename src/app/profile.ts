@@ -1,3 +1,4 @@
+import { Tooltip } from "./tooltip";
 import { Icon } from "./icon";
 import { Confirmation } from "./confirmation";
 import { Component, OnInit, inject, signal } from "@angular/core";
@@ -30,7 +31,7 @@ export function displayAccountDate(
 }
 @Component({
   selector: "cedar-profile-page",
-  imports: [FormsModule, AccountShell, Icon, TranslatePipe],
+  imports: [Tooltip, FormsModule, AccountShell, Icon, TranslatePipe],
   templateUrl: "./profile.html",
   styleUrl: "./profile.scss",
 })
@@ -143,6 +144,8 @@ export class Profile implements OnInit {
               ? "Account.Profile.ConfirmDelete"
               : "Account.Profile.ConfirmRegenerate",
           ),
+          "lock",
+          action === "delete" ? "delete" : "",
         )))
     )
       return;

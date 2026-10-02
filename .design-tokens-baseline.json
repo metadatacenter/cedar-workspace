@@ -8,13 +8,6 @@
       "value": "40px auto",
       "count": 1
     },
-    "2a553765ba8fd69be9ff": {
-      "file": "src/app/groups.scss",
-      "rule": "spacing",
-      "property": "margin",
-      "value": "0 22px -1px 0",
-      "count": 1
-    },
     "2b84a49f998e00abd6d5": {
       "file": "src/styles.scss",
       "rule": "geometry",
@@ -27,13 +20,6 @@
       "rule": "geometry",
       "property": "min-height",
       "value": "calc(100vh - 80px)",
-      "count": 1
-    },
-    "5b77bd8ad27d596afd7c": {
-      "file": "src/app/permissions-dialog.scss",
-      "rule": "geometry",
-      "property": "height",
-      "value": "36px",
       "count": 1
     },
     "600bd7631ff3d2cc2c03": {
@@ -50,40 +36,12 @@
       "value": "13px",
       "count": 1
     },
-    "7620ecef50b1aeb8960d": {
-      "file": "src/app/group-picker.ts",
-      "rule": "spacing",
-      "property": "padding",
-      "value": "6px var(--cedar-space-3)",
-      "count": 1
-    },
-    "7ef1a514949d586dace0": {
-      "file": "src/app/permissions-dialog.scss",
-      "rule": "spacing",
-      "property": "padding",
-      "value": "6px var(--cedar-space-3)",
-      "count": 1
-    },
-    "83217a98e37a1664b642": {
-      "file": "src/app/group-picker.ts",
-      "rule": "spacing",
-      "property": "margin",
-      "value": "0 0 6px",
-      "count": 1
-    },
     "83401d2f75884e06f84b": {
       "file": "src/app/permissions-dialog.scss",
       "rule": "geometry",
       "property": "height",
       "value": "1px",
       "count": 2
-    },
-    "942f3cbcbc9f149a064f": {
-      "file": "src/app/permissions-dialog.scss",
-      "rule": "geometry",
-      "property": "min-height",
-      "value": "32px",
-      "count": 1
     },
     "9a92494e68bf377e5fee": {
       "file": "src/app/groups.scss",
@@ -92,25 +50,11 @@
       "value": "13px",
       "count": 1
     },
-    "9c44166625ec0d67095c": {
-      "file": "src/app/groups.scss",
-      "rule": "spacing",
-      "property": "margin",
-      "value": "0 10px 0 var(--cedar-space-4)",
-      "count": 1
-    },
     "9caed4aa5ce94da73cb5": {
       "file": "src/app/groups.scss",
       "rule": "geometry",
       "property": "min-height",
       "value": "calc(100vh - 65px)",
-      "count": 1
-    },
-    "9d6b94990f9ceacd0315": {
-      "file": "src/styles.scss",
-      "rule": "typography",
-      "property": "line-height",
-      "value": "1.6",
       "count": 1
     },
     "a79611315819abf5d622": {
@@ -127,32 +71,11 @@
       "value": "var(--cedar-space-2) 55px var(--cedar-space-2) var(--cedar-space-3)",
       "count": 1
     },
-    "cdc248292e3b36bf7156": {
-      "file": "src/app/groups.scss",
-      "rule": "spacing",
-      "property": "padding",
-      "value": "6px var(--cedar-space-3)",
-      "count": 2
-    },
-    "cf1415e131279ea53514": {
-      "file": "src/app/groups.scss",
-      "rule": "spacing",
-      "property": "padding",
-      "value": "5px 7px",
-      "count": 2
-    },
     "d4e583b9b678d0da1eba": {
       "file": "src/styles.scss",
       "rule": "geometry",
       "property": "height",
       "value": "1px",
-      "count": 1
-    },
-    "dc6bf4c50afff9f2e480": {
-      "file": "src/app/groups.scss",
-      "rule": "spacing",
-      "property": "padding",
-      "value": "5px 9px",
       "count": 1
     },
     "e6c206f7d36065ee011a": {
@@ -162,25 +85,11 @@
       "value": "80px",
       "count": 1
     },
-    "ef559d4cf495f2fb1595": {
-      "file": "src/app/permissions-dialog.scss",
-      "rule": "spacing",
-      "property": "margin",
-      "value": "8px auto",
-      "count": 1
-    },
     "f9d9ecfe198b0c28ba20": {
       "file": "src/app/groups.scss",
       "rule": "geometry",
       "property": "height",
       "value": "34px",
-      "count": 1
-    },
-    "fc261cdae8399864332a": {
-      "file": "src/app/groups.scss",
-      "rule": "spacing",
-      "property": "margin-left",
-      "value": "10px",
       "count": 1
     },
     "fc4e7ed700484ce1f273": {

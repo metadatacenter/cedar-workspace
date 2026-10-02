@@ -1,10 +1,13 @@
 @use "sass:meta";
+@use "./overlay-spacing";
 @use "@org.metadatacenter/cedar-design-tokens/patterns";
 @use "@org.metadatacenter/cedar-design-tokens/motion";
 @use "@org.metadatacenter/cedar-design-tokens/controls";
 @use "@org.metadatacenter/cedar-design-tokens/fonts/roboto-400";
 @use "@org.metadatacenter/cedar-design-tokens/fonts/roboto-500";
 @import "@org.metadatacenter/cedar-design-tokens/custom-properties.css";
+@import "@org.metadatacenter/cedar-design-tokens/icon-contract.css";
+@import "@org.metadatacenter/cedar-design-tokens/native-choices.css";
 * {
   box-sizing: border-box;
 }
@@ -41,7 +44,7 @@ summary {
 button {
   min-height: var(--cedar-control-height-default);
   border: 0;
-  border-radius: var(--cedar-control-radius-default);
+  border-radius: var(--cedar-radius);
   padding: var(--cedar-space-2) var(--cedar-space-3);
   background: transparent;
   color: var(--cedar-color-primary);
@@ -56,7 +59,7 @@ input,
 select,
 textarea {
   border: 1px solid var(--cedar-control-border-default);
-  border-radius: var(--cedar-control-radius-default);
+  border-radius: var(--cedar-radius);
   min-height: var(--cedar-control-height-default);
   padding: var(--cedar-space-2);
   color: var(--cedar-text-primary);
@@ -79,16 +82,21 @@ textarea {
   display: flex;
   align-items: center;
   gap: var(--cedar-space-3);
-  width: 230px;
+  // The search keeps the same distance from the brand's text as from the user menu's glyph.
+  // On that side, the menu's padding and the glyph's own inset add up to about this much.
+  padding-inline-end: var(--cedar-space-3);
   flex-shrink: 0;
-  color: var(--cedar-color-artifact-title);
+  color: var(--cedar-text-title);
   font-weight: var(--cedar-font-weight-medium);
+}
+.brand:hover {
+  text-decoration: none;
 }
 .brand img {
   width: var(--cedar-control-height-default);
   height: var(--cedar-control-height-default);
   object-fit: contain;
-  background: var(--cedar-color-component-title);
+  background: var(--cedar-text-title);
   border-radius: 50%;
 }
 .search {
@@ -97,7 +105,7 @@ textarea {
   max-width: 1100px;
   min-width: 0;
   border: 1px solid var(--cedar-control-border-default);
-  border-radius: calc(var(--cedar-control-radius-default) * 4);
+  border-radius: var(--cedar-radius-pill);
 }
 .search:focus-within {
   @include controls.focus-ring;
@@ -121,8 +129,8 @@ textarea {
   color: var(--cedar-text-muted);
 }
 .search button {
-  border-radius: 0 calc(var(--cedar-control-radius-default) * 4)
-    calc(var(--cedar-control-radius-default) * 4) 0;
+  border-radius: 0 var(--cedar-radius-pill)
+    var(--cedar-radius-pill) 0;
   color: inherit;
   font-size: var(--cedar-font-size-heading);
 }
@@ -156,65 +164,87 @@ textarea {
   @include patterns.menu-item;
   width: 100%;
 }
-// Keep menu labels and decorative icons aligned as in the legacy header.
+// Existing menu icons lead their labels and follow the active theme.
 .header-menu nav a,
 .header-menu nav button {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: var(--cedar-space-3);
 }
 .header-menu nav cedar-icon {
   flex-shrink: 0;
 }
+.new-menu nav a,
+.new-menu nav button {
+  display: flex;
+  align-items: center;
+  gap: var(--cedar-space-3);
+}
+.new-menu nav cedar-icon {
+  flex-shrink: 0;
+}
 .workspace {
-  // CEE compact controls plus one small gutter per side, including in table cells.
-  --cedar-table-cell-padding-block: var(--cedar-space-1);
-  --cedar-table-row-height: calc(
-    var(--cedar-control-height-default) + 2 * var(--cedar-space-1)
-  );
   display: grid;
   grid-template-columns: 250px minmax(0, 1fr) 340px;
   min-height: calc(100vh - 80px);
 }
 .workspace.left-collapsed {
-  grid-template-columns: 44px minmax(0, 1fr) 340px;
+  grid-template-columns: 0 minmax(0, 1fr) 340px;
 }
 .workspace.right-collapsed {
-  grid-template-columns: 250px minmax(0, 1fr) 44px;
+  grid-template-columns: 250px minmax(0, 1fr) 0;
 }
 .workspace.left-collapsed.right-collapsed {
-  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  grid-template-columns: 0 minmax(0, 1fr) 0;
+}
+.workspace > main {
+  grid-column: 2;
+}
+.workspace > .information {
+  grid-column: 3;
 }
 .navigation {
   position: relative;
-  padding: var(--cedar-space-4);
-  border-right: 1px solid var(--cedar-border-rule-light);
+  padding: var(--cedar-space-2) var(--cedar-space-4) var(--cedar-space-4);
+  border-right: 1px solid var(--cedar-border-rule);
 }
-.collapse {
-  position: absolute;
-  right: 4px;
-  top: 4px;
-  font-size: var(--cedar-font-size-heading);
+.panel-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
   padding: 0;
-  width: 32px;
+  width: var(--cedar-control-height-authoring);
+  min-height: var(--cedar-control-height-authoring);
+  color: var(--cedar-text-muted);
+}
+.panel-toggle:hover,
+.panel-toggle[aria-expanded="true"] {
+  color: var(--cedar-color-primary);
+  background: var(--cedar-surface-subtle);
 }
 .left-collapsed .navigation,
 .right-collapsed .information {
-  padding: 0;
+  display: none;
 }
 .new-menu {
   margin-top: 0;
   position: relative;
-  // As wide as its button. A full-width box sat over the collapse arrow and took its clicks.
   width: fit-content;
 }
 .primary {
   @include controls.primary-action;
-  border-radius: var(--cedar-control-radius-default);
+  border-radius: var(--cedar-radius);
   padding: var(--cedar-space-2) var(--cedar-space-4);
   display: inline-block;
   list-style: none;
+}
+.new-menu summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cedar-space-1);
+  min-height: var(--cedar-control-height-default);
 }
 .new-menu summary span {
   padding-left: var(--cedar-space-3);
@@ -240,7 +270,7 @@ main {
   padding: var(--cedar-space-2) var(--cedar-space-4) var(--cedar-space-4);
 }
 .table-toolbar .breadcrumbs {
-  font-size: var(--cedar-font-size-element-heading);
+  @include patterns.breadcrumbs($size: heading);
 }
 .table-toolbar {
   display: flex;
@@ -248,17 +278,19 @@ main {
   justify-content: space-between;
   min-height: var(--cedar-control-height-default);
 }
-.breadcrumbs {
-  display: flex;
-  flex-wrap: wrap;
+.table-toolbar > button {
+  display: inline-flex;
   align-items: center;
-  row-gap: var(--cedar-space-2);
-  color: var(--cedar-text-muted);
+  justify-content: center;
+  padding: var(--cedar-space-1);
+  min-width: 28px;
+  flex-shrink: 0;
+}
+.breadcrumbs {
+  @include patterns.breadcrumbs;
 }
 .breadcrumb-separator {
-  display: inline-block;
-  margin-inline: 0;
-  color: var(--cedar-text-muted);
+  @include patterns.breadcrumb-separator;
 }
 .table-scroll {
   position: relative;
@@ -280,8 +312,6 @@ h6,
 strong,
 b,
 .destinations .active,
-.breadcrumbs [aria-current],
-.tabs [aria-selected="true"],
 .account-card dt,
 .account-group-list [aria-current="true"],
 .account-nav [aria-current="page"],
@@ -297,7 +327,7 @@ th:first-child {
   width: 62%;
 }
 th button {
-  padding: var(--cedar-space-1) var(--cedar-table-cell-padding-inline);
+  padding: var(--cedar-space-1) var(--cedar-space-3);
 }
 td {
   @include patterns.table-cell;
@@ -315,12 +345,12 @@ td:not(:first-child) {
   white-space: nowrap;
 }
 tbody tr:hover {
-  background: var(--cedar-surface-row-hover);
+  background: var(--cedar-surface-subtle);
 }
 tr.selected,
 tr.selected:hover {
   background: var(--cedar-surface-selected);
-  color: var(--cedar-text-selected);
+  color: var(--cedar-text-primary);
 }
 .resource-icon {
   display: inline-block;
@@ -328,9 +358,6 @@ tr.selected:hover {
   color: var(--cedar-color-primary);
   font-size: var(--cedar-font-size-heading);
   vertical-align: middle;
-}
-.resource-icon[data-type="folder"] {
-  color: var(--cedar-color-component-title);
 }
 .sort-column {
   text-align: right;
@@ -372,12 +399,13 @@ tr.selected:hover {
   position: relative;
   background: var(--cedar-color-on-primary);
   border-left: 1px solid var(--cedar-border-rule);
-  padding: var(--cedar-control-height-default) var(--cedar-space-4)
-    var(--cedar-space-4);
+  padding: var(--cedar-space-2) var(--cedar-space-4) var(--cedar-space-4);
   overflow-wrap: anywhere;
 }
 .information h1 {
   @include patterns.artifact-title;
+  // The panel names the selected item beside a page that already has a title, so a section heading's size.
+  font-size: var(--cedar-font-size-element-heading);
   display: flex;
   align-items: flex-start;
   gap: var(--cedar-space-2);
@@ -385,16 +413,13 @@ tr.selected:hover {
 }
 .information h1 cedar-icon {
   flex: none;
-  margin-top: var(--cedar-space-1);
+  // One line tall, so the icon centres on the first line and a long name wraps beneath the text.
+  height: 1lh;
 }
 .information dt,
 .information small,
 .information .identifiers {
   font-size: var(--cedar-font-size);
-}
-.information > .collapse {
-  left: var(--cedar-space-1);
-  right: auto;
 }
 .badge {
   font-size: var(--cedar-font-size);
@@ -402,17 +427,13 @@ tr.selected:hover {
   margin-right: var(--cedar-space-3);
 }
 .tabs {
-  display: flex;
+  @include patterns.tabs;
+  flex-wrap: nowrap;
   margin-top: var(--cedar-space-2);
-  border-bottom: 1px solid var(--cedar-border-rule);
 }
 .tabs button {
+  @include patterns.tab;
   flex: 1;
-  border-radius: 0;
-}
-.tabs [aria-selected="true"] {
-  border-bottom: 2px solid var(--cedar-color-primary);
-  margin-bottom: -1px;
 }
 dl {
   display: grid;
@@ -423,7 +444,7 @@ dt,
 dd {
   margin: 0;
   padding: var(--cedar-space-4) 0;
-  border-bottom: 1px solid var(--cedar-border-rule-light);
+  border-bottom: 1px solid var(--cedar-border-rule);
 }
 .information dl {
   display: grid;
@@ -434,7 +455,7 @@ dd {
 .information dd {
   margin: 0;
   padding: var(--cedar-space-2) 0;
-  border-bottom: 1px solid var(--cedar-border-rule-light);
+  border-bottom: 1px solid var(--cedar-border-rule);
 }
 .information dt {
   @include patterns.field-label($size: body);
@@ -464,14 +485,26 @@ dd small {
 .information .info-section {
   margin: 0;
   padding: var(--cedar-space-2) 0;
-  border-bottom: 1px solid var(--cedar-border-rule-light);
+  border-bottom: 1px solid var(--cedar-border-rule);
 }
 .info-section .description-heading {
   @include patterns.field-label($size: body);
   margin-bottom: var(--cedar-space-1);
 }
+.instances-section .description-heading:only-child {
+  margin-bottom: 0;
+}
 .info-section .instance-count {
   margin: var(--cedar-space-2) 0 0;
+}
+// What the panel says of something it has none of reads as the description's placeholder does.
+.info-section .no-instances {
+  margin: 0;
+  color: var(--cedar-text-muted);
+}
+cedar-description-editor textarea::placeholder,
+cedar-description-editor .no-description {
+  color: var(--cedar-text-muted);
 }
 .info-section small {
   display: block;
@@ -507,12 +540,13 @@ dd small {
   align-items: center;
 }
 .alert {
+  --cedar-icon-color: var(--cedar-status-error-text);
   color: var(--cedar-status-error-text);
   background: var(--cedar-status-error-surface);
 }
 .notice {
-  color: var(--cedar-status-info-text);
-  background: var(--cedar-status-info-surface);
+  color: var(--cedar-color-primary-strong);
+  background: var(--cedar-surface-selected);
 }
 .sr-only {
   position: absolute;
@@ -529,12 +563,11 @@ dialog {
   max-height: 90vh;
   @include patterns.dialog-surface;
 }
-dialog header,
 dialog footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--cedar-dialog-action-gap);
+  gap: var(--cedar-space-3);
 }
 dialog h2 {
   @include patterns.artifact-title;
@@ -555,9 +588,11 @@ dialog h2 {
 }
 dialog footer {
   justify-content: flex-end;
-  margin-top: var(--cedar-dialog-padding);
 }
+@include overlay-spacing.action-dialogs;
+@include overlay-spacing.dialog-chrome;
 fieldset {
+  min-width: 0;
   border: 0;
   padding: 0;
   margin: 0;
@@ -565,26 +600,18 @@ fieldset {
 label {
   display: flex;
   flex-direction: column;
-  gap: var(--cedar-form-label-gap);
-  margin: var(--cedar-form-field-gap) 0;
+  gap: var(--cedar-space-2);
+  margin: var(--cedar-space-4) 0;
 }
 .check {
   flex-direction: row;
   align-items: center;
 }
-.folder-picker {
-  border: 1px solid var(--cedar-border-rule);
-  padding: var(--cedar-space-3);
-  margin-top: var(--cedar-space-4);
-}
-.folder-list {
-  max-height: 180px;
-  overflow: auto;
-}
-.folder-list button {
-  display: block;
-  width: 100%;
-  text-align: left;
+// A field of several controls cannot sit in one label, so it takes the label's layout.
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cedar-space-2);
 }
 .grant {
   display: flex;
@@ -600,28 +627,22 @@ label {
     grid-template-columns: 200px minmax(0, 1fr) 280px;
   }
   .workspace.left-collapsed {
-    grid-template-columns: 44px minmax(0, 1fr) 280px;
+    grid-template-columns: 0 minmax(0, 1fr) 280px;
   }
   .workspace.right-collapsed {
-    grid-template-columns: 200px minmax(0, 1fr) 44px;
-  }
-  .brand {
-    width: 176px;
+    grid-template-columns: 200px minmax(0, 1fr) 0;
   }
   main {
     padding: var(--cedar-space-3);
   }
   td {
-    padding-inline: var(--cedar-table-cell-padding-inline-authoring);
+    padding-inline: var(--cedar-space-2);
   }
 }
 @media (max-width: 760px) {
   .topbar {
     gap: var(--cedar-space-2);
     padding: var(--cedar-space-2);
-  }
-  .brand {
-    width: auto;
   }
   .brand span {
     display: none;
@@ -639,16 +660,11 @@ label {
     margin-top: var(--cedar-space-4);
   }
   .workspace main {
-    width: calc(100% - 44px);
+    width: 100%;
   }
   .information {
     width: 100%;
-  }
-  .right-collapsed .information {
-    width: 44px;
-  }
-  .workspace:not(.right-collapsed) main {
-    width: 100%;
+    padding-top: var(--cedar-control-height-default);
   }
   .paging {
     gap: var(--cedar-space-1);
@@ -703,20 +719,42 @@ td:first-child a {
   display: flex;
   align-items: center;
   gap: var(--cedar-space-4);
-  padding: var(--cedar-space-4);
+  padding: var(--cedar-space-4) var(--cedar-space-6);
   background: var(--cedar-color-on-primary);
   border-bottom: 1px solid var(--cedar-border-rule);
+}
+// The editor names itself beside the way back, as the Template Designer does, at the size the
+// form below gives its template's title.
+.metadata-title {
+  font-size: var(--cedar-font-size-artifact-title);
+  line-height: var(--cedar-line-height-heading);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.metadata-save-action {
+  display: inline-flex;
+}
+// A disabled button gets no pointer events in some browsers, so its wrapper takes the hover that explains it.
+.metadata-save-action.is-refused button {
+  pointer-events: none;
 }
 .metadata-save-status {
   margin-left: auto;
   display: inline-flex;
   align-items: center;
   gap: var(--cedar-space-2);
-  &.is-dirty::before {
+  // A hollow dot while nothing is unsaved, whether the instance is unmodified or saved; filled once it is modified.
+  &.has-save-state::before {
     content: "";
+    box-sizing: border-box;
     flex: 0 0 var(--cedar-space-2);
     height: var(--cedar-space-2);
     border-radius: 50%;
+    border: 2px solid var(--cedar-status-unsaved-dot);
+    background: transparent;
+  }
+  &.has-save-state.is-dirty::before {
     background: var(--cedar-status-unsaved-dot);
   }
 }
@@ -725,8 +763,7 @@ td:first-child a {
   margin: auto;
   padding: var(--cedar-space-3) var(--cedar-space-6);
   > label {
-    display: block;
-    margin-bottom: var(--cedar-space-2);
+    @include patterns.field-label($size: body);
   }
   > input {
     width: 100%;
@@ -741,6 +778,14 @@ td:first-child a {
 }
 .metadata-quality {
   @include patterns.validation-summary;
+  // Each problem leads to its field, and reads as the line of text it is rather than as
+  // one of the page's buttons.
+  li button {
+    min-height: 0;
+    padding: 0;
+    border-radius: 0;
+    background: none;
+  }
 }
 
 @media (max-width: 600px) {
@@ -753,6 +798,7 @@ td:first-child a {
 }
 
 .account-header,
+.workspace-return-bar,
 .account-nav {
   display: flex;
   align-items: center;
@@ -780,7 +826,7 @@ td:first-child a {
   font-size: var(--cedar-font-size-element-heading);
 }
 .account-card h3 {
-  font-size: var(--cedar-font-size-lead);
+  font-size: var(--cedar-font-size);
 }
 .account-card dt {
   margin-top: var(--cedar-space-3);
@@ -794,9 +840,9 @@ td:first-child a {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+// A form label matches the muted medium labels of the facts beside it and of other Workspace forms.
 .account-card label {
-  display: block;
-  margin-bottom: var(--cedar-space-2);
+  @include patterns.field-label($size: body);
 }
 .account-card input,
 .account-card textarea,
@@ -856,7 +902,7 @@ td:first-child a {
   text-decoration: underline;
 }
 .account-policy {
-  line-height: 1.6;
+  line-height: var(--cedar-control-line-height-default);
 }
 .account-policy li {
   margin-bottom: var(--cedar-space-3);
@@ -879,7 +925,7 @@ textarea {
   padding: 0;
   margin-bottom: var(--cedar-space-4);
   border: 1px solid var(--cedar-border-rule);
-  border-radius: var(--cedar-control-radius-authoring);
+  border-radius: var(--cedar-radius);
   overflow: hidden;
 }
 .account-section-heading {
@@ -888,8 +934,8 @@ textarea {
   gap: var(--cedar-space-2);
   margin: 0;
   padding: var(--cedar-space-3) var(--cedar-space-4);
-  color: var(--cedar-color-artifact-title);
-  background: var(--cedar-surface-panel);
+  color: var(--cedar-text-title);
+  background: var(--cedar-surface-subtle);
   border-bottom: 1px solid var(--cedar-border-rule);
 }
 
@@ -958,3 +1004,65 @@ th,
 }
 
 @include meta.load-css("./app/explorer");
+
+.workspace-tooltip {
+  @include patterns.menu-surface;
+  @include overlay-spacing.feedback;
+  // Small help labels need less elevation than an interactive dropdown menu.
+  box-shadow: var(--cedar-shadow-overlay);
+  position: fixed;
+  z-index: var(--cedar-layer-tooltip);
+  visibility: hidden;
+  width: max-content;
+  max-width: min(360px, calc(100vw - 16px));
+  max-height: calc(100dvh - 16px);
+  overflow: auto;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  font-family: var(--cedar-font-family);
+  font-size: var(--cedar-font-size);
+  font-weight: var(--cedar-font-weight-regular);
+  line-height: var(--cedar-control-line-height-default);
+  color: var(--cedar-text-primary);
+}
+
+// Menu glyphs and labels share the active theme; filter icons follow it too.
+.header-menu nav cedar-icon,
+.new-menu nav cedar-icon,
+.resource-menu cedar-icon,
+cedar-sort-menu [role="menuitemradio"] cedar-icon,
+cedar-resource-filters .popover cedar-icon {
+  color: var(--cedar-color-primary);
+}
+
+// Shared semantic destructive roles; ordinary control/focus geometry remains centralized.
+.destructive-action {
+  color: var(--cedar-status-error-text);
+  background: var(--cedar-status-error-surface);
+  &:hover:not(:disabled), &:active:not(:disabled) {
+    color: var(--cedar-color-on-primary);
+    background: var(--cedar-status-error-text);
+  }
+}
+.selection-delete {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cedar-space-2);
+  &:hover:not(:disabled), &:active:not(:disabled) {
+    color: var(--cedar-status-error-text);
+    background: var(--cedar-status-error-surface);
+  }
+}
+
+.selection-delete.explorer-delete-target {
+  outline: var(--cedar-focus-ring-width) solid var(--cedar-status-error-text);
+  outline-offset: var(--cedar-focus-ring-offset);
+  color: var(--cedar-status-error-text);
+  background: var(--cedar-status-error-surface);
+}
+
+// A section inside a dialog is headed at the element-heading step, as account sections are.
+.folder-picker h3 {
+  font-size: var(--cedar-font-size-element-heading);
+  line-height: var(--cedar-line-height-heading);
+}

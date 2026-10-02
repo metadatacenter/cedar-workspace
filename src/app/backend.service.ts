@@ -25,6 +25,7 @@ export class HttpError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    readonly code?: string,
   ) {
     super(message);
   }
@@ -146,9 +147,11 @@ export class Backend {
       }
       if (!response.ok) {
         let message = "";
+        let code: string | undefined;
         try {
           const data = await response.json();
           message = data.message || data.error || "";
+          if (typeof data.code === "string") code = data.code;
         } catch {}
         if (response.status === 412)
           throw new HttpError(
@@ -161,6 +164,7 @@ export class Backend {
           response.status,
           message ||
             this.i18n.t("Errors.RequestFailed", { status: response.status }),
+          code,
         );
       }
       return response;

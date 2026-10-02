@@ -72,6 +72,21 @@ describe("Authorized backend", () => {
     );
     expect(fetcher).not.toHaveBeenCalled();
   });
+  it("preserves a stable error code for feature-specific localisation", async () => {
+    fetcher.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          code: "FOLDER_DELETE_NOT_OWNER",
+          message: "Only the owner",
+        }),
+        { status: 403 },
+      ),
+    );
+    await expect(api.request("/folders/id/deletion")).rejects.toMatchObject({
+      status: 403,
+      code: "FOLDER_DELETE_NOT_OWNER",
+    });
+  });
   it("accepts empty successful deletion responses", async () => {
     fetcher.mockResolvedValue(new Response(null, { status: 204 }));
     expect((await api.request("/folders/id", "DELETE")).data).toBeUndefined();

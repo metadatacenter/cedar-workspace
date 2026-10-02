@@ -1,7 +1,7 @@
 @use "@org.metadatacenter/cedar-design-tokens/controls";
 @use "@org.metadatacenter/cedar-design-tokens/patterns";
 :host {
-  display: block;
+  display: grid;
 }
 label,
 .heading {
@@ -10,7 +10,13 @@ label,
 }
 textarea {
   display: block;
-  width: 100%;
+  width: auto;
+  min-width: 0;
+  box-sizing: content-box;
+  field-sizing: content;
+  min-height: 2lh;
+  max-height: 8lh;
+  overflow-y: auto;
   @include patterns.info-description-resize;
 }
 p {
@@ -27,5 +33,6 @@ p {
   @include controls.primary-action;
 }
 [role="alert"] {
-  color: var(--cedar-color-error);
+  --cedar-icon-color: var(--cedar-status-error-text);
+  color: var(--cedar-status-error-text);
 }

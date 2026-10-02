@@ -1,20 +1,25 @@
 <header class="metadata-toolbar">
-  <button (click)="back()" [disabled]="saving()">
-    <cedar-icon name="back" /> {{'Common.Workspace' | translate}}
-  </button>
+  <cedar-workspace-return [guarded]="true" [disabled]="saving()" (activate)="back()" />
+  <strong class="metadata-title">{{'Metadata.Title' | translate}}</strong>
   <span
     class="metadata-save-status"
+    [class.has-save-state]="writable() && !loading() && !saving()"
     [class.is-dirty]="dirty() && writable() && !loading() && !saving()"
     role="status"
     >{{saveStatus | translate}}</span
   >
-  @if(writable()) {<button
-    id="button-save-metadata"
-    class="primary"
-    (click)="save()"
-    [disabled]="loading() || saving() || validationErrors.length > 0"
-  >
-    {{'Common.Save' | translate}}</button
+  @if(writable()) {<span
+    class="metadata-save-action"
+    [class.is-refused]="saveRefused"
+    [cedarTooltip]="saveRefused ? ('Metadata.SaveRefused' | translate) : null"
+    ><button
+      id="button-save-metadata"
+      class="primary"
+      (click)="save()"
+      [disabled]="loading() || saving() || validationErrors.length > 0"
+    >
+      {{'Common.Save' | translate}}</button
+    ></span
   >}
 </header>
 <main class="metadata-content">
@@ -52,7 +57,13 @@
     </summary>
     <ul>
       @for(issue of validationErrors; track $index){
-      <li>{{issue.label}}: {{issue.message}}</li>
+      <li>
+        @if(issue.problem){
+        <button type="button" (click)="reveal(issue)">
+          {{issue.label}}: {{issue.message}}
+        </button>
+        } @else { {{issue.label}}: {{issue.message}} }
+      </li>
       }
     </ul>
   </details>
@@ -75,7 +86,13 @@
     </summary>
     <ul>
       @for(issue of validationWarnings; track $index){
-      <li>{{issue.label}}: {{issue.message}}</li>
+      <li>
+        @if(issue.problem){
+        <button type="button" (click)="reveal(issue)">
+          {{issue.label}}: {{issue.message}}
+        </button>
+        } @else { {{issue.label}}: {{issue.message}} }
+      </li>
       }
     </ul>
   </details>

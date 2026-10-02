@@ -24,6 +24,7 @@
         'Common.AllVersions') | translate}}</span
       >
       <select
+        data-cedar-select-icon
         [attr.aria-label]="'Common.Version' | translate"
         [ngModel]="version()"
         (ngModelChange)="versionChange.emit($event)"
@@ -51,18 +52,13 @@
   @if(open() === 'type') {
   <div class="type-options">
     @for(type of types; track type.value) {
-    <label
-      ><input
-        type="checkbox"
-        spellcheck="false"
+    <label>
+      <cedar-icon [name]="type.value === 'folder' ? 'folder' : 'artifact-' + type.value" />
+      <span>{{type.label | translate}}</span>
+      <input type="checkbox" spellcheck="false"
         [checked]="draft().types.includes(type.value)"
-        (change)="selectType(type.value)"
-      />
-      <cedar-icon
-        [name]="type.value === 'folder' ? 'folder' : 'artifact-' + type.value"
-      />
-      {{type.label | translate}}</label
-    >
+        (change)="selectType(type.value)" />
+    </label>
     }
   </div>
   } @else {

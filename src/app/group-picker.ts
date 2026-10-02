@@ -64,25 +64,19 @@ import { TranslatePipe } from "@ngx-translate/core";
       <p role="status">{{ "GroupPicker.NoMatches" | translate }}</p>
     }
   `,
+  styleUrl: "./group-picker.scss",
   styles: [
     `
       :host {
         display: block;
         position: relative;
       }
-      label {
-        display: block;
-        margin: 0 0 6px;
-        color: var(--cedar-text-muted);
-        font-size: var(--cedar-font-size);
-        font-weight: var(--cedar-font-weight-medium);
-      }
       input {
         display: block;
         width: 100%;
         height: var(--cedar-control-height-default);
         min-height: 0;
-        padding: 6px var(--cedar-space-3);
+        padding: var(--cedar-space-1) var(--cedar-space-3);
         border-color: var(--cedar-control-border-default);
       }
       input::placeholder {
@@ -97,17 +91,17 @@ import { TranslatePipe } from "@ngx-translate/core";
         width: 100%;
         max-width: 100%;
         padding: var(--cedar-space-1) 0;
-        background: var(--cedar-overlay-surface);
-        border: 1px solid var(--cedar-overlay-border);
-        border-radius: var(--cedar-menu-radius);
-        box-shadow: var(--cedar-menu-shadow);
+        background: var(--cedar-surface-raised);
+        border: 1px solid var(--cedar-border-rule);
+        border-radius: var(--cedar-radius);
+        box-shadow: var(--cedar-shadow-overlay);
       }
       button {
         display: block;
         width: 100%;
-        min-height: var(--cedar-menu-item-height);
-        padding: var(--cedar-menu-item-padding-block)
-          var(--cedar-menu-item-padding-inline);
+        min-height: var(--cedar-control-height-default);
+        padding: var(--cedar-space-2)
+          var(--cedar-space-3);
         border-radius: 0;
         text-align: left;
         color: var(--cedar-text-primary);
@@ -118,7 +112,7 @@ import { TranslatePipe } from "@ngx-translate/core";
       }
       button.active,
       button.active:hover:not(:disabled):not([aria-disabled='true']) {
-        color: var(--cedar-text-selected);
+        color: var(--cedar-text-primary);
         background: var(--cedar-surface-selected);
       }
     `,

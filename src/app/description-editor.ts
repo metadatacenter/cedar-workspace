@@ -45,11 +45,11 @@ import { Resource, can, title } from "./resource";
       }
     } @else {
       <div class="heading">{{ "Common.Description" | translate }}</div>
-      <p>
-        {{
-          resource()["schema:description"] || ("Description.Empty" | translate)
-        }}
-      </p>
+      @if (resource()["schema:description"]; as description) {
+        <p>{{ description }}</p>
+      } @else {
+        <p class="no-description">{{ "Description.Empty" | translate }}</p>
+      }
     }
     @if (error()) {
       <p role="alert">{{ error() }}</p>

@@ -1,4 +1,6 @@
+import { Tooltip } from "./tooltip";
 import { Toast } from "./toast";
+import { WorkspaceReturn } from "./workspace-return";
 import { Confirmation } from "./confirmation";
 import { Component, OnInit, inject, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
@@ -32,7 +34,9 @@ export const userName = (u: GroupUser, i18n: Pick<I18n, "t">) =>
 @Component({
   selector: "cedar-groups-page",
   imports: [
+    Tooltip,
     Toast,
+    WorkspaceReturn,
     FormsModule,
     NgTemplateOutlet,
     Icon,
@@ -63,7 +67,7 @@ export class Groups implements OnInit {
   groupEtag: string | null = null;
   memberEtag: string | null = null;
   private generation = 0;
-  activeTab: "manage" | "create" = "manage";
+  activeTab: "manage" | "create" | "delete" = "manage";
   createdGroup: Group | null = null;
   search = "";
   get groupOptions() {
@@ -86,7 +90,7 @@ export class Groups implements OnInit {
     const group = this.groups().find((g) => g["@id"] === id);
     if (group) await this.select(group);
   }
-  async selectTab(tab: "manage" | "create") {
+  async selectTab(tab: "manage" | "create" | "delete") {
     if (this.busy() || this.selecting()) return;
     if (
       tab === "create" &&
@@ -317,6 +321,8 @@ export class Groups implements OnInit {
       this.busy() ||
       !(await this.confirmation.confirm(
         this.i18n.t("Groups.ConfirmDelete", { name: this.groupName(g) }),
+        "groups",
+        "delete",
       ))
     )
       return;
@@ -365,6 +371,7 @@ export class Groups implements OnInit {
             : "Groups.ConfirmMakeAdministrator",
           { name: this.userName(m.user) },
         ),
+        "user",
       ))
     )
       return;

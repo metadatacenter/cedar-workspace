@@ -1,3 +1,6 @@
+import { DragPreview } from "./drag-preview";
+import { TooltipController } from "./tooltip-controller";
+import { Tooltip } from "./tooltip";
 import {
   CdkDropList,
   CdkDrag,
@@ -16,6 +19,7 @@ import {
   filtersFromParams,
   filterQuery,
 } from "./listing-filters";
+import { ArtifactPreview } from "./artifact-preview";
 import { Toast } from "./toast";
 import {
   Component,
@@ -27,6 +31,7 @@ import {
   ElementRef,
   Injector,
   computed,
+  effect,
 } from "@angular/core";
 import { FriendlyDatePipe } from "./friendly-date";
 import { TitleCasePipe } from "@angular/common";
@@ -40,11 +45,13 @@ import {
   Listing,
   title,
   can,
+  inOpenView,
   listingPath,
   resourceLink,
   collections,
 } from "./resource";
 import { Icon } from "./icon";
+import { FolderDeletionDialog } from "./folder-deletion-dialog";
 import { ResourceDialog } from "./resource-dialog";
 import { PermissionsDialog } from "./permissions-dialog";
 import { I18n } from "./i18n";
@@ -87,27 +94,6 @@ export function actions(r: Resource, i18n: Pick<I18n, "t">): Action[] {
       label: label("ResourceActions.Rename"),
       enabled: cap("updateResource"),
     },
-    {
-      id: "folder-id",
-      label: label("ResourceActions.CopyFolderId"),
-      enabled: r.resourceType === "folder",
-    },
-    {
-      id: "parent-id",
-      label: label("ResourceActions.CopyParentFolderId"),
-      enabled: !!r.pathInfo?.length,
-    },
-    ...(
-      [
-        ["json", "ResourceActions.DownloadJson"],
-        ["yaml", "ResourceActions.DownloadYaml"],
-        ["yamlc", "ResourceActions.DownloadCompactYaml"],
-      ] as const
-    ).map(([id, key]) => ({
-      id,
-      label: label(key),
-      enabled: r.resourceType !== "folder" && cap("readResource"),
-    })),
     ...(r.resourceType === "instance"
       ? []
       : [
@@ -128,13 +114,6 @@ export function actions(r: Resource, i18n: Pick<I18n, "t">): Action[] {
       enabled: cap("deleteResource"),
     },
     {
-      id: "datacite",
-      label: label("ResourceActions.DataCite"),
-      enabled:
-        window.dataciteEnabled !== false &&
-        ["template", "instance"].includes(r.resourceType),
-    },
-    {
       id: "make-open",
       label: label("ResourceActions.MakeOpen"),
       enabled: window.makeOpenEnabled !== false && cap("enableOpenView"),
@@ -147,13 +126,32 @@ export function actions(r: Resource, i18n: Pick<I18n, "t">): Action[] {
     {
       id: "openview",
       label: label("ResourceActions.OpenInOpenView"),
-      enabled: window.makeOpenEnabled !== false && !!r.isOpen,
+      enabled: window.makeOpenEnabled !== false && inOpenView(r),
     },
-  ];
+  ].filter((action) => {
+    // Applicability comes from the resource kind; capabilities still gate valid actions.
+    switch (action.id) {
+      case "populate":
+        return r.resourceType === "template";
+      case "copy":
+        return r.resourceType !== "folder";
+      case "publish":
+      case "draft":
+        return ["template", "element", "field"].includes(r.resourceType);
+      default:
+        return true;
+    }
+  });
 }
+/** The query parameter naming the artifact to select once the listing is loaded. */
+const SELECTED_PARAM = "selected";
+
 @Component({
   selector: "cedar-workspace-page",
   imports: [
+    DragPreview,
+    Tooltip,
+    ArtifactPreview,
     CdkDropList,
     CdkDrag,
     CdkDragPreview,
@@ -167,6 +165,7 @@ export function actions(r: Resource, i18n: Pick<I18n, "t">): Action[] {
     FriendlyDatePipe,
     RouterLink,
     ResourceDialog,
+    FolderDeletionDialog,
     PermissionsDialog,
     Icon,
     TranslatePipe,
@@ -174,6 +173,7 @@ export function actions(r: Resource, i18n: Pick<I18n, "t">): Action[] {
   templateUrl: "./workspace.html",
 })
 export class Workspace {
+  private readonly tooltips = inject(TooltipController);
   private readonly i18n = inject(I18n);
   readonly cedarVersion = window.cedarVersion || this.i18n.t("Common.Unknown");
   readonly api = inject(Backend);
@@ -184,7 +184,22 @@ export class Workspace {
   private injector = inject(Injector);
   readonly title = (r: Resource) => title(r, this.i18n.t("Common.Untitled"));
   readonly can = can;
+  readonly inOpenView = inOpenView;
+  readonly openViewEnabled = window.makeOpenEnabled !== false;
   readonly actions = (r: Resource) => actions(r, this.i18n);
+  attribution(userId?: string, name?: string): string {
+    if (this.isCurrentUser(userId))
+      return this.i18n.t("Dashboard.ByYou");
+    return name ? this.i18n.t("Dashboard.By", { name }) : "";
+  }
+  ownerName(r: Resource): string {
+    return this.isCurrentUser(r.ownedBy)
+      ? this.i18n.t("Dashboard.You")
+      : r.ownedByUserName || "—";
+  }
+  private isCurrentUser(userId?: string): boolean {
+    return !!userId && userId === this.api.profile?.["@id"];
+  }
   /** A role as the server states it, translated when Workspace knows it. */
   role(r: Resource) {
     const role = r.currentUserPermissions?.role;
@@ -208,25 +223,55 @@ export class Workspace {
   readonly rows = signal<Resource[]>([]);
   readonly path = signal<Resource[]>([]);
   readonly currentFolder = signal<Resource | undefined>(undefined);
-  readonly grid = signal(false);
+  readonly grid = signal(true);
+  readonly preview = signal<Resource | null>(null);
   readonly selectionIds = signal<string[]>([]);
   readonly selection = computed(() =>
     this.rows().filter((r) => this.selectionIds().includes(r["@id"])),
   );
   readonly moving = signal(false);
   readonly cutItems = signal<Resource[]>([]);
+  openSelectionDeletion(event: Event) {
+    this.reviewDeletion(this.selection(), event.currentTarget as HTMLElement);
+  }
+  private reviewDeletion(resources: Resource[], trigger: HTMLElement | null) {
+    trigger?.focus();
+    this.deletionSelection.set([...resources]);
+  }
+  readonly deletionSelection = signal<Resource[] | null>(null);
   readonly moveDialog = signal<Resource[] | null>(null);
+  readonly deleteDrop = signal(false);
   readonly dropTarget = signal("");
-  private dragging: Resource[] = [];
+  readonly dragging = signal<Resource[]>([]);
+  readonly validDropIds = computed(() => new Set(
+    [...this.rows(), ...this.path()].filter(target =>
+      this.dragging().every(r => can(r, "moveResource")) &&
+      target["@id"] !== this.folder &&
+      validMoveShape(this.dragging(), target) &&
+      (can(target, "moveIntoFolder") || this.path().some(p => p["@id"] === target["@id"]))
+    ).map(target => target["@id"]),
+  ));
+  readonly dropName = computed(() => {
+    const target = [...this.rows(), ...this.path()].find(r => r["@id"] === this.dropTarget());
+    return target ? this.title(target) : "";
+  });
+  readonly movedTarget = signal("");
+  private movedTimer?: ReturnType<typeof setTimeout>;
   private moves = inject(ResourceMoves);
   readonly canMoveSelection = computed(
     () =>
       this.selection().length > 0 &&
       this.selection().every((r) => can(r, "moveResource")),
   );
+  canDrag(r: Resource) {
+    const items = this.selectionIds().includes(r["@id"]) ? this.selection() : [r];
+    return items.length > 0 && items.every(item => can(item, "moveResource") || can(item, "deleteResource"));
+  }
   readonly selected = signal<Resource | undefined>(undefined);
   readonly instances = signal<Resource[]>([]);
   readonly instanceTotal = signal(0);
+  /** Whether the search for the selected template's instances has answered. */
+  readonly instancesLoaded = signal(false);
   readonly total = signal(0);
   readonly offset = signal(0);
   readonly left = signal(true);
@@ -240,13 +285,25 @@ export class Workspace {
   sort = "name";
   folder = "";
   params = new URLSearchParams();
+  // The listing the URL names, without the artifact to select in it: dropping that
+  // parameter once it has been applied must not load the listing again.
+  private listingKey: string | null = null;
+  // An artifact to select once the listing holds it, as an editor returning here names it.
+  private reselect: string | null = null;
   private listRead = 0;
   private detailRead = 0;
   constructor() {
+    effect(() => {
+      document.body.classList.toggle("explorer-dragging", this.dragging().length > 0);
+      document.body.classList.toggle("explorer-can-drop", !!this.dropTarget() || this.deleteDrop());
+    });
     const clock = setInterval(() => this.now.set(Date.now()), 60_000);
     void this.start();
     this.destroy.onDestroy(() => {
       clearInterval(clock);
+      clearTimeout(this.movedTimer);
+      this.tooltips.resume();
+      document.body.classList.remove("explorer-dragging", "explorer-can-drop");
       this.listRead++;
       this.detailRead++;
     });
@@ -259,7 +316,14 @@ export class Workspace {
         .pipe(takeUntilDestroyed(this.destroy))
         .subscribe((map) => {
           this.params = new URLSearchParams();
-          map.keys.forEach((key) => this.params.set(key, map.get(key)!));
+          map.keys
+            .filter((key) => key !== SELECTED_PARAM)
+            .forEach((key) => this.params.set(key, map.get(key)!));
+          const selected = map.get(SELECTED_PARAM);
+          if (selected) this.reselect = selected;
+          const listingKey = this.params.toString();
+          if (listingKey === this.listingKey && !selected) return;
+          this.listingKey = listingKey;
           this.search = map.get("search") || "";
           this.folder = map.get("folderId") || this.api.profile.homeFolderId;
           const sort = map.get("sort") || "name";
@@ -314,6 +378,7 @@ export class Workspace {
       this.rows.set(data.resources);
       this.total.set(data.totalCount);
       this.path.set(data.pathInfo || []);
+      this.restoreSelection();
       void this.loadFolder(read);
       // Listings omit lifecycle actions. Enrich template links without blocking the table.
       void this.loadTemplateActions(data.resources, read);
@@ -328,6 +393,60 @@ export class Workspace {
         this.refreshing.set(false);
       }
     }
+  }
+  /**
+   * Select again the artifact an editor was opened on, once the listing holds it.
+   *
+   * Opening an artifact leaves the dashboard for an editor, and coming back loaded a
+   * fresh listing with nothing selected. The editor returns to the address it was
+   * given, which names the artifact; the parameter is dropped once applied, so a
+   * reload or a later return does not select it again.
+   */
+  private restoreSelection() {
+    const id = this.reselect;
+    if (id === null) return;
+    this.reselect = null;
+    const r = this.rows().find((row) => row["@id"] === id);
+    if (r) {
+      void this.select(r);
+      afterNextRender(
+        () =>
+          this.host.nativeElement
+            .querySelector(`[data-resource-id="${CSS.escape(id)}"]`)
+            ?.scrollIntoView({ block: "nearest" }),
+        { injector: this.injector },
+      );
+    }
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { [SELECTED_PARAM]: null },
+      queryParamsHandling: "merge",
+      replaceUrl: true,
+    });
+  }
+  /**
+   * Where an editor opened from here returns to: this listing, naming the artifact to
+   * select again. That is the one opened when the listing shows it, and otherwise the
+   * one selected now, as when a link in the Info panel opens an artifact kept elsewhere.
+   */
+  private returnHere(opened?: Resource) {
+    const listed =
+      opened && this.rows().some((row) => row["@id"] === opened["@id"])
+        ? opened
+        : undefined;
+    const selection = this.selection();
+    const keep = listed ?? (selection.length === 1 ? selection[0] : undefined);
+    // The query is edited as text: URLSearchParams would re-encode every other
+    // parameter, so the way back would no longer be the address the router wrote.
+    const url = new URL(location.href);
+    const params = url.search
+      .slice(1)
+      .split("&")
+      .filter((param) => param && param.split("=")[0] !== SELECTED_PARAM);
+    if (keep)
+      params.push(SELECTED_PARAM + "=" + encodeURIComponent(keep["@id"]));
+    url.search = params.join("&");
+    return url.toString();
   }
   private async loadFolder(read: number) {
     try {
@@ -405,14 +524,14 @@ export class Workspace {
             buttons.length;
     buttons[next]?.focus();
   }
-  async select(r: Resource, reveal = true) {
+  async select(r: Resource) {
     const read = ++this.detailRead;
     this.selectionIds.set([r["@id"]]);
     this.selected.set(r);
     this.instances.set([]);
     this.instanceTotal.set(0);
+    this.instancesLoaded.set(false);
     this.tab = "info";
-    if (reveal) this.right.set(true);
     try {
       const { data } = await this.api.report(r);
       if (read === this.detailRead) {
@@ -437,17 +556,27 @@ export class Workspace {
     } else {
       this.detailRead++;
       this.selected.set(undefined);
-      if (ids.length) this.right.set(true);
     }
+  }
+  doubleClickItem(r: Resource, event: MouseEvent) {
+    const target = event.target as Element;
+    if (this.loading() || this.moving() || target.closest("a,button,input,.row-actions")) return;
+    if (this.grid() || r.resourceType === "folder" || target === event.currentTarget)
+      this.openItem(r["@id"]);
   }
   openItem(id: string) {
     const r = this.rows().find((r) => r["@id"] === id);
     if (r) void this.act("open", r);
   }
   startDrag(r: Resource) {
+    this.deleteDrop.set(false);
+    this.dropTarget.set("");
+    this.tooltips.suspend();
     this.menu.set(null);
     if (!this.selectionIds().includes(r["@id"])) this.setSelection([r["@id"]]);
-    this.dragging = [...this.selection()];
+    clearTimeout(this.movedTimer);
+    this.movedTarget.set("");
+    this.dragging.set([...this.selection()]);
   }
   dragMove(event: CdkDragMove) {
     const element = document
@@ -455,29 +584,24 @@ export class Workspace {
         event.pointerPosition.x - window.scrollX,
         event.pointerPosition.y - window.scrollY,
       )
-      ?.closest<HTMLElement>("[data-drop-id]");
+      ?.closest<HTMLElement>("[data-drop-id], .selection-delete");
+    const deleteTarget = !!element?.matches(".selection-delete:not(:disabled)") && this.dragging().length > 0;
+    this.deleteDrop.set(deleteTarget);
     const id = element?.dataset["dropId"];
-    const target = [...this.rows(), ...this.path()].find(
-      (r) => r["@id"] === id,
-    );
-    this.dropTarget.set(
-      target &&
-        validMoveShape(this.dragging, target) &&
-        (can(target, "moveIntoFolder") ||
-          this.path().some((p) => p["@id"] === id)) &&
-        id !== this.folder
-        ? id!
-        : "",
-    );
+    this.dropTarget.set(id && this.validDropIds().has(id) ? id : "");
   }
   endDrag(event: CdkDragEnd, explorer: ExplorerSelection) {
     const target = this.dropTarget(),
-      resources = this.dragging;
+      deleting = this.deleteDrop(),
+      resources = this.dragging();
+    this.deleteDrop.set(false);
     this.dropTarget.set("");
-    this.dragging = [];
+    this.dragging.set([]);
     event.source.reset();
     explorer.ignoreClick();
-    if (target) void this.moveItems(resources, target);
+    this.tooltips.resume();
+    if (deleting) this.reviewDeletion(resources, this.host.nativeElement.querySelector(".selection-delete"));
+    else if (target) void this.moveItems(resources, target);
   }
   cutSelection() {
     if (this.canMoveSelection()) this.cutItems.set([...this.selection()]);
@@ -492,13 +616,20 @@ export class Workspace {
         items.filter((r) => !result.moved.includes(r["@id"])),
       );
       await this.load(true);
+      if (result.moved.length) {
+        clearTimeout(this.movedTimer);
+        this.movedTarget.set(target);
+        this.movedTimer = setTimeout(() => this.movedTarget.set(""), 1600);
+      }
       this.selectionIds.set(
         result.failed
           .map((f) => f.resource["@id"])
           .filter((id) => this.rows().some((r) => r["@id"] === id)),
       );
       this.notice.set(
-        this.i18n.t("Explorer.Moved", { count: result.moved.length }),
+        this.i18n.t(result.moved.length === 1 ? "Explorer.MovedOne" : "Explorer.Moved", {
+          count: result.moved.length,
+        }),
       );
       if (result.failed.length)
         this.error.set(
@@ -541,6 +672,7 @@ export class Workspace {
       if (read === this.detailRead) {
         this.instances.set(data.resources);
         this.instanceTotal.set(data.totalCount);
+        this.instancesLoaded.set(true);
       }
     } catch (e) {
       if (read === this.detailRead) this.fail(e);
@@ -601,11 +733,19 @@ export class Workspace {
       this.fail(e);
     }
   }
+  navigationQuery(destination: Record<string, string> = {}) {
+    // Sorting is a view preference; location, search, filters and paging are not.
+    return {
+      ...(this.params.has("sort") ? { sort: this.sort } : {}),
+      ...(this.params.get("folders") === "first" ? { folders: "first" } : {}),
+      ...destination,
+    };
+  }
   submitSearch() {
     void this.router.navigate(["/dashboard"], {
-      queryParams: this.search.trim()
+      queryParams: this.navigationQuery(this.search.trim()
         ? { search: this.search.trim() }
-        : { folderId: this.folder },
+        : { folderId: this.folder }),
     });
   }
   get filters(): ListingFilters {
@@ -668,12 +808,59 @@ export class Workspace {
       queryParams: { offset: Math.max(0, this.offset() + delta * 50) },
     });
   }
+  /** " · 0.0.1 · Published" after an artifact's name, from what the report says of it. */
+  versionAndStatus(v: Resource): string {
+    const status = this.status(v);
+    const parts = [
+      v["pav:version"] || this.i18n.t("Dashboard.Unversioned"),
+      ...(status === "—" ? [] : [status]),
+    ];
+    return " · " + parts.join(" · ");
+  }
+  /**
+   * Whether the artifact is the newest of its versions.
+   *
+   * The version history settles it when the report includes one, so the Status line
+   * and the Latest entry cannot disagree; without a history, the report's own flag does.
+   */
+  isLatest(r: Resource): boolean {
+    if (!r["pav:version"]) return false;
+    return r.versions?.length ? !this.latestVersion(r) : r.isLatestVersion !== false;
+  }
+  /** The newest version when it is not this one; the report lists versions newest first. */
+  latestVersion(r: Resource): Resource | undefined {
+    const latest = r.versions?.[0];
+    return latest && latest["@id"] !== r["@id"] ? latest : undefined;
+  }
+  /** What everyone may do with the artifact, when it is shared with everyone. */
+  everyoneAccess(r: Resource): string | null {
+    if (r.everybodyPermission === "read") return "Dashboard.EveryoneCanView";
+    if (r.everybodyPermission === "write") return "Dashboard.EveryoneCanEdit";
+    return null;
+  }
+  /**
+   * The versions older than this one, newest first.
+   *
+   * The report lists the whole version history, newest first and including this
+   * version, so the previous ones are those after it.
+   */
+  previousVersions(r: Resource): Resource[] {
+    const versions = r.versions ?? [];
+    const here = versions.findIndex((v) => v["@id"] === r["@id"]);
+    return here < 0 ? [] : versions.slice(here + 1);
+  }
+  /** The version after this one, which the latest has none of; the report lists versions newest first. */
+  nextVersion(r: Resource): Resource | undefined {
+    const versions = r.versions ?? [];
+    const here = versions.findIndex((v) => v["@id"] === r["@id"]);
+    return here > 0 ? versions[here - 1] : undefined;
+  }
   link(r: Resource, populate = false) {
     return resourceLink(
       r,
       this.api.config,
       this.folder,
-      location.href,
+      this.returnHere(r),
       populate,
     );
   }
@@ -683,7 +870,10 @@ export class Workspace {
       "/" +
       kind +
       "/create?" +
-      new URLSearchParams({ folderId: this.folder, returnTo: location.href })
+      new URLSearchParams({
+        folderId: this.folder,
+        returnTo: this.returnHere(),
+      })
     );
   }
   openView(r: Resource) {
@@ -704,41 +894,13 @@ export class Workspace {
       if (id === "open" || id === "populate") {
         if (r.resourceType === "folder")
           void this.router.navigate(["/dashboard"], {
-            queryParams: { folderId: r["@id"] },
+            queryParams: this.navigationQuery({ folderId: r["@id"] }),
           });
         else location.assign(this.link(r, id === "populate"));
         return;
       }
       if (id === "openview") {
         window.open(this.openView(r), "_blank", "noopener");
-        return;
-      }
-      if (id === "datacite") {
-        if (!r.isOpen)
-          throw new Error(this.i18n.t("Dashboard.OpenBeforeDataCite"));
-        if (
-          r.resourceType === "template" &&
-          r["bibo:status"] !== "bibo:published"
-        )
-          throw new Error(this.i18n.t("Dashboard.PublishBeforeDataCite"));
-        window.open(
-          this.api.config.dataciteDOIBase + "/" + encodeURIComponent(r["@id"]),
-          "_blank",
-          "noopener",
-        );
-        return;
-      }
-      if (id === "folder-id" || id === "parent-id") {
-        const path = r.pathInfo || [];
-        const parent = path.filter((p) => p["@id"] !== r["@id"]).at(-1);
-        await navigator.clipboard.writeText(
-          id === "folder-id" ? r["@id"] : parent?.["@id"] || this.folder,
-        );
-        this.notice.set(this.i18n.t("Common.IdCopied"));
-        return;
-      }
-      if (["json", "yaml", "yamlc"].includes(id)) {
-        await this.api.download(r, id);
         return;
       }
       this.dialog.set({ action: id, resource: r });

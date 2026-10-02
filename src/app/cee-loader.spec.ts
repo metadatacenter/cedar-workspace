@@ -73,4 +73,22 @@ describe("CEE bundle loading", () => {
       document.querySelector('script[src*="cedar-embeddable-editor.js"]'),
     ).toBeNull();
   });
+  it("ignores late events from a timed-out load while its retry is pending", async () => {
+    vi.useFakeTimers();
+    const first = loader.load();
+    const oldScript = document.querySelector(
+      'script[src*="cedar-embeddable-editor.js"]',
+    ) as HTMLScriptElement;
+    const rejected = expect(first).rejects.toThrow("Unable to load");
+    await vi.advanceTimersByTimeAsync(30000);
+    await rejected;
+    const retry = loader.load();
+    oldScript.dispatchEvent(new Event("error"));
+    expect(loader.load()).toBe(retry);
+    registered = true;
+    document
+      .querySelector('script[src*="cedar-embeddable-editor.js"]')!
+      .dispatchEvent(new Event("load"));
+    await retry;
+  });
 });

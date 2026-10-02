@@ -16,8 +16,13 @@ export class CeeLoader {
     return (this.pending ||= new Promise<void>((resolve, reject) => {
       const script = document.createElement("script");
       const timer = setTimeout(() => fail(), 30000);
-      const fail = () => {
+      const detach = () => {
         clearTimeout(timer);
+        script.onload = null;
+        script.onerror = null;
+      };
+      const fail = () => {
+        detach();
         script.remove();
         this.pending = undefined;
         reject(new Error(this.i18n.t("Errors.EditorUnavailable")));
@@ -29,7 +34,7 @@ export class CeeLoader {
       script.onerror = fail;
       script.onload = () => {
         if (!customElements.get("cedar-embeddable-editor")) return fail();
-        clearTimeout(timer);
+        detach();
         resolve();
       };
       document.head.append(script);

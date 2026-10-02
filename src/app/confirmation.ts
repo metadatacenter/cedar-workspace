@@ -8,17 +8,26 @@ import {
   viewChild,
 } from "@angular/core";
 import { TranslatePipe } from "@ngx-translate/core";
+import { Icon } from "./icon";
 import { DialogKeyboard } from "./dialog-keyboard";
 
 @Injectable({ providedIn: "root" })
 export class Confirmation {
   readonly message = signal("");
+  readonly icon = signal("warning");
+  readonly headingIcon = signal("");
   private resolve?: (accepted: boolean) => void;
   private returnFocus: HTMLElement | null = null;
-  confirm(message: string): Promise<boolean> {
+  confirm(
+    message: string,
+    icon = "warning",
+    headingIcon = "",
+  ): Promise<boolean> {
     // A second activation must not replace a decision already in progress.
     if (this.resolve) return Promise.resolve(false);
     this.returnFocus = document.activeElement as HTMLElement | null;
+    this.icon.set(icon);
+    this.headingIcon.set(headingIcon);
     this.message.set(message);
     return new Promise((resolve) => {
       this.resolve = resolve;
@@ -38,20 +47,29 @@ export class Confirmation {
 
 @Component({
   selector: "cedar-confirmation",
-  imports: [DialogKeyboard, TranslatePipe],
+  imports: [DialogKeyboard, TranslatePipe, Icon],
   template: `@if (confirmation.message()) {
     <dialog
       #dialog
       cedarDialogKeyboard
-      class="confirmation-dialog"
+      class="confirmation-dialog dialog-stack"
       aria-labelledby="confirmation-title"
       aria-describedby="confirmation-message"
       (cancel)="
         $event.preventDefault(); $event.stopPropagation(); decide(false)
       "
     >
-      <h2 id="confirmation-title">{{ "Confirmation.Title" | translate }}</h2>
-      <p id="confirmation-message">{{ confirmation.message() }}</p>
+      <h2 id="confirmation-title" class="resource-dialog-title">
+        @if (confirmation.headingIcon()) {
+          <cedar-icon [name]="confirmation.headingIcon()" />
+        }
+        {{ "Confirmation.Title" | translate }}
+      </h2>
+      <p id="confirmation-message">
+        <cedar-icon [name]="confirmation.icon()" /><span>{{
+          confirmation.message()
+        }}</span>
+      </p>
       <footer>
         <button autofocus (click)="decide(false)">
           {{ "Common.Cancel" | translate }}</button
@@ -63,21 +81,18 @@ export class Confirmation {
   }`,
   styles: [
     `
-      @use "@org.metadatacenter/cedar-design-tokens/patterns";
       dialog {
-        @include patterns.dialog-surface;
         width: min(460px, calc(100vw - 32px));
       }
-      h2 {
-        @include patterns.artifact-title;
-        margin: 0 0 var(--cedar-space-2);
-      }
       p {
-        margin: 0 0 var(--cedar-space-4);
+        display: flex;
+        align-items: center;
+        gap: var(--cedar-space-2);
         line-height: var(--cedar-control-line-height-default);
       }
-      footer {
-        @include patterns.dialog-actions;
+      cedar-icon {
+        flex-shrink: 0;
+        color: var(--cedar-color-primary);
       }
     `,
   ],

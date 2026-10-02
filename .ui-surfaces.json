@@ -1,0 +1,747 @@
+{
+  "schema": 1,
+  "repo": "cedar-workspace",
+  "browserHelper": "browser/tests/surface-contracts.generated.mjs",
+  "surfaces": [
+    {
+      "id": "workspace.profile",
+      "name": "Profile",
+      "section": "Management",
+      "contract": "page",
+      "scenario": "profile-page",
+      "selector": "cedar-workspace",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/profile.html",
+          "anchor": "class=\"account-card\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.permissions",
+      "name": "Permissions",
+      "section": "Management",
+      "contract": "dialog",
+      "scenario": "permissions",
+      "selector": "cedar-permissions-dialog dialog",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/permissions-dialog.html",
+          "anchor": "aria-labelledby=\"permissions-title\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.privacy",
+      "name": "Privacy",
+      "section": "Management",
+      "contract": "page",
+      "scenario": "privacy-page",
+      "selector": "cedar-workspace",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/privacy.html",
+          "anchor": "class=\"account-card account-policy\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.settings",
+      "name": "Settings",
+      "section": "Management",
+      "contract": "page",
+      "scenario": "settings-page",
+      "selector": "cedar-workspace",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/settings.html",
+          "anchor": "class=\"account-card\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.groups",
+      "name": "Groups",
+      "section": "Management",
+      "contract": "page",
+      "scenario": "groups-page",
+      "selector": "cedar-workspace",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/groups.html",
+          "anchor": "id=\"groups-page\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.manage-groups",
+      "name": "Manage Groups",
+      "section": "Management",
+      "parent": "workspace.groups"
+    },
+    {
+      "id": "workspace.create-group",
+      "name": "Create Group",
+      "section": "Management",
+      "parent": "workspace.groups"
+    },
+    {
+      "id": "workspace.delete-group-tab",
+      "name": "Delete Group",
+      "section": "Management",
+      "parent": "workspace.groups",
+      "source": [
+        {
+          "file": "src/app/groups.html",
+          "anchor": "id=\"delete-group-panel\""
+        }
+      ],
+      "test": "browser/tests/group-tabs.spec.mjs"
+    },
+    {
+      "id": "workspace.logout",
+      "name": "Logout",
+      "section": "Management"
+    },
+    {
+      "id": "workspace.workspace",
+      "name": "Workspace",
+      "section": "Menus"
+    },
+    {
+      "id": "workspace.artifact-menu",
+      "name": "Artifact Menu",
+      "section": "Menus",
+      "parent": "workspace.workspace",
+      "contract": "menu",
+      "scenario": "artifact-menu",
+      "selector": ".resource-menu",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/workspace.html",
+          "anchor": "class=\"resource-menu\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.folder-menu",
+      "name": "Folder Menu",
+      "section": "Menus",
+      "parent": "workspace.workspace",
+      "contract": "menu",
+      "scenario": "folder-menu",
+      "selector": ".resource-menu",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/workspace.html",
+          "anchor": "class=\"resource-menu\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.person-menu",
+      "name": "Person Menu",
+      "section": "Menus",
+      "parent": "workspace.workspace",
+      "contract": "menu",
+      "scenario": "person-menu",
+      "selector": ".header-menu[open] nav",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/workspace.html",
+          "anchor": "class=\"header-menu\""
+        },
+        {
+          "file": "src/app/groups.html",
+          "anchor": "class=\"header-menu\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.more-menu-hot-dogs",
+      "name": "Actions Menu (\u201cHot Dogs\u201d)",
+      "section": "Menus",
+      "parent": "workspace.workspace",
+      "contract": "menu",
+      "scenario": "more-menu",
+      "selector": ".header-menu[open] nav",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/workspace.html",
+          "anchor": "class=\"header-menu\""
+        },
+        {
+          "file": "src/app/groups.html",
+          "anchor": "class=\"header-menu\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.new-menu",
+      "name": "New Menu",
+      "section": "Menus",
+      "parent": "workspace.workspace",
+      "contract": "menu",
+      "scenario": "new-menu",
+      "selector": ".new-menu[open] nav",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/workspace.html",
+          "anchor": "class=\"new-menu\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.sort-menu",
+      "name": "Sort Menu",
+      "section": "Menus",
+      "parent": "workspace.workspace",
+      "contract": "menu",
+      "scenario": "sort-menu",
+      "selector": ".sort-menu",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/sort-menu.html",
+          "anchor": "role=\"menu\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.workspace-view",
+      "name": "Workspace",
+      "section": "Resource Dialogs"
+    },
+    {
+      "id": "workspace.new-folder",
+      "name": "New Folder",
+      "section": "Resource Dialogs",
+      "parent": "workspace.workspace-view",
+      "contract": "dialog",
+      "scenario": "new-folder",
+      "selector": "cedar-resource-dialog dialog",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/resource-dialog.html",
+          "anchor": "aria-labelledby=\"dialog-title\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.rename-edit-description",
+      "name": "Rename / Edit Description",
+      "section": "Resource Dialogs",
+      "parent": "workspace.workspace-view",
+      "contract": "dialog",
+      "scenario": "rename",
+      "selector": "cedar-resource-dialog dialog",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/resource-dialog.html",
+          "anchor": "aria-labelledby=\"dialog-title\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.copy",
+      "name": "Copy",
+      "section": "Resource Dialogs",
+      "parent": "workspace.workspace-view",
+      "contract": "dialog",
+      "scenario": "copy",
+      "selector": "cedar-resource-dialog dialog",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/resource-dialog.html",
+          "anchor": "aria-labelledby=\"dialog-title\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.move",
+      "name": "Move",
+      "section": "Resource Dialogs",
+      "parent": "workspace.workspace-view",
+      "contract": "dialog",
+      "scenario": "move",
+      "selector": "cedar-resource-dialog dialog",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/resource-dialog.html",
+          "anchor": "aria-labelledby=\"dialog-title\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.folder-list",
+      "name": "Folder List",
+      "section": "Resource Dialogs",
+      "parent": "workspace.destination-folder-picker"
+    },
+    {
+      "id": "workspace.destination-folder-picker",
+      "name": "Destination Folder Picker",
+      "section": "Resource Dialogs",
+      "parent": "workspace.workspace-view"
+    },
+    {
+      "id": "workspace.publish",
+      "name": "Publish",
+      "section": "Resource Dialogs",
+      "parent": "workspace.workspace-view",
+      "contract": "dialog",
+      "scenario": "publish",
+      "selector": "cedar-resource-dialog dialog",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/resource-dialog.html",
+          "anchor": "aria-labelledby=\"dialog-title\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.create-draft",
+      "name": "Create Draft",
+      "section": "Resource Dialogs",
+      "parent": "workspace.workspace-view",
+      "contract": "dialog",
+      "scenario": "draft",
+      "selector": "cedar-resource-dialog dialog",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/resource-dialog.html",
+          "anchor": "aria-labelledby=\"dialog-title\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.workspace-management",
+      "name": "Workspace / Management",
+      "section": "Confirmation / Warning / Error"
+    },
+    {
+      "id": "workspace.delete-artifact-folder",
+      "name": "Delete Artifact",
+      "section": "Confirmation / Warning / Error",
+      "parent": "workspace.workspace-management",
+      "contract": "dialog",
+      "scenario": "delete",
+      "selector": "cedar-resource-dialog dialog",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/resource-dialog.html",
+          "anchor": "aria-labelledby=\"dialog-title\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.delete-group",
+      "name": "Delete Group",
+      "section": "Confirmation / Warning / Error",
+      "parent": "workspace.workspace-management"
+    },
+    {
+      "id": "workspace.enable-openview-disable-openview",
+      "name": "Enable OpenView / Disable OpenView",
+      "section": "Confirmation / Warning / Error",
+      "parent": "workspace.workspace-management",
+      "contract": "dialog",
+      "scenario": "make-open",
+      "selector": "cedar-resource-dialog dialog",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/resource-dialog.html",
+          "anchor": "aria-labelledby=\"dialog-title\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.transfer-ownership",
+      "name": "Transfer Ownership",
+      "section": "Confirmation / Warning / Error",
+      "parent": "workspace.workspace-management"
+    },
+    {
+      "id": "workspace.grant-remove-group-administrator",
+      "name": "Grant / Remove Group Administrator",
+      "section": "Confirmation / Warning / Error",
+      "parent": "workspace.workspace-management"
+    },
+    {
+      "id": "workspace.delete-regenerate-api-key",
+      "name": "Delete / Regenerate API Key",
+      "section": "Confirmation / Warning / Error",
+      "parent": "workspace.workspace-management"
+    },
+    {
+      "id": "workspace.discard-unsaved-changes",
+      "name": "Discard Unsaved Changes",
+      "section": "Confirmation / Warning / Error",
+      "parent": "workspace.workspace-management",
+      "contract": "dialog",
+      "scenario": "confirmation",
+      "selector": ".confirmation-dialog",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/confirmation.ts",
+          "anchor": "class=\"confirmation-dialog dialog-stack\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.error-alert",
+      "name": "Error Alert",
+      "section": "Confirmation / Warning / Error",
+      "parent": "workspace.workspace-management"
+    },
+    {
+      "id": "workspace.metadata-editor-cee",
+      "name": "Metadata Editor / CEE",
+      "section": "Confirmation / Warning / Error",
+      "contract": "page",
+      "scenario": "metadata-editor-page",
+      "selector": "cedar-workspace",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/metadata-editor.html",
+          "anchor": "class=\"metadata-toolbar\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.discard-unsaved-metadata-changes",
+      "name": "Discard Unsaved Metadata Changes",
+      "section": "Confirmation / Warning / Error",
+      "parent": "workspace.metadata-editor-cee"
+    },
+    {
+      "id": "workspace.metadata-errors-warnings",
+      "name": "Metadata Errors / Warnings",
+      "section": "Confirmation / Warning / Error",
+      "parent": "workspace.metadata-editor-cee"
+    },
+    {
+      "id": "workspace.field-validation-errors",
+      "name": "Field Validation Errors",
+      "section": "Confirmation / Warning / Error",
+      "parent": "workspace.metadata-editor-cee"
+    },
+    {
+      "id": "workspace.lookup-errors",
+      "name": "Lookup Errors",
+      "section": "Confirmation / Warning / Error",
+      "parent": "workspace.metadata-editor-cee"
+    },
+    {
+      "id": "workspace.image-video-errors",
+      "name": "Image / Video Errors",
+      "section": "Confirmation / Warning / Error",
+      "parent": "workspace.metadata-editor-cee"
+    },
+    {
+      "id": "workspace.metadata-errors-warnings-view",
+      "name": "Metadata Errors / Warnings",
+      "section": "Metadata Editor"
+    },
+    {
+      "id": "workspace.workspace-view-40",
+      "name": "Workspace",
+      "section": "Workspace",
+      "contract": "page",
+      "scenario": "dashboard-page",
+      "selector": "cedar-workspace",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/workspace.html",
+          "anchor": "class=\"workspace\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.header",
+      "name": "Header",
+      "section": "Workspace",
+      "parent": "workspace.workspace-view-40"
+    },
+    {
+      "id": "workspace.left-panel",
+      "name": "Left Panel",
+      "section": "Workspace",
+      "parent": "workspace.workspace-view-40"
+    },
+    {
+      "id": "workspace.main-panel",
+      "name": "Main Panel",
+      "section": "Workspace",
+      "parent": "workspace.workspace-view-40"
+    },
+    {
+      "id": "workspace.list-view",
+      "name": "List View",
+      "section": "Workspace",
+      "parent": "workspace.main-panel"
+    },
+    {
+      "id": "workspace.grid-view",
+      "name": "Grid View",
+      "section": "Workspace",
+      "parent": "workspace.main-panel"
+    },
+    {
+      "id": "workspace.drag-preview",
+      "name": "Drag Preview",
+      "section": "Workspace",
+      "parent": "workspace.main-panel"
+    },
+    {
+      "id": "workspace.information-panel",
+      "name": "Information Panel",
+      "section": "Workspace",
+      "parent": "workspace.workspace-view-40"
+    },
+    {
+      "id": "workspace.info-tab",
+      "name": "Details Tab",
+      "section": "Workspace",
+      "parent": "workspace.information-panel"
+    },
+    {
+      "id": "workspace.version-tab",
+      "name": "Version Tab",
+      "section": "Workspace",
+      "parent": "workspace.information-panel"
+    },
+    {
+      "id": "workspace.type-filter",
+      "name": "Type Filter",
+      "section": "Resource Dialogs",
+      "contract": "dialog",
+      "scenario": "type-filter",
+      "selector": "cedar-resource-filters .popover",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/resource-filters.html",
+          "anchor": "role=\"dialog\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs",
+      "parent": "workspace.workspace-view"
+    },
+    {
+      "id": "workspace.date-filter",
+      "name": "Date Filter",
+      "section": "Resource Dialogs",
+      "contract": "dialog",
+      "scenario": "date-filter",
+      "selector": "cedar-resource-filters .popover",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/resource-filters.html",
+          "anchor": "role=\"dialog\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs",
+      "parent": "workspace.workspace-view"
+    },
+    {
+      "id": "workspace.artifact-preview",
+      "name": "Artifact Preview",
+      "section": "Resource Dialogs",
+      "contract": "dialog",
+      "scenario": "preview",
+      "selector": "dialog.artifact-preview",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/artifact-preview.ts",
+          "anchor": "class=\"artifact-preview\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs",
+      "parent": "workspace.workspace-view"
+    },
+    {
+      "id": "workspace.metadata-errors",
+      "name": "Metadata Errors",
+      "section": "Confirmation / Warning / Error",
+      "parent": "workspace.metadata-errors-warnings",
+      "contract": "error-summary",
+      "scenario": "metadata-errors",
+      "selector": ".metadata-quality:not(.validation-summary--warning)",
+      "states": ["collapsed", "expanded"],
+      "source": [
+        {
+          "file": "src/app/metadata-editor.html",
+          "anchor": "Metadata.ErrorsRegion"
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs",
+      "inventory": false
+    },
+    {
+      "id": "workspace.metadata-warnings",
+      "name": "Metadata Warnings",
+      "section": "Confirmation / Warning / Error",
+      "parent": "workspace.metadata-errors-warnings",
+      "contract": "warning-summary",
+      "scenario": "metadata-warnings",
+      "selector": ".metadata-quality.validation-summary--warning",
+      "states": ["collapsed", "expanded"],
+      "source": [
+        {
+          "file": "src/app/metadata-editor.html",
+          "anchor": "Metadata.WarningsRegion"
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs",
+      "inventory": false
+    },
+    {
+      "id": "workspace.recursive-delete-confirmation",
+      "name": "Recursive Folder Delete / Confirmation",
+      "section": "Confirmation / Warning / Error",
+      "parent": "workspace.workspace-management",
+      "contract": "dialog",
+      "scenario": "recursive-delete-confirmation",
+      "selector": "cedar-folder-deletion-dialog dialog",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/folder-deletion-dialog.html",
+          "anchor": "aria-labelledby=\"folder-deletion-title\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.recursive-delete-permissions",
+      "name": "Recursive Folder Delete / Permission Refusal",
+      "section": "Confirmation / Warning / Error",
+      "parent": "workspace.workspace-management",
+      "contract": "dialog",
+      "scenario": "recursive-delete-permissions",
+      "selector": "cedar-folder-deletion-dialog dialog",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/folder-deletion-dialog.html",
+          "anchor": "aria-labelledby=\"folder-deletion-title\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.recursive-delete-references",
+      "name": "Recursive Folder Delete / Outside Instance Refusal",
+      "section": "Confirmation / Warning / Error",
+      "parent": "workspace.workspace-management",
+      "contract": "dialog",
+      "scenario": "recursive-delete-references",
+      "selector": "cedar-folder-deletion-dialog dialog",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/folder-deletion-dialog.html",
+          "anchor": "aria-labelledby=\"folder-deletion-title\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.recursive-delete-owner",
+      "name": "Recursive Folder Delete / Ownership Refusal",
+      "section": "Confirmation / Warning / Error",
+      "parent": "workspace.workspace-management",
+      "contract": "dialog",
+      "scenario": "recursive-delete-owner",
+      "selector": "cedar-folder-deletion-dialog dialog",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/folder-deletion-dialog.html",
+          "anchor": "aria-labelledby=\"folder-deletion-title\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.selection-delete-confirmation",
+      "name": "Selected Items Delete / Confirmation",
+      "section": "Confirmation / Warning / Error",
+      "parent": "workspace.workspace-management",
+      "contract": "dialog",
+      "scenario": "selection-delete",
+      "selector": "cedar-folder-deletion-dialog dialog",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/folder-deletion-dialog.html",
+          "anchor": "aria-labelledby=\"folder-deletion-title\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    },
+    {
+      "id": "workspace.item-delete-confirmation",
+      "name": "Selected Items Delete / Simple Confirmation",
+      "section": "Confirmation / Warning / Error",
+      "parent": "workspace.workspace-management",
+      "contract": "dialog",
+      "scenario": "selection-delete-simple",
+      "selector": "cedar-folder-deletion-dialog dialog",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/folder-deletion-dialog.html",
+          "anchor": "aria-labelledby=\"folder-deletion-title\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
+    }
+  ]
+}

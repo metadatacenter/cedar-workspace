@@ -1,0 +1,66 @@
+<div class="folder-scroll" [attr.aria-busy]="busy()">
+  <table [attr.aria-label]="label()">
+    <thead>
+      <tr>
+        <th scope="col" [attr.aria-sort]="direction('name')">
+          <button
+            type="button"
+            [disabled]="busy()"
+            (click)="changeSort('name')"
+          >
+            {{'Common.Name' | translate}} @if(direction('name') !== 'none') {
+            <cedar-icon
+              [name]="sort() === 'name' ? 'chevron-up' : 'chevron-down'"
+            />
+            }
+          </button>
+        </th>
+        <th scope="col" [attr.aria-sort]="direction('lastUpdatedOnTS')">
+          <button
+            type="button"
+            [disabled]="busy()"
+            (click)="changeSort('lastUpdatedOnTS')"
+          >
+            {{'Common.LastModified' | translate}}
+            @if(direction('lastUpdatedOnTS') !== 'none') {
+            <cedar-icon
+              [name]="sort() === 'lastUpdatedOnTS' ? 'chevron-up' : 'chevron-down'"
+            />
+            }
+          </button>
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      @for(folder of folders(); track folder['@id']) {
+      <tr (click)="open(folder)">
+        <td>
+          <button
+            class="folder-name"
+            type="button"
+            [disabled]="busy() || folder['@id'] === disabledId()"
+            (click)="$event.stopPropagation(); open(folder)"
+          >
+            <cedar-icon name="folder" /><span>{{title(folder)}}</span>
+          </button>
+        </td>
+        <td>
+          <time
+            [attr.datetime]="folder['pav:lastUpdatedOn'] || null"
+            [cedarTooltip]="folder['pav:lastUpdatedOn'] || null"
+          >
+            {{folder['pav:lastUpdatedOn'] | friendlyDate:now}}
+          </time>
+        </td>
+      </tr>
+      } @empty {
+      <tr>
+        <td colspan="2">
+          {{(busy() ? 'Common.Loading' : 'ResourceDialog.NoSubfolders') |
+          translate}}
+        </td>
+      </tr>
+      }
+    </tbody>
+  </table>
+</div>

@@ -1,0 +1,48 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+.folder-scroll {
+  max-height: calc(var(--cedar-table-row-height) * 7);
+  overflow: auto;
+}
+table {
+  table-layout: auto;
+  min-width: 0;
+  border-top: 1px solid var(--cedar-border-rule);
+}
+th:first-child {
+  width: auto;
+}
+th:last-child {
+  width: 1%;
+  white-space: nowrap;
+}
+td:last-child:not([colspan]) {
+  white-space: nowrap;
+}
+th button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cedar-space-1);
+  text-align: left;
+}
+td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.folder-name {
+  display: flex;
+  align-items: center;
+  gap: var(--cedar-space-2);
+  width: 100%;
+  min-height: 0;
+  padding: 0;
+  color: var(--cedar-text-primary);
+  text-align: left;
+  background: transparent;
+}
+.folder-name cedar-icon {
+  flex-shrink: 0;
+  color: var(--cedar-color-primary);
+}
