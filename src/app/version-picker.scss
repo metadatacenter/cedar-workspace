@@ -4,10 +4,10 @@
 // come from the global input rules. Only the width and alignment are the picker's own.
 
 // A part's baseline is its number's, so the dots sit on the line the digits stand on. The gap
-// leaves room for the focus ring.
+// leaves room for the focus ring. The boxes stand centered under their field's label.
 :host {
   display: flex;
-  align-self: flex-start;
+  align-self: center;
   align-items: baseline;
   gap: var(--cedar-space-2);
 }
