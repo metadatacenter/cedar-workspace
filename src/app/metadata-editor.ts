@@ -97,8 +97,15 @@ export function metadataFieldLabel(
       const labels = (parent["_ui"] as CeeJsonObject | undefined)?.[
         "propertyLabels"
       ] as CeeJsonObject | undefined;
-      const label =
-        labels?.[key] ?? child["skos:prefLabel"] ?? child["schema:name"] ?? key;
+      // The parent's label for this use of the child counts only where it says something the key
+      // and the child's own name do not. Templates often repeat the key there.
+      const declared = labels?.[key];
+      const own = child["schema:name"];
+      const deployment =
+        declared == null || declared === key || declared === own
+          ? undefined
+          : declared;
+      const label = deployment ?? child["skos:prefLabel"] ?? own ?? key;
       parent = child;
       return String(label);
     })

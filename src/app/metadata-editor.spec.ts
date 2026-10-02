@@ -417,6 +417,30 @@ describe("metadata field labels", () => {
       ),
     ).toBe("Annual count");
   });
+  it("passes over a parent label that only repeats the key or the field's own name", () => {
+    const schema = {
+      _ui: {
+        propertyLabels: {
+          parent_sample_id: "parent_sample_id",
+          contributors_path: "contributors_path",
+        },
+      },
+      properties: {
+        parent_sample_id: {
+          "schema:name": "parent_sample_id",
+          "skos:prefLabel": "Parent sample ID",
+        },
+        contributors_path: { "schema:name": "contributors_path" },
+      },
+    };
+    expect(metadataFieldLabel(schema, ["parent_sample_id"])).toBe(
+      "Parent sample ID",
+    );
+    // With nothing more legible, the form shows the name, and so does the warning.
+    expect(metadataFieldLabel(schema, ["contributors_path"])).toBe(
+      "contributors_path",
+    );
+  });
 });
 
 describe("metadata warning messages", () => {
