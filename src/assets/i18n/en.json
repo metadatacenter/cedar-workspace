@@ -375,6 +375,7 @@
   },
   "Metadata": {
     "Title": "Metadata Editor",
+    "SaveRefused": "Cannot save until errors are fixed",
     "ReadOnly": "Read only",
     "ModifiedStatus": "Modified",
     "UnmodifiedStatus": "Unmodified",

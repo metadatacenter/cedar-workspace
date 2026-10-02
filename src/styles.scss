@@ -720,6 +720,13 @@ td:first-child a {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.metadata-save-action {
+  display: inline-flex;
+}
+// A disabled button gets no pointer events in some browsers, so its wrapper takes the hover that explains it.
+.metadata-save-action.is-refused button {
+  pointer-events: none;
+}
 .metadata-save-status {
   margin-left: auto;
   display: inline-flex;

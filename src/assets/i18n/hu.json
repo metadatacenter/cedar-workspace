@@ -375,6 +375,7 @@
   },
   "Metadata": {
     "Title": "Metaadat-szerkesztő",
+    "SaveRefused": "Nem menthető, amíg a hibák nincsenek kijavítva",
     "ReadOnly": "Csak olvasható",
     "ModifiedStatus": "Módosítva",
     "UnmodifiedStatus": "Változatlan",

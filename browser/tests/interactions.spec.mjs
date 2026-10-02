@@ -522,6 +522,13 @@ test("metadata errors and nonblocking warnings share centered, expandable summar
   await expect(
     page.getByRole("button", { name: "Save", exact: true }),
   ).toBeDisabled();
+  // A refused Save says why on hover.
+  await page.locator(".metadata-save-action").hover();
+  await expect(page.getByRole("tooltip")).toHaveText(
+    "Cannot save until errors are fixed",
+  );
+  await page.mouse.move(0, 0);
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
   await errors.locator("summary").click();
   await expect(errors.locator("li")).toBeVisible();
   await warnings.locator("summary").click();
@@ -539,6 +546,10 @@ test("metadata errors and nonblocking warnings share centered, expandable summar
   await expect(
     page.getByRole("button", { name: "Save", exact: true }),
   ).toBeEnabled();
+  // An enabled Save needs no explanation.
+  await page.locator(".metadata-save-action").hover();
+  await page.waitForTimeout(400);
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
 });
 
 test("new metadata is unmodified until edited, and saved once persisted", async ({ page, api }) => {

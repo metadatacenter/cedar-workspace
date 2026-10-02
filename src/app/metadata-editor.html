@@ -8,13 +8,18 @@
     role="status"
     >{{saveStatus | translate}}</span
   >
-  @if(writable()) {<button
-    id="button-save-metadata"
-    class="primary"
-    (click)="save()"
-    [disabled]="loading() || saving() || validationErrors.length > 0"
-  >
-    {{'Common.Save' | translate}}</button
+  @if(writable()) {<span
+    class="metadata-save-action"
+    [class.is-refused]="saveRefused"
+    [cedarTooltip]="saveRefused ? ('Metadata.SaveRefused' | translate) : null"
+    ><button
+      id="button-save-metadata"
+      class="primary"
+      (click)="save()"
+      [disabled]="loading() || saving() || validationErrors.length > 0"
+    >
+      {{'Common.Save' | translate}}</button
+    ></span
   >}
 </header>
 <main class="metadata-content">
