@@ -276,7 +276,7 @@ describe("Angular Workspace", () => {
       ).toBe(offered);
     });
   }
-  it("says in the information panel which open folder keeps a resource in OpenView", async () => {
+  it("offers the OpenView link in the information panel, and names the open folder that provides it", async () => {
     const f = await render();
     const shared: Resource = {
       "@id": "shared",
@@ -297,9 +297,19 @@ describe("Angular Workspace", () => {
       pathInfo: [folder, shared, template],
     });
     f.detectChanges();
-    expect(section()?.textContent?.replace(/\s+/g, " ").trim()).toBe(
-      "OpenView Available through the open folder “Shared”.",
+    expect(section()?.querySelector("a")?.getAttribute("href")).toBe(
+      "https://openview.example/templates/template-id",
     );
+    expect(section()?.querySelector("small")?.textContent?.trim()).toBe(
+      "Available through the open folder “Shared”.",
+    );
+    // Open itself, the artifact's public link is offered without a folder to explain it.
+    f.componentInstance.selected.set({ ...template, isOpen: true, pathInfo: [folder, template] });
+    f.detectChanges();
+    expect(section()?.querySelector("a")?.getAttribute("href")).toBe(
+      "https://openview.example/templates/template-id",
+    );
+    expect(section()?.querySelector("small")).toBeNull();
   });
   it("exposes the artifact action set and gates it using the server capabilities", () => {
     const list = actions(template, TestBed.inject(I18n));

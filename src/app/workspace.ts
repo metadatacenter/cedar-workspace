@@ -676,6 +676,14 @@ export class Workspace {
   parentId(r: Resource): string | undefined {
     return r.pathInfo?.filter((p) => p["@id"] !== r["@id"]).at(-1)?.["@id"];
   }
+  async copyLink(value: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      this.notice.set(this.i18n.t("Common.LinkCopied"));
+    } catch (e) {
+      this.fail(e);
+    }
+  }
   async copyId(value: string) {
     try {
       await navigator.clipboard.writeText(value);
@@ -802,6 +810,26 @@ export class Workspace {
       queryParamsHandling: "merge",
       queryParams: { offset: Math.max(0, this.offset() + delta * 50) },
     });
+  }
+  /** " · 0.0.1 · Published" after an artifact's name, from what the report says of it. */
+  versionAndStatus(v: Resource): string {
+    const status = this.status(v);
+    const parts = [
+      v["pav:version"] || this.i18n.t("Dashboard.Unversioned"),
+      ...(status === "—" ? [] : [status]),
+    ];
+    return " · " + parts.join(" · ");
+  }
+  /** The newest version when it is not this one; the report lists versions newest first. */
+  latestVersion(r: Resource): Resource | undefined {
+    const latest = r.versions?.[0];
+    return latest && latest["@id"] !== r["@id"] ? latest : undefined;
+  }
+  /** What everyone may do with the artifact, when it is shared with everyone. */
+  everyoneAccess(r: Resource): string | null {
+    if (r.everybodyPermission === "read") return "Dashboard.EveryoneCanView";
+    if (r.everybodyPermission === "write") return "Dashboard.EveryoneCanEdit";
+    return null;
   }
   /**
    * The versions older than this one, newest first.

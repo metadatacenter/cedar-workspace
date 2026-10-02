@@ -30,7 +30,8 @@
     "LatestVersion": "Latest version",
     "AllVersions": "All versions",
     "IdCopied": "ID copied.",
-    "Unknown": "unknown"
+    "Unknown": "unknown",
+    "LinkCopied": "Link copied."
   },
   "ResourceTypes": {
     "folder": "Folder",
@@ -206,7 +207,12 @@
     "PreviousVersions": "Previous versions",
     "CopySourceIdentifier": "Copy source identifier",
     "CopyVersionIdentifier": "Copy version identifier",
-    "UnreadableVersion": "A version you cannot open"
+    "UnreadableVersion": "A version you cannot open",
+    "LatestVersion": "Latest version",
+    "Latest": "Latest",
+    "CopyOpenViewLink": "Copy OpenView link",
+    "EveryoneCanView": "Everyone can view",
+    "EveryoneCanEdit": "Everyone can edit"
   },
   "Preview": {
     "Label": "Preview",

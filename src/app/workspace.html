@@ -608,6 +608,7 @@
       <dt>{{'Dashboard.Access' | translate}}</dt>
       <dd>
         {{r.currentUserPermissions?.owner?('Common.Owner' | translate):role(r)}}
+        @if(everyoneAccess(r); as everyone){<small>{{everyone | translate}}</small>}
       </dd>
     </dl>
     @if(r.derivedFrom;as derived){
@@ -638,10 +639,36 @@
         {{'Dashboard.Template' | translate}}
       </div>
       <div class="detail-with-copy">
-        <a [href]="link(based)">{{title(based)}}</a>
+        <span
+          ><a [href]="link(based)">{{title(based)}}</a
+          >{{versionAndStatus(based)}}</span
+        >
         <cedar-copy-button
           [label]="'Dashboard.CopyTemplateIdentifier' | translate"
           (copied)="copyId(based['@id'])"
+        />
+      </div>
+    </section>
+    } @if(latestVersion(r); as latest){
+    <section class="info-section latest-version">
+      <div class="description-heading">
+        {{'Dashboard.LatestVersion' | translate}}
+      </div>
+      <div class="detail-with-copy">
+        @if(latest.activeUserCanRead !== false){
+        <span
+          ><a [href]="link(latest)">{{title(latest)}}</a
+          >{{versionAndStatus(latest)}}</span
+        >
+        } @else {
+        <span
+          >{{'Dashboard.UnreadableVersion' | translate}}{{versionAndStatus(latest)}}</span
+        >
+        }
+        <cedar-copy-button
+          [label]="'Dashboard.CopyIdentifierFor' | translate: {name: latest.activeUserCanRead !== false ? title(latest) : (latest['pav:version'] || latest['@id'])}"
+          [help]="'Dashboard.CopyVersionIdentifier' | translate"
+          (copied)="copyId(latest['@id'])"
         />
       </div>
     </section>
@@ -664,10 +691,17 @@
       <div class="description-heading">{{'Dashboard.Doi' | translate}}</div>
       <a [href]="r.doi" target="_blank" rel="noopener">{{r.doi}}</a>
     </section>
-    } @if(openViewEnabled && openThroughAFolder(r)){
-    <section class="info-section">
+    } @if(openViewEnabled && (r.isOpen || openThroughAFolder(r))){
+    <section class="info-section open-view">
       <div class="description-heading">{{'Dashboard.OpenView' | translate}}</div>
-      {{openThrough(r)}}
+      <div class="detail-with-copy">
+        <a [href]="openView(r)" target="_blank" rel="noopener">{{openView(r)}}</a>
+        <cedar-copy-button
+          [label]="'Dashboard.CopyOpenViewLink' | translate"
+          (copied)="copyLink(openView(r))"
+        />
+      </div>
+      @if(openThroughAFolder(r)){<small>{{openThrough(r)}}</small>}
     </section>
     } @if(r.numberOfInstances!==undefined || instances().length){
     <section class="info-section instances-section">
@@ -724,7 +758,11 @@
           <dd>{{'ResourceTypes.' + r.resourceType | translate}}</dd>
           }
           <dt>{{'Common.Version' | translate}}</dt>
-          <dd>{{v['pav:version'] || ('Dashboard.Unversioned' | translate)}}</dd>
+          <dd>
+            {{v['pav:version'] || ('Dashboard.Unversioned' |
+            translate)}}@if($first && (r.versions?.length ?? 0) > 1){ ·
+            {{'Dashboard.Latest' | translate}}}
+          </dd>
           <dt>{{'Dashboard.Status' | translate}}</dt>
           <dd>{{status(v)}}</dd>
         </dl>
