@@ -206,7 +206,7 @@
     "CopyVersionIdentifier": "Copy version identifier",
     "UnreadableVersion": "A version you cannot open",
     "LatestVersion": "Latest version",
-    "Latest": "Latest",
+    "NextVersion": "Next version",
     "EveryoneCanView": "Everyone can view",
     "EveryoneCanEdit": "Everyone can edit"
   },

@@ -842,6 +842,12 @@ export class Workspace {
     const here = versions.findIndex((v) => v["@id"] === r["@id"]);
     return here < 0 ? [] : versions.slice(here + 1);
   }
+  /** The version after this one, which the latest has none of; the report lists versions newest first. */
+  nextVersion(r: Resource): Resource | undefined {
+    const versions = r.versions ?? [];
+    const here = versions.findIndex((v) => v["@id"] === r["@id"]);
+    return here > 0 ? versions[here - 1] : undefined;
+  }
   link(r: Resource, populate = false) {
     return resourceLink(
       r,

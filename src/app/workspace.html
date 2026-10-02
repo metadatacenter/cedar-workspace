@@ -737,7 +737,7 @@
       @if(latestVersion(r); as latest){
       <section class="info-section latest-version">
         <div class="description-heading">
-          {{'Dashboard.Latest' | translate}}
+          {{'Dashboard.LatestVersion' | translate}}
         </div>
         <div class="detail-with-copy">
           @if(latest.activeUserCanRead !== false){
@@ -754,6 +754,29 @@
             [label]="'Dashboard.CopyIdentifierFor' | translate: {name: latest.activeUserCanRead !== false ? title(latest) : (latest['pav:version'] || latest['@id'])}"
             [help]="'Dashboard.CopyVersionIdentifier' | translate"
             (copied)="copyId(latest['@id'])"
+          />
+        </div>
+      </section>
+      } @if(nextVersion(r); as next){
+      <section class="info-section next-version">
+        <div class="description-heading">
+          {{'Dashboard.NextVersion' | translate}}
+        </div>
+        <div class="detail-with-copy">
+          @if(next.activeUserCanRead !== false){
+          <span
+            ><a [href]="link(next)">{{title(next)}}</a
+            >{{versionAndStatus(next)}}</span
+          >
+          } @else {
+          <span
+            >{{'Dashboard.UnreadableVersion' | translate}}{{versionAndStatus(next)}}</span
+          >
+          }
+          <cedar-copy-button
+            [label]="'Dashboard.CopyIdentifierFor' | translate: {name: next.activeUserCanRead !== false ? title(next) : (next['pav:version'] || next['@id'])}"
+            [help]="'Dashboard.CopyVersionIdentifier' | translate"
+            (copied)="copyId(next['@id'])"
           />
         </div>
       </section>

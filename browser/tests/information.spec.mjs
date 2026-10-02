@@ -200,7 +200,8 @@ test("version details and instances have concise labels and identifier copy cont
   await info.getByRole('tab', {name:'Version', exact:true}).click();
   await expect(info.locator('.version dt')).toHaveText(['Type', 'Version', 'Status']);
   await expect(info.locator('.version dd')).toHaveText(['Template', '1.2.0', 'Published · Latest version']);
-  await expect(info.locator('.latest-version')).toHaveCount(0);
+  // The latest version has no newer one to name.
+  await expect(info.locator('.latest-version, .next-version')).toHaveCount(0);
   await expect(info.locator('.version a')).toHaveCount(0);
   await expect(info.locator('.version')).not.toContainText('Modified');
   // A template with no older version lists none.
@@ -308,7 +309,9 @@ test("derived-from and previous versions link to their artifacts beside copy con
   await expect(info.locator('.version dd')).toHaveText(['Template', '2.0.0', 'Published']);
   // A newer version is named with its version and status beside it, the name alone linked.
   const latest = info.locator('.latest-version');
-  await expect(latest.locator('.description-heading')).toHaveText('Latest');
+  await expect(latest.locator('.description-heading')).toHaveText('Latest version');
+  // The next version is named even when it is also the latest.
+  await expect(info.locator('.next-version .detail-with-copy > span')).toHaveText('Study metadata · 3.0.0 · Published');
   await expect(latest.locator('.detail-with-copy > span')).toHaveText('Study metadata · 3.0.0 · Published');
   await expect(latest.getByRole('link')).toHaveText('Study metadata');
   await expect(latest.getByRole('link')).toHaveAttribute('href', /\/templates\/edit\/newer\?/);
@@ -325,6 +328,36 @@ test("derived-from and previous versions link to their artifacts beside copy con
   await expect(previous.getByRole('link')).toHaveAttribute('href', /\/templates\/edit\/older\?/);
   await previous.getByRole('button', {name: 'Copy identifier for Study metadata, first edition', exact: true}).click();
   await expect.poll(() => page.evaluate(() => window.copiedId)).toBe('older');
+});
+
+test("a version two behind the latest names its next version between the latest and the previous ones", async ({page, api}) => {
+  const version = (id, number, extra = {}) => ({...resource, '@id': id, 'pav:version': number, 'bibo:status': 'bibo:published', ...extra});
+  await page.route('**/templates/template/report', route => route.fulfill({json: {
+    ...version('template', '2.0.0'),
+    versions: [
+      version('latest', '4.0.0', {'bibo:status': 'bibo:draft'}),
+      version('next', '3.0.0', {'schema:name': 'Study metadata, third edition'}),
+      version('template', '2.0.0'),
+      version('older', '1.0.0'),
+    ],
+  }}));
+  await page.addInitScript(() => Object.defineProperty(navigator, 'clipboard', {value: {writeText: async value => { window.copiedId = value; }}}));
+  await dashboard(page);
+  await page.locator('tbody tr').first().press('Enter');
+  const info = page.getByRole('complementary', {name: 'Resource information'});
+  await info.getByRole('tab', {name: 'Version', exact: true}).click();
+  await expect(info.locator('.latest-version .detail-with-copy > span')).toHaveText('Study metadata · 4.0.0 · Draft');
+  const next = info.locator('.next-version');
+  await expect(next.locator('.description-heading')).toHaveText('Next version');
+  await expect(next.locator('.detail-with-copy > span')).toHaveText('Study metadata, third edition · 3.0.0 · Published');
+  await expect(next.getByRole('link')).toHaveText('Study metadata, third edition');
+  await expect(next.getByRole('link')).toHaveAttribute('href', /\/templates\/edit\/next\?/);
+  await next.getByRole('button', {name: 'Copy identifier for Study metadata, third edition', exact: true}).click();
+  await expect.poll(() => page.evaluate(() => window.copiedId)).toBe('next');
+  await expect(info.locator('.previous-versions .detail-with-copy > span')).toHaveText(['Study metadata · 1.0.0 · Published']);
+  // Latest, next, then previous, as the history runs.
+  const order = await info.locator('.latest-version, .next-version, .previous-versions').evaluateAll(sections => sections.map(s => s.className));
+  expect(order.map(name => name.split(' ').at(-1))).toEqual(['latest-version', 'next-version', 'previous-versions']);
 });
 
 test("an instance names its template with the template's version and status, linking the name alone", async ({page, api}) => {
