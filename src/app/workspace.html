@@ -713,6 +713,8 @@
         {{'Dashboard.InstanceCount' | translate: {shown: instances().length,
         total: instanceTotal()} }}
       </p>
+      } @else if(r.numberOfInstances===0){
+      <p class="no-instances">{{'Dashboard.NoInstances' | translate}}</p>
       }
     </section>
     }

@@ -193,6 +193,7 @@ test("version details and instances have concise labels and identifier copy cont
   await page.locator('tbody tr').first().press('Enter');
   const info = page.getByRole('complementary', {name:'Resource information'});
   await expect(info.getByText('Instances', {exact:true})).toBeVisible();
+  await expect(info.locator('.no-instances')).toHaveCount(0);
   await info.getByRole('button', {name:'Copy identifier for Study metadata', exact:true}).click();
   await expect.poll(() => page.evaluate(() => window.copiedId)).toBe('instance-id');
   await info.getByRole('tab', {name:'Version', exact:true}).click();
@@ -202,6 +203,19 @@ test("version details and instances have concise labels and identifier copy cont
   await expect(info.locator('.version')).not.toContainText('Modified');
   // A template with no older version lists none.
   await expect(info.getByText('Previous versions', {exact:true})).toHaveCount(0);
+});
+
+test("a template with no instances says so under the Instances heading", async ({page, api}) => {
+  await page.route('**/templates/template/report', route => route.fulfill({json: {...resource, numberOfInstances: 0}}));
+  await dashboard(page);
+  await page.locator('tbody tr').first().press('Enter');
+  const info = page.getByRole('complementary', {name:'Resource information'});
+  const section = info.locator('.instances-section');
+  await expect(section.locator('.description-heading')).toHaveText('Instances');
+  await expect(section.locator('.no-instances')).toHaveText('No instances');
+  const [heading, text] = await Promise.all([section.locator('.description-heading'), section.locator('.no-instances')].map(l => l.boundingBox()));
+  expect(text.y).toBeGreaterThanOrEqual(heading.y + heading.height);
+  await expect(section.locator('.instance-list, .instance-count')).toHaveCount(0);
 });
 
 test("derived-from and previous versions link to their artifacts beside copy controls", async ({page, api}) => {

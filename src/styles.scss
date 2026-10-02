@@ -497,6 +497,9 @@ dd small {
 .info-section .instance-count {
   margin: var(--cedar-space-2) 0 0;
 }
+.info-section .no-instances {
+  margin: 0;
+}
 .info-section small {
   display: block;
   color: var(--cedar-text-muted);

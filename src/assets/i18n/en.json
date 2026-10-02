@@ -194,6 +194,7 @@
     "CopyIdentifierFor": "Copy identifier for {{name}}",
     "CopyInstanceIdentifier": "Copy instance identifier",
     "InstanceCount": "{{shown}} of {{total}} accessible instances.",
+    "NoInstances": "No instances",
     "CopyIdentifier": "Copy identifier",
     "Status": "Status",
     "Unversioned": "Unversioned",

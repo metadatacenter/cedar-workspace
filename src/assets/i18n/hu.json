@@ -194,6 +194,7 @@
     "CopyIdentifierFor": "Azonosító másolása: {{name}}",
     "CopyInstanceIdentifier": "Példányazonosító másolása",
     "InstanceCount": "{{total}} elérhető példányból {{shown}} látható.",
+    "NoInstances": "Nincsenek példányok",
     "CopyIdentifier": "Azonosító másolása",
     "Status": "Állapot",
     "Unversioned": "Verzió nélkül",
