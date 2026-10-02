@@ -27,6 +27,7 @@ import type {
   CeeConfig,
   CeeDataQualityReport,
   CeeJsonObject,
+  CeeValidationProblem,
 } from "cedar-embeddable-editor";
 import { Backend } from "./backend.service";
 import { CeeLoader } from "./cee-loader";
@@ -101,7 +102,50 @@ export function metadataFieldLabel(
       parent = child;
       return String(label);
     })
-    .join(" / ");
+    .join(" · ");
+}
+// The minimum a repeated property declares, read where its declaring parent states it.
+function declaredMinItems(
+  template: CeeJsonObject,
+  path: string[],
+): number | undefined {
+  let parent = template;
+  let property: CeeJsonObject | undefined;
+  for (const key of path) {
+    const found = (parent["properties"] as CeeJsonObject | undefined)?.[key] as
+      CeeJsonObject | undefined;
+    if (!found) continue;
+    property = found;
+    parent = (found["items"] as CeeJsonObject | undefined) || found;
+  }
+  const min = property?.["minItems"];
+  return typeof min === "number" ? min : undefined;
+}
+// CEE describes its problems in English for diagnostics, so the page states the ones
+// it presents as warnings in the reader's language. Any other problem keeps CEE's text.
+export function metadataWarningMessage(
+  template: CeeJsonObject,
+  problem: CeeValidationProblem,
+  t: (key: string, params?: Record<string, unknown>) => string,
+): string {
+  switch (problem.code) {
+    case "required":
+      return t("Metadata.ProblemRequired");
+    case "missingProperty":
+      // CEE reports an absent property without a value, and a property of the
+      // wrong shape with the value it holds.
+      return t(
+        problem.value == null
+          ? "Metadata.ProblemAbsent"
+          : "Metadata.ProblemNotList",
+      );
+    case "minItems": {
+      const min = declaredMinItems(template, problem.path);
+      if (typeof problem.value === "number" && min !== undefined)
+        return t("Metadata.ProblemMinItems", { count: problem.value, min });
+    }
+  }
+  return problem.message || problem.code;
 }
 export const leaveMetadata: CanDeactivateFn<MetadataEditor> = (editor) =>
   editor.mayLeave();
@@ -277,7 +321,9 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         metadataFieldLabel(this.template, p.path) ||
         p.field ||
         this.i18n.t("Metadata.Label"),
-      message: p.message || p.code,
+      message: metadataWarningMessage(this.template, p, (key, params) =>
+        this.i18n.t(key, params),
+      ),
     }));
     if (this.missingRequired && !problems.some((p) => p.code === "required"))
       items.push({

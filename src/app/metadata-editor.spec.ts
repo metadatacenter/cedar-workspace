@@ -12,6 +12,7 @@ import {
   MetadataEditor,
   metadataKey,
   metadataFieldLabel,
+  metadataWarningMessage,
   metadataRoute,
   workspaceReturn,
 } from "./metadata-editor";
@@ -398,10 +399,10 @@ describe("metadata field labels", () => {
       },
     };
     expect(metadataFieldLabel(schema, ["samples", "0", "amount"])).toBe(
-      "Study samples / #1 / Sample weight",
+      "Study samples · #1 · Sample weight",
     );
     expect(metadataFieldLabel(schema, ["samples", "count"])).toBe(
-      "Study samples / Cell count",
+      "Study samples · Cell count",
     );
     expect(metadataFieldLabel(schema, ["unknown"])).toBe("unknown");
     expect(
@@ -410,5 +411,51 @@ describe("metadata field labels", () => {
         ["2026"],
       ),
     ).toBe("Annual count");
+  });
+});
+
+describe("metadata warning messages", () => {
+  const template = {
+    properties: {
+      samples: {
+        type: "array",
+        minItems: 2,
+        items: { properties: { amount: { "schema:name": "Amount" } } },
+      },
+    },
+  };
+  const t = (key: string, params?: Record<string, unknown>) =>
+    `${key}${params ? " " + JSON.stringify(params) : ""}`;
+  const problem = (code: string, value: unknown, path = ["samples"]) => ({
+    code,
+    path,
+    field: path[path.length - 1],
+    inputType: null,
+    message: "CEE's English diagnostic",
+    value,
+  });
+
+  it("states the warnings it presents through the translation files", () => {
+    expect(metadataWarningMessage(template, problem("required", null), t)).toBe(
+      "Metadata.ProblemRequired",
+    );
+    expect(
+      metadataWarningMessage(template, problem("missingProperty", null), t),
+    ).toBe("Metadata.ProblemAbsent");
+    expect(
+      metadataWarningMessage(template, problem("missingProperty", {}), t),
+    ).toBe("Metadata.ProblemNotList");
+    expect(metadataWarningMessage(template, problem("minItems", 1), t)).toBe(
+      'Metadata.ProblemMinItems {"count":1,"min":2}',
+    );
+  });
+
+  it("keeps CEE's text for a problem it has no wording for", () => {
+    expect(
+      metadataWarningMessage(template, problem("minItems", 1, ["unknown"]), t),
+    ).toBe("CEE's English diagnostic");
+    expect(metadataWarningMessage(template, problem("pattern", "x"), t)).toBe(
+      "CEE's English diagnostic",
+    );
   });
 });
