@@ -85,6 +85,7 @@ export const test = base.extend({
         currentMetadata = {}; dataQualityReport = {isValid:true};
         connectedCallback() { queueMicrotask(() => this.eventHandler?.ready?.()); }
         set templateAndInstanceObject(value) { this.currentMetadata = value.instanceObject; }
+        reveal(location) { (window.__ceeReveals ??= []).push(location); return Promise.resolve(true); }
       });
     `,
       }),

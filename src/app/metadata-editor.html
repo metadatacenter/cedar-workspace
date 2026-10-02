@@ -57,7 +57,13 @@
     </summary>
     <ul>
       @for(issue of validationErrors; track $index){
-      <li>{{issue.label}}: {{issue.message}}</li>
+      <li>
+        @if(issue.problem){
+        <button type="button" (click)="reveal(issue)">
+          {{issue.label}}: {{issue.message}}
+        </button>
+        } @else { {{issue.label}}: {{issue.message}} }
+      </li>
       }
     </ul>
   </details>
@@ -80,7 +86,13 @@
     </summary>
     <ul>
       @for(issue of validationWarnings; track $index){
-      <li>{{issue.label}}: {{issue.message}}</li>
+      <li>
+        @if(issue.problem){
+        <button type="button" (click)="reveal(issue)">
+          {{issue.label}}: {{issue.message}}
+        </button>
+        } @else { {{issue.label}}: {{issue.message}} }
+      </li>
       }
     </ul>
   </details>

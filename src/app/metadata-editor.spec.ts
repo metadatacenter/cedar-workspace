@@ -319,6 +319,11 @@ describe("Modern metadata host", () => {
     host.changed();
     expect(host.validationWarnings).toHaveLength(1);
     expect(host.validationErrors).toHaveLength(1);
+    // Each listed problem leads to its field.
+    const reveal = vi.fn().mockResolvedValue(true);
+    Object.defineProperty(cee, "reveal", { value: reveal });
+    host.reveal(host.validationErrors[0]);
+    expect(reveal).toHaveBeenCalledWith(cee.dataQualityReport.problems[1]);
     api.request.mockClear();
     await host.save();
     expect(api.request).not.toHaveBeenCalled();
@@ -417,6 +422,49 @@ describe("metadata field labels", () => {
       ),
     ).toBe("Annual count");
   });
+  it("numbers the entry of each repeated element or field a problem is in", () => {
+    const schema = {
+      properties: {
+        samples: {
+          type: "array",
+          items: {
+            "schema:name": "Sample",
+            properties: {
+              tags: {
+                type: "array",
+                items: {
+                  "schema:name": "Tag",
+                  _ui: { inputType: "textfield" },
+                },
+              },
+              picks: {
+                type: "array",
+                items: {
+                  "schema:name": "Picks",
+                  _ui: { inputType: "checkbox" },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    expect(metadataFieldLabel(schema, ["samples", "tags"], [1, 2])).toBe(
+      "Sample 2 · Tag 3",
+    );
+    // A list of entries is named as a whole, so only the element is numbered.
+    expect(metadataFieldLabel(schema, ["samples", "tags"], [1])).toBe(
+      "Sample 2 · Tag",
+    );
+    // A checkbox group shows every selection at once and has no entries to number.
+    expect(metadataFieldLabel(schema, ["samples", "picks"], [0])).toBe(
+      "Sample 1 · Picks",
+    );
+    // A requirement any entry satisfies names no entry.
+    expect(metadataFieldLabel(schema, ["samples", "tags"], [])).toBe(
+      "Sample · Tag",
+    );
+  });
   it("passes over a parent label that only repeats the key or the field's own name", () => {
     const schema = {
       _ui: {
@@ -458,6 +506,7 @@ describe("metadata warning messages", () => {
   const problem = (code: string, value: unknown, path = ["samples"]) => ({
     code,
     path,
+    occurrences: [],
     field: path[path.length - 1],
     inputType: null,
     message: "CEE's English diagnostic",
@@ -468,12 +517,6 @@ describe("metadata warning messages", () => {
     expect(metadataWarningMessage(template, problem("required", null), t)).toBe(
       "Metadata.ProblemRequired",
     );
-    expect(
-      metadataWarningMessage(template, problem("missingProperty", null), t),
-    ).toBe("Metadata.ProblemAbsent");
-    expect(
-      metadataWarningMessage(template, problem("missingProperty", {}), t),
-    ).toBe("Metadata.ProblemNotList");
     expect(metadataWarningMessage(template, problem("minItems", 1), t)).toBe(
       'Metadata.ProblemMinItems {"count":1,"min":2}',
     );

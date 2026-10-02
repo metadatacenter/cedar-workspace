@@ -500,7 +500,7 @@ for (const route of ["settings", "privacy", "profile"]) {
 test("metadata errors and nonblocking warnings share centered, expandable summaries", async ({
   page,
   api,
-}) => {
+}, testInfo) => {
   await page.goto("/instances/edit/instance");
   await expect(page.getByLabel("Instance name")).toHaveValue("Study record");
   await page.evaluate(() => {
@@ -533,6 +533,19 @@ test("metadata errors and nonblocking warnings share centered, expandable summar
   await expect(errors.locator("li")).toBeVisible();
   await warnings.locator("summary").click();
   await expect(warnings.locator("li")).toBeVisible();
+  // Each listed problem leads to its field, wherever CEE has it, and reads as a line of text.
+  const link = errors.getByRole("button", { name: "Email: Enter a valid email." });
+  await expect(link).toHaveCSS("padding", "0px");
+  await expect(link).toHaveCSS("text-decoration-line", "underline");
+  await page
+    .locator(".metadata-content")
+    .screenshot({ path: testInfo.outputPath("metadata-problem-links.png") });
+  await link.click();
+  await warnings.getByRole("button", { name: "Title: A required value is missing." }).click();
+  expect(await page.evaluate(() => window.__ceeReveals)).toEqual([
+    { path: ["Email"], code: "email", message: "Enter a valid email." },
+    { path: ["Title"], code: "required", message: "A value is required." },
+  ]);
   await page
     .locator(".metadata-content")
     .screenshot({ path: "/tmp/metadata-validation-summaries.png" });

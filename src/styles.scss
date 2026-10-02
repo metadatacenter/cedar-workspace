@@ -766,6 +766,14 @@ td:first-child a {
 }
 .metadata-quality {
   @include patterns.validation-summary;
+  // Each problem leads to its field, and reads as the line of text it is rather than as
+  // one of the page's buttons.
+  li button {
+    min-height: 0;
+    padding: 0;
+    border-radius: 0;
+    background: none;
+  }
 }
 
 @media (max-width: 600px) {
