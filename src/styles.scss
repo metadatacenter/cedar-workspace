@@ -714,8 +714,11 @@ td:first-child a {
   background: var(--cedar-color-on-primary);
   border-bottom: 1px solid var(--cedar-border-rule);
 }
-// The editor names itself beside the way back, as the Template Designer does.
+// The editor names itself beside the way back, as the Template Designer does, at the size the
+// form below gives its template's title.
 .metadata-title {
+  font-size: var(--cedar-font-size-artifact-title);
+  line-height: var(--cedar-line-height-heading);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
