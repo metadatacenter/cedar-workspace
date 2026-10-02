@@ -105,8 +105,6 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   targetOffset = 0;
   targetTotal = 0;
   folderSort: FolderSort = "name";
-  propagate = true;
-  newFolderName = "";
   private initialValues: string | null = null;
   private etag: string | null = null;
   private alive = true;
@@ -138,7 +136,9 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   get submitLabel() {
     if (this.busy()) return "Common.Working";
     if (this.action === "delete") return "ResourceDialog.ConfirmDeleteButton";
-    return ["make-open", "make-not-open", "publish"].includes(this.action)
+    return ["make-open", "make-not-open", "publish", "draft"].includes(
+      this.action,
+    )
       ? "ResourceDialog.Ok"
       : "Common.Save";
   }
@@ -161,15 +161,13 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
       this.name,
       this.description,
       this.version,
-      this.propagate,
-      this.newFolderName,
     ]);
   }
   async close() {
     if (this.busy() && !this.preparing()) return;
-    // A publication asks only for a version, which is quick to choose again.
+    // Publishing and drafting ask only for a version, which is quick to choose again.
     if (
-      this.action !== "publish" &&
+      !["publish", "draft"].includes(this.action) &&
       this.initialValues !== null &&
       this.values() !== this.initialValues &&
       !(await this.confirmation.confirm(
@@ -400,8 +398,9 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
             "@id": id,
             newVersion: formatVersion(this.version),
             folderId: this.target,
-            propagateSharing: this.propagate,
-            newFolderName: this.newFolderName || null,
+            // The draft is shared as the version it is drafted from is.
+            propagateSharing: true,
+            newFolderName: null,
           });
           break;
         case "delete":

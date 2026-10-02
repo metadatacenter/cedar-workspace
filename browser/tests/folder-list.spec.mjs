@@ -35,6 +35,9 @@ async function openPicker(page, action = 'Copy', many = false, options = {}) {
   return reads;
 }
 
+// Create Draft confirms with Ok; Copy and Move save.
+const submitLabel = action => action === 'Create Draft' ? 'Ok' : 'Save';
+
 for (const action of ['Copy', 'Move', 'Create Draft']) {
   test(`${action} uses the shared folder list, sorts and navigates with permissions`, async ({page, api}) => {
     const reads = await openPicker(page, action);
@@ -74,7 +77,7 @@ for (const action of ['Copy', 'Move', 'Create Draft']) {
     await table.getByRole('button', {name:'Last modified', exact:true}).click();
     await expect(table.getByRole('columnheader', {name:'Last modified'})).toHaveAttribute('aria-sort', 'ascending');
     await table.getByRole('button', {name:'Read only', exact:true}).click();
-    await expect(dialog.getByRole('button', {name:'Save', exact:true})).toBeDisabled();
+    await expect(dialog.getByRole('button', {name:submitLabel(action), exact:true})).toBeDisabled();
     await expect(dialog).toContainText('No subfolders');
     await dialog.locator('.breadcrumbs').getByRole('button', {name:'My workspace', exact:true}).click();
     const archive = table.getByRole('button', {name:'Archive', exact:true});
@@ -83,9 +86,9 @@ for (const action of ['Copy', 'Move', 'Create Draft']) {
     await expect(dialog.locator('.breadcrumbs').getByRole('button', {name:'Archive', exact:true})).toBeVisible();
     await expect(dialog.locator('.breadcrumbs button')).toHaveText(['My workspace', 'Archive']);
     await expect(dialog.locator('.breadcrumb-separator')).toHaveCount(1);
-    await expect(dialog.getByRole('button', {name:'Save', exact:true})).toBeEnabled();
+    await expect(dialog.getByRole('button', {name:submitLabel(action), exact:true})).toBeEnabled();
     expect(reads.at(-1)).toEqual({id:'archive', sort:'lastUpdatedOnTS', offset:'0'});
-    await dialog.getByRole('button', {name:'Save', exact:true}).click();
+    await dialog.getByRole('button', {name:submitLabel(action), exact:true}).click();
     await expect(dialog).toHaveCount(0);
     const command = api.requests.find(r => r.path.includes('/command/'));
     expect(command.body.targetFolderId ?? command.body.folderId).toBe('archive');
@@ -122,7 +125,7 @@ for (const action of ['Copy', 'Move', 'Create Draft']) {
     });
     release();
     await expect(dialog).toHaveAttribute('aria-busy', 'false');
-    await expect(dialog.getByRole('button', {name:'Save', exact:true})).toBeEnabled();
+    await expect(dialog.getByRole('button', {name:submitLabel(action), exact:true})).toBeEnabled();
     await expect(dialog.locator('.dialog-preparing-status')).toHaveCount(0);
     await expect.poll(() => page.evaluate(() => window.dialogFrames.length)).toBeGreaterThan(2);
     const frames = await page.evaluate(() => {
@@ -226,7 +229,6 @@ for (const action of ['Move', 'Copy', 'Create Draft']) {
 
 for (const [action, field, value, original] of [
   ['Copy', 'Name of copy', 'New copy name', 'Study metadata (copy)'],
-  ['Create Draft', 'Major', '2', '1'],
 ]) {
   test(`${action} still protects edited content after browsing and recognises a revert`, async ({page, api}) => {
     await openPicker(page, action);

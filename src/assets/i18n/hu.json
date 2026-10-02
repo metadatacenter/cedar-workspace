@@ -248,8 +248,6 @@
     "Close": "Párbeszédablak bezárása",
     "NameOfCopy": "Másolat neve",
     "CopyName": "{{name}} (másolat)",
-    "KeepSharing": "Megosztási jogosultságok megtartása",
-    "NewFolderName": "Új mappa neve (nem kötelező)",
     "DestinationFolder": "Célmappa",
     "Destination": "Cél",
     "NoSubfolders": "Nincsenek almappák",

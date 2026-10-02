@@ -248,8 +248,6 @@
     "Close": "Close dialog",
     "NameOfCopy": "Name of copy",
     "CopyName": "{{name}} (copy)",
-    "KeepSharing": "Keep sharing permissions",
-    "NewFolderName": "New folder name (optional)",
     "DestinationFolder": "Destination folder",
     "Destination": "Destination",
     "NoSubfolders": "No subfolders",

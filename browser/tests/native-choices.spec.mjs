@@ -1,4 +1,4 @@
-import { test, expect, dashboard, action, resource } from "./fixtures.mjs";
+import { test, expect, dashboard, action } from "./fixtures.mjs";
 
 // Compare computed values with the roles themselves, not a copied brand hex.
 async function themedChoices(page, region = page) {
@@ -17,7 +17,7 @@ async function themedChoices(page, region = page) {
   }
 }
 
-test('Groups, permissions, filters and draft sharing use the shared native theme', async ({page, api}) => {
+test('Groups, permissions and filters use the shared native theme', async ({page, api}) => {
   await page.goto('/groups');
   await page.getByRole('tab', {name:'Create group', exact:true}).click();
   await page.getByLabel('Group name', {exact:true}).fill('Research team');
@@ -32,15 +32,6 @@ test('Groups, permissions, filters and draft sharing use the shared native theme
   await page.getByRole('button', {name:'Type', exact:true}).click();
   await themedChoices(page);
   await page.keyboard.press('Escape');
-  await page.route('**/templates/template/report', route => route.fulfill({json:{...resource, 'bibo:status':'bibo:published'}}));
-  await page.getByRole('button', {name:'Actions for Study metadata'}).click();
-  await page.locator('.resource-menu').getByRole('button', {name:'Create Draft', exact:true}).click();
-  const draft = page.locator('input[name="propagate"]');
-  await expect(draft).toBeVisible();
-  await themedChoices(page);
-  await page.keyboard.press('Tab');
-  await draft.focus();
-  expect(await draft.evaluate(el => getComputedStyle(el).outlineStyle)).toBe('solid');
 });
 
 test('new native checkbox and radio controls inherit tokens in every state', async ({page, api}) => {

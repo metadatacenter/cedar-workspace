@@ -168,10 +168,17 @@ describe("Conditional action dialogs", () => {
     expect(api.request).not.toHaveBeenCalled();
     d.version = [2, 0, 0];
     await d.submit();
+    // Shared as the published version is, directly in the chosen folder.
     expect(api.request).toHaveBeenCalledWith(
       "/command/create-draft-artifact",
       "POST",
-      expect.objectContaining({ "@id": "id", newVersion: "2.0.0" }),
+      {
+        "@id": "id",
+        newVersion: "2.0.0",
+        folderId: "home",
+        propagateSharing: true,
+        newFolderName: null,
+      },
     );
   });
   it("publishes at the current version or later", async () => {
@@ -205,26 +212,29 @@ describe("Conditional action dialogs", () => {
         expect(api.request).not.toHaveBeenCalled();
       }
     });
-  it("labels Publish's button Ok and closes it after a version change without asking", async () => {
+  it("labels Publish's and Create Draft's button Ok and closes them after a version change without asking", async () => {
     const asked = vi.spyOn(TestBed.inject(Confirmation), "confirm").mockResolvedValue(false);
-    const publish = dialog("publish");
-    publish.resource = { ...resource, "pav:version": "0.3.0" };
-    await publish.load();
-    expect(publish.submitLabel).toBe("ResourceDialog.Ok");
-    const closed = vi.fn();
-    publish.closed.subscribe(closed);
-    publish.version = [1, 0, 0];
-    await publish.close();
+    api.request.mockResolvedValue({
+      data: { resources: [], totalCount: 0, pathInfo: [] },
+    });
+    for (const action of ["publish", "draft"]) {
+      const d = dialog(action);
+      d.resource = { ...resource, "pav:version": "0.3.0" };
+      await d.load();
+      expect(d.submitLabel).toBe("ResourceDialog.Ok");
+      const closed = vi.fn();
+      d.closed.subscribe(closed);
+      d.version = [1, 0, 0];
+      await d.close();
+      expect(closed).toHaveBeenCalledOnce();
+    }
     expect(asked).not.toHaveBeenCalled();
-    expect(closed).toHaveBeenCalledOnce();
-    // A draft still asks, since it also carries sharing and a folder name.
-    const draft = dialog("draft");
-    draft.resource = { ...resource, "pav:version": "0.3.0" };
-    api.request.mockResolvedValue({ data: { resources: [], totalCount: 0, pathInfo: [] } });
-    await draft.load();
-    expect(draft.submitLabel).toBe("Common.Save");
-    draft.version = [1, 0, 0];
-    await draft.close();
+    // A rename still asks before discarding a changed name.
+    const rename = dialog("rename");
+    await rename.load();
+    expect(rename.submitLabel).toBe("Common.Save");
+    rename.name = "Changed";
+    await rename.close();
     expect(asked).toHaveBeenCalledOnce();
   });
   it("blocks duplicate submissions while a write is pending", async () => {
