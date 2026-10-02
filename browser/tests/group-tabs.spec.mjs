@@ -145,3 +145,24 @@ test("returning to Create group waits for the complete group without shifting th
   ).toBeEnabled();
   expect((await manage.boundingBox()).y).toBe(top);
 });
+
+for (const width of [1440, 375]) {
+  test(`every group tab places its heading where Manage groups does at ${width}`, async ({ page, api }) => {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto("/groups");
+    const placements = {};
+    for (const name of ["Manage groups", "Create group", "Delete group"]) {
+      await page.getByRole("tab", { name, exact: true }).click();
+      const heading = page.getByRole("tabpanel", { name, exact: true }).getByRole("heading", { level: 2 });
+      await expect(heading).toBeVisible();
+      placements[name] = await heading.evaluate((h2) => {
+        const tabs = document.querySelector(".groups-tabs").getBoundingClientRect();
+        const box = h2.getBoundingClientRect();
+        const style = getComputedStyle(h2);
+        return { x: box.x, top: box.y - tabs.bottom, size: style.fontSize, weight: style.fontWeight };
+      });
+    }
+    expect(placements["Create group"]).toEqual(placements["Manage groups"]);
+    expect(placements["Delete group"]).toEqual(placements["Manage groups"]);
+  });
+}

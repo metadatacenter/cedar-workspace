@@ -88,6 +88,8 @@
   }
 
   .groups-create-card {
+    // Top alignment keeps each tab's heading where the Manage tab's heading sits.
+    align-items: flex-start;
     justify-content: space-between;
     gap: var(--cedar-space-4);
   }
