@@ -53,6 +53,25 @@ test("help appears promptly, stays hoverable, and Escape preserves selection", a
   await expect(page.locator(".resource-menu")).toBeVisible();
 });
 
+test("help closes when the pointer moves away unheard, and when the window loses focus", async ({ page, api }) => {
+  await dashboard(page);
+  const trigger = page.getByRole("button", { name: "Grid view", exact: true });
+  const tip = page.getByRole("tooltip");
+  await trigger.hover();
+  await expect(tip).toHaveText("Grid view", { timeout: 700 });
+  // As after the pointer leaves the window and comes back: it moves elsewhere, and the trigger
+  // is sent no pointerleave.
+  await page.evaluate(() =>
+    document.body.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, pointerType: "mouse" })),
+  );
+  await expect(tip).toHaveCount(0);
+  await page.mouse.move(0, 0);
+  await trigger.hover();
+  await expect(tip).toHaveText("Grid view", { timeout: 700 });
+  await page.evaluate(() => window.dispatchEvent(new Event("blur")));
+  await expect(tip).toHaveCount(0);
+});
+
 test("short hovers cancel and help also works outside the grid", async ({ page, api }) => {
   await dashboard(page);
   const sort = page.locator("cedar-sort-menu > button");

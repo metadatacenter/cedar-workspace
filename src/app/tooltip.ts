@@ -44,11 +44,11 @@ export class Tooltip {
   enter(event: PointerEvent) {
     if (event.pointerType === "touch" || this.controller.suppressed()) return;
     this.cancelTimer();
-    this.timer = setTimeout(() => this.show(), 250);
+    this.timer = setTimeout(() => this.show(true), 250);
   }
 
   focus() {
-    if (this.host.matches(":focus-visible")) this.show();
+    if (this.host.matches(":focus-visible")) this.show(false);
   }
 
   leave() {
@@ -62,7 +62,7 @@ export class Tooltip {
     this.timer = undefined;
   }
 
-  private show() {
+  private show(byPointer: boolean) {
     this.cancelTimer();
     const text = this.cedarTooltip();
     if (!text || !this.host.isConnected || this.tip || this.controller.suppressed()) return;
@@ -101,15 +101,33 @@ export class Tooltip {
       event.stopPropagation();
       this.hide();
     };
+    // Chrome can lose track of the element under the pointer, as when the pointer leaves the
+    // window and comes back, and the trigger is then sent no pointerleave: the help stayed until
+    // the next click. Help the pointer opened therefore closes, as leaving would, once the
+    // pointer moves over anything that is neither the trigger nor the help.
+    const away = (event: PointerEvent) => {
+      const target = event.target;
+      if (
+        target instanceof Node &&
+        (this.host.contains(target) || tip.contains(target))
+      )
+        return;
+      if (this.timer === undefined)
+        this.timer = setTimeout(() => this.hide(), 100);
+    };
     document.addEventListener("keydown", escape, true);
     document.addEventListener("scroll", dismiss, true);
     document.addEventListener("pointerdown", dismiss, true);
+    if (byPointer) document.addEventListener("pointermove", away, true);
     window.addEventListener("resize", dismiss);
+    window.addEventListener("blur", dismiss);
     this.cleanup = () => {
       document.removeEventListener("keydown", escape, true);
       document.removeEventListener("scroll", dismiss, true);
       document.removeEventListener("pointerdown", dismiss, true);
+      document.removeEventListener("pointermove", away, true);
       window.removeEventListener("resize", dismiss);
+      window.removeEventListener("blur", dismiss);
     };
   }
 
