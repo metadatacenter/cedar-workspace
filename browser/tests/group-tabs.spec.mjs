@@ -164,5 +164,7 @@ for (const width of [1440, 375]) {
     }
     expect(placements["Create group"]).toEqual(placements["Manage groups"]);
     expect(placements["Delete group"]).toEqual(placements["Manage groups"]);
+    // A section heading's size, as the Permissions dialog gives its sections; not the larger form heading.
+    expect(placements["Manage groups"].size).toBe("18px");
   });
 }
