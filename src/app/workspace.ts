@@ -430,15 +430,22 @@ export class Workspace {
    * one selected now, as when a link in the Info panel opens an artifact kept elsewhere.
    */
   private returnHere(opened?: Resource) {
-    const url = new URL(location.href);
-    url.searchParams.delete(SELECTED_PARAM);
     const listed =
       opened && this.rows().some((row) => row["@id"] === opened["@id"])
         ? opened
         : undefined;
     const selection = this.selection();
     const keep = listed ?? (selection.length === 1 ? selection[0] : undefined);
-    if (keep) url.searchParams.set(SELECTED_PARAM, keep["@id"]);
+    // The query is edited as text: URLSearchParams would re-encode every other
+    // parameter, so the way back would no longer be the address the router wrote.
+    const url = new URL(location.href);
+    const params = url.search
+      .slice(1)
+      .split("&")
+      .filter((param) => param && param.split("=")[0] !== SELECTED_PARAM);
+    if (keep)
+      params.push(SELECTED_PARAM + "=" + encodeURIComponent(keep["@id"]));
+    url.search = params.join("&");
     return url.toString();
   }
   private async loadFolder(read: number) {

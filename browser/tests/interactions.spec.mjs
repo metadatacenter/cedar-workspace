@@ -258,6 +258,22 @@ test("New menu offers only supported creation actions", async ({
   await expect(page.locator('input[type="file"]')).toHaveCount(0);
 });
 
+test("the way back from a designer is the address the router wrote", async ({
+  page,
+  api,
+}) => {
+  await dashboard(page);
+  await page.goto("/dashboard?search=study:metadata");
+  await expect(page.getByText("Search results for “study:metadata”")).toBeVisible();
+  await page.getByRole("button", { name: "New", exact: true }).click();
+  const href = await page
+    .locator(".new-menu nav")
+    .getByRole("link", { name: "Template", exact: true })
+    .getAttribute("href");
+  expect(page.url()).toContain("search=study:metadata");
+  expect(new URL(href).searchParams.get("returnTo")).toBe(page.url());
+});
+
 test("group members are removed immediately without confirmation and show a success notice", async ({
   page,
   api,
