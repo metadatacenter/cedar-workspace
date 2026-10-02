@@ -799,9 +799,9 @@ td:first-child a {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+// A form label matches the muted medium labels of the facts beside it and of other Workspace forms.
 .account-card label {
-  display: block;
-  margin-bottom: var(--cedar-space-2);
+  @include patterns.field-label($size: body);
 }
 .account-card input,
 .account-card textarea,
