@@ -138,7 +138,7 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   get submitLabel() {
     if (this.busy()) return "Common.Working";
     if (this.action === "delete") return "ResourceDialog.ConfirmDeleteButton";
-    return ["make-open", "make-not-open"].includes(this.action)
+    return ["make-open", "make-not-open", "publish"].includes(this.action)
       ? "ResourceDialog.Ok"
       : "Common.Save";
   }
@@ -167,7 +167,9 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   }
   async close() {
     if (this.busy() && !this.preparing()) return;
+    // A publication asks only for a version, which is quick to choose again.
     if (
+      this.action !== "publish" &&
       this.initialValues !== null &&
       this.values() !== this.initialValues &&
       !(await this.confirmation.confirm(

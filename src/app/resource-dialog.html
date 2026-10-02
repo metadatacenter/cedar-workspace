@@ -67,11 +67,11 @@
       } @if(['publish','draft'].includes(action)){<div class="field"
         ><span id="version-label" class="field-label">{{'Common.Version' | translate}}</span><cedar-version-picker
           labelledBy="version-label"
-          [describedBy]="submitted && versionError ? 'version-error' : ''"
-          [invalid]="submitted && !!versionError"
+          [describedBy]="versionError ? 'version-error' : ''"
+          [invalid]="!!versionError"
           [(value)]="version"
       /></div>
-      @if(submitted && versionError){
+      @if(versionError){
       <p id="version-error" class="field-error" role="alert">
         {{versionError}}
       </p>

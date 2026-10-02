@@ -2,6 +2,7 @@ import { TestBed } from "@angular/core/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ResourceDialog } from "./resource-dialog";
 import { Backend } from "./backend.service";
+import { Confirmation } from "./confirmation";
 import { Resource } from "./resource";
 const resource: Resource = {
   "@id": "id",
@@ -204,6 +205,28 @@ describe("Conditional action dialogs", () => {
         expect(api.request).not.toHaveBeenCalled();
       }
     });
+  it("labels Publish's button Ok and closes it after a version change without asking", async () => {
+    const asked = vi.spyOn(TestBed.inject(Confirmation), "confirm").mockResolvedValue(false);
+    const publish = dialog("publish");
+    publish.resource = { ...resource, "pav:version": "0.3.0" };
+    await publish.load();
+    expect(publish.submitLabel).toBe("ResourceDialog.Ok");
+    const closed = vi.fn();
+    publish.closed.subscribe(closed);
+    publish.version = [1, 0, 0];
+    await publish.close();
+    expect(asked).not.toHaveBeenCalled();
+    expect(closed).toHaveBeenCalledOnce();
+    // A draft still asks, since it also carries sharing and a folder name.
+    const draft = dialog("draft");
+    draft.resource = { ...resource, "pav:version": "0.3.0" };
+    api.request.mockResolvedValue({ data: { resources: [], totalCount: 0, pathInfo: [] } });
+    await draft.load();
+    expect(draft.submitLabel).toBe("Common.Save");
+    draft.version = [1, 0, 0];
+    await draft.close();
+    expect(asked).toHaveBeenCalledOnce();
+  });
   it("blocks duplicate submissions while a write is pending", async () => {
     const d = dialog();
     await d.load();
