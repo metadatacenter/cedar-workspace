@@ -61,7 +61,16 @@ export function previewElement(element: CeeJsonObject): CeeJsonObject {
         </div>
       }
       <header class="dialog-heading" [inert]="loading()">
-        <h2>{{ name }}</h2>
+        <h2>
+          <span
+            class="preview-kind"
+            aria-hidden="true"
+            [cedarTooltip]="
+              'ResourceTypes.' + resource.resourceType | translate
+            "
+            ><cedar-icon [name]="resource.resourceType" /></span
+          >{{ name }}
+        </h2>
         @if (!loading() && !error()) {
           <button class="try-out" type="button" (click)="toggleTryOut()">
             {{ (trying() ? "Preview.Back" : "Preview.TryOut") | translate }}

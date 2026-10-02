@@ -21,9 +21,20 @@ header {
 }
 header h2 {
   @include patterns.artifact-title;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--cedar-space-2);
   margin: 0 auto 0 0;
   min-width: 0;
   overflow-wrap: anywhere;
+}
+// A long title wraps, so the icon is centred on its first line rather than on the whole heading.
+.preview-kind {
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: 1lh;
+  color: var(--cedar-color-primary);
 }
 section {
   flex: 0 1 auto;

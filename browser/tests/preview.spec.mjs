@@ -43,6 +43,9 @@ for (const kind of ['template','element','field','instance']) {
     const viewer = dialog.locator(kind==='field'?'cedar-embeddable-field':'cedar-embeddable-editor');
     await expect(viewer).toBeVisible();
     await expect(dialog.getByRole('heading', {level: 2})).toHaveText(documents[kind]['schema:name']);
+    // The title carries the same kind icon as the item behind it in the listing.
+    const listed = await page.locator(`.resource-icon[data-type="${kind}"] [data-cedar-icon]`).first().getAttribute('data-cedar-icon');
+    await expect(dialog.locator('header h2 .preview-kind [data-cedar-icon]')).toHaveAttribute('data-cedar-icon', listed);
     if (kind === 'field') await expect(viewer.locator('app-cedar-component-header')).toHaveCount(0);
     await expect(viewer.locator('.logo-block')).toHaveCount(0);
     if (kind !== 'field') {
