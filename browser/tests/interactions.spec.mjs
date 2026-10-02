@@ -1,4 +1,4 @@
-import { test, expect, dashboard, action } from "./fixtures.mjs";
+import { test, expect, dashboard, action, resource } from "./fixtures.mjs";
 import { tokenStyles, feedbackSpacing } from './overlay-spacing.mjs';
 
 test("artifact commands support keyboard navigation, Escape, and return focus", async ({
@@ -563,6 +563,54 @@ test("metadata errors and nonblocking warnings share centered, expandable summar
   await page.locator(".metadata-save-action").hover();
   await page.waitForTimeout(400);
   await expect(page.getByRole("tooltip")).toHaveCount(0);
+});
+
+test("returning from the metadata editor selects the instance it opened", async ({ page, api }) => {
+  const instance = { ...resource, "@id": "instance", resourceType: "instance", "schema:name": "Study record" };
+  await page.route(/\/folders\/[^/]+\/contents/, (route) =>
+    route.fulfill({ json: { resources: [resource, instance], totalCount: 2, pathInfo: [] } }),
+  );
+  // The shared fixture answers every report with the template; this one is the instance's.
+  await page.route(/\/template-instances\/instance\/report/, (route) => route.fulfill({ json: instance }));
+  await page.goto("/dashboard");
+  const card = page.locator('[data-resource-id="instance"]');
+  await card.click({ position: { x: 8, y: 60 } });
+  await expect(card).toHaveAttribute("aria-selected", "true");
+  await card.dblclick({ position: { x: 8, y: 60 } });
+  await expect(page).toHaveURL(/\/instances\/edit\/instance/);
+  await expect(page.getByLabel("Instance name")).toHaveValue("Study record");
+  await page.locator("cedar-workspace-return").getByRole("button", { name: "Back to Workspace", exact: true }).click();
+  await expect(page).toHaveURL(/\/dashboard/);
+  await expect(card).toHaveAttribute("aria-selected", "true");
+  await expect(page).not.toHaveURL(/selected=/);
+});
+
+test("links in the Info panel return to the artifact whose panel held them", async ({ page, api }) => {
+  // An instance of the template that this folder does not hold.
+  const instance = { ...resource, "@id": "instance", resourceType: "instance", "schema:name": "Study record" };
+  await page.route(/\/search\?[^#]*is_based_on/, (route) =>
+    route.fulfill({ json: { resources: [instance], totalCount: 1, pathInfo: [] } }),
+  );
+  await page.goto("/dashboard");
+  const card = page.locator('[data-resource-id="template"]');
+  await card.click({ position: { x: 8, y: 60 } });
+  await expect(card).toHaveAttribute("aria-selected", "true");
+  const info = page.locator(".information");
+  const toInstance = info.getByRole("link", { name: "Study record", exact: true });
+  await expect(toInstance).toBeVisible();
+  const links = info.locator('a[href*="returnTo"]');
+  expect(await links.count()).toBeGreaterThan(1);
+  for (const href of await links.evaluateAll((all) => all.map((a) => a.href))) {
+    const back = new URL(new URL(href).searchParams.get("returnTo"));
+    expect(back.searchParams.get("selected"), href).toBe("template");
+  }
+  await toInstance.click();
+  await expect(page).toHaveURL(/\/instances\/edit\/instance/);
+  await expect(page.getByLabel("Instance name")).toHaveValue("Study record");
+  await page.locator("cedar-workspace-return").getByRole("button", { name: "Back to Workspace", exact: true }).click();
+  await expect(page).toHaveURL(/\/dashboard/);
+  await expect(card).toHaveAttribute("aria-selected", "true");
+  await expect(info).toContainText("Study metadata");
 });
 
 test("new metadata is unmodified until edited, and saved once persisted", async ({ page, api }) => {

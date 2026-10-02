@@ -145,6 +145,9 @@ export function actions(r: Resource, i18n: Pick<I18n, "t">): Action[] {
     }
   });
 }
+/** The query parameter naming the artifact to select once the listing is loaded. */
+const SELECTED_PARAM = "selected";
+
 @Component({
   selector: "cedar-workspace-page",
   imports: [
@@ -286,6 +289,11 @@ export class Workspace {
   sort = "name";
   folder = "";
   params = new URLSearchParams();
+  // The listing the URL names, without the artifact to select in it: dropping that
+  // parameter once it has been applied must not load the listing again.
+  private listingKey: string | null = null;
+  // An artifact to select once the listing holds it, as an editor returning here names it.
+  private reselect: string | null = null;
   private listRead = 0;
   private detailRead = 0;
   constructor() {
@@ -312,7 +320,14 @@ export class Workspace {
         .pipe(takeUntilDestroyed(this.destroy))
         .subscribe((map) => {
           this.params = new URLSearchParams();
-          map.keys.forEach((key) => this.params.set(key, map.get(key)!));
+          map.keys
+            .filter((key) => key !== SELECTED_PARAM)
+            .forEach((key) => this.params.set(key, map.get(key)!));
+          const selected = map.get(SELECTED_PARAM);
+          if (selected) this.reselect = selected;
+          const listingKey = this.params.toString();
+          if (listingKey === this.listingKey && !selected) return;
+          this.listingKey = listingKey;
           this.search = map.get("search") || "";
           this.folder = map.get("folderId") || this.api.profile.homeFolderId;
           const sort = map.get("sort") || "name";
@@ -367,6 +382,7 @@ export class Workspace {
       this.rows.set(data.resources);
       this.total.set(data.totalCount);
       this.path.set(data.pathInfo || []);
+      this.restoreSelection();
       void this.loadFolder(read);
       // Listings omit lifecycle actions. Enrich template links without blocking the table.
       void this.loadTemplateActions(data.resources, read);
@@ -381,6 +397,53 @@ export class Workspace {
         this.refreshing.set(false);
       }
     }
+  }
+  /**
+   * Select again the artifact an editor was opened on, once the listing holds it.
+   *
+   * Opening an artifact leaves the dashboard for an editor, and coming back loaded a
+   * fresh listing with nothing selected. The editor returns to the address it was
+   * given, which names the artifact; the parameter is dropped once applied, so a
+   * reload or a later return does not select it again.
+   */
+  private restoreSelection() {
+    const id = this.reselect;
+    if (id === null) return;
+    this.reselect = null;
+    const r = this.rows().find((row) => row["@id"] === id);
+    if (r) {
+      void this.select(r);
+      afterNextRender(
+        () =>
+          this.host.nativeElement
+            .querySelector(`[data-resource-id="${CSS.escape(id)}"]`)
+            ?.scrollIntoView({ block: "nearest" }),
+        { injector: this.injector },
+      );
+    }
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { [SELECTED_PARAM]: null },
+      queryParamsHandling: "merge",
+      replaceUrl: true,
+    });
+  }
+  /**
+   * Where an editor opened from here returns to: this listing, naming the artifact to
+   * select again. That is the one opened when the listing shows it, and otherwise the
+   * one selected now, as when a link in the Info panel opens an artifact kept elsewhere.
+   */
+  private returnHere(opened?: Resource) {
+    const url = new URL(location.href);
+    url.searchParams.delete(SELECTED_PARAM);
+    const listed =
+      opened && this.rows().some((row) => row["@id"] === opened["@id"])
+        ? opened
+        : undefined;
+    const selection = this.selection();
+    const keep = listed ?? (selection.length === 1 ? selection[0] : undefined);
+    if (keep) url.searchParams.set(SELECTED_PARAM, keep["@id"]);
+    return url.toString();
   }
   private async loadFolder(read: number) {
     try {
@@ -745,7 +808,7 @@ export class Workspace {
       r,
       this.api.config,
       this.folder,
-      location.href,
+      this.returnHere(r),
       populate,
     );
   }
@@ -755,7 +818,10 @@ export class Workspace {
       "/" +
       kind +
       "/create?" +
-      new URLSearchParams({ folderId: this.folder, returnTo: location.href })
+      new URLSearchParams({
+        folderId: this.folder,
+        returnTo: this.returnHere(),
+      })
     );
   }
   openView(r: Resource) {

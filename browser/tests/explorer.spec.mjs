@@ -109,10 +109,26 @@ for (const kind of ["template", "element", "field", "instance"]) {
       await expect(page).toHaveURL(returnTo);
       await target.dblclick(options);
       await expect(page).toHaveURL(url => url.pathname === editorPath);
-      expect(new URL(page.url()).searchParams.get('returnTo')).toBe(returnTo);
+      // The way back names the artifact, so the dashboard selects it again.
+      const expected = new URL(returnTo);
+      expected.searchParams.set('selected', artifact['@id']);
+      expect(new URL(page.url()).searchParams.get('returnTo')).toBe(expected.href);
     }
   });
 }
+
+test('a return that names an artifact selects it once, and the address forgets it', async ({page, api}) => {
+  await setup(page);
+  await page.goto('/dashboard?selected=b');
+  const card = page.locator('[data-resource-id="b"]');
+  await expect(card).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('.information')).toContainText('Sample b');
+  await expect(page).not.toHaveURL(/selected=/);
+  // An artifact the listing does not hold selects nothing.
+  await page.goto('/dashboard?selected=elsewhere');
+  await expect(page.locator('.explorer-item[aria-selected="true"]')).toHaveCount(0);
+  await expect(page).not.toHaveURL(/selected=/);
+});
 
 test('artifact card actions and list metadata do not trigger the double-click shortcut', async ({page, api}) => {
   await setup(page, [resource]);
