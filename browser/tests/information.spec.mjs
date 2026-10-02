@@ -208,7 +208,6 @@ test("derived-from and previous versions link to their artifacts beside copy con
   const version = (id, number, extra = {}) => ({...resource, '@id': id, 'pav:version': number, 'bibo:status': 'bibo:published', ...extra});
   await page.route('**/templates/template/report', route => route.fulfill({json: {
     ...resource,
-    isOpen: true,
     everybodyPermission: 'read',
     derivedFrom: {...resource, '@id': 'source', 'schema:name': 'Source template'},
     // Newest first, and including the template itself.
@@ -236,16 +235,6 @@ test("derived-from and previous versions link to their artifacts beside copy con
   await expect(latest.locator('.detail-with-copy > span')).toHaveText('Study metadata · 3.0.0 · Published');
   await expect(latest.getByRole('link')).toHaveText('Study metadata');
   await expect(latest.getByRole('link')).toHaveAttribute('href', /\/templates\/edit\/newer\?/);
-
-  // The artifact itself is in OpenView, so its public link is offered and can be copied.
-  const openView = info.locator('.open-view');
-  const publicLink = openView.getByRole('link');
-  await expect(publicLink).toHaveAttribute('href', /\/templates\/template$/);
-  await expect(publicLink).toHaveAttribute('target', '_blank');
-  await openView.getByRole('button', {name: 'Copy OpenView link', exact: true}).click();
-  await expect.poll(() => page.evaluate(() => window.copiedId)).toMatch(/\/templates\/template$/);
-  await expect(page.getByText('Link copied.', {exact: true})).toBeVisible();
-  await expect(openView.locator('small')).toHaveCount(0);
 
   // Shared with everyone, which the user's own role does not say.
   await expect(info.locator('dd').filter({hasText: 'Owner'}).locator('small')).toHaveText('Everyone can view');
@@ -277,9 +266,9 @@ test("an instance names its template with the template's version and status, lin
   const template = info.locator('.info-section').filter({hasText: 'Template'}).locator('.detail-with-copy > span');
   await expect(template).toHaveText('Study metadata · 0.0.1 · Draft');
   await expect(template.getByRole('link')).toHaveText('Study metadata');
-  // Nothing is shared with everyone, and no newer version or OpenView link is claimed.
+  // Nothing is shared with everyone, and no newer version is claimed.
   await expect(info.locator('dd small')).not.toContainText(['Everyone']);
-  await expect(info.locator('.latest-version, .open-view')).toHaveCount(0);
+  await expect(info.locator('.latest-version')).toHaveCount(0);
 });
 
 test("first instance copy help escapes the scrolling list and dismisses on scroll", async ({ page, api }) => {

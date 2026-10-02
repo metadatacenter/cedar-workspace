@@ -691,18 +691,6 @@
       <div class="description-heading">{{'Dashboard.Doi' | translate}}</div>
       <a [href]="r.doi" target="_blank" rel="noopener">{{r.doi}}</a>
     </section>
-    } @if(openViewEnabled && (r.isOpen || openThroughAFolder(r))){
-    <section class="info-section open-view">
-      <div class="description-heading">{{'Dashboard.OpenView' | translate}}</div>
-      <div class="detail-with-copy">
-        <a [href]="openView(r)" target="_blank" rel="noopener">{{openView(r)}}</a>
-        <cedar-copy-button
-          [label]="'Dashboard.CopyOpenViewLink' | translate"
-          (copied)="copyLink(openView(r))"
-        />
-      </div>
-      @if(openThroughAFolder(r)){<small>{{openThrough(r)}}</small>}
-    </section>
     } @if(r.numberOfInstances!==undefined || instances().length){
     <section class="info-section instances-section">
       <div class="description-heading">

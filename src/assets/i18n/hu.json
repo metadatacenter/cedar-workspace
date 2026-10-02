@@ -30,8 +30,7 @@
     "LatestVersion": "Legújabb verzió",
     "AllVersions": "Összes verzió",
     "IdCopied": "Azonosító másolva.",
-    "Unknown": "ismeretlen",
-    "LinkCopied": "Hivatkozás másolva."
+    "Unknown": "ismeretlen"
   },
   "ResourceTypes": {
     "folder": "Mappa",
@@ -191,10 +190,6 @@
     "TrustedBy": "Megbízható forrás",
     "Identifier": "Azonosító",
     "Doi": "DOI",
-    "OpenView": "OpenView",
-    "OpenThroughFolder": "Elérhető a nyitott {{folders}} mappán keresztül.",
-    "OpenThroughFolders": "Elérhető a nyitott {{folders}} mappákon keresztül.",
-    "OpenThroughAFolder": "Elérhető egy fölötte lévő nyitott mappán keresztül.",
     "Instances": "Példányok",
     "CopyIdentifierFor": "Azonosító másolása: {{name}}",
     "CopyInstanceIdentifier": "Példányazonosító másolása",
@@ -210,7 +205,6 @@
     "UnreadableVersion": "Ön által nem megnyitható verzió",
     "LatestVersion": "Legújabb verzió",
     "Latest": "Legújabb",
-    "CopyOpenViewLink": "OpenView-hivatkozás másolása",
     "EveryoneCanView": "Mindenki megtekintheti",
     "EveryoneCanEdit": "Mindenki szerkesztheti"
   },

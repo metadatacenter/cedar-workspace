@@ -30,8 +30,7 @@
     "LatestVersion": "Latest version",
     "AllVersions": "All versions",
     "IdCopied": "ID copied.",
-    "Unknown": "unknown",
-    "LinkCopied": "Link copied."
+    "Unknown": "unknown"
   },
   "ResourceTypes": {
     "folder": "Folder",
@@ -191,10 +190,6 @@
     "TrustedBy": "Trusted by",
     "Identifier": "Identifier",
     "Doi": "DOI",
-    "OpenView": "OpenView",
-    "OpenThroughFolder": "Available through the open folder {{folders}}.",
-    "OpenThroughFolders": "Available through the open folders {{folders}}.",
-    "OpenThroughAFolder": "Available through an open folder above it.",
     "Instances": "Instances",
     "CopyIdentifierFor": "Copy identifier for {{name}}",
     "CopyInstanceIdentifier": "Copy instance identifier",
@@ -210,7 +205,6 @@
     "UnreadableVersion": "A version you cannot open",
     "LatestVersion": "Latest version",
     "Latest": "Latest",
-    "CopyOpenViewLink": "Copy OpenView link",
     "EveryoneCanView": "Everyone can view",
     "EveryoneCanEdit": "Everyone can edit"
   },

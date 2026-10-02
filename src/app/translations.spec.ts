@@ -34,7 +34,6 @@ const reference = maps.en;
 const identical = new Set([
   "Common.OK",
   "Dashboard.Doi",
-  "Dashboard.OpenView",
   "Account.Profile.Uuid",
   "Account.Profile.Id",
 ]);

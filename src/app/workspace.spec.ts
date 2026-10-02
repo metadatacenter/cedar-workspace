@@ -276,7 +276,7 @@ describe("Angular Workspace", () => {
       ).toBe(offered);
     });
   }
-  it("offers the OpenView link in the information panel, and names the open folder that provides it", async () => {
+  it("keeps OpenView out of the information panel, open itself or through a folder", async () => {
     const f = await render();
     const shared: Resource = {
       "@id": "shared",
@@ -284,32 +284,18 @@ describe("Angular Workspace", () => {
       "schema:name": "Shared",
       isOpen: true,
     };
-    const section = () =>
-      [...(f.nativeElement as HTMLElement).querySelectorAll(".info-section")].find(
-        (s) => s.querySelector(".description-heading")?.textContent?.trim() === "OpenView",
+    const headings = () =>
+      [...(f.nativeElement as HTMLElement).querySelectorAll(".info-section .description-heading")].map(
+        (h) => h.textContent?.trim(),
       );
-    f.componentInstance.selected.set({ ...template, pathInfo: [folder, template] });
-    f.detectChanges();
-    expect(section()).toBeUndefined();
-    f.componentInstance.selected.set({
-      ...template,
-      isOpenImplicitly: true,
-      pathInfo: [folder, shared, template],
-    });
-    f.detectChanges();
-    expect(section()?.querySelector("a")?.getAttribute("href")).toBe(
-      "https://openview.example/templates/template-id",
-    );
-    expect(section()?.querySelector("small")?.textContent?.trim()).toBe(
-      "Available through the open folder “Shared”.",
-    );
-    // Open itself, the artifact's public link is offered without a folder to explain it.
-    f.componentInstance.selected.set({ ...template, isOpen: true, pathInfo: [folder, template] });
-    f.detectChanges();
-    expect(section()?.querySelector("a")?.getAttribute("href")).toBe(
-      "https://openview.example/templates/template-id",
-    );
-    expect(section()?.querySelector("small")).toBeNull();
+    for (const selected of [
+      { ...template, isOpen: true, pathInfo: [folder, template] },
+      { ...template, isOpenImplicitly: true, pathInfo: [folder, shared, template] },
+    ]) {
+      f.componentInstance.selected.set(selected);
+      f.detectChanges();
+      expect(headings()).not.toContain("OpenView");
+    }
   });
   it("exposes the artifact action set and gates it using the server capabilities", () => {
     const list = actions(template, TestBed.inject(I18n));

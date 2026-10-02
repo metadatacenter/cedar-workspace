@@ -46,8 +46,6 @@ import {
   title,
   can,
   inOpenView,
-  openThroughAFolder,
-  openThroughText,
   listingPath,
   resourceLink,
   collections,
@@ -187,11 +185,7 @@ export class Workspace {
   readonly title = (r: Resource) => title(r, this.i18n.t("Common.Untitled"));
   readonly can = can;
   readonly inOpenView = inOpenView;
-  readonly openThroughAFolder = openThroughAFolder;
   readonly openViewEnabled = window.makeOpenEnabled !== false;
-  openThrough(r: Resource) {
-    return openThroughText(r, this.i18n, "Dashboard.OpenThrough");
-  }
   readonly actions = (r: Resource) => actions(r, this.i18n);
   attribution(userId?: string, name?: string): string {
     if (this.isCurrentUser(userId))
@@ -675,14 +669,6 @@ export class Workspace {
   }
   parentId(r: Resource): string | undefined {
     return r.pathInfo?.filter((p) => p["@id"] !== r["@id"]).at(-1)?.["@id"];
-  }
-  async copyLink(value: string) {
-    try {
-      await navigator.clipboard.writeText(value);
-      this.notice.set(this.i18n.t("Common.LinkCopied"));
-    } catch (e) {
-      this.fail(e);
-    }
   }
   async copyId(value: string) {
     try {
