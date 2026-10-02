@@ -153,8 +153,10 @@ test("unsaved metadata cannot be lost by leaving, and read-only mode cannot save
     const style = getComputedStyle(el, '::before');
     return {content: style.content, fill: style.backgroundColor, border: style.borderTopColor, width: style.borderTopWidth};
   });
-  await expect(saveState).toHaveText('Saved');
-  expect(await indicator()).toEqual({content: '""', fill:'rgba(0, 0, 0, 0)', border:'rgb(234, 179, 8)', width:'2px'});
+  // Read from the server and not yet saved here.
+  await expect(saveState).toHaveText('Unmodified');
+  // The dot marks unsaved content, so an unmodified instance shows none.
+  expect((await indicator()).content).toBe('none');
   await expect(page.locator('label[for="instance-name"]')).toHaveCSS('font-weight', '500');
   await input.fill("Working record");
   await expect(page.locator(".metadata-save-status")).toHaveClass(/is-dirty/);
@@ -170,9 +172,9 @@ test("unsaved metadata cannot be lost by leaving, and read-only mode cannot save
     .click();
   await expect(input).toHaveValue("Working record");
   await input.fill("Study record");
-  await expect(page.locator(".metadata-toolbar")).toContainText("Saved");
+  await expect(page.locator(".metadata-toolbar")).toContainText("Unmodified");
   await expect(page.locator(".metadata-save-status")).not.toHaveClass(/is-dirty/);
-  expect((await indicator()).fill).toBe('rgba(0, 0, 0, 0)');
+  expect((await indicator()).content).toBe('none');
   api.readonly = true;
   await page.reload();
   await expect(input).toHaveAttribute("readonly", "");

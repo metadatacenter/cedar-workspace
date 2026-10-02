@@ -140,10 +140,15 @@ describe("Modern metadata host", () => {
     expect(host.saveStatus).toBe("Metadata.SavedStatus");
     expect(host.hasUnsavedContent).toBe(false);
   });
-  it("shows saved for an existing unchanged artifact", async () => {
+  it("shows an existing artifact as unmodified until it is saved here", async () => {
     await edit();
-    expect(host.saveStatus).toBe("Metadata.SavedStatus");
+    expect(host.saveStatus).toBe("Metadata.UnmodifiedStatus");
     expect(host.hasUnsavedContent).toBe(false);
+    host.name = "Changed";
+    host.changed();
+    expect(host.saveStatus).toBe("Metadata.ModifiedStatus");
+    await host.save();
+    expect(host.saveStatus).toBe("Metadata.SavedStatus");
   });
   it("passes the active language to CEE with English as its fallback", async () => {
     await host.ngAfterViewInit();

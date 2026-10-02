@@ -716,16 +716,12 @@ td:first-child a {
   display: inline-flex;
   align-items: center;
   gap: var(--cedar-space-2);
-  &.has-save-state::before {
+  // The dot marks unsaved content and nothing else: an unmodified or saved instance shows none.
+  &.has-save-state.is-dirty::before {
     content: "";
-    box-sizing: border-box;
     flex: 0 0 var(--cedar-space-2);
     height: var(--cedar-space-2);
     border-radius: 50%;
-    border: 2px solid var(--cedar-status-unsaved-dot);
-    background: transparent;
-  }
-  &.has-save-state.is-dirty::before {
     background: var(--cedar-status-unsaved-dot);
   }
 }

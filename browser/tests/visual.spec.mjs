@@ -111,7 +111,7 @@ for (const readonly of [false, true]) {
     await page.goto("/instances/edit/instance");
     await expect(page.getByLabel("Instance name")).toHaveValue("Study record");
     await expect(page.locator(".metadata-toolbar")).toContainText(
-      readonly ? "Read only" : "Saved",
+      readonly ? "Read only" : "Unmodified",
     );
     if (process.env.WORKSPACE_VISUAL)
       await expect(page.locator(".metadata-toolbar")).toHaveScreenshot(

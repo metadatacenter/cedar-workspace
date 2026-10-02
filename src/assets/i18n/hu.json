@@ -377,6 +377,7 @@
   "Metadata": {
     "ReadOnly": "Csak olvasható",
     "ModifiedStatus": "Módosítva",
+    "UnmodifiedStatus": "Változatlan",
     "NotSavedStatus": "Nincs mentve",
     "SavedStatus": "Mentve",
     "Name": "Példány neve",

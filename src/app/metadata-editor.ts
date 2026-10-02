@@ -178,6 +178,8 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   private folder = "";
   private template!: CeeJsonObject;
   private saved?: CeeJsonObject;
+  // An instance read from the server is unmodified; only a save made here is reported as saved.
+  private savedHere = false;
   private etag: string | null = null;
   private baseline = "";
   private baselineName = "";
@@ -299,9 +301,11 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     if (!this.writable()) return "Metadata.ReadOnly";
     return this.dirty()
       ? "Metadata.ModifiedStatus"
-      : this.saved
+      : this.savedHere
         ? "Metadata.SavedStatus"
-        : "Metadata.NotSavedStatus";
+        : this.saved
+          ? "Metadata.UnmodifiedStatus"
+          : "Metadata.NotSavedStatus";
   }
   get missingRequired() {
     const q = this.quality();
@@ -394,6 +398,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       );
       if (!this.alive) return;
       this.saved = reply.data;
+      this.savedHere = true;
       this.etag = reply.etag;
       this.baseline = baseline;
       this.baselineName = name;
