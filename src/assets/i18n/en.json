@@ -275,6 +275,7 @@
     "NoRevision": "No concurrency validator was returned. Reopen this dialog before saving.",
     "UnknownAction": "Unknown action.",
     "NameRequired": "Enter a name.",
+    "ChoosePublicationVersion": "Please select the publication version.",
     "VersionAfter": "Use a version later than {{version}}.",
     "VersionNotBefore": "Use version {{version}} or later."
   },

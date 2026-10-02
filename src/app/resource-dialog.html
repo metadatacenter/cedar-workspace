@@ -62,7 +62,9 @@
           [(ngModel)]="description"
           rows="3"
         ></textarea></label
-      >} @if(['publish','draft'].includes(action)){<div class="field"
+      >} @if(action==='publish'){
+      <p>{{'ResourceDialog.ChoosePublicationVersion' | translate}}</p>
+      } @if(['publish','draft'].includes(action)){<div class="field"
         ><span id="version-label" class="field-label">{{'Common.Version' | translate}}</span><cedar-version-picker
           labelledBy="version-label"
           [describedBy]="submitted && versionError ? 'version-error' : ''"

@@ -189,6 +189,21 @@ describe("Conditional action dialogs", () => {
       { "@id": "id", newVersion: "1.0.0" },
     );
   });
+  for (const [title, stored] of [
+    ["at 0.0.1", "0.0.1"],
+    ["whose version cannot be read", undefined],
+  ] as const)
+    it(`refuses version 0.0.0 for a publication or draft of an artifact ${title}`, async () => {
+      for (const action of ["publish", "draft"]) {
+        const d = dialog(action);
+        d.resource = { ...resource, "pav:version": stored };
+        d.version = [0, 0, 0];
+        expect(d.versionError).toBe("Use version 0.0.1 or later.");
+        api.request.mockClear();
+        await d.submit();
+        expect(api.request).not.toHaveBeenCalled();
+      }
+    });
   it("blocks duplicate submissions while a write is pending", async () => {
     const d = dialog();
     await d.load();

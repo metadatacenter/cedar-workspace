@@ -275,6 +275,7 @@
     "NoRevision": "A szerver nem küldött egyidejűség-ellenőrző azonosítót. Mentés előtt nyissa meg újra ezt a párbeszédablakot.",
     "UnknownAction": "Ismeretlen művelet.",
     "NameRequired": "Adjon meg egy nevet.",
+    "ChoosePublicationVersion": "Kérjük, válassza ki a közzététel verzióját.",
     "VersionAfter": "Adjon meg a(z) {{version}} verziónál későbbi verziót.",
     "VersionNotBefore": "Adjon meg {{version}} vagy annál későbbi verziót."
   },

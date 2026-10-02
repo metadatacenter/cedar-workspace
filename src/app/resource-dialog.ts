@@ -5,6 +5,7 @@ import { DialogKeyboard } from "./dialog-keyboard";
 import { Icon } from "./icon";
 import { FolderList, FolderSort } from "./folder-list";
 import {
+  FIRST_VERSION,
   Version,
   VersionPicker,
   compareVersions,
@@ -285,8 +286,16 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
       ? this.i18n.t("ResourceDialog.NameRequired")
       : "";
   }
-  /** The resource server refuses a draft that does not raise the version and a publication that lowers it. */
+  /**
+   * The resource server refuses a draft that does not raise the version and a
+   * publication that lowers it. Below 0.0.1 is refused here even when the current
+   * version cannot be read, since no artifact is numbered lower.
+   */
   get versionError() {
+    if (compareVersions(this.version, FIRST_VERSION) < 0)
+      return this.i18n.t("ResourceDialog.VersionNotBefore", {
+        version: formatVersion(FIRST_VERSION),
+      });
     const current = parseVersion(this.resource?.["pav:version"]);
     if (!current) return "";
     const order = compareVersions(this.version, current);

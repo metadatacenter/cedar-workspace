@@ -22,6 +22,9 @@ export function parseVersion(text: string | undefined): Version | null {
   return match ? [Number(match[1]), Number(match[2]), Number(match[3])] : null;
 }
 
+/** The lowest version an artifact can have, as the resource server numbers a new one. */
+export const FIRST_VERSION: Version = [0, 0, 1];
+
 export function formatVersion(version: Version): string {
   return version.join(".");
 }
