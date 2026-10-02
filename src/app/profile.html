@@ -98,10 +98,12 @@
         <header>
           <h3>{{example[0] | translate}}</h3>
           <button
+            class="profile-copy"
             [attr.aria-label]="'Account.Profile.CopyExample' | translate: {example: (example[0] | translate)}"
+            [cedarTooltip]="'Account.Profile.CopyExample' | translate: {example: (example[0] | translate)}"
             (click)="copy(example[1])"
           >
-            <cedar-icon name="copy" />{{'Common.Copy' | translate}}
+            <cedar-icon name="copy" />
           </button>
         </header>
         <pre><code>{{example[1]}}</code></pre>
