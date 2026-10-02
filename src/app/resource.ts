@@ -24,6 +24,7 @@ export interface Resource {
   versions?: Resource[];
   // False for a version the report names but the user may not read; its name is withheld.
   activeUserCanRead?: boolean;
+  isLatestVersion?: boolean;
   // What everyone may do with the resource, when it is shared with everyone.
   everybodyPermission?: "read" | "write" | "none" | null;
   numberOfInstances?: number;

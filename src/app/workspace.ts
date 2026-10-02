@@ -810,6 +810,15 @@ export class Workspace {
     ];
     return " · " + parts.join(" · ");
   }
+  /**
+   * Whether a version on the Version tab is the newest.
+   *
+   * The report says so of each version; without that, the first of a list ordered
+   * newest first is.
+   */
+  isLatest(v: Resource, first: boolean): boolean {
+    return Boolean(v["pav:version"]) && (v.isLatestVersion ?? first);
+  }
   /** The newest version when it is not this one; the report lists versions newest first. */
   latestVersion(r: Resource): Resource | undefined {
     const latest = r.versions?.[0];

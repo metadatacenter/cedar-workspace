@@ -751,12 +751,13 @@
           }
           <dt>{{'Common.Version' | translate}}</dt>
           <dd>
-            {{v['pav:version'] || ('Dashboard.Unversioned' |
-            translate)}}@if($first && (r.versions?.length ?? 0) > 1){ ·
-            {{'Dashboard.Latest' | translate}}}
+            {{v['pav:version'] || ('Dashboard.Unversioned' | translate)}}
           </dd>
           <dt>{{'Dashboard.Status' | translate}}</dt>
-          <dd>{{status(v)}}</dd>
+          <dd>
+            {{status(v)}}@if(isLatest(v, $first)){ ·
+            {{'Dashboard.LatestVersion' | translate}}}
+          </dd>
         </dl>
       </article>
       } @if(previousVersions(r); as previous){ @if(previous.length){
