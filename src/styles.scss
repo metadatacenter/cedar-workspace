@@ -497,8 +497,14 @@ dd small {
 .info-section .instance-count {
   margin: var(--cedar-space-2) 0 0;
 }
+// What the panel says of something it has none of reads as the description's placeholder does.
 .info-section .no-instances {
   margin: 0;
+  color: var(--cedar-text-muted);
+}
+cedar-description-editor textarea::placeholder,
+cedar-description-editor .no-description {
+  color: var(--cedar-text-muted);
 }
 .info-section small {
   display: block;

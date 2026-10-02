@@ -218,6 +218,25 @@ test("a template with no instances says so under the Instances heading", async (
   const [heading, text] = await Promise.all([section.locator('.description-heading'), section.locator('.no-instances')].map(l => l.boundingBox()));
   expect(text.y).toBeGreaterThanOrEqual(heading.y + heading.height);
   await expect(section.locator('.instance-list, .instance-count')).toHaveCount(0);
+  // It reads as the description's placeholder does.
+  const look = (el, pseudo) => { const style = getComputedStyle(el, pseudo); return [style.color, style.fontWeight, style.fontSize]; };
+  const placeholder = await info.getByRole('textbox', {name: 'Description', exact: true}).evaluate(el => {
+    const style = getComputedStyle(el, '::placeholder'); return [style.color, style.fontWeight, style.fontSize];
+  });
+  expect(await section.locator('.no-instances').evaluate(look)).toEqual(placeholder);
+});
+
+test("a read-only empty description reads as the editable one's placeholder", async ({page, api}) => {
+  api.readonly = true;
+  await page.route('**/templates/template/report', route => route.fulfill({json: {...resource, 'schema:description': '',
+    numberOfInstances: 0, currentUserPermissions: {capabilities: ['readResource']}}}));
+  await dashboard(page);
+  await page.locator('tbody tr').first().press('Enter');
+  const info = page.getByRole('complementary', {name:'Resource information'});
+  const empty = info.locator('.no-description');
+  await expect(empty).toHaveText('No description');
+  const look = el => { const style = getComputedStyle(el); return [style.color, style.fontWeight]; };
+  expect(await empty.evaluate(look)).toEqual(await info.locator('.no-instances').evaluate(look));
 });
 
 test("a template whose instances the user cannot read says none is accessible, once the search answers", async ({page, api}) => {
