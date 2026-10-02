@@ -218,6 +218,25 @@ test("a template with no instances says so under the Instances heading", async (
   await expect(section.locator('.instance-list, .instance-count')).toHaveCount(0);
 });
 
+test("a template whose instances the user cannot read says none is accessible, once the search answers", async ({page, api}) => {
+  await page.route('**/templates/template/report', route => route.fulfill({json: {...resource, numberOfInstances: 3}}));
+  let answer;
+  const answered = new Promise(resolve => { answer = resolve; });
+  await page.route('**/search?is_based_on=*', async route => {
+    await answered;
+    await route.fulfill({json: {resources: [], totalCount: 0}});
+  });
+  await dashboard(page);
+  await page.locator('tbody tr').first().press('Enter');
+  const section = page.getByRole('complementary', {name:'Resource information'}).locator('.instances-section');
+  await expect(section.locator('.description-heading')).toHaveText('Instances');
+  // Nothing is claimed while the search is still out.
+  await expect(section.locator('.no-instances')).toHaveCount(0);
+  answer();
+  await expect(section.locator('.no-instances')).toHaveText('No accessible instances');
+  await expect(section.locator('.instance-list, .instance-count')).toHaveCount(0);
+});
+
 test("derived-from and previous versions link to their artifacts beside copy controls", async ({page, api}) => {
   const version = (id, number, extra = {}) => ({...resource, '@id': id, 'pav:version': number, 'bibo:status': 'bibo:published', ...extra});
   await page.route('**/templates/template/report', route => route.fulfill({json: {

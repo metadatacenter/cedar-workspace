@@ -270,6 +270,8 @@ export class Workspace {
   readonly selected = signal<Resource | undefined>(undefined);
   readonly instances = signal<Resource[]>([]);
   readonly instanceTotal = signal(0);
+  /** Whether the search for the selected template's instances has answered. */
+  readonly instancesLoaded = signal(false);
   readonly total = signal(0);
   readonly offset = signal(0);
   readonly left = signal(true);
@@ -521,6 +523,7 @@ export class Workspace {
     this.selected.set(r);
     this.instances.set([]);
     this.instanceTotal.set(0);
+    this.instancesLoaded.set(false);
     this.tab = "info";
     try {
       const { data } = await this.api.report(r);
@@ -662,6 +665,7 @@ export class Workspace {
       if (read === this.detailRead) {
         this.instances.set(data.resources);
         this.instanceTotal.set(data.totalCount);
+        this.instancesLoaded.set(true);
       }
     } catch (e) {
       if (read === this.detailRead) this.fail(e);

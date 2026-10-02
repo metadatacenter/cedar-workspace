@@ -715,6 +715,8 @@
       </p>
       } @else if(r.numberOfInstances===0){
       <p class="no-instances">{{'Dashboard.NoInstances' | translate}}</p>
+      } @else if(instancesLoaded()){
+      <p class="no-instances">{{'Dashboard.NoAccessibleInstances' | translate}}</p>
       }
     </section>
     }
