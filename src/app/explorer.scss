@@ -1,3 +1,4 @@
+@use "@org.metadatacenter/cedar-design-tokens/spacing";
 @use "@org.metadatacenter/cedar-design-tokens/patterns";
 
 .explorer-toolbar {
@@ -22,7 +23,7 @@
 }
 .explorer-view-switch button {
   min-width: 36px;
-  padding: calc(var(--cedar-space-1) * 1.25) var(--cedar-space-2);
+  @include spacing.apply(padding, view-switch);
   border-radius: 0;
 }
 .explorer-view-switch [aria-pressed="true"] {
@@ -64,8 +65,7 @@ body.explorer-dragging.explorer-can-drop * {
 }
 .explorer-grid {
   min-height: calc(10 * var(--cedar-space-6));
-  padding: var(--cedar-space-3) calc(var(--cedar-space-1) / 4)
-    calc(2 * var(--cedar-space-4));
+  @include spacing.apply(padding, resource-list-inset);
 }
 .explorer-grid table {
   min-width: 0;
@@ -115,7 +115,7 @@ body.explorer-dragging.explorer-can-drop * {
   margin: 0;
 }
 .explorer-grid .row-actions button {
-  padding: calc(var(--cedar-space-1) / 2);
+  @include spacing.apply(padding, compact);
   min-height: var(--cedar-space-6);
 }
 .cdk-drag-preview {
@@ -123,14 +123,18 @@ body.explorer-dragging.explorer-can-drop * {
 }
 .selecto-selection {
   border: 1px solid var(--cedar-color-primary) !important;
-  background: color-mix(in srgb, var(--cedar-color-primary) 13%, transparent) !important;
+  background: color-mix(
+    in srgb,
+    var(--cedar-color-primary) 13%,
+    transparent
+  ) !important;
 }
 .explorer-grid .explorer-schema {
-  padding-block: calc(var(--cedar-space-1) + var(--cedar-space-1) / 2);
-  gap: calc(var(--cedar-space-1) / 2);
+  @include spacing.apply(padding-block, resource-card-inset);
+  @include spacing.apply(gap, compact);
 }
 .explorer-grid .explorer-schema td:first-child {
-  gap: calc(var(--cedar-space-1) / 2);
+  @include spacing.apply(gap, compact);
 }
 .explorer-grid .explorer-schema .explorer-name {
   line-height: var(--cedar-control-line-height-authoring);
@@ -149,14 +153,10 @@ body.explorer-dragging.explorer-can-drop * {
   @include patterns.resource-card-icon;
 }
 .explorer-grid tr:has(.row-actions > a) .explorer-heading {
-  padding-right: calc(
-    var(--cedar-space-4) + var(--cedar-space-6) + var(--cedar-space-1)
-  );
+  @include spacing.apply(padding-right, resource-action-reserve);
 }
 .explorer-grid tr:has(.row-actions > a ~ a) .explorer-heading {
-  padding-right: calc(
-    var(--cedar-space-4) + 2 * (var(--cedar-space-6) + var(--cedar-space-1))
-  );
+  @include spacing.apply(padding-right, resource-two-action-reserve);
 }
 .explorer-release {
   display: block;

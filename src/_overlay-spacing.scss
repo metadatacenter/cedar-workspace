@@ -1,3 +1,4 @@
+@use "@org.metadatacenter/cedar-design-tokens/spacing";
 // Workspace overlay spacing recipes. Keep these values here, not in individual
 // dialog/popover styles. Rendered contracts in browser/tests/surfaces.spec.mjs
 // cover each recipe at desktop and narrow widths, including accumulated margins.
@@ -28,8 +29,9 @@
   .dialog-heading > .dialog-close {
     // Align the icon with the content edge while retaining a full square hit target
     // in the dialog's padding. Text-button padding otherwise leaves it floating inward.
-    margin-inline-end: calc(
-      (var(--cedar-icon-size-default) - var(--cedar-control-height-default)) / 2
+    @include spacing.apply(
+      margin-inline-end,
+      dialog-close-alignment
     );
   }
   dialog .field-label {
