@@ -22,6 +22,8 @@ export interface Resource {
   isOpenImplicitly?: boolean;
   pathInfo?: Resource[];
   versions?: Resource[];
+  // False for a version the report names but the user may not read; its name is withheld.
+  activeUserCanRead?: boolean;
   numberOfInstances?: number;
   derivedFrom?: Resource;
   isBasedOn?: Resource;

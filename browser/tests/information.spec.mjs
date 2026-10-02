@@ -200,6 +200,44 @@ test("version details and instances have concise labels and identifier copy cont
   await expect(info.locator('.version dd')).toHaveText(['Template', '1.2.0', 'Published']);
   await expect(info.locator('.version a')).toHaveCount(0);
   await expect(info.locator('.version')).not.toContainText('Modified');
+  // A template with no older version lists none.
+  await expect(info.getByText('Previous versions', {exact:true})).toHaveCount(0);
+});
+
+test("derived-from and previous versions link to their artifacts beside copy controls", async ({page, api}) => {
+  const version = (id, number, extra = {}) => ({...resource, '@id': id, 'pav:version': number, 'bibo:status': 'bibo:published', ...extra});
+  await page.route('**/templates/template/report', route => route.fulfill({json: {
+    ...resource,
+    derivedFrom: {...resource, '@id': 'source', 'schema:name': 'Source template'},
+    // Newest first, and including the template itself.
+    versions: [
+      version('newer', '3.0.0'),
+      version('template', '2.0.0'),
+      version('older', '1.0.0', {'schema:name': 'Study metadata, first edition'}),
+      {'@id': 'hidden', resourceType: 'template', 'pav:version': '0.9.0', activeUserCanRead: false},
+    ],
+  }}));
+  await page.addInitScript(() => Object.defineProperty(navigator, 'clipboard', {value: {writeText: async value => { window.copiedId = value; }}}));
+  await dashboard(page);
+  await page.locator('tbody tr').first().press('Enter');
+  const info = page.getByRole('complementary', {name:'Resource information'});
+
+  const source = info.getByRole('link', {name: 'Source template', exact: true});
+  await expect(info.getByText('Derived from', {exact: true})).toBeVisible();
+  await expect(source).toHaveAttribute('href', /\/templates\/edit\/source\?/);
+  await info.getByRole('button', {name: 'Copy identifier for Source template', exact: true}).click();
+  await expect.poll(() => page.evaluate(() => window.copiedId)).toBe('source');
+
+  await info.getByRole('tab', {name: 'Version', exact: true}).click();
+  const previous = info.locator('.previous-versions');
+  await expect(previous.locator('.description-heading')).toHaveText('Previous versions');
+  await expect(previous.getByRole('link')).toHaveText(['Study metadata, first edition']);
+  await expect(previous.getByRole('link')).toHaveAttribute('href', /\/templates\/edit\/older\?/);
+  await expect(previous).toContainText('A version you cannot open');
+  await expect(previous.locator('small')).toHaveText(['Version 1.0.0', 'Version 0.9.0']);
+  await expect(previous).not.toContainText('3.0.0');
+  await previous.getByRole('button', {name: 'Copy identifier for Study metadata, first edition', exact: true}).click();
+  await expect.poll(() => page.evaluate(() => window.copiedId)).toBe('older');
 });
 
 test("first instance copy help escapes the scrolling list and dismisses on scroll", async ({ page, api }) => {

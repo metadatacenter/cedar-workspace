@@ -202,7 +202,11 @@
     "Status": "Status",
     "Unversioned": "Unversioned",
     "SelectItem": "Select an item to see its details",
-    "DescriptionSaved": "Description saved."
+    "DescriptionSaved": "Description saved.",
+    "PreviousVersions": "Previous versions",
+    "CopySourceIdentifier": "Copy source identifier",
+    "CopyVersionIdentifier": "Copy version identifier",
+    "UnreadableVersion": "A version you cannot open"
   },
   "Preview": {
     "Label": "Preview",

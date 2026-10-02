@@ -202,7 +202,11 @@
     "Status": "Állapot",
     "Unversioned": "Verzió nélkül",
     "SelectItem": "Válasszon ki egy elemet a részletek megtekintéséhez",
-    "DescriptionSaved": "Leírás mentve."
+    "DescriptionSaved": "Leírás mentve.",
+    "PreviousVersions": "Korábbi verziók",
+    "CopySourceIdentifier": "Forrásazonosító másolása",
+    "CopyVersionIdentifier": "Verzióazonosító másolása",
+    "UnreadableVersion": "Ön által nem megnyitható verzió"
   },
   "Preview": {
     "Label": "Előnézet",

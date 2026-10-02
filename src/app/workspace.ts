@@ -803,6 +803,17 @@ export class Workspace {
       queryParams: { offset: Math.max(0, this.offset() + delta * 50) },
     });
   }
+  /**
+   * The versions older than this one, newest first.
+   *
+   * The report lists the whole version history, newest first and including this
+   * version, so the previous ones are those after it.
+   */
+  previousVersions(r: Resource): Resource[] {
+    const versions = r.versions ?? [];
+    const here = versions.findIndex((v) => v["@id"] === r["@id"]);
+    return here < 0 ? [] : versions.slice(here + 1);
+  }
   link(r: Resource, populate = false) {
     return resourceLink(
       r,

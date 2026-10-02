@@ -615,7 +615,14 @@
       <div class="description-heading">
         {{'Dashboard.DerivedFrom' | translate}}
       </div>
-      <a [href]="link(derived)">{{title(derived)}}</a>
+      <div class="detail-with-copy">
+        <a [href]="link(derived)">{{title(derived)}}</a>
+        <cedar-copy-button
+          [label]="'Dashboard.CopyIdentifierFor' | translate: {name: title(derived)}"
+          [help]="'Dashboard.CopySourceIdentifier' | translate"
+          (copied)="copyId(derived['@id'])"
+        />
+      </div>
       <small
         >{{'Dashboard.Modified' | translate}}
         <time
@@ -722,7 +729,35 @@
           <dd>{{status(v)}}</dd>
         </dl>
       </article>
-      }
+      } @if(previousVersions(r); as previous){ @if(previous.length){
+      <section class="info-section previous-versions">
+        <div class="description-heading">
+          {{'Dashboard.PreviousVersions' | translate}}
+        </div>
+        <div class="instance-list">
+          @for(v of previous;track v['@id']){
+          <div>
+            <div class="detail-with-copy">
+              @if(v.activeUserCanRead !== false){
+              <a [href]="link(v)">{{title(v)}}</a>
+              } @else {
+              <span>{{'Dashboard.UnreadableVersion' | translate}}</span>
+              }
+              <cedar-copy-button
+                [label]="'Dashboard.CopyIdentifierFor' | translate: {name: v.activeUserCanRead !== false ? title(v) : (v['pav:version'] || v['@id'])}"
+                [help]="'Dashboard.CopyVersionIdentifier' | translate"
+                (copied)="copyId(v['@id'])"
+              />
+            </div>
+            <small
+              >{{'Common.Version' | translate}} {{v['pav:version'] ||
+              ('Dashboard.Unversioned' | translate)}}</small
+            >
+          </div>
+          }
+        </div>
+      </section>
+      } }
     </div>
     } }@else{
     <p class="empty">{{'Dashboard.SelectItem' | translate}}</p>
