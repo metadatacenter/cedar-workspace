@@ -178,7 +178,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   private folder = "";
   private template!: CeeJsonObject;
   private saved?: CeeJsonObject;
-  // An instance read from the server is unmodified; only a save made here is reported as saved.
+  // Until it is edited, an instance is unmodified, whether read from the server or new; only a save made here is reported as saved.
   private savedHere = false;
   private etag: string | null = null;
   private baseline = "";
@@ -291,9 +291,6 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     );
     this.notice.set("");
   };
-  get hasUnsavedContent() {
-    return this.dirty() || !this.saved;
-  }
   /** The translation key for the toolbar's save status. */
   get saveStatus() {
     if (this.loading()) return "Common.Loading";
@@ -303,9 +300,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       ? "Metadata.ModifiedStatus"
       : this.savedHere
         ? "Metadata.SavedStatus"
-        : this.saved
-          ? "Metadata.UnmodifiedStatus"
-          : "Metadata.NotSavedStatus";
+        : "Metadata.UnmodifiedStatus";
   }
   get missingRequired() {
     const q = this.quality();

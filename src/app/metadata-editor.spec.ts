@@ -129,21 +129,21 @@ describe("Modern metadata host", () => {
     expect(host.loading()).toBe(false);
     expect(host.dirty()).toBe(false);
   });
-  it("distinguishes a new untouched draft from persisted content", async () => {
+  it("shows a new untouched instance as unmodified until it is edited", async () => {
     await host.ngAfterViewInit();
-    expect(host.saveStatus).toBe("Metadata.NotSavedStatus");
-    expect(host.hasUnsavedContent).toBe(true);
+    expect(host.saveStatus).toBe("Metadata.UnmodifiedStatus");
+    expect(host.dirty()).toBe(false);
     host.name = "Changed";
     host.changed();
     expect(host.saveStatus).toBe("Metadata.ModifiedStatus");
     await host.save();
     expect(host.saveStatus).toBe("Metadata.SavedStatus");
-    expect(host.hasUnsavedContent).toBe(false);
+    expect(host.dirty()).toBe(false);
   });
   it("shows an existing artifact as unmodified until it is saved here", async () => {
     await edit();
     expect(host.saveStatus).toBe("Metadata.UnmodifiedStatus");
-    expect(host.hasUnsavedContent).toBe(false);
+    expect(host.dirty()).toBe(false);
     host.name = "Changed";
     host.changed();
     expect(host.saveStatus).toBe("Metadata.ModifiedStatus");

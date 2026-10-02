@@ -377,7 +377,6 @@
     "ReadOnly": "Csak olvasható",
     "ModifiedStatus": "Módosítva",
     "UnmodifiedStatus": "Változatlan",
-    "NotSavedStatus": "Nincs mentve",
     "SavedStatus": "Mentve",
     "Name": "Példány neve",
     "ReadOnlyAccess": "Ezekhez a metaadatokhoz csak olvasási hozzáférése van.",

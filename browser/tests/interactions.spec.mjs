@@ -155,8 +155,8 @@ test("unsaved metadata cannot be lost by leaving, and read-only mode cannot save
   });
   // Read from the server and not yet saved here.
   await expect(saveState).toHaveText('Unmodified');
-  // The dot marks unsaved content, so an unmodified instance shows none.
-  expect((await indicator()).content).toBe('none');
+  // Nothing is unsaved, so the dot is hollow.
+  expect(await indicator()).toEqual({content: '""', fill: 'rgba(0, 0, 0, 0)', border: 'rgb(234, 179, 8)', width: '2px'});
   await expect(page.locator('label[for="instance-name"]')).toHaveCSS('font-weight', '500');
   await input.fill("Working record");
   await expect(page.locator(".metadata-save-status")).toHaveClass(/is-dirty/);
@@ -174,7 +174,7 @@ test("unsaved metadata cannot be lost by leaving, and read-only mode cannot save
   await input.fill("Study record");
   await expect(page.locator(".metadata-toolbar")).toContainText("Unmodified");
   await expect(page.locator(".metadata-save-status")).not.toHaveClass(/is-dirty/);
-  expect((await indicator()).content).toBe('none');
+  expect((await indicator()).fill).toBe('rgba(0, 0, 0, 0)');
   api.readonly = true;
   await page.reload();
   await expect(input).toHaveAttribute("readonly", "");
@@ -541,21 +541,24 @@ test("metadata errors and nonblocking warnings share centered, expandable summar
   ).toBeEnabled();
 });
 
-test("new metadata stays not saved until persisted", async ({ page, api }) => {
+test("new metadata is unmodified until edited, and saved once persisted", async ({ page, api }) => {
   await page.route(/\/template-instances(?:\?|$)/, route => route.fulfill({
     json: { ...route.request().postDataJSON(), "@id": "instance" },
     headers: { ETag: '\"saved-revision\"' },
   }));
   await page.goto("/instances/create/template");
   const state = page.locator(".metadata-save-status");
-  await expect(state).toHaveText("Not saved");
-  await expect(state).toHaveClass(/is-dirty/);
+  await expect(state).toHaveText("Unmodified");
+  await expect(state).not.toHaveClass(/is-dirty/);
+  expect(await state.evaluate(el => getComputedStyle(el, "::before").backgroundColor)).toBe("rgba(0, 0, 0, 0)");
   const name = page.getByLabel("Instance name", { exact: true });
   const original = await name.inputValue();
   await name.fill("Changed draft");
   await expect(state).toHaveText("Modified");
+  await expect(state).toHaveClass(/is-dirty/);
   await name.fill(original);
-  await expect(state).toHaveText("Not saved");
+  await expect(state).toHaveText("Unmodified");
+  await name.fill("Changed draft");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(state).toHaveText("Saved");
   await expect(state).not.toHaveClass(/is-dirty/);

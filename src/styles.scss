@@ -719,12 +719,17 @@ td:first-child a {
   display: inline-flex;
   align-items: center;
   gap: var(--cedar-space-2);
-  // The dot marks unsaved content and nothing else: an unmodified or saved instance shows none.
-  &.has-save-state.is-dirty::before {
+  // A hollow dot while nothing is unsaved, whether the instance is unmodified or saved; filled once it is modified.
+  &.has-save-state::before {
     content: "";
+    box-sizing: border-box;
     flex: 0 0 var(--cedar-space-2);
     height: var(--cedar-space-2);
     border-radius: 50%;
+    border: 2px solid var(--cedar-status-unsaved-dot);
+    background: transparent;
+  }
+  &.has-save-state.is-dirty::before {
     background: var(--cedar-status-unsaved-dot);
   }
 }

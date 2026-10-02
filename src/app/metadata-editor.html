@@ -3,7 +3,7 @@
   <span
     class="metadata-save-status"
     [class.has-save-state]="writable() && !loading() && !saving()"
-    [class.is-dirty]="hasUnsavedContent && writable() && !loading() && !saving()"
+    [class.is-dirty]="dirty() && writable() && !loading() && !saving()"
     role="status"
     >{{saveStatus | translate}}</span
   >
