@@ -714,6 +714,12 @@ td:first-child a {
   background: var(--cedar-color-on-primary);
   border-bottom: 1px solid var(--cedar-border-rule);
 }
+// The editor names itself beside the way back, as the Template Designer does.
+.metadata-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .metadata-save-status {
   margin-left: auto;
   display: inline-flex;

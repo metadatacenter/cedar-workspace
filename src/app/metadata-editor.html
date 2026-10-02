@@ -1,5 +1,6 @@
 <header class="metadata-toolbar">
   <cedar-workspace-return [guarded]="true" [disabled]="saving()" (activate)="back()" />
+  <strong class="metadata-title">{{'Metadata.Title' | translate}}</strong>
   <span
     class="metadata-save-status"
     [class.has-save-state]="writable() && !loading() && !saving()"

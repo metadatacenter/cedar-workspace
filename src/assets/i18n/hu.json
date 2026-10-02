@@ -374,6 +374,7 @@
     "Failed": "A kijelentkezés sikertelen. Kérjük, próbálja újra."
   },
   "Metadata": {
+    "Title": "Metaadat-szerkesztő",
     "ReadOnly": "Csak olvasható",
     "ModifiedStatus": "Módosítva",
     "UnmodifiedStatus": "Változatlan",

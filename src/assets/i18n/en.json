@@ -374,6 +374,7 @@
     "Failed": "Unable to sign out. Please try again."
   },
   "Metadata": {
+    "Title": "Metadata Editor",
     "ReadOnly": "Read only",
     "ModifiedStatus": "Modified",
     "UnmodifiedStatus": "Unmodified",

@@ -113,6 +113,8 @@ for (const readonly of [false, true]) {
     await expect(page.locator(".metadata-toolbar")).toContainText(
       readonly ? "Read only" : "Unmodified",
     );
+    // The editor names itself beside the way back, as the Template Designer does.
+    await expect(page.locator(".metadata-title")).toHaveText("Metadata Editor");
     if (process.env.WORKSPACE_VISUAL)
       await expect(page.locator(".metadata-toolbar")).toHaveScreenshot(
         `metadata-toolbar-${readonly}.png`,
