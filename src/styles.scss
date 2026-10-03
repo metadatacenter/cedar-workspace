@@ -542,14 +542,7 @@ cedar-description-editor .no-description {
   background: var(--cedar-surface-selected);
 }
 .sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
+  @include patterns.visually-hidden;
 }
 dialog {
   width: min(620px, calc(100vw - 32px));

@@ -214,12 +214,7 @@ footer button {
   min-width: 88px;
 }
 .sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
+  @include patterns.visually-hidden;
 }
 @media (max-width: 600px) {
   dialog {

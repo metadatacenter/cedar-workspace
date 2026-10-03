@@ -55,7 +55,7 @@
       "rule": "geometry",
       "property": "height",
       "value": "1px",
-      "count": 2
+      "count": 1
     },
     "9a92494e68bf377e5fee": {
       "file": "src/app/groups.scss",
@@ -97,13 +97,6 @@
       "rule": "color",
       "property": "background",
       "value": "color-mix( in srgb, var(--cedar-color-primary) 13%, transparent ) !important",
-      "count": 1
-    },
-    "d4e583b9b678d0da1eba": {
-      "file": "src/styles.scss",
-      "rule": "geometry",
-      "property": "height",
-      "value": "1px",
       "count": 1
     },
     "e6c206f7d36065ee011a": {
