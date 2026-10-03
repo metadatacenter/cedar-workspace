@@ -739,16 +739,10 @@ td:first-child a {
   gap: var(--cedar-space-2);
   // A hollow dot while nothing is unsaved, whether the instance is unmodified or saved; filled once it is modified.
   &.has-save-state::before {
-    content: "";
-    box-sizing: border-box;
-    flex: 0 0 var(--cedar-space-2);
-    height: var(--cedar-space-2);
-    border-radius: 50%;
-    border: 2px solid var(--cedar-status-unsaved-dot);
-    background: transparent;
+    @include patterns.save-state-dot;
   }
   &.has-save-state.is-dirty::before {
-    background: var(--cedar-status-unsaved-dot);
+    @include patterns.save-state-dot-modified;
   }
 }
 .metadata-content {
