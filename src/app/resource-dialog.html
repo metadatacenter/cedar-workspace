@@ -82,11 +82,15 @@
       >
         <h3>{{'ResourceDialog.Destination' | translate}}</h3>
         <nav class="breadcrumbs">
-          @for(p of path();track p['@id'];let first=$first){@if(!first){<span
+          @for(p of path();track p['@id'];let first=$first;let last=$last){@if(!first){<span
             class="breadcrumb-separator"
             aria-hidden="true"
             >/</span
-          >}<button type="button" (click)="browse(p['@id'])">
+          >}<button
+            type="button"
+            [attr.aria-current]="last ? 'location' : null"
+            (click)="browse(p['@id'])"
+          >
             {{title(p)==='/'?('Common.All' | translate):title(p)}}</button
           >}
         </nav>

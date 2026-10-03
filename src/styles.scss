@@ -289,6 +289,11 @@ main {
 .breadcrumbs {
   @include patterns.breadcrumbs;
 }
+// The destination picker's crumbs are buttons, and the page's button colour would otherwise
+// outrank the muted colour its ancestors take from the trail.
+.breadcrumbs button:not([aria-current]) {
+  color: inherit;
+}
 .breadcrumb-separator {
   @include patterns.breadcrumb-separator;
 }

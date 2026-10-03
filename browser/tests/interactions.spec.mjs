@@ -440,6 +440,35 @@ test("folder separators have no surrounding spacing in navigation, details and d
   ).toHaveCount(0);
 });
 
+test("trails mute their ancestors and colour the current folder in navigation and destinations", async ({
+  page,
+  api,
+}) => {
+  api.pathInfo = [
+    { "@id": "root", "schema:name": "/" },
+    { "@id": "users", "schema:name": "Users" },
+    { "@id": "home", "schema:name": "My workspace" },
+  ];
+  await dashboard(page);
+  const trail = page.getByRole("navigation", { name: "Folder breadcrumb" });
+  await expect(trail.locator("a:not([aria-current])")).toHaveText(["All", "Users"]);
+  await tokenStyles(trail.locator("a:not([aria-current])"), { color: "--cedar-text-muted" });
+  await expect(trail.locator("[aria-current]")).toHaveText("My workspace");
+  await tokenStyles(trail.locator("[aria-current]"), { color: "--cedar-color-primary" });
+  await page
+    .getByRole("button", { name: "Actions for Study metadata" })
+    .click();
+  await page
+    .locator(".resource-menu")
+    .getByRole("button", { name: "Move", exact: true })
+    .click();
+  const destination = page.locator("dialog .breadcrumbs");
+  await expect(destination.locator("button:not([aria-current])")).toHaveText(["All", "Users"]);
+  await tokenStyles(destination.locator("button:not([aria-current])"), { color: "--cedar-text-muted" });
+  await expect(destination.locator("button[aria-current]")).toHaveText("My workspace");
+  await tokenStyles(destination.locator("button[aria-current]"), { color: "--cedar-color-primary" });
+});
+
 test("profile sections expose labelled copy actions for API examples", async ({
   page,
   api,
