@@ -582,6 +582,9 @@ test("metadata errors and nonblocking warnings share centered, expandable summar
   const link = errors.getByRole("button", { name: "Email: Enter a valid email." });
   await expect(link).toHaveCSS("padding", "0px");
   await expect(link).toHaveCSS("text-decoration-line", "underline");
+  // A line of text takes no hover fill, whatever the page's buttons do.
+  await link.hover();
+  await expect(link).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await page
     .locator(".metadata-content")
     .screenshot({ path: testInfo.outputPath("metadata-problem-links.png") });
