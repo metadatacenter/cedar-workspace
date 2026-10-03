@@ -132,7 +132,6 @@ textarea {
   border-radius: 0 var(--cedar-radius-pill)
     var(--cedar-radius-pill) 0;
   color: inherit;
-  font-size: var(--cedar-font-size-heading);
 }
 .header-menu {
   position: relative;
@@ -142,7 +141,6 @@ textarea {
 }
 .header-menu summary {
   padding: var(--cedar-space-2);
-  font-size: var(--cedar-font-size-heading);
   list-style: none;
 }
 .header-menu nav,
@@ -359,7 +357,6 @@ tr.selected:hover {
   display: inline-block;
   width: 28px;
   color: var(--cedar-color-primary);
-  font-size: var(--cedar-font-size-heading);
   vertical-align: middle;
 }
 .sort-column {
@@ -801,7 +798,7 @@ td:first-child a {
   background: var(--cedar-surface-raised);
 }
 .account-card h2 {
-  font-size: var(--cedar-font-size-element-heading);
+  font-size: var(--cedar-font-size-large);
 }
 .account-card h3 {
   font-size: var(--cedar-font-size);
@@ -994,8 +991,8 @@ cedar-resource-filters .popover cedar-icon {
   background: var(--cedar-status-error-surface);
 }
 
-// A section inside a dialog is headed at the element-heading step, as account sections are.
+// A section inside a dialog is headed at the large size, as account sections are.
 .folder-picker h3 {
-  font-size: var(--cedar-font-size-element-heading);
+  font-size: var(--cedar-font-size-large);
   line-height: var(--cedar-line-height-heading);
 }
