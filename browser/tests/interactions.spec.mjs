@@ -156,12 +156,12 @@ test("unsaved metadata cannot be lost by leaving, and read-only mode cannot save
   // Read from the server and not yet saved here.
   await expect(saveState).toHaveText('Unmodified');
   // Nothing is unsaved, so the dot is hollow.
-  expect(await indicator()).toEqual({content: '""', fill: 'rgba(0, 0, 0, 0)', border: 'rgb(234, 179, 8)', width: '2px'});
+  expect(await indicator()).toEqual({content: '""', fill: 'rgba(0, 0, 0, 0)', border: 'rgb(180, 83, 9)', width: '2px'});
   await expect(page.locator('label[for="instance-name"]')).toHaveCSS('font-weight', '500');
   await input.fill("Working record");
   await expect(page.locator(".metadata-save-status")).toHaveClass(/is-dirty/);
   expect(await page.locator(".metadata-save-status").evaluate((el) =>
-    getComputedStyle(el, "::before").backgroundColor)).toBe("rgb(234, 179, 8)");
+    getComputedStyle(el, "::before").backgroundColor)).toBe("rgb(180, 83, 9)");
   await expect(page.locator(".metadata-toolbar")).toContainText(
     "Modified",
   );

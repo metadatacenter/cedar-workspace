@@ -3,8 +3,9 @@
 @use "@org.metadatacenter/cedar-design-tokens/patterns";
 @use "@org.metadatacenter/cedar-design-tokens/motion";
 @use "@org.metadatacenter/cedar-design-tokens/controls";
-@use "@org.metadatacenter/cedar-design-tokens/fonts/roboto-400";
-@use "@org.metadatacenter/cedar-design-tokens/fonts/roboto-500";
+@use "@org.metadatacenter/cedar-design-tokens/spacing";
+@use "@org.metadatacenter/cedar-design-tokens/fonts/regular";
+@use "@org.metadatacenter/cedar-design-tokens/fonts/medium";
 @import "@org.metadatacenter/cedar-design-tokens/custom-properties.css";
 @import "@org.metadatacenter/cedar-design-tokens/icon-contract.css";
 @import "@org.metadatacenter/cedar-design-tokens/native-choices.css";
@@ -332,7 +333,7 @@ th button {
 }
 td {
   @include patterns.table-cell;
-  height: var(--cedar-table-row-height);
+  height: spacing.$table-row-height;
   vertical-align: middle;
 }
 td:first-child {

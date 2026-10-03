@@ -1,4 +1,5 @@
 @use "@org.metadatacenter/cedar-design-tokens/patterns";
+@use "@org.metadatacenter/cedar-design-tokens/spacing";
 @use "../overlay-spacing";
 @include overlay-spacing.permissions-dialog;
 :host {
@@ -16,7 +17,7 @@ dialog {
   border-radius: var(--cedar-radius);
   color: var(--cedar-text-primary);
   background: var(--cedar-surface-raised);
-  box-shadow: var(--cedar-shadow-dialog);
+  box-shadow: var(--cedar-shadow-overlay);
 }
 dialog::backdrop {
   background: var(--cedar-dialog-backdrop);
@@ -130,7 +131,7 @@ select.readonly-role:disabled {
 .access-row {
   display: flex;
   align-items: center;
-  min-height: var(--cedar-table-row-height);
+  min-height: spacing.$table-row-height;
   padding: var(--cedar-space-1)
     var(--cedar-space-3);
   gap: var(--cedar-space-3);

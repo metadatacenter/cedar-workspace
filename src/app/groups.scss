@@ -1,5 +1,6 @@
 @use "@org.metadatacenter/cedar-design-tokens/patterns";
 @use "@org.metadatacenter/cedar-design-tokens/controls";
+@use "@org.metadatacenter/cedar-design-tokens/spacing";
 #groups-page {
   min-height: 100vh;
   background: var(--cedar-surface-raised);
@@ -237,7 +238,7 @@
   }
 
   .groups-member-row {
-    min-height: var(--cedar-table-row-height);
+    min-height: spacing.$table-row-height;
     padding: var(--cedar-space-1)
       var(--cedar-space-3);
   }

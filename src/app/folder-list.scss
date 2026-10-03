@@ -1,9 +1,10 @@
+@use "@org.metadatacenter/cedar-design-tokens/spacing";
 :host {
   display: block;
   min-width: 0;
 }
 .folder-scroll {
-  max-height: calc(var(--cedar-table-row-height) * 7);
+  max-height: calc(#{spacing.$table-row-height} * 7);
   overflow: auto;
 }
 table {
