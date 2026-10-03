@@ -955,24 +955,9 @@ th,
 @include meta.load-css("./app/explorer");
 
 .workspace-tooltip {
-  @include patterns.menu-surface;
-  @include overlay-spacing.feedback;
-  // Small help labels need less elevation than an interactive dropdown menu.
-  box-shadow: var(--cedar-shadow-overlay);
+  @include patterns.tooltip-surface;
   position: fixed;
-  z-index: var(--cedar-layer-tooltip);
   visibility: hidden;
-  width: max-content;
-  max-width: min(360px, calc(100vw - 16px));
-  max-height: calc(100dvh - 16px);
-  overflow: auto;
-  overflow-wrap: anywhere;
-  white-space: normal;
-  font-family: var(--cedar-font-family);
-  font-size: var(--cedar-font-size);
-  font-weight: var(--cedar-font-weight-regular);
-  line-height: var(--cedar-control-line-height-default);
-  color: var(--cedar-text-primary);
 }
 
 // Menu glyphs and labels share the active theme; filter icons follow it too.
