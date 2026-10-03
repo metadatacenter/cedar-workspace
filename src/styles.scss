@@ -717,8 +717,7 @@ td:first-child a {
 // The editor names itself beside the way back, as the Template Designer does, at the size the
 // form below gives its template's title.
 .metadata-title {
-  font-size: var(--cedar-font-size-artifact-title);
-  line-height: var(--cedar-line-height-heading);
+  @include patterns.artifact-title;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
