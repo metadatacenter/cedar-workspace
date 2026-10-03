@@ -406,9 +406,8 @@ tr.selected:hover {
   overflow-wrap: anywhere;
 }
 .information h1 {
-  @include patterns.artifact-title;
-  // The panel names the selected item beside a page that already has a title, so a section heading's size.
-  font-size: var(--cedar-font-size-element-heading);
+  // The panel names the selected item beside a page that already has a title, so it takes a section heading.
+  @include patterns.section-heading;
   display: flex;
   align-items: flex-start;
   gap: var(--cedar-space-2);

@@ -46,13 +46,11 @@
     border-bottom: 1px solid var(--cedar-border-rule);
     background: var(--cedar-surface-raised);
 
-    // Each tab's heading, and Members within it, take the size the Permissions dialog gives its sections.
+    // Each tab's heading, and Members within it, are section headings, as the Permissions dialog's are.
     h2,
     h3 {
-      line-height: var(--cedar-line-height-heading);
+      @include patterns.section-heading;
       margin-top: 0;
-      font-size: var(--cedar-font-size-element-heading);
-      font-weight: var(--cedar-font-weight-medium);
     }
 
     p {
