@@ -87,7 +87,7 @@
   }
   .folder-picker .breadcrumbs button {
     // Inline navigation targets do not need form-button padding.
-    min-height: var(--cedar-space-6);
+    min-height: spacing.$inline-target-height;
     padding: 0;
   }
 }

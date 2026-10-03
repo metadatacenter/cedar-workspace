@@ -198,11 +198,7 @@ select.readonly-role:disabled {
   flex: 0 0 28px;
 }
 .action-cell button {
-  display: flex;
-  justify-content: center;
-  width: 28px;
-  min-height: var(--cedar-control-height-authoring);
-  padding: var(--cedar-space-1);
+  @include patterns.icon-button;
   color: var(--cedar-text-primary);
 }
 footer {

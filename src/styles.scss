@@ -94,9 +94,10 @@ textarea {
   text-decoration: none;
 }
 .brand img {
-  width: var(--cedar-control-height-default);
-  height: var(--cedar-control-height-default);
+  width: spacing.$brand-mark-size;
+  height: spacing.$brand-mark-size;
   object-fit: contain;
+  // The circle is part of the brand mark, drawn in the title colour.
   background: var(--cedar-text-title);
   border-radius: 50%;
 }
@@ -209,13 +210,7 @@ textarea {
   border-right: 1px solid var(--cedar-border-rule);
 }
 .panel-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-  padding: 0;
-  width: var(--cedar-control-height-authoring);
-  min-height: var(--cedar-control-height-authoring);
+  @include patterns.icon-button(default);
   color: var(--cedar-text-muted);
 }
 .panel-toggle:hover,
@@ -648,7 +643,7 @@ label {
   }
   .information {
     width: 100%;
-    padding-top: var(--cedar-control-height-default);
+    @include spacing.apply(padding-top, control-reserve);
   }
   .paging {
     gap: var(--cedar-space-1);
