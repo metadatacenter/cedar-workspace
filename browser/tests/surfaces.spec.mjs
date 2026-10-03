@@ -110,6 +110,18 @@ for (const route of ["groups", "profile", "settings", "privacy"])
     await expect(page.getByRole("heading", { name: route[0].toUpperCase() + route.slice(1), exact: true })).toBeVisible();
     await expect(page.getByText("Loading…", { exact: true })).toHaveCount(0);
   };
+// A successful sign-out leaves the page, so the sign-out fails and the page shows its error.
+scenarios["logout-page"] = async (page) => {
+  await page.route("**/scripts/handlers/KeycloakUserHandler.js", (route) =>
+    route.fulfill({
+      contentType: "text/javascript",
+      body: "KeycloakUserHandler.prototype.doLogout = () => Promise.reject(new Error('Sign-out unavailable'));",
+    }),
+  );
+  await page.goto("/logout");
+  await expect(page.getByRole("heading", { name: "Logout", exact: true })).toBeVisible();
+  await expect(page.getByRole("alert")).toHaveText("Sign-out unavailable");
+};
 for (const [key, label] of Object.entries({
   rename: "Rename",
   copy: "Copy",

@@ -5,15 +5,17 @@ import { I18n } from "./i18n";
 @Component({
   selector: "cedar-logout-page",
   imports: [TranslatePipe],
-  template: `<main class="account-content">
-    <h1>{{ "Logout.Title" | translate }}</h1>
-    @if (error()) {
-      <p role="alert">{{ error() }}</p>
-      <a href="/logout">{{ "Logout.Retry" | translate }}</a>
-    } @else {
-      <p role="status">{{ "Logout.SigningOut" | translate }}</p>
-    }
-  </main>`,
+  template: `<header class="account-header">
+      <h1>{{ "Logout.Title" | translate }}</h1>
+    </header>
+    <main class="account-content">
+      @if (error()) {
+        <p role="alert">{{ error() }}</p>
+        <a href="/logout">{{ "Logout.Retry" | translate }}</a>
+      } @else {
+        <p role="status">{{ "Logout.SigningOut" | translate }}</p>
+      }
+    </main>`,
 })
 export class Logout implements OnInit {
   readonly api = inject(Backend);

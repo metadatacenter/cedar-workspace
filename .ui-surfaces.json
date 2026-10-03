@@ -137,7 +137,18 @@
     {
       "id": "workspace.logout",
       "name": "Logout",
-      "section": "Management"
+      "section": "Management",
+      "contract": "page",
+      "scenario": "logout-page",
+      "selector": "cedar-workspace",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/logout.ts",
+          "anchor": "class=\"account-header\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.workspace",
