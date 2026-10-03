@@ -1,11 +1,25 @@
 {
   "schema": 1,
   "findings": {
+    "0583dd5f7f2047bd75a7": {
+      "file": "src/app/explorer.scss",
+      "rule": "geometry",
+      "property": "outline",
+      "value": "1px dashed var(--cedar-color-primary)",
+      "count": 1
+    },
     "1d3ee05313a518a64d25": {
       "file": "src/app/permissions-dialog.scss",
       "rule": "spacing",
       "property": "margin",
       "value": "40px auto",
+      "count": 1
+    },
+    "1fb117bf53c65b5de2b6": {
+      "file": "src/app/explorer.scss",
+      "rule": "geometry",
+      "property": "outline-offset",
+      "value": "-1px",
       "count": 1
     },
     "2b84a49f998e00abd6d5": {
@@ -43,6 +57,13 @@
       "value": "1px",
       "count": 2
     },
+    "9778d97379919a5f617c": {
+      "file": "src/app/explorer.scss",
+      "rule": "geometry",
+      "property": "outline",
+      "value": "2px solid var(--cedar-status-success-text)",
+      "count": 1
+    },
     "9a92494e68bf377e5fee": {
       "file": "src/app/groups.scss",
       "rule": "geometry",
@@ -71,11 +92,39 @@
       "value": "var(--cedar-space-2) 55px var(--cedar-space-2) var(--cedar-space-3)",
       "count": 1
     },
+    "b94c47d48e33d699ee52": {
+      "file": "src/app/explorer.scss",
+      "rule": "geometry",
+      "property": "outline-offset",
+      "value": "-2px",
+      "count": 2
+    },
+    "c34608b98209bb7b66d3": {
+      "file": "src/app/explorer.scss",
+      "rule": "color",
+      "property": "background",
+      "value": "color-mix( in srgb, var(--cedar-color-primary) 13%, transparent ) !important",
+      "count": 1
+    },
     "d4e583b9b678d0da1eba": {
       "file": "src/styles.scss",
       "rule": "geometry",
       "property": "height",
       "value": "1px",
+      "count": 1
+    },
+    "d89b25766e9f80c5fe65": {
+      "file": "src/app/explorer.scss",
+      "rule": "geometry",
+      "property": "outline",
+      "value": "2px solid var(--cedar-color-primary) !important",
+      "count": 1
+    },
+    "e225525684444de8937f": {
+      "file": "src/app/explorer.scss",
+      "rule": "geometry",
+      "property": "outline",
+      "value": "2px solid var(--cedar-color-primary)",
       "count": 1
     },
     "e6c206f7d36065ee011a": {
@@ -101,5 +150,5 @@
     }
   },
   "exceptions": {},
-  "policy": 2
+  "policy": 3
 }
