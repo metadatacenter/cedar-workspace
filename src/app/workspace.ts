@@ -185,7 +185,6 @@ export class Workspace {
   readonly title = (r: Resource) => title(r, this.i18n.t("Common.Untitled"));
   readonly can = can;
   readonly inOpenView = inOpenView;
-  readonly openViewEnabled = window.makeOpenEnabled !== false;
   readonly actions = (r: Resource) => actions(r, this.i18n);
   attribution(userId?: string, name?: string): string {
     if (this.isCurrentUser(userId))

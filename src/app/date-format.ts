@@ -17,6 +17,3 @@ export const dateFormats: Record<string, string> = {
   "MMM D, YYYY": "MMM d, yyyy",
   "ddd, D MMM YYYY": "EEE, d MMM yyyy",
 };
-export function dateFormat(preference?: string) {
-  return dateFormats[preference || ""] || dateFormats["MM/DD/YYYY"];
-}
