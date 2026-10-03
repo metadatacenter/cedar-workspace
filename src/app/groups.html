@@ -1,4 +1,4 @@
-<header class="topbar groups-topbar">
+<header class="topbar">
   <a
     href="/dashboard"
     class="brand"
@@ -209,7 +209,7 @@
     } @else {
     <section
       id="manage-groups-panel"
-      class="groups-card groups-manage-card"
+      class="groups-card"
       role="tabpanel"
       aria-labelledby="manage-groups-tab"
     >
@@ -246,7 +246,7 @@
     </div>
     }
     <form class="groups-details-form" (ngSubmit)="!deleting && save()">
-      <div class="groups-field">
+      <div>
         <label for="group-name">{{'Common.Name' | translate}}</label>
         <input
           spellcheck="false"
@@ -260,7 +260,7 @@
           required
         />
       </div>
-      <div class="groups-field">
+      <div>
         <label for="group-description"
           >{{'Common.Description' | translate}}</label
         >

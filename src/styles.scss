@@ -313,8 +313,6 @@ strong,
 b,
 .destinations .active,
 .account-card dt,
-.account-group-list [aria-current="true"],
-.account-nav [aria-current="page"],
 th {
   font-weight: var(--cedar-font-weight-medium, 500);
 }
@@ -420,11 +418,6 @@ tr.selected:hover {
 .information small,
 .information .identifiers {
   font-size: var(--cedar-font-size);
-}
-.badge {
-  font-size: var(--cedar-font-size);
-  color: var(--cedar-text-muted);
-  margin-right: var(--cedar-space-3);
 }
 .tabs {
   @include patterns.tabs;
@@ -798,8 +791,7 @@ td:first-child a {
 }
 
 .account-header,
-.workspace-return-bar,
-.account-nav {
+.workspace-return-bar {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -863,23 +855,6 @@ td:first-child a {
   gap: var(--cedar-space-2);
   margin-top: var(--cedar-space-3);
 }
-.account-groups {
-  display: grid;
-  grid-template-columns: minmax(16rem, 1fr) minmax(0, 2fr);
-  gap: var(--cedar-space-4);
-  align-items: start;
-}
-.account-group-list {
-  list-style: none;
-  padding: 0;
-}
-.account-group-list li {
-  padding: var(--cedar-space-3) 0;
-  border-bottom: 1px solid var(--cedar-border-rule);
-}
-.account-group-list small {
-  display: block;
-}
 .account-card form label {
   display: block;
   margin-top: var(--cedar-space-3);
@@ -887,19 +862,6 @@ td:first-child a {
 .account-card textarea {
   width: 100%;
   min-height: 5rem;
-}
-@media (max-width: 700px) {
-  .account-groups {
-    grid-template-columns: 1fr;
-  }
-}
-
-.account-groups #group-name {
-  width: 100%;
-}
-
-.account-nav [aria-current="page"] {
-  text-decoration: underline;
 }
 .account-policy {
   line-height: var(--cedar-control-line-height-default);
