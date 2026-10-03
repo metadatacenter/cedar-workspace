@@ -26,9 +26,13 @@
     }
   }
 
-  .notice,
+  // A notice's text lines up with the cards' content edge.
+  .notice {
+    @include patterns.notice(info, $inset: var(--cedar-space-3));
+  }
+
   .alert {
-    padding: var(--cedar-space-2) var(--cedar-space-3);
+    @include patterns.notice(error, $inset: var(--cedar-space-3));
   }
 
   .groups-tabs {

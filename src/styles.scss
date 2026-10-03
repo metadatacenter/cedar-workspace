@@ -531,19 +531,15 @@ cedar-description-editor .no-description {
 }
 .alert,
 .notice {
-  padding: var(--cedar-space-3) var(--cedar-space-6);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 .alert {
-  --cedar-icon-color: var(--cedar-status-error-text);
-  color: var(--cedar-status-error-text);
-  background: var(--cedar-status-error-surface);
+  @include patterns.notice(error, $inset: var(--cedar-space-6));
 }
 .notice {
-  color: var(--cedar-color-primary-strong);
-  background: var(--cedar-surface-selected);
+  @include patterns.notice(info, $inset: var(--cedar-space-6));
 }
 .sr-only {
   @include patterns.visually-hidden;
@@ -745,6 +741,10 @@ td:first-child a {
   max-width: 90rem;
   margin: auto;
   padding: var(--cedar-space-3) var(--cedar-space-6);
+  // A notice keeps the form below it at the distance the form keeps between its fields.
+  > .alert {
+    margin-bottom: var(--cedar-space-3);
+  }
   > label {
     @include patterns.field-label($size: body);
   }
@@ -789,6 +789,10 @@ td:first-child a {
 .account-content {
   max-width: 70rem;
   margin: auto;
+}
+// A notice keeps the cards below it at the distance they keep from each other.
+.account-content > .alert {
+  margin-bottom: var(--cedar-space-4);
 }
 .account-card {
   padding: var(--cedar-space-6);
