@@ -16,7 +16,7 @@ body {
   font-family: var(--cedar-font-family);
   font-size: var(--cedar-font-size);
   color: var(--cedar-text-primary);
-  background: var(--cedar-color-on-primary);
+  background: var(--cedar-surface-raised);
 }
 
 button,
@@ -63,7 +63,7 @@ textarea {
   min-height: var(--cedar-control-height-default);
   padding: var(--cedar-space-2);
   color: var(--cedar-text-primary);
-  background: var(--cedar-color-on-primary);
+  background: var(--cedar-surface-raised);
 }
 textarea {
   resize: none;
@@ -74,7 +74,7 @@ textarea {
   align-items: center;
   gap: var(--cedar-space-6);
   padding: var(--cedar-space-3) var(--cedar-space-6);
-  background: var(--cedar-color-on-primary);
+  background: var(--cedar-surface-raised);
   color: var(--cedar-text-primary);
   border-bottom: 1px solid var(--cedar-border-rule);
 }
@@ -300,7 +300,7 @@ main {
 table {
   width: 100%;
   border-collapse: collapse;
-  background: var(--cedar-color-on-primary);
+  background: var(--cedar-surface-raised);
 }
 /* Shared regular/medium faces cover headings and emphasis without synthetic bold. */
 h1,
@@ -395,7 +395,7 @@ tr.selected:hover {
 }
 .information {
   position: relative;
-  background: var(--cedar-color-on-primary);
+  background: var(--cedar-surface-raised);
   border-left: 1px solid var(--cedar-border-rule);
   padding: var(--cedar-space-2) var(--cedar-space-4) var(--cedar-space-4);
   overflow-wrap: anywhere;
@@ -706,7 +706,7 @@ td:first-child a {
   align-items: center;
   gap: var(--cedar-space-4);
   padding: var(--cedar-space-4) var(--cedar-space-6);
-  background: var(--cedar-color-on-primary);
+  background: var(--cedar-surface-raised);
   border-bottom: 1px solid var(--cedar-border-rule);
 }
 // The editor names itself beside the way back, as the Template Designer does, at the size the
@@ -784,7 +784,7 @@ td:first-child a {
   flex-wrap: wrap;
   gap: var(--cedar-space-4);
   padding: var(--cedar-space-4) var(--cedar-space-6);
-  background: var(--cedar-color-on-primary);
+  background: var(--cedar-surface-raised);
   border-bottom: 1px solid var(--cedar-border-rule);
 }
 .account-header h1 {
@@ -799,7 +799,7 @@ td:first-child a {
   padding: var(--cedar-space-6);
   margin-bottom: var(--cedar-space-4);
   border-bottom: 1px solid var(--cedar-border-rule);
-  background: var(--cedar-color-on-primary);
+  background: var(--cedar-surface-raised);
 }
 .account-card h2 {
   font-size: var(--cedar-font-size-element-heading);

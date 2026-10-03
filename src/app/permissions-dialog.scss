@@ -15,7 +15,7 @@ dialog {
   border: 0;
   border-radius: var(--cedar-radius);
   color: var(--cedar-text-primary);
-  background: var(--cedar-color-on-primary);
+  background: var(--cedar-surface-raised);
   box-shadow: var(--cedar-shadow-dialog);
 }
 dialog::backdrop {
