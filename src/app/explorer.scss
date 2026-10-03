@@ -33,11 +33,11 @@
   user-select: none;
 }
 .explorer-item:focus-visible {
-  outline: 2px solid var(--cedar-color-primary);
+  outline: var(--cedar-focus-ring-width) solid var(--cedar-color-primary);
   outline-offset: -2px;
 }
 .explorer-drop-target {
-  outline: 2px solid var(--cedar-color-primary) !important;
+  outline: var(--cedar-focus-ring-width) solid var(--cedar-color-primary) !important;
   background: var(--cedar-surface-selected) !important;
 }
 .explorer-drop-eligible:not(.explorer-drop-target) {
@@ -51,7 +51,7 @@
   color: var(--cedar-color-primary);
 }
 .explorer-move-complete {
-  outline: 2px solid var(--cedar-status-success-text);
+  outline: var(--cedar-focus-ring-width) solid var(--cedar-status-success-text);
   outline-offset: -2px;
   background: var(--cedar-status-success-surface) !important;
 }

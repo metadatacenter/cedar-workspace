@@ -57,13 +57,6 @@
       "value": "1px",
       "count": 2
     },
-    "9778d97379919a5f617c": {
-      "file": "src/app/explorer.scss",
-      "rule": "geometry",
-      "property": "outline",
-      "value": "2px solid var(--cedar-status-success-text)",
-      "count": 1
-    },
     "9a92494e68bf377e5fee": {
       "file": "src/app/groups.scss",
       "rule": "geometry",
@@ -111,20 +104,6 @@
       "rule": "geometry",
       "property": "height",
       "value": "1px",
-      "count": 1
-    },
-    "d89b25766e9f80c5fe65": {
-      "file": "src/app/explorer.scss",
-      "rule": "geometry",
-      "property": "outline",
-      "value": "2px solid var(--cedar-color-primary) !important",
-      "count": 1
-    },
-    "e225525684444de8937f": {
-      "file": "src/app/explorer.scss",
-      "rule": "geometry",
-      "property": "outline",
-      "value": "2px solid var(--cedar-color-primary)",
       "count": 1
     },
     "e6c206f7d36065ee011a": {
