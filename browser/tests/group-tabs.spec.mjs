@@ -218,3 +218,22 @@ test("uncertain group creation requires directory recovery and preserves the ent
   await expect(name).toHaveValue("New team");
   expect(writes).toBe(1);
 });
+
+test("an externally deleted created group does not trap the Create tab", async ({ page, api }) => {
+  await page.goto("/groups");
+  const createTab = page.getByRole("tab", { name: "Create group", exact: true });
+  await createTab.click();
+  await page.getByLabel("Group name", { exact: true }).fill("Research team");
+  await page.getByRole("button", { name: "Create group", exact: true }).click();
+  await expect(page.getByLabel("Name", { exact: true })).toHaveValue("Research team");
+  await page.getByRole("tab", { name: "Manage groups", exact: true }).click();
+  const creation = api.requests.find(r => r.method === "POST" && r.path.endsWith("/groups"));
+  expect(creation).toBeTruthy();
+  await page.route("**/api/group/groups/*", route => route.request().method() === "GET" ? route.fulfill({ status: 404, json: { message: "Group deleted" } }) : route.fallback());
+  await createTab.click();
+  await expect(createTab).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("alert")).toContainText("Group deleted");
+  await expect(page.getByLabel("Group name", { exact: true })).toBeEnabled();
+  await page.getByLabel("Group name", { exact: true }).fill("Replacement group");
+  await expect(page.getByRole("button", { name: "Create group", exact: true })).toBeEnabled();
+});

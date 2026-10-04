@@ -180,6 +180,11 @@ export class Groups implements OnInit, OnDestroy {
       )
         throw new Error(this.i18n.t("Groups.InvalidResponse"));
       this.groups.set(groups.data.groups);
+      if (
+        this.createdGroup &&
+        !groups.data.groups.some((g) => g["@id"] === this.createdGroup!["@id"])
+      )
+        this.createdGroup = null;
       this.users.set(
         (users.data.users || []).sort((a, b) =>
           this.userName(a).localeCompare(this.userName(b)),
@@ -285,7 +290,20 @@ export class Groups implements OnInit, OnDestroy {
     } catch (e) {
       if (operation.current()) {
         if (!parent) operation.fail(e);
-        this.fail(e, g);
+        if (e instanceof HttpError && e.status === 404) {
+          this.groups.update((groups) =>
+            groups.filter((value) => value["@id"] !== g["@id"]),
+          );
+          if (this.createdGroup?.["@id"] === g["@id"]) {
+            this.createdGroup = null;
+            if (returningToCreate) this.activeTab = "create";
+          }
+          if (this.selected()?.["@id"] === g["@id"]) {
+            this.selected.set(null);
+            this.members.set(null);
+          }
+          this.fail(e);
+        } else this.fail(e, g);
       }
     } finally {
       if (operation.current()) {

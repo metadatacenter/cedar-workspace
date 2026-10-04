@@ -714,4 +714,37 @@ describe("Groups", () => {
     expect(host.canAdmin).toBe(false);
     expect(host.error()).toBe("");
   });
+  for (const recovery of ["tab", "directory"]) {
+    it(`an externally deleted created group cannot trap the Create tab after ${recovery} recovery`, async () => {
+      host.createdGroup = { ...g, "@id": "deleted", "schema:name": "Deleted" };
+      if (recovery === "tab") {
+        request.mockRejectedValueOnce(new HttpError(404, "Group deleted"));
+        await host.selectTab("create");
+        expect(host.activeTab).toBe("create");
+        expect(host.recoveryGroup()).toBeNull();
+        expect(host.selected()).toBe(g);
+      } else {
+        request
+          .mockResolvedValueOnce({ data: { groups: [g] } })
+          .mockResolvedValueOnce({ data: { users: [me.user] } });
+        await host.ngOnInit();
+        await host.selectTab("create");
+      }
+      expect(host.createdGroup).toBeNull();
+      const created = {
+        ...g,
+        "@id": "replacement",
+        "schema:name": "Replacement",
+      };
+      host.newName = "Replacement";
+      request
+        .mockResolvedValueOnce({ data: created })
+        .mockResolvedValueOnce({ data: created, etag: '"g"' })
+        .mockResolvedValueOnce({ data: { users: [me] }, etag: '"m"' });
+      await host.create();
+      expect(host.createdGroup).toEqual(created);
+      expect(host.selected()).toEqual(created);
+      expect(host.error()).toBe("");
+    });
+  }
 });
