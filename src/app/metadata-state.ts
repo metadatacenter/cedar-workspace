@@ -6,9 +6,14 @@ import type {
 } from "cedar-embeddable-editor";
 import { OperationCoordinator } from "./operation-coordinator";
 
-export type MetadataProblem = CeeValidationProblem & {
+/** Accept older component reports at the boundary, then classify every emitted problem. */
+export type MetadataProblem = Omit<CeeValidationProblem, "severity"> & {
   severity?: "error" | "warning";
   origin?: "server";
+};
+type ClassifiedProblem = MetadataProblem & { severity: "error" | "warning" };
+type MetadataReport = Omit<CeeDataQualityReport, "problems"> & {
+  problems: ClassifiedProblem[];
 };
 export const problemSeverity = (problem: MetadataProblem) =>
   problem.severity === undefined
@@ -73,13 +78,13 @@ export function metadataLocation(
 
 /** One owner for loading, writes and the component/server reports about the current draft. */
 export class MetadataState extends OperationCoordinator<"load" | "save"> {
-  readonly quality = signal<CeeDataQualityReport | null>(null);
+  readonly quality = signal<MetadataReport | null>(null);
   readonly reloadRequired = signal(false);
   readonly loadFailed = signal(false);
   readonly uncertainCreation = signal(false);
   private currentKey = "";
-  private local: CeeDataQualityReport | null = null;
-  private server: { key: string; problems: MetadataProblem[] } | undefined;
+  private local: MetadataReport | null = null;
+  private server: { key: string; problems: ClassifiedProblem[] } | undefined;
 
   observe(value: unknown, key: string) {
     this.currentKey = key;
@@ -101,11 +106,17 @@ export class MetadataState extends OperationCoordinator<"load" | "save"> {
                     (index) => Number.isSafeInteger(index) && index >= 0,
                   ))),
           )));
-    this.local = valid
-      ? (structuredClone({
-          ...value,
-          problems: value["problems"] ?? [],
-        }) as unknown as CeeDataQualityReport)
+    const incoming = valid
+      ? (structuredClone(value) as unknown as CeeDataQualityReport)
+      : null;
+    this.local = incoming
+      ? {
+          ...incoming,
+          problems: (incoming.problems ?? []).map((problem) => ({
+            ...problem,
+            severity: problemSeverity(problem),
+          })),
+        }
       : {
           isValid: false,
           requiredFieldValueCount: 0,
@@ -113,6 +124,7 @@ export class MetadataState extends OperationCoordinator<"load" | "save"> {
           problems: [
             {
               code: "reportUnavailable",
+              severity: "error",
               path: [],
               occurrences: [],
               field: "",
@@ -125,7 +137,7 @@ export class MetadataState extends OperationCoordinator<"load" | "save"> {
   }
   reject(value: unknown, key: string, template: CeeJsonObject) {
     if (key !== this.currentKey || !object(value)) return;
-    const problems: MetadataProblem[] = [];
+    const problems: ClassifiedProblem[] = [];
     for (const severity of ["error", "warning"] as const) {
       const entries = value[severity === "error" ? "errors" : "warnings"];
       if (!Array.isArray(entries)) continue;

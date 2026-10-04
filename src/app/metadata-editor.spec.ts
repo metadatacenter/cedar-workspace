@@ -344,7 +344,10 @@ describe("Modern metadata host", () => {
     const reveal = vi.fn().mockResolvedValue(true);
     Object.defineProperty(cee, "reveal", { value: reveal });
     host.reveal(host.validationErrors[0]);
-    expect(reveal).toHaveBeenCalledWith(cee.dataQualityReport.problems[1]);
+    expect(reveal).toHaveBeenCalledWith({
+      ...cee.dataQualityReport.problems[1],
+      severity: "error",
+    });
     api.request.mockClear();
     await host.save();
     expect(api.request).not.toHaveBeenCalled();

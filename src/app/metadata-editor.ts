@@ -153,7 +153,7 @@ function declaredMinItems(
 // it presents as warnings in the reader's language. Any other problem keeps CEE's text.
 export function metadataWarningMessage(
   template: CeeJsonObject,
-  problem: CeeValidationProblem,
+  problem: MetadataProblem,
   t: (key: string, params?: Record<string, unknown>) => string,
 ): string {
   switch (problem.code) {

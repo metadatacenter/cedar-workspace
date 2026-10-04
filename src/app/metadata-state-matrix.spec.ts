@@ -104,20 +104,26 @@ describe("metadata validation ownership matrix", () => {
   for (const code of ["required", "minItems", "iri", "unknownFutureCode"])
     for (const severity of [undefined, "warning", "error"] as const) {
       it(`honors explicit severity for ${code}/${severity}`, () => {
-        expect(
-          problemSeverity({
-            code,
-            severity,
-            path: [],
-            occurrences: [],
-            field: "",
-            inputType: null,
-            message: "",
-          }),
-        ).toBe(
+        const problem = {
+          code,
+          severity,
+          path: [],
+          occurrences: [],
+          field: "",
+          inputType: null,
+          message: "",
+        };
+        const expected =
           severity ??
-            (["required", "minItems"].includes(code) ? "warning" : "error"),
-        );
+          (["required", "minItems"].includes(code) ? "warning" : "error");
+        expect(problemSeverity(problem)).toBe(expected);
+        const state = new MetadataState();
+        state.observe({ ...good, problems: [problem] }, "current");
+        expect(state.quality()!.problems[0]).toMatchObject({
+          severity: expected,
+        });
+        expect(state.quality()!.isValid).toBe(expected === "warning");
+        expect(problem.severity).toBe(severity);
       });
     }
   for (const report of [
