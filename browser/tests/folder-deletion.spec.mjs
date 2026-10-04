@@ -178,3 +178,16 @@ for (const outcome of [{}, { status: "completed", deleted: { ...deletionPlan.cou
     await expect(remove).toBeEnabled(); expect(attempts).toBe(1);
   });
 }
+
+for (const rootDepth of [3, 12]) {
+  test(`a folder at absolute depth ${rootDepth} retains its relative inventory and can be confirmed`, async ({ page, api }) => {
+    const plan = structuredClone(deletionPlan);
+    plan.items.forEach(item => item.depth += rootDepth);
+    let attempts = 0;
+    const dialog = await openFolderDeletion(page, plan, route => {
+      attempts++; return route.fulfill({ json: { status: "completed", deleted: plan.counts, remaining: 0 } });
+    });
+    await dialog.getByRole("button", { name: "Delete folder and contents", exact: true }).click();
+    await expect(dialog).not.toBeVisible(); expect(attempts).toBe(1);
+  });
+}

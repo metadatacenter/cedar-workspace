@@ -38,7 +38,6 @@ export function validDeletionPlan(
         Object.hasOwn(collections, item.type) &&
         (item.parentId === null || nonempty(item.parentId)) &&
         count(item.depth) &&
-        item.depth < items.length &&
         typeof item.deletable === "boolean" &&
         typeof item.protectedFolder === "boolean" &&
         count(item.instancesInside) &&
@@ -54,17 +53,14 @@ export function validDeletionPlan(
   if (ids.size !== items.filter((item) => item.id !== null).length)
     return false;
   const start = ids.get(root);
-  if (
-    !start ||
-    start.type !== "folder" ||
-    start.depth !== 0 ||
-    start.parentId !== null
-  )
+  if (!start || start.type !== "folder" || start.parentId !== null)
     return false;
   if (
     !items.every((item) => {
+      if (item.depth < start.depth || item.depth - start.depth >= items.length)
+        return false;
       if (item === start) return true;
-      if (item.depth === 0) return false;
+      if (item.depth === start.depth) return false;
       if (item.parentId === null)
         return (
           items.some(

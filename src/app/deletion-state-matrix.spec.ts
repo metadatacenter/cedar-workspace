@@ -282,3 +282,26 @@ it("single-folder retries accumulate only confirmed progress across fresh invent
   await host.confirm();
   expect(request).toHaveBeenCalledTimes(4);
 });
+
+for (const rootDepth of [0, 2, 7, 20]) {
+  for (const levels of [0, 1, 3, 8]) {
+    for (const redacted of [false, true]) {
+      it(`absolute root depth ${rootDepth}, ${levels} descendants, redacted=${redacted}`, () => {
+        const p = inventory(levels);
+        p.items.forEach((item) => (item.depth += rootDepth));
+        if (redacted && levels) {
+          const item = p.items[levels];
+          item.id = item.name = item.parentId = null;
+          item.deletable = false;
+          p.allowed = false;
+          p.restrictedItems = 1;
+        }
+        expect(validDeletionPlan(p, "folder-0")).toBe(true);
+        if (levels) {
+          p.items[levels].depth = rootDepth;
+          expect(validDeletionPlan(p, "folder-0")).toBe(false);
+        }
+      });
+    }
+  }
+}
