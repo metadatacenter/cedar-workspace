@@ -251,6 +251,12 @@ require unique identifiers and boolean membership roles; the last administrator 
 protected. Confirmation decisions expire across reads, writes, tabs and destruction.
 An uncertain creation requires a directory reload before another attempt.
 
+API-key management also uses `RevisionCoordinator`. It validates incoming key lists,
+rechecks the selected key and last-active-key rule after confirmation, and requires a
+profile reload after an uncertain mutation. A successful response must acknowledge
+the requested creation, rotation or deletion. Refreshes reset secret visibility and
+keep an unfinished creation description.
+
 Use the shared `Confirmation` service for in-app confirmation, awaiting its result
 before writing and rechecking the target and permissions afterward. The root outlet
 provides a styled, labelled modal with Cancel focused, Escape cancellation, focus

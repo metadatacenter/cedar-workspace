@@ -456,7 +456,9 @@
         "Create": "Sablon létrehozása",
         "Update": "Sablon frissítése (a GET által visszaadott ETag használatával)",
         "Instances": "Egy sablonon alapuló metaadatok lekérése"
-      }
+      },
+      "InvalidResponse": "A szerver nem adott vissza érvényes API-kulcsállapotot. Újabb módosítás előtt töltse be újra a profilját.",
+      "Reload": "Profil újratöltése"
     },
     "Settings": {
       "Title": "Beállítások",

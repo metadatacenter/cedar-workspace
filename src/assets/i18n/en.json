@@ -456,7 +456,9 @@
         "Create": "Create a template",
         "Update": "Update a template (use the ETag returned by GET)",
         "Instances": "Get metadata based on a template"
-      }
+      },
+      "InvalidResponse": "The server did not return a valid API-key state. Reload your profile before making another change.",
+      "Reload": "Reload profile"
     },
     "Settings": {
       "Title": "Settings",

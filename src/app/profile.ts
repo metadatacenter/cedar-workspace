@@ -1,7 +1,10 @@
+import { RevisionCoordinator } from "./revision-coordinator";
+import { record, nonempty } from "./access-validation";
+import { validApiKeys, canChangeKey, acknowledgesKeys } from "./api-key-state";
 import { Tooltip } from "./tooltip";
 import { Icon } from "./icon";
 import { Confirmation } from "./confirmation";
-import { Component, OnInit, inject, signal } from "@angular/core";
+import { Component, OnInit, OnDestroy, inject, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { TranslatePipe } from "@ngx-translate/core";
 import { Backend } from "./backend.service";
@@ -35,11 +38,18 @@ export function displayAccountDate(
   templateUrl: "./profile.html",
   styleUrl: "./profile.scss",
 })
-export class Profile implements OnInit {
+export class Profile implements OnInit, OnDestroy {
   readonly confirmation = inject(Confirmation);
   readonly api = inject(Backend);
   private readonly i18n = inject(I18n);
+  readonly coordinator = new RevisionCoordinator();
+  readonly reloadRequired = this.coordinator.reloadRequired;
+  readonly ready = signal(false);
   readonly loading = signal(true);
+  ngOnDestroy() {
+    this.coordinator.dispose();
+    this.revealed.set(new Set());
+  }
   readonly busy = signal(false);
   readonly error = signal("");
   readonly notice = signal("");
@@ -51,29 +61,48 @@ export class Profile implements OnInit {
   readonly date = (value: string | number | number[] | undefined) =>
     displayAccountDate(value, this.i18n.locale(undefined));
   async ngOnInit() {
+    const operation = this.coordinator.read();
+    if (!operation) return;
+    this.loading.set(true);
+    this.ready.set(false);
+    this.error.set("");
+    this.notice.set("");
+    this.revealed.set(new Set());
     try {
-      if (!(await this.api.init())) return;
-      this.profile = (
-        await this.api.request<UserProfile>(this.api.userPath)
-      ).data;
-      this.keys.set(this.profile.apiKeys || []);
+      if (!(await this.api.init()) || !operation.current()) return;
+      const response = await this.api.request<UserProfile>(this.api.userPath);
+      if (!operation.current()) return;
+      const profile = response.data;
+      if (
+        !record(profile) ||
+        !nonempty(profile.homeFolderId) ||
+        !validApiKeys(profile.apiKeys === undefined ? [] : profile.apiKeys)
+      )
+        throw new Error(this.i18n.t("Account.Profile.InvalidResponse"));
+      this.profile = profile;
+      this.keys.set(profile.apiKeys ?? []);
+      this.api.profile.apiKeys = profile.apiKeys ?? [];
+      this.ready.set(true);
+      operation.finish();
       this.loading.set(false);
       try {
-        this.memberSince.set(
-          this.date(
-            (
-              await this.api.request<{ createdTimestamp: number }>(
-                this.api.userPath + "/summary",
-              )
-            ).data.createdTimestamp,
-          ),
+        const summary = await this.api.request<{ createdTimestamp: number }>(
+          this.api.userPath + "/summary",
         );
+        if (operation.current())
+          this.memberSince.set(this.date(summary.data?.createdTimestamp));
       } catch {
         /* Account creation time is optional. */
       }
     } catch (e) {
+      if (!operation.current()) return;
+      operation.fail(e);
       this.error.set(e instanceof Error ? e.message : String(e));
-      this.loading.set(false);
+    } finally {
+      if (operation.current()) {
+        if (this.coordinator.phase() === "read") operation.finish();
+        this.loading.set(false);
+      }
     }
   }
   // Each label is a translation key; identifiers are shown in a monospace face.
@@ -115,26 +144,29 @@ export class Profile implements OnInit {
     return this.revealed().has(key.id) ? key.key : "••••••••••••••••••••";
   }
   canDelete(key: ApiKey) {
-    return (
-      this.keys().length > 1 &&
-      (!key.enabled || this.keys().filter((k) => k.enabled).length > 1)
-    );
+    return canChangeKey(this.keys(), "delete", key);
   }
   async copy(value: string) {
+    const current = this.coordinator.checkpoint();
     try {
       await navigator.clipboard.writeText(value);
-      this.notice.set(this.i18n.t("Account.Profile.Copied"));
+      if (current()) this.notice.set(this.i18n.t("Account.Profile.Copied"));
     } catch {
-      this.error.set(this.i18n.t("Account.Profile.CopyFailed"));
+      if (current()) this.error.set(this.i18n.t("Account.Profile.CopyFailed"));
     }
   }
   async mutate(action: "create" | "regenerate" | "delete", key?: ApiKey) {
     if (
+      !this.coordinator.active ||
+      !this.ready() ||
       this.busy() ||
-      (action === "create" && this.keys().length >= 20) ||
-      (action === "delete" && (!key || !this.canDelete(key)))
+      this.loading() ||
+      this.reloadRequired() ||
+      !canChangeKey(this.keys(), action, key)
     )
       return;
+    const decision = this.coordinator.checkpoint();
+    const before = this.keys();
     if (
       action !== "create" &&
       (!key ||
@@ -149,6 +181,15 @@ export class Profile implements OnInit {
         )))
     )
       return;
+    if (
+      !decision() ||
+      this.keys() !== before ||
+      !canChangeKey(this.keys(), action, key)
+    )
+      return;
+    const operation = this.coordinator.write();
+    if (!operation) return;
+    const description = this.description;
     this.busy.set(true);
     this.error.set("");
     this.notice.set("");
@@ -170,10 +211,18 @@ export class Profile implements OnInit {
         action === "delete" ? "DELETE" : "POST",
         action === "delete" ? undefined : body,
       );
+      if (!operation.current()) return;
+      if (
+        !validApiKeys(result.data?.apiKeys) ||
+        !acknowledgesKeys(before, result.data.apiKeys, action, key)
+      )
+        throw new Error(this.i18n.t("Account.Profile.InvalidResponse"));
       this.keys.set(result.data.apiKeys);
       this.api.profile.apiKeys = result.data.apiKeys;
       this.revealed.set(new Set());
-      if (action === "create") this.description = "";
+      if (action === "create" && this.description === description)
+        this.description = "";
+      operation.finish();
       this.notice.set(
         this.i18n.t(
           action === "create"
@@ -184,9 +233,11 @@ export class Profile implements OnInit {
         ),
       );
     } catch (e) {
+      if (!operation.current()) return;
+      operation.fail(e);
       this.error.set(e instanceof Error ? e.message : String(e));
     } finally {
-      this.busy.set(false);
+      if (operation.current()) this.busy.set(false);
     }
   }
   get examples() {

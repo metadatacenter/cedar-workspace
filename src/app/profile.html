@@ -4,6 +4,9 @@
   [error]="error()"
   [notice]="notice()"
 >
+  @if(error()) {
+  <button (click)="ngOnInit()" [disabled]="busy() || loading()">{{'Account.Profile.Reload' | translate}}</button>
+  }
   @if(profile){
   <section class="account-card">
     <h2 class="account-section-heading">
@@ -51,8 +54,8 @@
           id="key-description"
           name="description"
           [(ngModel)]="description"
-          [disabled]="busy() || keys().length>=20"
-        /><button class="primary" [disabled]="busy() || keys().length>=20">
+          [disabled]="busy() || !ready() || reloadRequired() || keys().length>=20"
+        /><button class="primary" [disabled]="busy() || !ready() || reloadRequired() || keys().length>=20">
           {{'Account.Profile.NewKey' | translate}}
         </button>
       </form>
@@ -75,10 +78,10 @@
             | translate}}</button
           ><button (click)="copy(key.key)">
             {{'Account.Profile.CopyKey' | translate}}</button
-          ><button [disabled]="busy()" (click)="mutate('regenerate',key)">
+          ><button [disabled]="busy() || !ready() || reloadRequired()" (click)="mutate('regenerate',key)">
             {{'Account.Profile.Regenerate' | translate}}</button
           ><button
-            [disabled]="busy() || !canDelete(key)"
+            [disabled]="busy() || !ready() || reloadRequired() || !canDelete(key)"
             (click)="mutate('delete',key)"
           >
             {{'Common.Delete' | translate}}
