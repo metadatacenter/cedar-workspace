@@ -99,7 +99,9 @@ describe("Permissions dialog", () => {
       etag: '"revision-2"',
     });
     let refresh!: (value: unknown) => void;
-    api.report.mockImplementationOnce(() => new Promise(resolve => (refresh = resolve)));
+    api.report.mockImplementationOnce(
+      () => new Promise((resolve) => (refresh = resolve)),
+    );
     const adding = host.add();
     await vi.waitFor(() => expect(refresh).toBeDefined());
     expect(host.current()).toBe(resource);
@@ -107,7 +109,12 @@ describe("Permissions dialog", () => {
     expect(host.busy()).toBe(true);
     await host.remove(host.grants[0]);
     expect(api.request).toHaveBeenCalledTimes(1);
-    refresh({ data: { ...resource, currentUserPermissions: { capabilities: ["readResource"] } } });
+    refresh({
+      data: {
+        ...resource,
+        currentUserPermissions: { capabilities: ["readResource"] },
+      },
+    });
     await adding;
     expect(host.canManage).toBe(false);
     expect(host.busy()).toBe(false);
@@ -221,7 +228,9 @@ describe("Permissions dialog", () => {
     await host.add();
     expect(api.request).not.toHaveBeenCalled();
     expect(host.error()).toContain("revision");
-    host.etag = '"revision-1"';
+    await host.load();
+    host.selectPerson("user");
+    api.request.mockClear();
     api.request.mockReturnValue(new Promise(() => {}));
     void host.add();
     await host.add();
@@ -458,5 +467,133 @@ describe("Permissions dialog", () => {
     });
     expect(host.canManage).toBe(true);
     expect(host.canTransfer).toBe(false);
+  });
+  for (const status of [400, 401, 403, 404, 409, 412, 422, 428, 500, 503]) {
+    for (const action of ["add", "role", "remove", "transfer"]) {
+      it(`${action}: HTTP ${status} preserves state and requires the appropriate recovery`, async () => {
+        const permissions = {
+          ...initial,
+          userPermissions: [{ user, role: "viewer" }],
+        };
+        host.permissions.set(permissions);
+        host.selectPerson("everyone");
+        const run = () =>
+          action === "add"
+            ? host.add()
+            : action === "role"
+              ? host.changeRole(host.grants[0], "editor")
+              : action === "remove"
+                ? host.remove(host.grants[0])
+                : host.transfer(host.grants[0]);
+        api.request.mockRejectedValue(new HttpError(status, "Rejected"));
+        await run();
+        expect(host.permissions()).toBe(permissions);
+        expect(host.busy()).toBe(false);
+        expect(host.stale()).toBe(![400, 422].includes(status));
+        await run();
+        expect(api.request).toHaveBeenCalledTimes(
+          [400, 422].includes(status) ? 2 : 1,
+        );
+        api.request.mockImplementation(async (path: string) =>
+          path === "/users"
+            ? { data: { users: [owner, user] } }
+            : path.endsWith("/groups")
+              ? { data: { groups: [everyone] } }
+              : { data: initial, etag: '"fresh"' },
+        );
+        await host.load();
+        expect(host.stale()).toBe(false);
+        expect(host.error()).toBe("");
+        expect(host.failedChange()).toBe("");
+        expect(host.etag).toBe('"fresh"');
+      });
+    }
+  }
+  for (const boundary of ["permissions", "groups", "users", "report"]) {
+    for (const bad of [null, {}, [], { "@id": "wrong" }]) {
+      it(`rejects malformed ${boundary}: ${JSON.stringify(bad)} atomically and recovers`, async () => {
+        const original = api.request.getMockImplementation()! as (
+          path: string,
+        ) => Promise<unknown>;
+        if (boundary === "report")
+          api.report.mockResolvedValueOnce({ data: bad });
+        else
+          api.request.mockImplementation(async (path: string) => {
+            if (
+              (boundary === "groups" && path.endsWith("/groups")) ||
+              (boundary === "users" && path === "/users") ||
+              (boundary === "permissions" && path.endsWith("/permissions"))
+            )
+              return { data: bad };
+            return original(path);
+          });
+        await host.load();
+        expect(host.current()).toBeNull();
+        expect(host.permissions()).toBeNull();
+        expect(host.canManage).toBe(false);
+        expect(host.error()).toContain("incomplete");
+        api.request.mockImplementation(original);
+        await host.load();
+        expect(host.error()).toBe("");
+        expect(host.canManage).toBe(true);
+      });
+    }
+  }
+  for (const transition of ["reload", "destroy", "write"]) {
+    it(`ownership confirmation cannot survive ${transition}`, async () => {
+      host.permissions.set({
+        ...initial,
+        userPermissions: [{ user, role: "viewer" }],
+      });
+      let decide!: (value: boolean) => void;
+      vi.mocked(TestBed.inject(Confirmation).confirm).mockImplementationOnce(
+        () => new Promise((resolve) => (decide = resolve)),
+      );
+      const transfer = host.transfer(host.grants[0]);
+      if (transition === "reload") await host.load();
+      else if (transition === "destroy") host.ngOnDestroy();
+      else {
+        api.request.mockRejectedValueOnce(new HttpError(400, "Rejected"));
+        await host.changeRole(host.grants[0], "editor");
+      }
+      decide(true);
+      await transfer;
+      expect(
+        api.request.mock.calls.some(
+          (call) => call[0] === "/command/transfer-resource-ownership",
+        ),
+      ).toBe(false);
+    });
+  }
+  for (const response of [
+    null,
+    {},
+    { ...initial, userPermissions: [{ user, role: "owner" }] },
+  ]) {
+    it(`blocks another mutation after malformed write acknowledgement: ${JSON.stringify(response)}`, async () => {
+      host.selectPerson("user");
+      api.request.mockResolvedValue({ data: response, etag: '"next"' });
+      await host.add();
+      expect(host.permissions()).toEqual(initial);
+      expect(host.stale()).toBe(true);
+      await host.add();
+      expect(api.request).toHaveBeenCalledTimes(1);
+    });
+  }
+  it("does not let a reload overlap a pending grant write", async () => {
+    host.selectPerson("user");
+    let finish!: (value: unknown) => void;
+    api.request.mockImplementationOnce(
+      () => new Promise((resolve) => (finish = resolve)),
+    );
+    const adding = host.add();
+    await host.load();
+    expect(api.request).toHaveBeenCalledTimes(1);
+    finish({
+      data: { ...initial, userPermissions: [{ user, role: "viewer" }] },
+      etag: '"next"',
+    });
+    await adding;
+    expect(host.grants).toHaveLength(1);
   });
 });

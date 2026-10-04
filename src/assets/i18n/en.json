@@ -329,7 +329,8 @@
       "Set": "Set {{name}} to {{role}}",
       "Remove": "Remove access for {{name}}",
       "Transfer": "Transfer ownership to {{name}}"
-    }
+    },
+    "InvalidResponse": "The server returned incomplete or ambiguous permissions. Reload permissions before making changes."
   },
   "Groups": {
     "Title": "Groups",

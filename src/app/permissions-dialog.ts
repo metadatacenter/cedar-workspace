@@ -1,3 +1,9 @@
+import { RevisionCoordinator } from "./revision-coordinator";
+import {
+  uniquePrincipals,
+  validAccessReport,
+  validPermissions,
+} from "./access-validation";
 import { Tooltip } from "./tooltip";
 import { Toast } from "./toast";
 import { Confirmation } from "./confirmation";
@@ -72,7 +78,8 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
   readonly error = signal("");
   readonly notice = signal("");
   readonly failedChange = signal("");
-  readonly stale = signal(false);
+  readonly coordinator = new RevisionCoordinator();
+  readonly stale = this.coordinator.reloadRequired;
   readonly current = signal<Resource | null>(null);
   readonly permissions = signal<Permissions | null>(null);
   readonly people = signal<(Principal & { kind: "user" | "group" })[]>([]);
@@ -84,8 +91,7 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
   personId = "";
   role = "viewer";
   etag: string | null = null;
-  private alive = true;
-  private readGeneration = 0;
+
   private originalFocus = document.activeElement as HTMLElement | null;
   get canManage() {
     return can(this.current() || undefined, "manageGrants");
@@ -144,15 +150,18 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
     this.dialog.nativeElement.showModal();
   }
   ngOnDestroy() {
-    this.alive = false;
-    this.readGeneration++;
+    this.coordinator.dispose();
     this.originalFocus?.focus();
   }
   close() {
     if (!this.busy()) this.closed.emit();
   }
   async load() {
-    const generation = ++this.readGeneration;
+    const operation = this.coordinator.read();
+    if (!operation) return;
+    const resource = this.resource;
+    this.notice.set("");
+    this.failedChange.set("");
     this.permissions.set(null);
     this.people.set([]);
     this.busy.set(true);
@@ -161,46 +170,65 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
     this.etag = null;
     try {
       const [report, permissions, groups] = await Promise.all([
-        this.api.report(this.resource),
-        this.api.request<Permissions>(
-          this.api.path(this.resource) + "/permissions",
-        ),
+        this.api.report(resource),
+        this.api.request<Permissions>(this.api.path(resource) + "/permissions"),
         this.api.request<{ groups: Principal[] }>(
           this.api.config.groupRestAPI.replace(/\/$/, "") + "/groups",
         ),
       ]);
-      if (!this.alive || generation !== this.readGeneration) return;
+      if (!operation.current()) return;
+      if (
+        !validAccessReport(report.data, resource) ||
+        !uniquePrincipals(groups.data?.groups) ||
+        !validPermissions(permissions.data, groups.data.groups)
+      )
+        throw new Error(this.i18n.t("Permissions.InvalidResponse"));
+      let people = groups.data.groups.map((p) => ({
+        ...p,
+        kind: "group" as "group" | "user",
+      }));
+      if (can(report.data, "manageGrants")) {
+        const users = await this.api.request<{ users: Principal[] }>("/users");
+        if (!operation.current()) return;
+        if (
+          !uniquePrincipals(users.data?.users) ||
+          !uniquePrincipals([...users.data.users, ...people])
+        )
+          throw new Error(this.i18n.t("Permissions.InvalidResponse"));
+        people = [
+          ...users.data.users.map((p) => ({ ...p, kind: "user" as const })),
+          ...people,
+        ];
+      }
       this.current.set(report.data);
       this.permissions.set(permissions.data);
       this.etag = permissions.etag;
-      this.stale.set(false);
-      this.people.set(
-        groups.data.groups.map((p) => ({ ...p, kind: "group" as const })),
-      );
-      if (this.canManage) {
-        const users = await this.api.request<{ users: Principal[] }>("/users");
-        if (!this.alive || generation !== this.readGeneration) return;
-        this.people.update((groups) => [
-          ...users.data.users.map((p) => ({ ...p, kind: "user" as const })),
-          ...groups,
-        ]);
+      this.people.set(people);
+      if (!this.options.some((p) => p.id === this.personId))
+        this.selectPerson("");
+      if (this.selectedPerson?.specialGroup) this.role = "viewer";
+      operation.finish();
+      if ((this.canManage || this.canTransfer) && !this.etag?.trim()) {
+        this.stale.set(true);
+        this.error.set(this.i18n.t("Permissions.NoRevision"));
       }
     } catch (e) {
-      if (!this.alive || generation !== this.readGeneration) return;
+      if (!operation.current()) return;
       this.current.set(null);
+      operation.fail(e);
       this.fail(e);
     } finally {
-      if (this.alive && generation === this.readGeneration)
-        this.busy.set(false);
+      if (operation.current()) this.busy.set(false);
     }
   }
   private fail(e: unknown) {
-    if (!this.alive) return;
+    if (!this.coordinator.active) return;
     this.error.set(e instanceof Error ? e.message : String(e));
     if (e instanceof HttpError && e.status === 412) this.stale.set(true);
   }
   private revision() {
-    if (!this.etag) throw new Error(this.i18n.t("Permissions.NoRevision"));
+    if (!this.etag?.trim())
+      throw new Error(this.i18n.t("Permissions.NoRevision"));
     return this.etag;
   }
   selectPerson(id: string) {
@@ -234,6 +262,12 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
     );
   }
   async remove(grant: Grant) {
+    if (
+      !this.grants.some(
+        (g) => g.kind === grant.kind && g.node["@id"] === grant.node["@id"],
+      )
+    )
+      return;
     await this.save(
       this.grants.filter((g) => g.node["@id"] !== grant.node["@id"]),
       this.i18n.t("Permissions.Changes.Remove", {
@@ -242,7 +276,13 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
     );
   }
   private async save(grants: Grant[], description: string) {
-    if (this.busy() || this.stale() || !this.canManage || !this.permissions())
+    if (
+      !this.coordinator.active ||
+      this.busy() ||
+      this.stale() ||
+      !this.canManage ||
+      !this.permissions()
+    )
       return false;
     if (
       grants.some(
@@ -280,6 +320,7 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
       )
     )
       return;
+    const decision = this.coordinator.checkpoint();
     const permissions = this.permissions();
     const resource = this.resource;
     if (
@@ -295,6 +336,8 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
     if (
       this.busy() ||
       !this.canTransfer ||
+      !decision() ||
+      this.stale() ||
       this.permissions() !== permissions ||
       this.resource !== resource
     )
@@ -311,7 +354,7 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
           this.revision(),
         ),
     );
-    if (transferred && this.alive)
+    if (transferred && this.coordinator.active)
       this.closed.emit(
         this.i18n.t("Permissions.Transferred", {
           name: this.principalName(grant.node),
@@ -322,6 +365,9 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
     description: string,
     action: () => Promise<{ data: Permissions; etag: string | null }>,
   ) {
+    const operation = this.coordinator.write();
+    if (!operation) return false;
+    const resource = this.resource;
     this.busy.set(true);
     this.error.set("");
     this.notice.set("");
@@ -329,23 +375,39 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
     let saved = false;
     try {
       const reply = await action();
-      if (!this.alive) return false;
+      if (!operation.current()) return false;
+      if (
+        !validPermissions(
+          reply.data,
+          this.people().filter((p) => p.kind === "group"),
+        )
+      )
+        throw new Error(this.i18n.t("Permissions.InvalidResponse"));
       this.permissions.set(reply.data);
       this.etag = reply.etag;
       saved = true;
       this.notice.set(this.i18n.t("Permissions.Saved"));
       // Keep the existing layout while all mutation controls remain disabled.
       // Apply refreshed privileges atomically, including a genuine self-demotion.
-      const report = await this.api.report(this.resource);
-      if (this.alive) this.current.set(report.data);
+      const report = await this.api.report(resource);
+      if (!operation.current()) return false;
+      if (!validAccessReport(report.data, resource))
+        throw new Error(this.i18n.t("Permissions.InvalidResponse"));
+      this.current.set(report.data);
+      if (!this.etag?.trim())
+        throw new Error(this.i18n.t("Permissions.NoRevision"));
+      operation.finish();
     } catch (e) {
       // A completed write may have revoked access. Never enable stale privileges
       // if their refresh fails; require an explicit permissions reload instead.
-      if (saved && this.alive) this.current.set(null);
+      if (!operation.current()) return false;
+      if (saved) this.current.set(null);
+      operation.fail(e);
       this.fail(e);
-      if (!saved && this.alive) this.failedChange.set(description);
+      if (!saved && e instanceof HttpError && e.status < 500)
+        this.failedChange.set(description);
     } finally {
-      if (this.alive) this.busy.set(false);
+      if (operation.current()) this.busy.set(false);
     }
     return saved;
   }

@@ -239,6 +239,12 @@ for an empty destination, and deliberately injected overrides prove the guards
 fail. Tooltip, toast and suggestion-list tests cover their spacing too. These
 checks supplement the shared surface contract, which checks color and radius.
 
+Permission reads and writes use `RevisionCoordinator`: it owns pending operations,
+invalidates old confirmations, and exposes a state report. Permission payloads and
+directories are validated before controls become available. Conflicts, lost access,
+missing revisions and uncertain writes require an explicit reload; a reload cannot
+overlap a write. Multi-step unit and browser matrices cover rejection and recovery.
+
 Use the shared `Confirmation` service for in-app confirmation, awaiting its result
 before writing and rechecking the target and permissions afterward. The root outlet
 provides a styled, labelled modal with Cancel focused, Escape cancellation, focus

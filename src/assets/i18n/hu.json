@@ -329,7 +329,8 @@
       "Set": "{{name}} szerepkörének módosítása erre: {{role}}",
       "Remove": "{{name}} hozzáférésének megszüntetése",
       "Transfer": "A tulajdonjog átruházása: {{name}}"
-    }
+    },
+    "InvalidResponse": "A szerver hiányos vagy nem egyértelmű jogosultságokat küldött. Módosítás előtt töltse be újra a jogosultságokat."
   },
   "Groups": {
     "Title": "Csoportok",

@@ -83,3 +83,34 @@ for (const kind of ["user", "group"]) {
     }
   });
 }
+
+for (const failure of [403, 409, 412, 428, 503, "invalid", "no-revision"]) {
+  test(`permissions ${failure} blocks another write until an explicit valid reload`, async ({ page, api }) => {
+    let writes = 0;
+    let recovered = false;
+    await page.route("**/templates/template/permissions", async route => {
+      if (route.request().method() === "PUT") {
+        writes++;
+        if (typeof failure === "number") return route.fulfill({ status: failure, json: { errorMessage: "Permissions rejected" } });
+        return route.fulfill({ json: failure === "invalid" ? {} : { owner, userPermissions: [{ user, role: "viewer" }], groupPermissions: [] }, headers: failure === "invalid" ? { ETag: '"bad"' } : {} });
+      }
+      return route.fulfill({ json: { owner, userPermissions: [], groupPermissions: [] }, headers: { ETag: recovered ? '"fresh"' : '"initial"' } });
+    });
+    await dashboard(page);
+    await action(page, "Permissions…");
+    const dialog = page.getByRole("dialog", { name: "Permissions", exact: true });
+    const input = dialog.getByRole("combobox", { name: "User or group" });
+    await input.fill("Sam");
+    await page.getByRole("option", { name: "Sam Curator", exact: true }).click();
+    await dialog.getByRole("button", { name: "Add", exact: true }).click();
+    await expect(dialog.getByRole("alert")).toBeVisible();
+    expect(writes).toBe(1);
+    const add = dialog.getByRole("button", { name: "Add", exact: true });
+    if (await add.count()) await expect(add).toBeDisabled();
+    recovered = true;
+    await dialog.getByRole("button", { name: "Reload permissions", exact: true }).click();
+    await expect(input).toBeEnabled();
+    await expect(dialog.getByRole("alert")).toHaveCount(0);
+    expect(writes).toBe(1);
+  });
+}
