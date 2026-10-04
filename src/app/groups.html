@@ -89,7 +89,7 @@
       <button (click)="select(group)" [disabled]="busy() || selecting()">
         {{'Groups.Reload' | translate}}
       </button>
-      } @else {
+      } @else if(!ready() || uncertainCreation()) {
       <button (click)="ngOnInit()" [disabled]="busy() || selecting() || loading()">{{'Groups.ReloadDirectory' | translate}}</button>
       }
     </div>

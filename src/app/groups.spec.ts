@@ -78,6 +78,7 @@ describe("Groups", () => {
     expect(host.newName).toBe("Existing name");
     expect(host.selected()).toEqual(g);
     expect(host.recoveryGroup()).toBeNull();
+    expect(host.uncertainCreation()).toBe(false);
   });
   it("offers the failed read's group for recovery even before it can be selected", async () => {
     request.mockRejectedValue(new HttpError(503, "Temporarily unavailable"));
