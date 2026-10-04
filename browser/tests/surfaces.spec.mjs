@@ -172,8 +172,8 @@ scenarios['recursive-delete-owner'] = page => openFolderDeletion(page, deletionO
 for (const kind of ['confirmation', 'permissions', 'references']) {
   scenarios['recursive-delete-' + kind] = async page => {
     const plan = structuredClone(deletionPlan);
-    if (kind === 'permissions') { plan.allowed = false; plan.restrictedItems = 1; }
-    if (kind === 'references') { plan.allowed = false; plan.templatesWithOutsideInstances = 1; plan.instancesOutside = 3; }
+    if (kind === 'permissions') { plan.allowed = false; plan.restrictedItems = 1; plan.items[4].deletable = false; }
+    if (kind === 'references') { plan.allowed = false; plan.templatesWithOutsideInstances = 1; plan.instancesOutside = 3; plan.items[2].instancesOutside = 3; }
     await openFolderDeletion(page, plan);
   };
 }

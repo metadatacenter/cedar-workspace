@@ -257,6 +257,12 @@ profile reload after an uncertain mutation. A successful response must acknowled
 the requested creation, rotation or deletion. Refreshes reset secret visibility and
 keep an unfinished creation description.
 
+Recursive and selection deletion validate each inventory against its root, topology,
+counts and blockers, including redacted descendants. Responses must account for the
+confirmed inventory before reporting completion or partial progress. The coordinator
+consumes each confirmation once, stops after uncertainty, and retains confirmed
+deletions across explicit inventory refreshes.
+
 Use the shared `Confirmation` service for in-app confirmation, awaiting its result
 before writing and rechecking the target and permissions afterward. The root outlet
 provides a styled, labelled modal with Cancel focused, Escape cancellation, focus

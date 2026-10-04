@@ -1,3 +1,5 @@
+import { validDeletionPlan, validDeletionOutcome } from "./deletion-validation";
+import { validAccessReport } from "./access-validation";
 import { I18n } from "./i18n";
 import { Injectable, inject } from "@angular/core";
 import { Backend } from "./backend.service";
@@ -47,14 +49,16 @@ export class SelectionDeletion {
       throw new Error(this.i18n.t("SelectionDeletion.InventoryUnavailable"));
     const folders = resources.filter((r) => r.resourceType === "folder");
     const replies = await Promise.allSettled(
-      folders.map(async (resource) => ({
-        resource,
-        plan: (
-          await this.api.request<DeletionPlan>(
-            this.api.path(resource) + "/deletion",
-          )
-        ).data,
-      })),
+      folders.map(async (resource) => {
+        const response = await this.api.request<DeletionPlan>(
+          this.api.path(resource) + "/deletion",
+        );
+        if (!validDeletionPlan(response.data, resource["@id"]))
+          throw new Error(
+            this.i18n.t("SelectionDeletion.InventoryUnavailable"),
+          );
+        return { resource, plan: response.data };
+      }),
     );
     const plans = replies.flatMap((reply) =>
       reply.status === "fulfilled" ? [reply.value] : [],
@@ -106,7 +110,11 @@ export class SelectionDeletion {
     )) {
       const report = (await this.api.report(resource)).data;
       const snapshot = await this.api.snapshot(resource, true);
-      if (!snapshot.etag)
+      if (
+        !validAccessReport(report, resource) ||
+        snapshot.data?.["@id"] !== resource["@id"] ||
+        !snapshot.etag?.trim()
+      )
         throw new Error(this.i18n.t("SelectionDeletion.InventoryUnavailable"));
       const references =
         resource.resourceType === "template" ? report.numberOfInstances : 0;
@@ -161,14 +169,23 @@ export class SelectionDeletion {
     };
   }
   async execute(root: DeletionRoot): Promise<DeletionOutcome> {
-    if (root.plan)
-      return (
-        await this.api.request<DeletionOutcome>(
-          this.api.path(root.resource) + "/deletion",
-          "POST",
-          { token: root.plan.token },
-        )
-      ).data;
+    if (root.plan) {
+      if (
+        !validDeletionPlan(root.plan, root.resource["@id"]) ||
+        !root.plan.allowed
+      )
+        throw new Error(this.i18n.t("SelectionDeletion.InventoryUnavailable"));
+      const response = await this.api.request<DeletionOutcome>(
+        this.api.path(root.resource) + "/deletion",
+        "POST",
+        { token: root.plan.token },
+      );
+      if (!validDeletionOutcome(response.data, root.plan))
+        throw new Error(this.i18n.t("SelectionDeletion.Uncertain"));
+      return response.data;
+    }
+    if (!root.etag?.trim())
+      throw new Error(this.i18n.t("SelectionDeletion.InventoryUnavailable"));
     await this.api.request(
       this.api.path(root.resource),
       "DELETE",
