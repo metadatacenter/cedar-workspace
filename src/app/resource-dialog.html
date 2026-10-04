@@ -45,6 +45,7 @@
       @if(['new-folder','rename','copy'].includes(action)){<label
         ><span class="field-label">{{(action === 'copy' ? 'ResourceDialog.NameOfCopy' : 'Common.Name') | translate}}</span><input
           spellcheck="false"
+          autocomplete="off"
           [attr.aria-invalid]="submitted && nameError ? true : null"
           [attr.aria-describedby]="submitted && nameError ? 'name-error' : null"
           name="name"
@@ -58,6 +59,7 @@
       } } @if(['new-folder','rename'].includes(action)){<label
         ><span class="field-label">{{'Common.Description' | translate}}</span><textarea
           spellcheck="false"
+          autocomplete="off"
           name="description"
           [(ngModel)]="description"
           rows="3"

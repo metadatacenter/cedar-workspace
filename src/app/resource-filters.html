@@ -86,6 +86,7 @@
         >{{'Filters.After' | translate}}<input
           type="date"
           spellcheck="false"
+          autocomplete="off"
           [attr.aria-label]="'Filters.After' | translate"
           [ngModel]="draft().after || ''"
           (ngModelChange)="editDate('after', $event)"
@@ -94,6 +95,7 @@
         >{{'Filters.Before' | translate}}<input
           type="date"
           spellcheck="false"
+          autocomplete="off"
           [attr.aria-label]="'Filters.Before' | translate"
           [ngModel]="draft().before || ''"
           (ngModelChange)="editDate('before', $event)"

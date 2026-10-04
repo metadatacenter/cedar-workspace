@@ -12,6 +12,7 @@
   <form class="search" action="/dashboard">
     <input
       spellcheck="false"
+      autocomplete="off"
       [attr.aria-label]="'Header.SearchWorkspace' | translate"
       name="search"
       [placeholder]="'Header.SearchPlaceholder' | translate"
@@ -153,6 +154,7 @@
           <div class="groups-inline-controls">
             <input
               spellcheck="false"
+              autocomplete="off"
               id="new-group-name"
               class="form-control"
               name="newName"
@@ -250,6 +252,7 @@
         <label for="group-name">{{'Common.Name' | translate}}</label>
         <input
           spellcheck="false"
+          autocomplete="off"
           id="group-name"
           class="form-control"
           name="editName"
@@ -266,6 +269,7 @@
         >
         <textarea
           spellcheck="false"
+          autocomplete="off"
           id="group-description"
           class="form-control"
           rows="1"

@@ -27,6 +27,7 @@ import { Resource, can, title } from "./resource";
         (ngModelChange)="draft.set($event)"
         [disabled]="busy() || !snapshot()"
         spellcheck="false"
+        autocomplete="off"
       ></textarea>
       @if (dirty) {
         <div class="actions">

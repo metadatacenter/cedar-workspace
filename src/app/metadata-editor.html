@@ -31,6 +31,7 @@
   <label for="instance-name">{{'Metadata.Name' | translate}}</label>
   <input
     spellcheck="false"
+    autocomplete="off"
     id="instance-name"
     [(ngModel)]="name"
     (ngModelChange)="changed()"
