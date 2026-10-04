@@ -404,7 +404,11 @@
     "Label": "Metaadatok",
     "RequiredMissing": "{{count}} kötelező mező hiányzik.",
     "ReviewInvalid": "Mentés előtt ellenőrizze az érvénytelen metaadatokat.",
-    "DefaultName": "{{template}} – metaadatok"
+    "DefaultName": "{{template}} – metaadatok",
+    "LoadFailed": "Nem tölthető be",
+    "ReloadRequired": "Újratöltés szükséges",
+    "Reload": "Metaadatok újratöltése",
+    "SaveUnconfirmed": "A kiszolgáló elfogadta a mentést, de hiányos visszaigazolást küldött. Újabb mentés előtt ellenőrizze a mentett elemet a Workspace-ben."
   },
   "Account": {
     "Profile": {

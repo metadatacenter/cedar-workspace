@@ -46,7 +46,9 @@ describe("Modern metadata host", () => {
     api = {
       init: vi.fn().mockResolvedValue(true),
       profile: { homeFolderId: "home" },
-      request: vi.fn(async (path: string) => {
+      request: vi.fn(async (path: string, method = "GET") => {
+        if (method !== "GET")
+          return { data: { "@id": "instance-id" }, etag: '"i2"' };
         if (path === "/templates/template-id")
           return { data: template, etag: '"t1"' };
         if (path === "/template-instances/instance-id")

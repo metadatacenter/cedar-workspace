@@ -26,11 +26,15 @@ import {
 import type {
   CedarEmbeddableEditorElement,
   CeeConfig,
-  CeeDataQualityReport,
   CeeJsonObject,
   CeeValidationProblem,
 } from "cedar-embeddable-editor";
-import { Backend } from "./backend.service";
+import { Backend, HttpError } from "./backend.service";
+import {
+  MetadataState,
+  MetadataProblem,
+  problemSeverity,
+} from "./metadata-state";
 import { CeeLoader } from "./cee-loader";
 import { can, Resource } from "./resource";
 import { I18n, fallbackLanguage } from "./i18n";
@@ -165,7 +169,7 @@ export function metadataWarningMessage(
 }
 // Problems the instance may be saved with: a required value nobody has given, and a list
 // shorter than its minimum. Every other problem refuses Save.
-const WARNING_CODES = ["required", "minItems"];
+
 /** One line of the page's error or warning list, and the problem it leads to, if any. */
 export interface MetadataIssue {
   label: string;
@@ -196,7 +200,8 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   readonly writable = signal(false);
   readonly error = signal("");
   readonly notice = signal("");
-  readonly quality = signal<CeeDataQualityReport | null>(null);
+  readonly state = new MetadataState();
+  readonly quality = this.state.quality;
   name = "";
   templateName = "";
   returnTo = "/dashboard";
@@ -222,8 +227,16 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     return this.i18n.t("Metadata.DefaultName", { template: this.templateName });
   }
   async ngAfterViewInit() {
+    await this.load();
+  }
+  private async load() {
+    const operation = this.state.begin("load", ["save"]);
+    this.loading.set(true);
+    this.state.loadFailed.set(false);
+    this.error.set("");
+    this.cee.removeEventListener("change", this.changed);
     try {
-      if (!(await this.api.init()) || !this.alive) return;
+      if (!(await this.api.init()) || !operation.current()) return;
       this.folder =
         this.route.snapshot.queryParamMap.get("folderId") ||
         this.api.profile.homeFolderId;
@@ -231,6 +244,8 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         this.route.snapshot.queryParamMap.get("returnTo"),
         this.folder,
       );
+      const id = this.route.snapshot.paramMap.get("id")!;
+      const mode = this.route.snapshot.paramMap.get("mode");
       const configResponse = await fetch(
         "/config/embeddable-editor-config.json",
         { cache: "no-store" },
@@ -238,26 +253,31 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       if (!configResponse.ok)
         throw new Error(this.i18n.t("Metadata.ConfigurationUnavailable"));
       const config: CeeConfig = await configResponse.json();
-      const id = this.route.snapshot.paramMap.get("id")!;
-      if (this.route.snapshot.paramMap.get("mode") === "edit") {
+      if (!operation.current()) return;
+      let saved: CeeJsonObject | undefined,
+        etag: string | null = null,
+        template: CeeJsonObject,
+        writable: boolean;
+      if (mode === "edit") {
         const path = "/template-instances/" + encodeURIComponent(id);
         const [instance, report] = await Promise.all([
           this.api.request<CeeJsonObject>(path),
           this.api.request<Resource>(path + "/report"),
         ]);
-        this.saved = instance.data;
-        this.etag = instance.etag;
-        this.writable.set(can(report.data, "updateResource"));
-        const templateId = this.saved["schema:isBasedOn"];
-        if (typeof templateId !== "string")
+        if (!operation.current()) return;
+        saved = instance.data;
+        etag = instance.etag;
+        writable = can(report.data, "updateResource");
+        const templateId = saved?.["schema:isBasedOn"];
+        if (typeof templateId !== "string" || !templateId.trim())
           throw new Error(this.i18n.t("Metadata.NoTemplate"));
-        this.template = (
+        template = (
           await this.api.request<CeeJsonObject>(
             "/templates/" + encodeURIComponent(templateId),
           )
         ).data;
       } else {
-        const [template, folder] = await Promise.all([
+        const [result, folder] = await Promise.all([
           this.api.request<CeeJsonObject>(
             "/templates/" + encodeURIComponent(id),
           ),
@@ -265,49 +285,78 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
             "/folders/" + encodeURIComponent(this.folder),
           ),
         ]);
-        this.template = template.data;
-        this.writable.set(can(folder.data, "createInFolder"));
+        template = result.data;
+        writable = can(folder.data, "createInFolder");
       }
+      if (!operation.current()) return;
+      if (
+        !template ||
+        typeof template["@id"] !== "string" ||
+        !template["@id"].trim()
+      )
+        throw new Error(this.i18n.t("Metadata.NoTemplate"));
       await this.loader.load();
-      if (!this.alive) return;
+      if (!operation.current()) return;
+      this.saved = saved;
+      this.etag = etag;
+      this.template = template;
+      this.writable.set(writable);
+      this.state.reloadRequired.set(false);
+      this.state.clearServer();
       this.templateName = String(
-        this.template["schema:name"] || this.i18n.t("Common.Untitled"),
+        template["schema:name"] || this.i18n.t("Common.Untitled"),
       );
-      this.name = this.saved
-        ? String(this.saved["schema:name"] || "")
+      this.name = saved
+        ? String(saved["schema:name"] || "")
         : this.defaultName();
-      // Both inputs are set once; permission must be settled before configuration.
-      // CEE shows its own strings in the language Workspace shows, falling back
-      // to English for any string CEE does not translate.
       this.cee.config = {
         ...config,
-        readOnlyMode: !this.writable(),
+        readOnlyMode: !writable,
         defaultLanguage: this.i18n.language,
         fallbackLanguage,
       };
-      if (this.saved)
+      if (saved)
         this.cee.templateAndInstanceObject = {
-          templateObject: this.template,
-          instanceObject: this.saved,
+          templateObject: template,
+          instanceObject: saved,
         };
-      else this.cee.templateObject = this.template;
-      // Angular Elements applies input setters in a microtask.
+      else this.cee.templateObject = template;
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
-      if (!this.alive) return;
+      if (!operation.current()) return;
       this.baseline = metadataKey(this.cee.currentMetadata);
       this.baselineText = this.name;
+      this.dirty.set(false);
+      this.savedHere = false;
+      this.notice.set("");
       this.cee.addEventListener("change", this.changed);
       this.refreshQuality();
       this.loading.set(false);
+      operation.finish();
     } catch (e) {
-      if (this.alive)
-        this.error.set(e instanceof Error ? e.message : String(e));
+      if (!operation.current()) return;
+      operation.fail(e);
+      this.state.loadFailed.set(true);
+      this.error.set(e instanceof Error ? e.message : String(e));
     }
   }
+  async reload() {
+    if (!this.alive || this.saving() || this.state.uncertainCreation()) return;
+    if (
+      this.dirty() &&
+      !(await this.confirmation.confirm(this.i18n.t("Metadata.DiscardChanges")))
+    )
+      return;
+    if (this.alive) await this.load();
+  }
+  private draftKey() {
+    return metadataKey([this.cee.currentMetadata, this.name]);
+  }
   private refreshQuality() {
-    const report = this.cee.dataQualityReport;
-    // Snapshot event data: a component may update an existing report object.
-    this.quality.set({ ...report, problems: [...(report.problems || [])] });
+    try {
+      this.state.observe(this.cee.dataQualityReport, this.draftKey());
+    } catch {
+      this.state.observe(null, "unavailable");
+    }
   }
   readonly changed = () => {
     if (this.loading() || !this.alive) return;
@@ -320,8 +369,10 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   };
   /** The translation key for the toolbar's save status. */
   get saveStatus() {
+    if (this.state.loadFailed()) return "Metadata.LoadFailed";
     if (this.loading()) return "Common.Loading";
     if (this.saving()) return "Common.Saving";
+    if (this.state.reloadRequired()) return "Metadata.ReloadRequired";
     if (!this.writable()) return "Metadata.ReadOnly";
     return this.dirty()
       ? "Metadata.ModifiedStatus"
@@ -332,7 +383,9 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   /** Save is refused because the page lists errors, rather than while it loads or saves. */
   get saveRefused() {
     return (
-      !this.loading() && !this.saving() && this.validationErrors.length > 0
+      !this.loading() &&
+      !this.saving() &&
+      (this.validationErrors.length > 0 || this.state.reloadRequired())
     );
   }
   get missingRequired() {
@@ -345,15 +398,15 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   }
   get validationWarnings(): MetadataIssue[] {
     const q = this.quality();
-    const problems = (q?.problems || []).filter((p) =>
-      WARNING_CODES.includes(p.code),
+    const problems = (q?.problems || []).filter(
+      (p) => problemSeverity(p as MetadataProblem) === "warning",
     );
     const items: MetadataIssue[] = problems.map((p) => ({
       label: this.issueLabel(p),
       message: metadataWarningMessage(this.template, p, (key, params) =>
         this.i18n.t(key, params),
       ),
-      problem: p,
+      problem: p.path.length ? p : undefined,
     }));
     if (this.missingRequired && !problems.some((p) => p.code === "required"))
       items.push({
@@ -367,11 +420,14 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   get validationErrors(): MetadataIssue[] {
     const q = this.quality();
     const items: MetadataIssue[] = (q?.problems || [])
-      .filter((p) => !WARNING_CODES.includes(p.code))
+      .filter((p) => problemSeverity(p as MetadataProblem) === "error")
       .map((p) => ({
         label: this.issueLabel(p),
-        message: p.message || p.code,
-        problem: p,
+        message:
+          p.code === "reportUnavailable"
+            ? this.i18n.t("Metadata.ReviewInvalid")
+            : p.message || p.code,
+        problem: p.path.length ? p : undefined,
       }));
     if (
       q?.isValid === false &&
@@ -396,15 +452,26 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     if (issue.problem) void this.cee.reveal(issue.problem);
   }
   async save() {
-    if (this.loading() || this.saving() || !this.writable()) return;
+    if (
+      !this.alive ||
+      this.loading() ||
+      this.saving() ||
+      !this.writable() ||
+      this.state.reloadRequired()
+    )
+      return;
     this.refreshQuality();
     if (this.validationErrors.length) return;
+    const operation = this.state.begin("save");
+    const submittedKey = this.draftKey();
     this.saving.set(true);
     this.error.set("");
     this.notice.set("");
     try {
-      if (this.saved && !this.etag)
+      if (this.saved && !this.etag) {
+        this.state.reloadRequired.set(true);
         throw new Error(this.i18n.t("Metadata.NoRevision"));
+      }
       const current = this.cee.currentMetadata;
       const baseline = metadataKey(current);
       const name = this.chosenName();
@@ -430,10 +497,22 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         metadata,
         this.etag,
       );
-      if (!this.alive) return;
+      if (!operation.current()) return;
+      if (
+        !reply.data ||
+        typeof reply.data["@id"] !== "string" ||
+        !reply.data["@id"].trim() ||
+        (this.saved && reply.data["@id"] !== this.saved["@id"])
+      ) {
+        this.state.reloadRequired.set(true);
+        this.state.uncertainCreation.set(!this.saved);
+        throw new Error(this.i18n.t("Metadata.SaveUnconfirmed"));
+      }
       this.saved = reply.data;
       this.savedHere = true;
       this.etag = reply.etag;
+      this.state.reloadRequired.set(!reply.etag);
+      this.state.clearServer();
       this.baseline = baseline;
       this.baselineText = text;
       // Keep the CEE element, focus and any edits made while the save was pending.
@@ -455,17 +534,27 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       } finally {
         this.updatingAddress = false;
       }
+      if (!operation.current()) return;
+      operation.finish();
       this.changed();
+      if (!reply.etag) this.error.set(this.i18n.t("Metadata.NoRevision"));
       this.notice.set(
         this.i18n.t(
           this.dirty() ? "Metadata.SavedWithChanges" : "Common.Saved",
         ),
       );
     } catch (e) {
-      if (this.alive)
-        this.error.set(e instanceof Error ? e.message : String(e));
+      if (!operation.current()) return;
+      operation.fail(e);
+      this.refreshQuality();
+      if (e instanceof HttpError) {
+        this.state.reject(e.validationReport, submittedKey, this.template);
+        if ([403, 404, 409, 412, 428].includes(e.status))
+          this.state.reloadRequired.set(true);
+      }
+      this.error.set(e instanceof Error ? e.message : String(e));
     } finally {
-      this.saving.set(false);
+      if (operation.current()) this.saving.set(false);
     }
   }
   async mayLeave() {
@@ -491,6 +580,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   }
   ngOnDestroy() {
     this.alive = false;
+    this.state.dispose();
     this.cee.removeEventListener("change", this.changed);
   }
 }

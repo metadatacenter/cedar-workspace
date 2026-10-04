@@ -1,5 +1,9 @@
 <header class="metadata-toolbar">
-  <cedar-workspace-return [guarded]="true" [disabled]="saving()" (activate)="back()" />
+  <cedar-workspace-return
+    [guarded]="true"
+    [disabled]="saving()"
+    (activate)="back()"
+  />
   <strong class="metadata-title">{{'Metadata.Title' | translate}}</strong>
   <span
     class="metadata-save-status"
@@ -16,15 +20,22 @@
       id="button-save-metadata"
       class="primary"
       (click)="save()"
-      [disabled]="loading() || saving() || validationErrors.length > 0"
+      [disabled]="loading() || saving() || validationErrors.length > 0 || state.reloadRequired()"
     >
-      {{'Common.Save' | translate}}</button
-    ></span
+      {{'Common.Save' | translate}}
+    </button></span
   >}
 </header>
 <main class="metadata-content">
   @if(error()){
-  <p role="alert" class="alert">{{error()}}</p>
+  <p role="alert" class="alert">
+    {{error()}} @if(state.loadFailed() || (state.reloadRequired() &&
+    !state.uncertainCreation())) {
+    <button type="button" (click)="reload()" [disabled]="saving()">
+      {{(state.loadFailed() ? 'Common.Retry' : 'Metadata.Reload') | translate}}
+    </button>
+    }
+  </p>
   } @if(notice()){
   <cedar-toast [message]="notice()" />
   } @if(!loading()) {

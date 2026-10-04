@@ -404,7 +404,11 @@
     "Label": "Metadata",
     "RequiredMissing": "{{count}} required fields are missing.",
     "ReviewInvalid": "Review invalid metadata before saving.",
-    "DefaultName": "{{template}} metadata"
+    "DefaultName": "{{template}} metadata",
+    "LoadFailed": "Unable to load",
+    "ReloadRequired": "Reload required",
+    "Reload": "Reload metadata",
+    "SaveUnconfirmed": "The server accepted the save but returned an incomplete confirmation. Check the saved artifact in Workspace before saving again."
   },
   "Account": {
     "Profile": {

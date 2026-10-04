@@ -91,4 +91,31 @@ describe("Authorized backend", () => {
     fetcher.mockResolvedValue(new Response(null, { status: 204 }));
     expect((await api.request("/folders/id", "DELETE")).data).toBeUndefined();
   });
+  for (const envelope of ["objects", "direct"])
+    it(`preserves ${envelope} server validation findings`, async () => {
+      const validationReport = {
+        errors: [{ message: "Invalid IRI", location: "/Child/2/Link/@id" }],
+        warnings: [],
+      };
+      fetcher.mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            errorKey: "invalidData",
+            message: "Validation failed",
+            ...(envelope === "objects"
+              ? { objects: { validationReport } }
+              : { validationReport }),
+          }),
+          { status: 400 },
+        ),
+      );
+      await expect(
+        api.request("/template-instances/id", "PUT", {}, '"one"'),
+      ).rejects.toMatchObject({
+        status: 400,
+        code: "invalidData",
+        validationReport,
+      });
+      expect(fetcher).toHaveBeenCalledTimes(1);
+    });
 });
