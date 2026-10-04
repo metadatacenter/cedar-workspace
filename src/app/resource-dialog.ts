@@ -1,3 +1,4 @@
+import { resourceSelector, resourcePathId } from "./resource-address";
 import { OperationCoordinator } from "./operation-coordinator";
 import { validListing } from "./resource";
 import { Tooltip } from "./tooltip";
@@ -265,13 +266,13 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
       const [reply, targetReply] = await Promise.all([
         this.api.request<Listing>(
           "/folders/" +
-            encodeURIComponent(id) +
+            encodeURIComponent(resourcePathId(id)) +
             "/contents?resource_types=folder&sort=" +
             sort +
             "&limit=50&offset=" +
             offset,
         ),
-        this.api.request<Resource>("/folders/" + encodeURIComponent(id)),
+        this.api.request<Resource>("/folders/" + encodeURIComponent(resourcePathId(id))),
       ]);
       if (!operation.current()) return;
       if (!validListing(reply.data))
@@ -388,7 +389,7 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
       switch (this.action) {
         case "new-folder":
           await this.api.request("/folders", "POST", {
-            folderId: this.folder,
+            folderId: resourceSelector(this.folder),
             name: this.name.trim(),
             // The folder API requires a nonempty description even though it is
             // optional in the dialog. Use the folder name as the initial value.
@@ -400,7 +401,7 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
             "/command/rename-resource",
             "POST",
             {
-              "@id": id,
+              "@id": resourceSelector(id!),
               "schema:name": this.name.trim(),
               "schema:description": this.description,
             },
@@ -409,8 +410,8 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
           break;
         case "copy":
           await this.api.request("/command/copy-artifact-to-folder", "POST", {
-            "@id": id,
-            targetFolderId: this.target,
+            "@id": resourceSelector(id!),
+            targetFolderId: resourceSelector(this.target),
             nameTemplate: this.name.trim(),
           });
           break;
@@ -418,21 +419,21 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
           await this.api.request(
             "/command/move-resource-to-folder",
             "POST",
-            { "@id": id, targetFolderId: this.target },
+            { "@id": resourceSelector(id!), targetFolderId: resourceSelector(this.target) },
             this.etag,
           );
           break;
         case "publish":
           await this.api.request("/command/publish-artifact", "POST", {
-            "@id": id,
+            "@id": resourceSelector(id!),
             newVersion: formatVersion(this.version),
           });
           break;
         case "draft":
           await this.api.request("/command/create-draft-artifact", "POST", {
-            "@id": id,
+            "@id": resourceSelector(id!),
             newVersion: formatVersion(this.version),
-            folderId: this.target,
+            folderId: resourceSelector(this.target),
             // The draft is shared as the version it is drafted from is.
             propagateSharing: true,
             newFolderName: null,
@@ -453,7 +454,7 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
               (r!.resourceType === "folder" ? "folder" : "artifact") +
               (this.action === "make-open" ? "-open" : "-not-open"),
             "POST",
-            { "@id": id },
+            { "@id": resourceSelector(id!) },
             this.etag,
           );
           break;

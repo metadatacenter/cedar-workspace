@@ -1,3 +1,4 @@
+import { resourceSelector, resourcePathId } from "./resource-address";
 import { applyListingFilters } from "./listing-filters";
 import type { I18n } from "./i18n";
 export type ResourceType =
@@ -161,7 +162,7 @@ export function listingPath(
   } else
     path =
       "/folders/" +
-      encodeURIComponent(params.get("folderId") || home) +
+      encodeURIComponent(resourcePathId(params.get("folderId") || home)) +
       "/contents";
   return path + "?" + query;
 }
@@ -173,7 +174,7 @@ export function resourceLink(
   populate = false,
 ): string {
   if (r.resourceType === "folder")
-    return "/dashboard?folderId=" + encodeURIComponent(r["@id"]);
+    return "/dashboard?folderId=" + encodeURIComponent(resourceSelector(r["@id"]));
   const instance = r.resourceType === "instance" || populate;
   const kind = instance
     ? "instances"
@@ -187,6 +188,6 @@ export function resourceLink(
     instance ? config.workspaceFrontend : config.templateDesignerFrontend
   ).replace(/\/$/, "");
   const query = new URLSearchParams({ returnTo });
-  if (populate) query.set("folderId", folder);
-  return `${base}/${kind}/${populate ? "create" : "edit"}/${encodeURIComponent(r["@id"])}?${query}`;
+  if (populate) query.set("folderId", resourceSelector(folder));
+  return `${base}/${kind}/${populate ? "create" : "edit"}/${encodeURIComponent(resourcePathId(r["@id"]))}?${query}`;
 }

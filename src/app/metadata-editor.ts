@@ -1,3 +1,4 @@
+import { resourceSelector, resourcePathId } from "./resource-address";
 import { Toast } from "./toast";
 import { WorkspaceReturn } from "./workspace-return";
 import { Confirmation } from "./confirmation";
@@ -61,7 +62,7 @@ export const metadataRoute: UrlMatcher = (segments) => {
   };
 };
 export function workspaceReturn(value: string | null, folder: string): string {
-  const fallback = "/dashboard?" + new URLSearchParams({ folderId: folder });
+  const fallback = "/dashboard?" + new URLSearchParams({ folderId: resourceSelector(folder) });
   if (!value) return fallback;
   try {
     const url = new URL(value, location.origin);
@@ -259,7 +260,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         template: CeeJsonObject,
         writable: boolean;
       if (mode === "edit") {
-        const path = "/template-instances/" + encodeURIComponent(id);
+        const path = "/template-instances/" + encodeURIComponent(resourcePathId(id));
         const [instance, report] = await Promise.all([
           this.api.request<CeeJsonObject>(path),
           this.api.request<Resource>(path + "/report"),
@@ -273,16 +274,16 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
           throw new Error(this.i18n.t("Metadata.NoTemplate"));
         template = (
           await this.api.request<CeeJsonObject>(
-            "/templates/" + encodeURIComponent(templateId),
+            "/templates/" + encodeURIComponent(resourcePathId(templateId)),
           )
         ).data;
       } else {
         const [result, folder] = await Promise.all([
           this.api.request<CeeJsonObject>(
-            "/templates/" + encodeURIComponent(id),
+            "/templates/" + encodeURIComponent(resourcePathId(id)),
           ),
           this.api.request<Resource>(
-            "/folders/" + encodeURIComponent(this.folder),
+            "/folders/" + encodeURIComponent(resourcePathId(this.folder)),
           ),
         ]);
         template = result.data;
@@ -480,12 +481,12 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       metadata["schema:name"] = name;
       metadata["schema:isBasedOn"] = this.template["@id"];
       let path =
-        "/template-instances?folder_id=" + encodeURIComponent(this.folder);
+        "/template-instances?folder_id=" + encodeURIComponent(resourceSelector(this.folder));
       if (this.saved) {
         metadata["@id"] = this.saved["@id"];
         path =
           "/template-instances/" +
-          encodeURIComponent(String(this.saved["@id"]));
+          encodeURIComponent(resourcePathId(String(this.saved["@id"])));
       } else {
         metadata["schema:description"] ||= String(
           this.template["schema:description"] || "",
@@ -523,10 +524,10 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       try {
         await this.router.navigateByUrl(
           "/instances/edit/" +
-            encodeURIComponent(String(this.saved["@id"])) +
+            encodeURIComponent(resourcePathId(String(this.saved["@id"]))) +
             "?" +
             new URLSearchParams({
-              folderId: this.folder,
+              folderId: resourceSelector(this.folder),
               returnTo: this.returnTo,
             }),
           { replaceUrl: true },

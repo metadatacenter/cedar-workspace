@@ -1,3 +1,4 @@
+import { resourcePathId } from "./resource-address";
 import { OperationCoordinator } from "./operation-coordinator";
 import { Tooltip } from "./tooltip";
 import {
@@ -161,7 +162,7 @@ export class ArtifactPreview implements AfterViewInit, OnDestroy {
           "/" +
             collections[this.resource.resourceType] +
             "/" +
-            encodeURIComponent(this.resource["@id"]),
+            encodeURIComponent(resourcePathId(this.resource["@id"])),
         ),
         fetch("/config/embeddable-editor-config.json", {
           cache: "no-store",
@@ -179,7 +180,7 @@ export class ArtifactPreview implements AfterViewInit, OnDestroy {
         if (typeof id !== "string" || !id) throw new Error();
         template = (
           await this.api.request<CeeJsonObject>(
-            "/templates/" + encodeURIComponent(id),
+            "/templates/" + encodeURIComponent(resourcePathId(id)),
           )
         ).data;
       } else if (this.resource.resourceType === "element")

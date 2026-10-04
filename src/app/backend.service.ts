@@ -1,3 +1,4 @@
+import { resourcePathId } from "./resource-address";
 import type { UserProfile } from "./account-types";
 import { Injectable, inject } from "@angular/core";
 import { I18n } from "./i18n";
@@ -191,7 +192,7 @@ export class Backend {
   }
   path(r: Resource) {
     return (
-      "/" + collections[r.resourceType] + "/" + encodeURIComponent(r["@id"])
+      "/" + collections[r.resourceType] + "/" + encodeURIComponent(resourcePathId(r["@id"]))
     );
   }
   report(r: Resource) {

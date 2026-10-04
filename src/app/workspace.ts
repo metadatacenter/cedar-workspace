@@ -1,3 +1,4 @@
+import { resourceSelector, resourcePathId, resourceIri } from "./resource-address";
 import { OperationCoordinator } from "./operation-coordinator";
 import { validListing } from "./resource";
 import { DragPreview } from "./drag-preview";
@@ -319,12 +320,12 @@ export class Workspace {
             .filter((key) => key !== SELECTED_PARAM)
             .forEach((key) => this.params.set(key, map.get(key)!));
           const selected = map.get(SELECTED_PARAM);
-          if (selected) this.reselect = selected;
+          if (selected) this.reselect = resourceIri(selected, this.api.profile.homeFolderId);
           const listingKey = this.params.toString();
           if (listingKey === this.listingKey && !selected) return;
           this.listingKey = listingKey;
           this.search = map.get("search") || "";
-          this.folder = map.get("folderId") || this.api.profile.homeFolderId;
+          this.folder = resourceIri(map.get("folderId") || this.api.profile.homeFolderId, this.api.profile.homeFolderId);
           const sort = map.get("sort") || "name";
           this.sort = [
             "name",
@@ -451,7 +452,7 @@ export class Workspace {
       .split("&")
       .filter((param) => param && param.split("=")[0] !== SELECTED_PARAM);
     if (keep)
-      params.push(SELECTED_PARAM + "=" + encodeURIComponent(keep["@id"]));
+      params.push(SELECTED_PARAM + "=" + encodeURIComponent(resourceSelector(keep["@id"])));
     url.search = params.join("&");
     return url.toString();
   }
@@ -459,7 +460,7 @@ export class Workspace {
     const operation = this.state.begin("folder");
     try {
       const { data } = await this.api.request<Resource>(
-        "/folders/" + encodeURIComponent(this.folder),
+        "/folders/" + encodeURIComponent(resourcePathId(this.folder)),
       );
       if (!operation.current()) return;
       this.currentFolder.set(data);
@@ -685,7 +686,7 @@ export class Workspace {
     try {
       const { data } = await this.api.request<Listing>(
         "/search?is_based_on=" +
-          encodeURIComponent(r["@id"]) +
+          encodeURIComponent(resourceSelector(r["@id"])) +
           "&limit=50&offset=0",
       );
       if (operation.current()) {
@@ -772,7 +773,7 @@ export class Workspace {
     void this.router.navigate(["/dashboard"], {
       queryParams: this.navigationQuery(this.search.trim()
         ? { search: this.search.trim() }
-        : { folderId: this.folder }),
+        : { folderId: resourceSelector(this.folder) }),
     });
   }
   get filters(): ListingFilters {
@@ -898,7 +899,7 @@ export class Workspace {
       kind +
       "/create?" +
       new URLSearchParams({
-        folderId: this.folder,
+        folderId: resourceSelector(this.folder),
         returnTo: this.returnHere(),
       })
     );
@@ -909,7 +910,7 @@ export class Workspace {
       "/" +
       collections[r.resourceType] +
       "/" +
-      encodeURIComponent(r["@id"])
+      encodeURIComponent(resourcePathId(r["@id"]))
     );
   }
   async act(id: string, r: Resource) {
@@ -921,7 +922,7 @@ export class Workspace {
       if (id === "open" || id === "populate") {
         if (r.resourceType === "folder")
           void this.router.navigate(["/dashboard"], {
-            queryParams: this.navigationQuery({ folderId: r["@id"] }),
+            queryParams: this.navigationQuery({ folderId: resourceSelector(r["@id"]) }),
           });
         else location.assign(this.link(r, id === "populate"));
         return;

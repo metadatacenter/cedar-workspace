@@ -1,3 +1,4 @@
+import { resourceSelector, resourcePathId } from "./resource-address";
 import { Injectable, inject } from "@angular/core";
 import { Backend } from "./backend.service";
 import { I18n } from "./i18n";
@@ -25,7 +26,7 @@ export class ResourceMoves {
       failed: { resource: Resource; message: string }[] = [];
     const target = (
       await this.api.request<Resource>(
-        "/folders/" + encodeURIComponent(targetId),
+        "/folders/" + encodeURIComponent(resourcePathId(targetId)),
       )
     ).data;
     if (!validMoveTarget(resources, target))
@@ -56,7 +57,7 @@ export class ResourceMoves {
         await this.api.request(
           "/command/move-resource-to-folder",
           "POST",
-          { "@id": resource["@id"], targetFolderId: targetId },
+          { "@id": resourceSelector(resource["@id"]), targetFolderId: resourceSelector(targetId) },
           etag,
         );
         moved.push(

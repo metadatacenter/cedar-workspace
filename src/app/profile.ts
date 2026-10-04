@@ -1,3 +1,4 @@
+import { resourceSelector, resourcePathId } from "./resource-address";
 import { RevisionCoordinator } from "./revision-coordinator";
 import { record, nonempty } from "./access-validation";
 import { validApiKeys, canChangeKey, acknowledgesKeys } from "./api-key-state";
@@ -123,7 +124,7 @@ export class Profile implements OnInit, OnDestroy {
           field("Account.Profile.HomeFolderId", p.homeFolderId, true),
           field(
             "Account.Profile.EncodedHomeFolderId",
-            encodeURIComponent(p.homeFolderId),
+            encodeURIComponent(resourcePathId(p.homeFolderId)),
             true,
           ),
           field(
@@ -252,7 +253,7 @@ export class Profile implements OnInit, OnDestroy {
     return [
       [
         "Account.Profile.Examples.HomeContents",
-        `${curl} "${base}/folders/${encodeURIComponent(this.profile.homeFolderId)}/contents"${auth}`,
+        `${curl} "${base}/folders/${encodeURIComponent(resourcePathId(this.profile.homeFolderId))}/contents"${auth}`,
       ],
       [
         "Account.Profile.Examples.Shared",
@@ -264,7 +265,7 @@ export class Profile implements OnInit, OnDestroy {
       ],
       [
         "Account.Profile.Examples.Create",
-        `${curl} -X POST "${base}/templates?folder_id=${encodeURIComponent(this.profile.homeFolderId)}"${auth} -H "Content-Type: application/json" -d @template.json`,
+        `${curl} -X POST "${base}/templates?folder_id=${encodeURIComponent(resourceSelector(this.profile.homeFolderId))}"${auth} -H "Content-Type: application/json" -d @template.json`,
       ],
       [
         "Account.Profile.Examples.Update",
