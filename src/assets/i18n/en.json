@@ -372,7 +372,9 @@
     "Created": "Group created.",
     "DetailsSaved": "Group details saved.",
     "Deleted": "Group deleted.",
-    "MembersSaved": "Group members saved."
+    "MembersSaved": "Group members saved.",
+    "InvalidResponse": "The server returned incomplete or ambiguous group data. Reload before making changes.",
+    "ReloadDirectory": "Reload groups"
   },
   "Logout": {
     "Title": "Logout",

@@ -372,7 +372,9 @@
     "Created": "Csoport létrehozva.",
     "DetailsSaved": "A csoport adatai mentve.",
     "Deleted": "Csoport törölve.",
-    "MembersSaved": "A csoport tagjai mentve."
+    "MembersSaved": "A csoport tagjai mentve.",
+    "InvalidResponse": "A szerver hiányos vagy nem egyértelmű csoportadatokat küldött. Módosítás előtt töltse be újra az adatokat.",
+    "ReloadDirectory": "Csoportok újratöltése"
   },
   "Logout": {
     "Title": "Kijelentkezés",

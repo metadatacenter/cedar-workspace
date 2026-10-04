@@ -245,6 +245,12 @@ directories are validated before controls become available. Conflicts, lost acce
 missing revisions and uncertain writes require an explicit reload; a reload cannot
 overlap a write. Multi-step unit and browser matrices cover rejection and recovery.
 
+Groups uses the same coordinator for directory loads, selection, membership, details,
+creation and deletion. Group and membership ETags remain independent. Incoming rosters
+require unique identifiers and boolean membership roles; the last administrator stays
+protected. Confirmation decisions expire across reads, writes, tabs and destruction.
+An uncertain creation requires a directory reload before another attempt.
+
 Use the shared `Confirmation` service for in-app confirmation, awaiting its result
 before writing and rechecking the target and permissions afterward. The root outlet
 provides a styled, labelled modal with Cancel focused, Escape cancellation, focus
