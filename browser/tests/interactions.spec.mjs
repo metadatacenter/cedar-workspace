@@ -591,8 +591,8 @@ test("metadata errors and nonblocking warnings share centered, expandable summar
   await link.click();
   await warnings.getByRole("button", { name: "Title: A required value is missing." }).click();
   expect(await page.evaluate(() => window.__ceeReveals)).toEqual([
-    { path: ["Email"], code: "email", message: "Enter a valid email." },
-    { path: ["Title"], code: "required", message: "A value is required." },
+    { path: ["Email"], code: "email", message: "Enter a valid email.", severity: "error" },
+    { path: ["Title"], code: "required", message: "A value is required.", severity: "warning" },
   ]);
   await page
     .locator(".metadata-content")

@@ -520,8 +520,8 @@
       <button (click)="page(-1)" [disabled]="offset()===0||loading()">
         {{'Common.Previous' | translate}}</button
       ><span
-        >{{'Dashboard.Displaying' | translate: {first: total()?offset()+1:0,
-        last: offset()+rows().length, total: total()} }}</span
+        >{{'Dashboard.Displaying' | translate: {first: rows().length?offset()+1:0,
+        last: rows().length?offset()+rows().length:0, total: total()} }}</span
       ><button
         (click)="page(1)"
         [disabled]="offset()+rows().length>=total()||loading()"

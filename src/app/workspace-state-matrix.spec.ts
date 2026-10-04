@@ -80,6 +80,7 @@ for (const refresh of [false, true]) {
       expect(workspace.selectionIds()).toEqual([]);
       expect(workspace.selected()).toBeUndefined();
       expect(workspace.rows()).toEqual(refresh ? [resource("same")] : []);
+      expect(workspace.total()).toBe(refresh ? 1 : 0);
       listing = { resources: [resource("new")], totalCount: 1 };
       await workspace.load();
       expect(workspace.error()).toBe("");
@@ -88,6 +89,56 @@ for (const refresh of [false, true]) {
     });
   }
 }
+
+for (const query of [
+  "sharing=shared-with-me",
+  "sharing=shared-with-everybody",
+  "search=Study",
+])
+  for (const pathInfo of [undefined, null, []])
+    for (const empty of [false, true]) {
+      it(`accepts search without a folder breadcrumb: ${query}, path=${JSON.stringify(pathInfo)}, empty=${empty}`, async () => {
+        const rows = empty ? [] : [resource("shared")];
+        const api = {
+          init: vi.fn().mockResolvedValue(true),
+          profile: { homeFolderId: "home" },
+          config: {
+            templateDesignerFrontend: "https://designer.example",
+            workspaceFrontend: "https://workspace.example",
+            openViewBase: "https://openview.example",
+          },
+          request: vi.fn(async (path: string) => ({
+            data: path.startsWith("/search?")
+              ? { resources: rows, totalCount: rows.length, pathInfo }
+              : path.includes("/contents")
+                ? {
+                    resources: [resource("old")],
+                    totalCount: 1,
+                    pathInfo: [home],
+                  }
+                : home,
+          })),
+        };
+        TestBed.configureTestingModule({
+          providers: [provideRouter([]), { provide: Backend, useValue: api }],
+        });
+        const fixture = TestBed.createComponent(Workspace);
+        fixture.detectChanges();
+        const workspace = fixture.componentInstance;
+        await vi.waitFor(() => expect(workspace.currentFolder()).toBeDefined());
+        workspace.params = new URLSearchParams(query);
+        await workspace.load();
+        expect(api.request).toHaveBeenCalledWith(
+          expect.stringContaining("/search?"),
+        );
+        expect(workspace.error()).toBe("");
+        expect(workspace.rows()).toEqual(rows);
+        expect(workspace.total()).toBe(rows.length);
+        expect(workspace.path()).toEqual([]);
+        expect(workspace.loading()).toBe(false);
+        fixture.destroy();
+      });
+    }
 
 for (const oldFails of [false, true]) {
   for (const newFails of [false, true]) {

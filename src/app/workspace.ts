@@ -388,7 +388,10 @@ export class Workspace {
     } catch (e) {
       operation.fail(e);
       if (operation.current()) {
-        if (!refresh) this.rows.set([]);
+        if (!refresh) {
+          this.rows.set([]);
+          this.total.set(0);
+        }
         this.fail(e);
       }
     } finally {

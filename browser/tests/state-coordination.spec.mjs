@@ -100,3 +100,36 @@ test('a failed metadata load can retry and a conflict requires an explicit reloa
   await page.locator('.confirmation-dialog').getByRole('button', {name:'OK',exact:true}).click();
   await expect(name).toHaveValue('Study record'); await expect(save).toBeEnabled();
 });
+
+for (const destination of ['Shared with Me', 'Shared with Everyone', 'Search']) for (const empty of [false, true]) {
+  test(`${destination} accepts the server's null breadcrumb, empty=${empty}`, async ({page, api}) => {
+    const rows = empty ? [] : [resource];
+    await page.route('**/api/resource/search?**', route => route.fulfill({json: {resources: rows, totalCount: rows.length, pathInfo: null}}));
+    await page.goto('/dashboard');
+    await expect(page.locator('tbody tr')).toHaveCount(1);
+    const response = page.waitForResponse(r => new URL(r.url()).pathname.endsWith('/search'));
+    if(destination === 'Search') {
+      await page.getByRole('textbox', {name: 'Search workspace', exact:true}).fill('Study');
+      await page.getByRole('button', {name:'Search',exact:true}).click();
+    } else await page.getByRole('link', {name: destination, exact:true}).click();
+    await response;
+    await expect(page.locator('.table-scroll')).toHaveAttribute('aria-busy','false');
+    await expect(page.getByRole('alert')).toHaveCount(0);
+    await expect(page.locator('tbody tr')).toHaveCount(rows.length);
+    await expect(page.locator('.paging')).toContainText(empty ? 'Displaying 0–0 of 0' : 'Displaying 1–1 of 1');
+    expect(api.requests.filter(request => request.method !== 'GET')).toEqual([]);
+  });
+}
+
+test('an empty page after the collection shrinks reports no displayed rows and can go back',async({page, api})=>{
+  await page.route('**/api/resource/search?**',route=>{
+    const offset=Number(new URL(route.request().url()).searchParams.get('offset'));
+    return route.fulfill({json:{resources:offset?[]:[resource],totalCount:20,pathInfo:null}});
+  });
+  await page.goto('/dashboard?sharing=shared-with-me&offset=50');
+  await expect(page.locator('.paging')).toContainText('Displaying 0–0 of 20');
+  await expect(page.getByRole('button',{name:'Next',exact:true})).toBeDisabled();
+  await page.getByRole('button',{name:'Previous',exact:true}).click();
+  await expect(page.locator('tbody tr')).toHaveCount(1);
+  await expect(page.locator('.paging')).toContainText('Displaying 1–1 of 20');
+});

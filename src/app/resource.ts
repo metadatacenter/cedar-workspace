@@ -43,7 +43,7 @@ export interface Resource {
 export interface Listing {
   resources: Resource[];
   totalCount: number;
-  pathInfo?: Resource[];
+  pathInfo?: Resource[] | null;
 }
 
 /** Reject incomplete or ambiguous listing replies before they become selectable rows. */
@@ -69,7 +69,7 @@ export function validListing(value: unknown): value is Listing {
     ids.add(item["@id"]);
   }
   return (
-    listing.pathInfo === undefined ||
+    listing.pathInfo == null ||
     (Array.isArray(listing.pathInfo) &&
       listing.pathInfo.every(
         (item) =>
