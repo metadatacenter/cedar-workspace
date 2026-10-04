@@ -1,3 +1,4 @@
+import { OperationCoordinator } from "./operation-coordinator";
 import { Tooltip } from "./tooltip";
 import {
   AfterViewInit,
@@ -124,6 +125,7 @@ export class ArtifactPreview implements AfterViewInit, OnDestroy {
     config: CeeConfig;
   };
   private alive = true;
+  readonly state = new OperationCoordinator<"viewer">();
   private timer?: ReturnType<typeof setTimeout>;
   private originalFocus = document.activeElement as HTMLElement | null;
   get name() {
@@ -201,6 +203,7 @@ export class ArtifactPreview implements AfterViewInit, OnDestroy {
     }
   }
   private mountViewer() {
+    const operation = this.state.begin("viewer");
     // Each mode starts from an isolated copy; trial edits never alter the fetched artifact.
     const { artifact, template, config } = structuredClone(this.source!);
     const field = this.resource.resourceType === "field";
@@ -210,11 +213,16 @@ export class ArtifactPreview implements AfterViewInit, OnDestroy {
       CedarEmbeddableEditorElement | CedarEmbeddableFieldElement;
     viewer.eventHandler = {
       ready: () => {
-        if (!this.alive || this.error()) return;
+        if (!operation.current() || !this.alive || this.error()) return;
+        operation.finish();
         clearTimeout(this.timer);
         this.reveal();
       },
-      error: this.fail,
+      error: (message) => {
+        if (!operation.current()) return;
+        operation.fail(message);
+        this.fail();
+      },
     };
     // Configure a fresh editor before inputs. No persistence handlers are attached.
     viewer.config = {
@@ -255,6 +263,7 @@ export class ArtifactPreview implements AfterViewInit, OnDestroy {
   }
   private dispose() {
     this.alive = false;
+    this.state.dispose();
     clearTimeout(this.timer);
     this.mount.nativeElement.replaceChildren();
   }

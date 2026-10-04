@@ -1,5 +1,8 @@
+import { OperationCoordinator } from "./operation-coordinator";
+import { I18n } from "./i18n";
 import {
   Component,
+  DestroyRef,
   effect,
   inject,
   input,
@@ -72,6 +75,8 @@ export class DescriptionEditor {
   readonly error = signal("");
   private readonly api = inject(Backend);
   private loaded = "";
+  private readonly i18n = inject(I18n);
+  readonly state = new OperationCoordinator<"read" | "write">();
   get editable() {
     return can(this.resource(), "updateResource");
   }
@@ -82,27 +87,41 @@ export class DescriptionEditor {
     );
   }
   constructor() {
+    inject(DestroyRef).onDestroy(() => this.state.dispose());
     effect(() => {
       const r = this.resource();
-      if (this.editable && this.loaded !== r["@id"]) {
-        this.loaded = r["@id"];
-        void this.load();
-      }
+      const key = JSON.stringify([r["@id"], this.editable]);
+      if (key === this.loaded) return;
+      this.loaded = key;
+      this.state.cancel("read", "write");
+      this.snapshot.set(null);
+      this.draft.set(r["schema:description"] || "");
+      this.error.set("");
+      this.busy.set(false);
+      if (this.editable) void this.load();
     });
   }
   async load() {
     const r = this.resource();
+    if (!this.editable) return;
+    const operation = this.state.begin("read", ["write"]);
     this.busy.set(true);
     this.error.set("");
     this.snapshot.set(null);
     try {
       const reply = await this.api.snapshot(r, true);
+      if (!operation.current()) return;
+      if (!reply.etag)
+        throw new Error(this.i18n.t("ResourceDialog.NoRevision"));
       this.snapshot.set({ ...reply, data: { ...r, ...reply.data } });
       this.draft.set(reply.data["schema:description"] || "");
+      operation.finish();
     } catch (e) {
-      this.error.set(e instanceof Error ? e.message : String(e));
+      operation.fail(e);
+      if (operation.current())
+        this.error.set(e instanceof Error ? e.message : String(e));
     } finally {
-      this.busy.set(false);
+      if (operation.current()) this.busy.set(false);
     }
   }
   cancel() {
@@ -112,6 +131,7 @@ export class DescriptionEditor {
   async save() {
     const snapshot = this.snapshot();
     if (!snapshot || !this.editable || !this.dirty || this.busy()) return;
+    const operation = this.state.begin("write", ["read"]);
     this.busy.set(true);
     this.error.set("");
     const updated = { ...snapshot.data, "schema:description": this.draft() };
@@ -126,14 +146,18 @@ export class DescriptionEditor {
         },
         snapshot.etag,
       );
+      if (!operation.current()) return;
       this.snapshot.set({ data: updated, etag: reply.etag });
+      operation.finish();
       this.saved.emit(updated);
       // Re-read the revision before another edit; the command may not return an ETag.
       await this.load();
     } catch (e) {
-      this.error.set(e instanceof Error ? e.message : String(e));
+      operation.fail(e);
+      if (operation.current())
+        this.error.set(e instanceof Error ? e.message : String(e));
     } finally {
-      this.busy.set(false);
+      if (operation.current()) this.busy.set(false);
     }
   }
 }

@@ -45,6 +45,38 @@ export interface Listing {
   totalCount: number;
   pathInfo?: Resource[];
 }
+
+/** Reject incomplete or ambiguous listing replies before they become selectable rows. */
+export function validListing(value: unknown): value is Listing {
+  if (!value || typeof value !== "object") return false;
+  const listing = value as Listing;
+  if (
+    !Array.isArray(listing.resources) ||
+    !Number.isSafeInteger(listing.totalCount) ||
+    listing.totalCount < listing.resources.length
+  )
+    return false;
+  const ids = new Set<string>();
+  for (const item of listing.resources) {
+    if (
+      !item ||
+      typeof item["@id"] !== "string" ||
+      !item["@id"].trim() ||
+      !Object.hasOwn(collections, item.resourceType) ||
+      ids.has(item["@id"])
+    )
+      return false;
+    ids.add(item["@id"]);
+  }
+  return (
+    listing.pathInfo === undefined ||
+    (Array.isArray(listing.pathInfo) &&
+      listing.pathInfo.every(
+        (item) =>
+          item && typeof item["@id"] === "string" && !!item["@id"].trim(),
+      ))
+  );
+}
 export interface Config {
   resourceRestAPI: string;
   userRestAPI: string;

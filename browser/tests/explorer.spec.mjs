@@ -18,11 +18,13 @@ async function setup(page, extra = []) {
   await page.route("**/api/resource/**", async (route) => {
     const request = route.request(),
       path = new URL(request.url()).pathname;
+    if (path.endsWith('/search'))
+      return route.fulfill({ json: { resources: [], totalCount: 0 } });
     if (path.includes("/contents"))
       return route.fulfill({
         json: {
           resources: [folder, ...items.filter((r) => !moved.has(r["@id"])), ...extra],
-          totalCount: 4 - moved.size,
+          totalCount: 4 - moved.size + extra.length,
           pathInfo: [],
         },
       });

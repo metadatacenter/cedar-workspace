@@ -72,6 +72,7 @@
     "About": "About"
   },
   "Errors": {
+    "InvalidListing": "The server returned an incomplete resource list. Please retry.",
     "ConfigurationUnavailable": "Unable to load workspace configuration.",
     "SignInFailed": "Sign-in failed. Please reload.",
     "SessionExpired": "Your session expired. Please sign in again.",

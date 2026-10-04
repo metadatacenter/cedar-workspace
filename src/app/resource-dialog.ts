@@ -1,3 +1,5 @@
+import { OperationCoordinator } from "./operation-coordinator";
+import { validListing } from "./resource";
 import { Tooltip } from "./tooltip";
 import { ResourceMoves, validMoveTarget } from "./resource-moves";
 import { Confirmation } from "./confirmation";
@@ -108,13 +110,24 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   private initialValues: string | null = null;
   private etag: string | null = null;
   private alive = true;
+  readonly state = new OperationCoordinator<"load" | "browse">();
   private originalFocus = document.activeElement as HTMLElement | null;
   get headingIcon() {
-    return ({
-      "new-folder": "folder", rename: "edit", copy: "copy", move: "move",
-      delete: "delete", publish: "publish",
-      draft: "new-record", "make-open": "globe", "make-not-open": "lock",
-    } as Record<string, string>)[this.action] ?? "info";
+    return (
+      (
+        {
+          "new-folder": "folder",
+          rename: "edit",
+          copy: "copy",
+          move: "move",
+          delete: "delete",
+          publish: "publish",
+          draft: "new-record",
+          "make-open": "globe",
+          "make-not-open": "lock",
+        } as Record<string, string>
+      )[this.action] ?? "info"
+    );
   }
   get heading() {
     const key = (
@@ -150,6 +163,7 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   }
   ngOnDestroy() {
     this.alive = false;
+    this.state.dispose();
     this.originalFocus?.focus();
   }
   ngOnInit() {
@@ -157,11 +171,7 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   }
   private values() {
     // Browsing a destination changes navigation, not authored content to preserve.
-    return JSON.stringify([
-      this.name,
-      this.description,
-      this.version,
-    ]);
+    return JSON.stringify([this.name, this.description, this.version]);
   }
   async close() {
     if (this.busy() && !this.preparing()) return;
@@ -175,16 +185,23 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
       ))
     )
       return;
+    this.alive = false;
+    this.state.dispose();
     this.closed.emit();
   }
   async load() {
+    const operation = this.state.begin("load", ["browse"]);
+    this.busy.set(true);
+    this.etag = null;
+    this.error.set("");
     try {
       const r = this.resource;
       this.target = this.folder;
       if (r) {
-        this.name = this.action === "copy"
-          ? this.i18n.t("ResourceDialog.CopyName", { name: this.title(r) })
-          : this.title(r);
+        this.name =
+          this.action === "copy"
+            ? this.i18n.t("ResourceDialog.CopyName", { name: this.title(r) })
+            : this.title(r);
         this.description = r["schema:description"] || "";
         const current = parseVersion(r["pav:version"]);
         // A draft starts at the next patch, the first version it may take.
@@ -200,17 +217,24 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
             r,
             this.action === "delete" || this.action === "rename",
           );
+          if (!operation.current()) return;
           this.etag = reply.etag;
           this.openViewPath = reply.data.pathInfo;
           this.name = this.title({ ...r, ...reply.data });
           this.description = reply.data["schema:description"] || "";
         }
       }
+      if (!operation.current()) return;
       if (this.choosesFolder) await this.browse(this.folder);
+      operation.finish();
     } catch (e) {
-      this.fail(e);
+      operation.fail(e);
+      if (operation.current()) this.fail(e);
     } finally {
-      this.busy.set(false);
+      if (!operation.current()) return;
+      this.busy.set(
+        this.state.report.some((entry) => entry.status === "pending"),
+      );
       this.initialValues = this.values();
       if (this.alive) {
         this.preparing.set(false);
@@ -233,6 +257,9 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
     this.error.set(e instanceof Error ? e.message : String(e));
   }
   async browse(id: string, offset = 0, sort: FolderSort = this.folderSort) {
+    if (!this.alive) return;
+    const operation = this.state.begin("browse");
+    this.error.set("");
     this.busy.set(true);
     try {
       const [reply, targetReply] = await Promise.all([
@@ -246,6 +273,9 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
         ),
         this.api.request<Resource>("/folders/" + encodeURIComponent(id)),
       ]);
+      if (!operation.current()) return;
+      if (!validListing(reply.data))
+        throw new Error(this.i18n.t("Errors.InvalidListing"));
       const targetResource = targetReply.data;
       this.target = id;
       this.folderSort = sort;
@@ -255,10 +285,15 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
       this.path.set(reply.data.pathInfo || []);
       this.targetResource = targetResource;
       this.error.set("");
+      operation.finish();
     } catch (e) {
-      this.fail(e);
+      operation.fail(e);
+      if (operation.current()) this.fail(e);
     } finally {
-      this.busy.set(false);
+      if (operation.current())
+        this.busy.set(
+          this.state.report.some((entry) => entry.status === "pending"),
+        );
     }
   }
   sortFolders(sort: FolderSort) {
@@ -307,7 +342,7 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
     return "";
   }
   async submit() {
-    if (this.busy() || !this.destinationAllowed) return;
+    if (!this.alive || this.busy() || !this.destinationAllowed) return;
     this.submitted = true;
     if (this.nameError || this.versionError) return;
     this.busy.set(true);

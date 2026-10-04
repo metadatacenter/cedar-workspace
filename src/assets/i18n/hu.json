@@ -72,6 +72,7 @@
     "About": "Névjegy"
   },
   "Errors": {
+    "InvalidListing": "A kiszolgáló hiányos erőforráslistát adott vissza. Próbálja újra.",
     "ConfigurationUnavailable": "A munkaterület beállításai nem tölthetők be.",
     "SignInFailed": "A bejelentkezés sikertelen. Kérjük, töltse be újra az oldalt.",
     "SessionExpired": "A munkamenete lejárt. Kérjük, jelentkezzen be újra.",

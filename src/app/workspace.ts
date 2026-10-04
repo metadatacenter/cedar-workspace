@@ -1,3 +1,5 @@
+import { OperationCoordinator } from "./operation-coordinator";
+import { validListing } from "./resource";
 import { DragPreview } from "./drag-preview";
 import { TooltipController } from "./tooltip-controller";
 import { Tooltip } from "./tooltip";
@@ -289,8 +291,7 @@ export class Workspace {
   private listingKey: string | null = null;
   // An artifact to select once the listing holds it, as an editor returning here names it.
   private reselect: string | null = null;
-  private listRead = 0;
-  private detailRead = 0;
+  readonly state = new OperationCoordinator<"listing" | "folder" | "detail" | "instances" | "menu" | "enrichment">();
   constructor() {
     effect(() => {
       document.body.classList.toggle("explorer-dragging", this.dragging().length > 0);
@@ -303,13 +304,12 @@ export class Workspace {
       clearTimeout(this.movedTimer);
       this.tooltips.resume();
       document.body.classList.remove("explorer-dragging", "explorer-can-drop");
-      this.listRead++;
-      this.detailRead++;
+      this.state.dispose();
     });
   }
   async start() {
     try {
-      if (!(await this.api.init())) return;
+      if (!(await this.api.init()) || !this.state.active) return;
       this.ready.set(true);
       this.route.queryParamMap
         .pipe(takeUntilDestroyed(this.destroy))
@@ -352,15 +352,17 @@ export class Workspace {
     this.error.set(e instanceof Error ? e.message : String(e));
   }
   async load(refresh = false) {
-    const read = ++this.listRead;
-    this.detailRead++;
+    const operation = this.state.begin("listing", ["folder", "detail", "instances", "menu", "enrichment"]);
     this.loading.set(true);
     this.refreshing.set(refresh);
     this.error.set("");
     this.selected.set(undefined);
     this.selectionIds.set([]);
+    this.currentFolder.set(undefined);
+    this.instances.set([]);
+    this.instanceTotal.set(0);
+    this.instancesLoaded.set(false);
     if (!refresh) {
-      this.currentFolder.set(undefined);
       this.path.set([]);
     }
     this.menu.set(null);
@@ -373,21 +375,24 @@ export class Workspace {
           this.offset(),
         ),
       );
-      if (read !== this.listRead) return;
+      if (!operation.current()) return;
+      if (!validListing(data)) throw new Error(this.i18n.t("Errors.InvalidListing"));
       this.rows.set(data.resources);
       this.total.set(data.totalCount);
       this.path.set(data.pathInfo || []);
       this.restoreSelection();
-      void this.loadFolder(read);
+      void this.loadFolder();
       // Listings omit lifecycle actions. Enrich template links without blocking the table.
-      void this.loadTemplateActions(data.resources, read);
+      void this.loadTemplateActions(data.resources);
+      operation.finish();
     } catch (e) {
-      if (read === this.listRead) {
+      operation.fail(e);
+      if (operation.current()) {
         if (!refresh) this.rows.set([]);
         this.fail(e);
       }
     } finally {
-      if (read === this.listRead) {
+      if (operation.current()) {
         this.loading.set(false);
         this.refreshing.set(false);
       }
@@ -447,25 +452,29 @@ export class Workspace {
     url.search = params.join("&");
     return url.toString();
   }
-  private async loadFolder(read: number) {
+  private async loadFolder() {
+    const operation = this.state.begin("folder");
     try {
       const { data } = await this.api.request<Resource>(
         "/folders/" + encodeURIComponent(this.folder),
       );
-      if (read !== this.listRead) return;
+      if (!operation.current()) return;
       this.currentFolder.set(data);
+      operation.finish();
     } catch (e) {
-      if (read === this.listRead) this.fail(e);
+      operation.fail(e);
+      if (operation.current()) this.fail(e);
     }
   }
-  private async loadTemplateActions(resources: Resource[], read: number) {
+  private async loadTemplateActions(resources: Resource[]) {
+    const operation = this.state.begin("enrichment");
     const templates = resources.filter((r) => r.resourceType === "template");
     for (let i = 0; i < templates.length; i += 4) {
-      if (read !== this.listRead) return;
+      if (!operation.current()) return;
       const reports = await Promise.allSettled(
         templates.slice(i, i + 4).map((r) => this.api.report(r)),
       );
-      if (read !== this.listRead) return;
+      if (!operation.current()) return;
       reports.forEach((report, index) => {
         if (report.status === "fulfilled")
           this.rows.update((rows) =>
@@ -477,6 +486,7 @@ export class Workspace {
           );
       });
     }
+    operation.finish();
   }
   private menuTrigger: HTMLElement | null = null;
   menuTop = signal(8);
@@ -524,7 +534,8 @@ export class Workspace {
     buttons[next]?.focus();
   }
   async select(r: Resource) {
-    const read = ++this.detailRead;
+    const operation = this.state.begin("detail", ["instances"]);
+    this.error.set("");
     this.selectionIds.set([r["@id"]]);
     this.selected.set(r);
     this.instances.set([]);
@@ -533,17 +544,19 @@ export class Workspace {
     this.tab = "info";
     try {
       const { data } = await this.api.report(r);
-      if (read === this.detailRead) {
+      if (operation.current()) {
         this.selected.set({ ...r, ...data });
-        if (r.resourceType === "template") void this.loadInstances(r, read);
+        if (r.resourceType === "template") void this.loadInstances(r);
         this.rows.update((rows) =>
           rows.map((row) =>
             row["@id"] === r["@id"] ? { ...row, ...data } : row,
           ),
         );
       }
+      operation.finish();
     } catch (e) {
-      if (read === this.detailRead) this.fail(e);
+      operation.fail(e);
+      if (operation.current()) this.fail(e);
     }
   }
   setSelection(ids: string[]) {
@@ -553,8 +566,11 @@ export class Workspace {
       const r = this.rows().find((r) => r["@id"] === ids[0]);
       if (r) void this.select(r);
     } else {
-      this.detailRead++;
+      this.state.cancel("detail", "instances");
       this.selected.set(undefined);
+      this.instances.set([]);
+      this.instanceTotal.set(0);
+      this.instancesLoaded.set(false);
     }
   }
   doubleClickItem(r: Resource, event: MouseEvent) {
@@ -661,20 +677,24 @@ export class Workspace {
       void this.moveItems(this.cutItems(), this.folder);
     }
   }
-  private async loadInstances(r: Resource, read: number) {
+  private async loadInstances(r: Resource) {
+    const operation = this.state.begin("instances");
     try {
       const { data } = await this.api.request<Listing>(
         "/search?is_based_on=" +
           encodeURIComponent(r["@id"]) +
           "&limit=50&offset=0",
       );
-      if (read === this.detailRead) {
+      if (operation.current()) {
+        if (!validListing(data)) throw new Error(this.i18n.t("Errors.InvalidListing"));
         this.instances.set(data.resources);
         this.instanceTotal.set(data.totalCount);
         this.instancesLoaded.set(true);
       }
+      operation.finish();
     } catch (e) {
-      if (read === this.detailRead) this.fail(e);
+      operation.fail(e);
+      if (operation.current()) this.fail(e);
     }
   }
   parentId(r: Resource): string | undefined {
@@ -690,9 +710,11 @@ export class Workspace {
   }
   async toggleMenu(r: Resource, event: MouseEvent) {
     if (this.menu() === r["@id"]) {
+      this.state.cancel("menu");
       this.menu.set(null);
       return;
     }
+    const operation = this.state.begin("menu");
     this.menuTrigger = event.currentTarget as HTMLElement;
     const rect = this.menuTrigger.getBoundingClientRect();
     this.menuLeft.set(
@@ -702,7 +724,7 @@ export class Workspace {
     this.menu.set(r["@id"]);
     afterNextRender(
       () => {
-        if (this.menu() !== r["@id"]) return;
+        if (!operation.current() || this.menu() !== r["@id"]) return;
         const menu =
           this.host.nativeElement.querySelector<HTMLElement>(".resource-menu");
         menu
@@ -723,13 +745,16 @@ export class Workspace {
     );
     try {
       const { data } = await this.api.report(r);
+      if (!operation.current() || this.menu() !== r["@id"]) return;
       this.rows.update((rows) =>
         rows.map((row) =>
           row["@id"] === r["@id"] ? { ...row, ...data } : row,
         ),
       );
+      operation.finish();
     } catch (e) {
-      this.fail(e);
+      operation.fail(e);
+      if (operation.current() && this.menu() === r["@id"]) this.fail(e);
     }
   }
   navigationQuery(destination: Record<string, string> = {}) {
