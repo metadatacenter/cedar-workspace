@@ -562,7 +562,10 @@ export class Workspace {
             buttons.length;
     buttons[next]?.focus();
   }
-  async select(r: Resource, tab: InfoTab = "info") {
+  async select(r: Resource, tab?: InfoTab) {
+    // Selecting the artifact the panel already shows, as the first click of a double-click does, keeps
+    // its tab. Another artifact starts on Details unless a return names its tab.
+    tab ??= this.selected()?.["@id"] === r["@id"] ? this.tab : "info";
     const operation = this.state.begin("detail", ["instances"]);
     this.error.set("");
     this.selectionIds.set([r["@id"]]);
