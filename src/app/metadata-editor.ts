@@ -213,9 +213,9 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   private savedHere = false;
   private etag: string | null = null;
   private baseline = "";
-  // The name as it was typed when the page last matched the server, whitespace and all: the
-  // name saved is trimmed, but an edit the user can see is an edit.
-  private baselineText = "";
+  // The name, trimmed, as it was when the page last matched the server. Save trims the name, so
+  // spaces around it change nothing that is stored and are not an edit.
+  private baselineName = "";
   private alive = true;
   private updatingAddress = false;
   private get cee() {
@@ -325,7 +325,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
       if (!operation.current()) return;
       this.baseline = metadataKey(this.cee.currentMetadata);
-      this.baselineText = this.name;
+      this.baselineName = this.name.trim();
       this.dirty.set(false);
       this.savedHere = false;
       this.notice.set("");
@@ -364,7 +364,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     this.refreshQuality();
     this.dirty.set(
       metadataKey(this.cee.currentMetadata) !== this.baseline ||
-        this.name !== this.baselineText,
+        this.name.trim() !== this.baselineName,
     );
     this.notice.set("");
   };
@@ -476,7 +476,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       const current = this.cee.currentMetadata;
       const baseline = metadataKey(current);
       const name = this.chosenName();
-      const text = this.name;
+      const typedName = this.name.trim();
       const metadata: CeeJsonObject = structuredClone(current);
       metadata["schema:name"] = name;
       metadata["schema:isBasedOn"] = this.template["@id"];
@@ -515,7 +515,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       this.state.reloadRequired.set(!reply.etag);
       this.state.clearServer();
       this.baseline = baseline;
-      this.baselineText = text;
+      this.baselineName = typedName;
       // Keep the CEE element, focus and any edits made while the save was pending.
       // Update the router as well as browser history: otherwise cancelling a
       // later navigation restores the original create URL. The same route

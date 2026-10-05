@@ -125,8 +125,8 @@ describe("metadata editor status matrix", () => {
     start();
     await host.ngAfterViewInit();
     apply(edit);
-    // Spaces around the name count as a change: the field holds what was typed, though Save trims it.
-    const edited = edit !== "none" && edit !== "an exact revert";
+    // Save trims the name, so spaces around it are not a change.
+    const edited = edit === "metadata" || edit === "name";
     let pending: Promise<void> | undefined;
     let release: (() => void) | undefined;
     if (stage === "saving") {
