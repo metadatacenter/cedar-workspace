@@ -168,7 +168,8 @@ test('artifact card actions and list metadata do not trigger the double-click sh
   await card.locator('.resource-icon').dblclick();
   await card.locator('time').dblclick();
   await expect(card).toHaveAttribute('aria-selected', 'true');
-  await expect(page).toHaveURL(/\/dashboard$/);
+  // Still the dashboard; list view is the only thing the address records.
+  await expect(page).toHaveURL(/\/dashboard\?view=list$/);
 });
 
 test("grid retains compact sizing, range and list selection, and moves a group with revisions", async ({
@@ -462,3 +463,32 @@ for (const grid of [true, false]) {
     });
   }
 }
+
+test('list view survives a reload, opening a folder and a return from an editor', async ({page, api}) => {
+  await setup(page);
+  const view = page.locator('.table-scroll');
+  const depth = await page.evaluate(() => history.length);
+  await page.getByRole('button', {name: 'List view', exact: true}).click();
+  await expect(page).toHaveURL(/[?&]view=list/);
+  await expect(view).not.toHaveClass(/explorer-grid/);
+  // A preference, not a place: switching adds no history entry.
+  expect(await page.evaluate(() => history.length)).toBe(depth);
+  await page.reload();
+  await expect(view).not.toHaveClass(/explorer-grid/);
+  await page.locator('[data-resource-id="destination"] .resource-icon').dblclick();
+  await expect(page).toHaveURL(/folderId=destination/);
+  await expect(page).toHaveURL(/[?&]view=list/);
+  await expect(view).not.toHaveClass(/explorer-grid/);
+  // An editor returns to the address it was given, and that address keeps the view.
+  await page.goto('/dashboard?view=list');
+  const href = await page.locator('[data-resource-id="a"] td:first-child a').getAttribute('href');
+  const back = new URL(new URL(href, page.url()).searchParams.get('returnTo'));
+  expect(back.searchParams.get('view')).toBe('list');
+  await page.goto(back.href);
+  await expect(view).not.toHaveClass(/explorer-grid/);
+  await expect(page.getByRole('button', {name: 'List view', exact: true})).toHaveAttribute('aria-pressed', 'true');
+  // Grid is the default and drops the parameter.
+  await page.getByRole('button', {name: 'Grid view', exact: true}).click();
+  await expect(view).toHaveClass(/explorer-grid/);
+  await expect(page).not.toHaveURL(/view=/);
+});

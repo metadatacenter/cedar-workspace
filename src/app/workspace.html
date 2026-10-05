@@ -265,7 +265,7 @@
         [attr.aria-label]="'Explorer.View' | translate"
       >
         <button
-          (click)="grid.set(false)"
+          (click)="setView(false)"
           [attr.aria-pressed]="!grid()"
           [attr.aria-label]="'Explorer.List' | translate"
           [cedarTooltip]="'Explorer.List' | translate"
@@ -273,7 +273,7 @@
           <cedar-icon name="list" size="small" />
         </button>
         <button
-          (click)="grid.set(true)"
+          (click)="setView(true)"
           [attr.aria-pressed]="grid()"
           [attr.aria-label]="'Explorer.Grid' | translate"
           [cedarTooltip]="'Explorer.Grid' | translate"

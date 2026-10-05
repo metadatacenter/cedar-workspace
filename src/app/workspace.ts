@@ -152,6 +152,11 @@ export function actions(r: Resource, i18n: Pick<I18n, "t">): Action[] {
 const SELECTED_PARAM = "selected";
 /** The query parameter naming the Info panel tab to show that artifact on. */
 const TAB_PARAM = "tab";
+/**
+ * The query parameter that keeps the listing in list view. Grid is the default and goes unnamed. The
+ * address carries the choice, as it carries sorting, so a return from an editor and a reload keep it.
+ */
+const VIEW_PARAM = "view";
 /** The Info panel's tabs: the artifact's details, and its version and its history. */
 type InfoTab = "info" | "version";
 
@@ -325,8 +330,10 @@ export class Workspace {
         .pipe(takeUntilDestroyed(this.destroy))
         .subscribe((map) => {
           this.params = new URLSearchParams();
+          // The view changes how the listing is shown, not what it holds, so it is not part of its key.
+          this.grid.set(map.get(VIEW_PARAM) !== "list");
           map.keys
-            .filter((key) => key !== SELECTED_PARAM && key !== TAB_PARAM)
+            .filter((key) => ![SELECTED_PARAM, TAB_PARAM, VIEW_PARAM].includes(key))
             .forEach((key) => this.params.set(key, map.get(key)!));
           const selected = map.get(SELECTED_PARAM);
           if (selected) {
@@ -787,12 +794,23 @@ export class Workspace {
     }
   }
   navigationQuery(destination: Record<string, string> = {}) {
-    // Sorting is a view preference; location, search, filters and paging are not.
+    // Sorting and the view are preferences; location, search, filters and paging are not.
     return {
       ...(this.params.has("sort") ? { sort: this.sort } : {}),
       ...(this.params.get("folders") === "first" ? { folders: "first" } : {}),
+      ...(this.grid() ? {} : { [VIEW_PARAM]: "list" }),
       ...destination,
     };
+  }
+  setView(grid: boolean) {
+    this.grid.set(grid);
+    // A preference, not a place: switching views adds no history entry.
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParamsHandling: "merge",
+      queryParams: { [VIEW_PARAM]: grid ? null : "list" },
+      replaceUrl: true,
+    });
   }
   submitSearch() {
     void this.router.navigate(["/dashboard"], {
