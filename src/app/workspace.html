@@ -553,8 +553,7 @@
       >
         {{'Dashboard.Info' | translate}}
       </button>
-      @if(r.resourceType === "template" || r.resourceType === "element" ||
-      r.resourceType === "field"){
+      @if(versioned(r)){
       <button
         role="tab"
         [attr.aria-selected]="tab==='version'"

@@ -132,6 +132,33 @@ test('a return that names an artifact selects it once, and the address forgets i
   await expect(page).not.toHaveURL(/selected=/);
 });
 
+// A return can also name the Info panel tab the artifact was left on. Only an artifact with
+// versions has the Version tab, so an instance named with it shows Details.
+const template = {...resource, '@id': 'tpl', 'schema:name': 'Sample template'};
+for (const [id, tab, shown] of [
+  ['tpl', 'version', 'Version'],
+  ['tpl', 'info', 'Details'],
+  ['tpl', 'unknown', 'Details'],
+  ['b', 'version', 'Details'],
+]) {
+  test(`a return that names ${id} on the ${tab} tab shows ${shown}, and the address forgets both`, async ({page, api}) => {
+    await setup(page, [template]);
+    let listings = 0;
+    page.on('request', r => { if (new URL(r.url()).pathname.endsWith('/contents')) listings++; });
+    await page.goto(`/dashboard?selected=${id}&tab=${tab}`);
+    await expect(page.locator(`[data-resource-id="${id}"]`)).toHaveAttribute('aria-selected', 'true');
+    const info = page.locator('.information');
+    await expect(info.getByRole('tab', {name: shown, exact: true})).toHaveAttribute('aria-selected', 'true');
+    await expect(info.locator('.version')).toHaveCount(shown === 'Version' ? 1 : 0);
+    await expect(page).not.toHaveURL(/[?&](selected|tab)=/);
+    // Dropping the two parameters does not load the listing again.
+    expect(listings).toBe(1);
+    // Another selection starts on Details, as it always has.
+    await page.locator('[data-resource-id="a"]').click();
+    await expect(info.getByRole('tab', {name: 'Details', exact: true})).toHaveAttribute('aria-selected', 'true');
+  });
+}
+
 test('artifact card actions and list metadata do not trigger the double-click shortcut', async ({page, api}) => {
   await setup(page, [resource]);
   const card = page.locator('[data-resource-id="template"]');

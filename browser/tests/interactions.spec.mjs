@@ -661,6 +661,58 @@ test("links in the Info panel return to the artifact whose panel held them", asy
   await expect(info).toContainText("Study metadata");
 });
 
+// Leaving for an editor and coming back shows the Info panel on the tab it was left on.
+for (const tab of ["Details", "Version"]) {
+  test(`returning from the metadata editor keeps the Info panel on ${tab}`, async ({ page, api }) => {
+    await page.goto("/dashboard");
+    const card = page.locator('[data-resource-id="template"]');
+    await card.click({ position: { x: 8, y: 60 } });
+    await expect(card).toHaveAttribute("aria-selected", "true");
+    const info = page.locator(".information");
+    await info.getByRole("tab", { name: tab, exact: true }).click();
+    await card.locator(".explorer-populate").click();
+    await expect(page).toHaveURL(/\/instances\/create\/template/);
+    await page.locator("cedar-workspace-return").getByRole("button", { name: "Back to Workspace", exact: true }).click();
+    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(card).toHaveAttribute("aria-selected", "true");
+    await expect(info.getByRole("tab", { name: tab, exact: true })).toHaveAttribute("aria-selected", "true");
+    await expect(page).not.toHaveURL(/[?&](selected|tab)=/);
+  });
+}
+
+// A version opened from the Version tab returns to that tab, selecting the version when this
+// folder holds it and the artifact whose history named it when it does not.
+for (const listed of [false, true]) {
+  test(`a version opened from the Version tab returns on that tab, listed=${listed}`, async ({ page, api }) => {
+    const version = (id, number) => ({ ...resource, "@id": id, "pav:version": number, "bibo:status": "bibo:published" });
+    const newer = version("newer", "2.0.0");
+    const versions = [newer, version("template", "1.0.0")];
+    await page.route(/\/templates\/(template|newer)\/report/, (route) => {
+      const id = new URL(route.request().url()).pathname.split("/").at(-2);
+      return route.fulfill({ json: { ...(id === "newer" ? newer : resource), versions } });
+    });
+    if (listed)
+      await page.route(/\/folders\/[^/]+\/contents/, (route) =>
+        route.fulfill({ json: { resources: [resource, newer], totalCount: 2, pathInfo: [] } }),
+      );
+    await page.route((url) => url.pathname === "/templates/edit/newer", (route) =>
+      route.fulfill({ contentType: "text/html", body: "<h1>Designer</h1>" }),
+    );
+    await page.goto("/dashboard");
+    await page.locator('[data-resource-id="template"]').click({ position: { x: 8, y: 60 } });
+    const info = page.locator(".information");
+    await info.getByRole("tab", { name: "Version", exact: true }).click();
+    await info.locator(".latest-version").getByRole("link").click();
+    await expect(page).toHaveURL((url) => url.pathname === "/templates/edit/newer");
+    // The Designer returns to the address it was given.
+    await page.goto(new URL(page.url()).searchParams.get("returnTo"));
+    const back = page.locator(`[data-resource-id="${listed ? "newer" : "template"}"]`);
+    await expect(back).toHaveAttribute("aria-selected", "true");
+    await expect(info.getByRole("tab", { name: "Version", exact: true })).toHaveAttribute("aria-selected", "true");
+    await expect(page).not.toHaveURL(/[?&](selected|tab)=/);
+  });
+}
+
 test("new metadata is unmodified until edited, and saved once persisted", async ({ page, api }) => {
   await page.route(/\/template-instances(?:\?|$)/, route => route.fulfill({
     json: { ...route.request().postDataJSON(), "@id": "instance" },

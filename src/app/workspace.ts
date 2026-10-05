@@ -50,6 +50,7 @@ import {
   can,
   inOpenView,
   openThroughAFolder,
+  versioned,
   listingPath,
   resourceLink,
   collections,
@@ -149,6 +150,10 @@ export function actions(r: Resource, i18n: Pick<I18n, "t">): Action[] {
 }
 /** The query parameter naming the artifact to select once the listing is loaded. */
 const SELECTED_PARAM = "selected";
+/** The query parameter naming the Info panel tab to show that artifact on. */
+const TAB_PARAM = "tab";
+/** The Info panel's tabs: the artifact's details, and its version and its history. */
+type InfoTab = "info" | "version";
 
 @Component({
   selector: "cedar-workspace-page",
@@ -189,6 +194,7 @@ export class Workspace {
   readonly title = (r: Resource) => title(r, this.i18n.t("Common.Untitled"));
   readonly can = can;
   readonly inOpenView = inOpenView;
+  readonly versioned = versioned;
   readonly actions = (r: Resource) => actions(r, this.i18n);
   attribution(userId?: string, name?: string): string {
     if (this.isCurrentUser(userId))
@@ -283,16 +289,18 @@ export class Workspace {
     null,
   );
   readonly menu = signal<string | null>(null);
-  tab = "info";
+  tab: InfoTab = "info";
   search = "";
   sort = "name";
   folder = "";
   params = new URLSearchParams();
-  // The listing the URL names, without the artifact to select in it: dropping that
-  // parameter once it has been applied must not load the listing again.
+  // The listing the URL names, without the artifact to select in it or the tab to show
+  // it on: dropping those parameters once applied must not load the listing again.
   private listingKey: string | null = null;
-  // An artifact to select once the listing holds it, as an editor returning here names it.
+  // An artifact to select once the listing holds it, as an editor returning here names it,
+  // and the Info panel tab it was left on.
   private reselect: string | null = null;
+  private reselectTab: InfoTab = "info";
   readonly state = new OperationCoordinator<"listing" | "folder" | "detail" | "instances" | "menu" | "enrichment">();
   constructor() {
     effect(() => {
@@ -318,10 +326,13 @@ export class Workspace {
         .subscribe((map) => {
           this.params = new URLSearchParams();
           map.keys
-            .filter((key) => key !== SELECTED_PARAM)
+            .filter((key) => key !== SELECTED_PARAM && key !== TAB_PARAM)
             .forEach((key) => this.params.set(key, map.get(key)!));
           const selected = map.get(SELECTED_PARAM);
-          if (selected) this.reselect = resourceIri(selected, this.api.profile.homeFolderId);
+          if (selected) {
+            this.reselect = resourceIri(selected, this.api.profile.homeFolderId);
+            this.reselectTab = map.get(TAB_PARAM) === "version" ? "version" : "info";
+          }
           const listingKey = this.params.toString();
           if (listingKey === this.listingKey && !selected) return;
           this.listingKey = listingKey;
@@ -408,16 +419,19 @@ export class Workspace {
    *
    * Opening an artifact leaves the dashboard for an editor, and coming back loaded a
    * fresh listing with nothing selected. The editor returns to the address it was
-   * given, which names the artifact; the parameter is dropped once applied, so a
-   * reload or a later return does not select it again.
+   * given, which names the artifact and the Info panel tab it was left on; both
+   * parameters are dropped once applied, so a reload or a later return does not
+   * select it again.
    */
   private restoreSelection() {
     const id = this.reselect;
     if (id === null) return;
+    const tab = this.reselectTab;
     this.reselect = null;
+    this.reselectTab = "info";
     const r = this.rows().find((row) => row["@id"] === id);
     if (r) {
-      void this.select(r);
+      void this.select(r, tab);
       afterNextRender(
         () =>
           this.host.nativeElement
@@ -428,7 +442,7 @@ export class Workspace {
     }
     void this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { [SELECTED_PARAM]: null },
+      queryParams: { [SELECTED_PARAM]: null, [TAB_PARAM]: null },
       queryParamsHandling: "merge",
       replaceUrl: true,
     });
@@ -437,6 +451,7 @@ export class Workspace {
    * Where an editor opened from here returns to: this listing, naming the artifact to
    * select again. That is the one opened when the listing shows it, and otherwise the
    * one selected now, as when a link in the Info panel opens an artifact kept elsewhere.
+   * The Info panel comes back on the tab it was left on.
    */
   private returnHere(opened?: Resource) {
     const listed =
@@ -451,9 +466,11 @@ export class Workspace {
     const params = url.search
       .slice(1)
       .split("&")
-      .filter((param) => param && param.split("=")[0] !== SELECTED_PARAM);
-    if (keep)
+      .filter((param) => param && ![SELECTED_PARAM, TAB_PARAM].includes(param.split("=")[0]));
+    if (keep) {
       params.push(SELECTED_PARAM + "=" + encodeURIComponent(resourceSelector(keep["@id"])));
+      if (this.tab !== "info") params.push(TAB_PARAM + "=" + this.tab);
+    }
     url.search = params.join("&");
     return url.toString();
   }
@@ -538,7 +555,7 @@ export class Workspace {
             buttons.length;
     buttons[next]?.focus();
   }
-  async select(r: Resource) {
+  async select(r: Resource, tab: InfoTab = "info") {
     const operation = this.state.begin("detail", ["instances"]);
     this.error.set("");
     this.selectionIds.set([r["@id"]]);
@@ -546,7 +563,8 @@ export class Workspace {
     this.instances.set([]);
     this.instanceTotal.set(0);
     this.instancesLoaded.set(false);
-    this.tab = "info";
+    // Only an artifact with versions has the Version tab.
+    this.tab = tab === "version" && versioned(r) ? "version" : "info";
     try {
       const { data } = await this.api.report(r);
       if (operation.current()) {

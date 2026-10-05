@@ -99,6 +99,9 @@ export const collections: Record<ResourceType, string> = {
 // the translated word instead.
 export const title = (r: Resource, untitled = "Untitled") =>
   r["schema:name"] || r.name || untitled;
+// Templates, elements and fields have versions; instances and folders do not.
+export const versioned = (r: Resource) =>
+  r.resourceType === "template" || r.resourceType === "element" || r.resourceType === "field";
 // OpenView serves a resource made open and anything inside an open folder, so
 // either one offers the link.
 export const inOpenView = (r: Resource) => !!r.isOpen || !!r.isOpenImplicitly;
