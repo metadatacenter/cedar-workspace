@@ -33,7 +33,7 @@ import {
 } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { TranslatePipe } from "@ngx-translate/core";
-import { Backend } from "./backend.service";
+import { Backend, failureText } from "./backend.service";
 import {
   Resource,
   Listing,
@@ -252,7 +252,8 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
     }
   }
   fail(e: unknown) {
-    this.error.set(e instanceof Error ? e.message : String(e));
+    // Only a rename holds what the person typed; the dialog's other actions have nothing to keep.
+    this.error.set(failureText(e, this.i18n, this.action === "rename"));
   }
   async browse(id: string, offset = 0, sort: FolderSort = this.folderSort) {
     if (!this.alive) return;

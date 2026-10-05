@@ -29,9 +29,25 @@ export class HttpError extends Error {
     message: string,
     readonly code?: string,
     readonly validationReport?: unknown,
+    /** For a 412, whether the item is gone rather than changed. */
+    readonly deleted = false,
   ) {
     super(message);
   }
+}
+/**
+ * What to tell a person about a failed request. The transport's text says what happened. A conflict
+ * met by an editor that keeps the person's edits on screen also says so, which only that editor
+ * knows; an action that holds no edits, such as a move or a delete, says only what happened.
+ */
+export function failureText(
+  error: unknown,
+  i18n: Pick<I18n, "t">,
+  keepsEdits = false,
+): string {
+  if (keepsEdits && error instanceof HttpError && error.status === 412)
+    return i18n.t(error.deleted ? "Errors.DeletedEditsKept" : "Errors.ChangedEditsKept");
+  return error instanceof Error ? error.message : String(error);
 }
 export interface Reply<T> {
   data: T;
@@ -141,14 +157,25 @@ export class Backend {
       };
       if (body !== undefined) headers["Content-Type"] = "application/json";
       if (etag) headers["If-Match"] = etag;
-      const response = await fetch(url, {
-        method,
-        headers,
-        body: body === undefined ? undefined : JSON.stringify(body),
-      });
-      if (response.status === 401 && attempt === 0) {
-        await this.renew(-1);
-        continue;
+      let response: Response;
+      try {
+        response = await fetch(url, {
+          method,
+          headers,
+          body: body === undefined ? undefined : JSON.stringify(body),
+        });
+      } catch {
+        // No answer arrived. The browser's own wording, "Failed to fetch", is English whatever
+        // language Workspace speaks, and says nothing a person can act on.
+        throw new HttpError(0, this.i18n.t("Errors.Unreachable"));
+      }
+      if (response.status === 401) {
+        if (attempt === 0) {
+          await this.renew(-1);
+          continue;
+        }
+        // Refused again with a fresh token: the session itself has ended.
+        break;
       }
       if (!response.ok) {
         let message = "";
@@ -161,13 +188,16 @@ export class Backend {
           else if (typeof data.errorKey === "string") code = data.errorKey;
           validationReport = data.objects?.validationReport ?? data.validationReport;
         } catch {}
-        if (response.status === 412)
+        if (response.status === 412) {
+          const deleted = /no longer exists/i.test(message);
           throw new HttpError(
             412,
-            /no longer exists/i.test(message)
-              ? this.i18n.t("Errors.ItemDeleted")
-              : this.i18n.t("Errors.ItemChanged"),
+            this.i18n.t(deleted ? "Errors.ItemDeleted" : "Errors.ItemChanged"),
+            code,
+            undefined,
+            deleted,
           );
+        }
         throw new HttpError(
           response.status,
           message ||
@@ -178,7 +208,7 @@ export class Backend {
       }
       return response;
     }
-    throw new Error(this.i18n.t("Errors.SessionExpired"));
+    throw new HttpError(401, this.i18n.t("Errors.SessionExpired"));
   }
   async request<T>(
     path: string,
@@ -188,10 +218,15 @@ export class Backend {
   ): Promise<Reply<T>> {
     const response = await this.raw(path, method, body, etag);
     const text = await response.text();
-    return {
-      data: text ? (JSON.parse(text) as T) : (undefined as T),
-      etag: response.headers.get("ETag"),
-    };
+    let data: T;
+    try {
+      data = text ? (JSON.parse(text) as T) : (undefined as T);
+    } catch {
+      // A proxy's HTML page under a 200, or a body cut short, would otherwise surface as the
+      // parser's own English complaint about an unexpected token.
+      throw new HttpError(response.status, this.i18n.t("Errors.UnreadableResponse"));
+    }
+    return { data, etag: response.headers.get("ETag") };
   }
   path(r: Resource) {
     return (

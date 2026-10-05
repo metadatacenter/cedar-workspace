@@ -78,11 +78,15 @@
     "SignInFailed": "A bejelentkezés sikertelen. Kérjük, töltse be újra az oldalt.",
     "SessionExpired": "A munkamenete lejárt. Kérjük, jelentkezzen be újra.",
     "UntrustedDestination": "Nem megbízható API-cím.",
-    "ItemDeleted": "Ezt az elemet törölték. A módosításai megmaradtak. Térjen vissza a munkaterületre, és válasszon másik elemet.",
-    "ItemChanged": "Ez az elem megváltozott, mióta megnyitotta. A módosításai megmaradtak. A legújabb verzió áttekintéséhez válassza a Mégse gombot, és nyissa meg újra.",
+    "ItemDeleted": "Ez az elem már nem létezik.",
+    "ItemChanged": "Ez az elem megváltozott, mióta betöltötte. Frissítsen, majd próbálja újra.",
     "RequestFailed": "A kérés sikertelen ({{status}}).",
     "EditorUnavailable": "A metaadat-szerkesztő nem tölthető be. Kérjük, töltse be újra az oldalt.",
-    "StartupFailed": "A CEDAR Munkaterület nem indítható el."
+    "StartupFailed": "A CEDAR Munkaterület nem indítható el.",
+    "Unreachable": "A kiszolgáló nem érhető el. Ellenőrizze a kapcsolatot, és próbálja újra.",
+    "UnreadableResponse": "A kiszolgáló olyan választ küldött, amelyet a CEDAR nem tud értelmezni. Próbálja újra.",
+    "ChangedEditsKept": "Ez az elem megváltozott, mióta megnyitotta. A módosításai megmaradtak. A legújabb verzió áttekintéséhez válassza a Mégse gombot, és nyissa meg újra.",
+    "DeletedEditsKept": "Ezt az elemet törölték. A módosításai megmaradtak."
   },
   "Confirmation": {
     "Title": "Biztos benne?"
@@ -416,7 +420,9 @@
     "LoadFailed": "Nem tölthető be",
     "ReloadRequired": "Újratöltés szükséges",
     "Reload": "Metaadatok újratöltése",
-    "SaveUnconfirmed": "A kiszolgáló elfogadta a mentést, de hiányos visszaigazolást küldött. Újabb mentés előtt ellenőrizze a mentett elemet a Workspace-ben."
+    "SaveUnconfirmed": "A kiszolgáló elfogadta a mentést, de hiányos visszaigazolást küldött. Újabb mentés előtt ellenőrizze a mentett elemet a Workspace-ben.",
+    "ItemDeleted": "Ezt az elemet törölték. A módosításai megmaradtak. Térjen vissza a munkaterületre, és válasszon másik elemet.",
+    "ItemChanged": "Ez az elem megváltozott, mióta megnyitotta. A módosításai megmaradtak. A legújabb verzió áttekintéséhez válassza a Mégse gombot, és nyissa meg újra."
   },
   "Account": {
     "Profile": {

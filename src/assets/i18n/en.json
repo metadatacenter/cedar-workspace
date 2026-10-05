@@ -78,11 +78,15 @@
     "SignInFailed": "Sign-in failed. Please reload.",
     "SessionExpired": "Your session expired. Please sign in again.",
     "UntrustedDestination": "Untrusted API destination.",
-    "ItemDeleted": "This item was deleted. Your edits have been kept. Return to Workspace to choose another item.",
-    "ItemChanged": "This item changed since you opened it. Your edits have been kept. Cancel and reopen to review the latest version.",
+    "ItemDeleted": "This item no longer exists.",
+    "ItemChanged": "This item changed since it was read. Refresh, then try again.",
     "RequestFailed": "Request failed ({{status}}).",
     "EditorUnavailable": "Unable to load the metadata editor. Please reload.",
-    "StartupFailed": "Unable to start CEDAR Workspace."
+    "StartupFailed": "Unable to start CEDAR Workspace.",
+    "Unreachable": "The server could not be reached. Check your connection and try again.",
+    "UnreadableResponse": "The server sent an answer CEDAR cannot read. Please retry.",
+    "ChangedEditsKept": "This item changed since you opened it. Your edits have been kept. Cancel and reopen to review the latest version.",
+    "DeletedEditsKept": "This item was deleted. Your edits have been kept."
   },
   "Confirmation": {
     "Title": "Are you sure?"
@@ -416,7 +420,9 @@
     "LoadFailed": "Unable to load",
     "ReloadRequired": "Reload required",
     "Reload": "Reload metadata",
-    "SaveUnconfirmed": "The server accepted the save but returned an incomplete confirmation. Check the saved artifact in Workspace before saving again."
+    "SaveUnconfirmed": "The server accepted the save but returned an incomplete confirmation. Check the saved artifact in Workspace before saving again.",
+    "ItemDeleted": "This item was deleted. Your edits have been kept. Return to Workspace to choose another item.",
+    "ItemChanged": "This item changed since you opened it. Your edits have been kept. Cancel and reopen to review the latest version."
   },
   "Account": {
     "Profile": {

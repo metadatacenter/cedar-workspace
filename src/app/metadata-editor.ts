@@ -563,7 +563,14 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         if ([403, 404, 409, 412, 428].includes(e.status))
           this.state.reloadRequired.set(true);
       }
-      this.error.set(e instanceof Error ? e.message : String(e));
+      // A conflict here leaves the edits on screen, which only this editor can say.
+      this.error.set(
+        e instanceof HttpError && e.status === 412
+          ? this.i18n.t(e.deleted ? "Metadata.ItemDeleted" : "Metadata.ItemChanged")
+          : e instanceof Error
+            ? e.message
+            : String(e),
+      );
     } finally {
       if (operation.current()) this.saving.set(false);
     }

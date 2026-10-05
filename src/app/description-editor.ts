@@ -11,7 +11,7 @@ import {
 } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { TranslatePipe } from "@ngx-translate/core";
-import { Backend, Reply } from "./backend.service";
+import { Backend, Reply, failureText } from "./backend.service";
 import { Resource, can, title } from "./resource";
 
 @Component({
@@ -154,8 +154,8 @@ export class DescriptionEditor {
       await this.load();
     } catch (e) {
       operation.fail(e);
-      if (operation.current())
-        this.error.set(e instanceof Error ? e.message : String(e));
+      // The draft stays in the box, so a conflict says the edits were kept.
+      if (operation.current()) this.error.set(failureText(e, this.i18n, true));
     } finally {
       if (operation.current()) this.busy.set(false);
     }

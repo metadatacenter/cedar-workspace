@@ -39,7 +39,7 @@ describe("Authorized backend", () => {
     fetcher.mockResolvedValue(new Response("", { status: 412 }));
     await expect(
       api.request("/folders/id", "PUT", {}, '"stale"'),
-    ).rejects.toThrow("Your edits have been kept");
+    ).rejects.toThrow("This item changed since it was read");
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
   it("distinguishes deletion conflicts from concurrent updates", async () => {
@@ -51,7 +51,7 @@ describe("Authorized backend", () => {
     );
     await expect(
       api.request("/template-instances/id", "PUT", {}, '"loaded"'),
-    ).rejects.toThrow("This item was deleted. Your edits have been kept.");
+    ).rejects.toThrow("This item no longer exists.");
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
   it("refreshes once on 401 and keeps the conditional request", async () => {
