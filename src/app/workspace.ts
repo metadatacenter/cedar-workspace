@@ -187,7 +187,7 @@ type InfoTab = "info" | "version";
 })
 export class Workspace {
   private readonly tooltips = inject(TooltipController);
-  private readonly i18n = inject(I18n);
+  protected readonly i18n = inject(I18n);
   readonly cedarVersion = window.cedarVersion || this.i18n.t("Common.Unknown");
   readonly api = inject(Backend);
   private router = inject(Router);
@@ -673,7 +673,7 @@ export class Workspace {
           .filter((id) => this.rows().some((r) => r["@id"] === id)),
       );
       this.notice.set(
-        this.i18n.t(result.moved.length === 1 ? "Explorer.MovedOne" : "Explorer.Moved", {
+        this.i18n.counted("Explorer.Moved", result.moved.length, {
           count: result.moved.length,
         }),
       );

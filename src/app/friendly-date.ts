@@ -4,9 +4,9 @@ import { I18n } from "./i18n";
 // English needs a singular and a plural form; Hungarian uses one form for both,
 // and its map simply gives the same text under both keys.
 const units = {
-  minute: ["FriendlyDate.MinuteAgo", "FriendlyDate.MinutesAgo"],
-  hour: ["FriendlyDate.HourAgo", "FriendlyDate.HoursAgo"],
-  day: ["FriendlyDate.DayAgo", "FriendlyDate.DaysAgo"],
+  minute: "FriendlyDate.MinutesAgo",
+  hour: "FriendlyDate.HoursAgo",
+  day: "FriendlyDate.DaysAgo",
 } as const;
 
 /** Compact listing dates, using the viewer's local calendar for older dates. */
@@ -27,7 +27,7 @@ export class FriendlyDatePipe implements PipeTransform {
             ? ([3_600_000, "hour"] as const)
             : ([86_400_000, "day"] as const);
       const count = Math.floor(age / size);
-      return this.i18n.t(units[unit][count === 1 ? 0 : 1], { count });
+      return this.i18n.counted(units[unit], count);
     }
     return new Intl.DateTimeFormat(this.i18n.locale("en-GB"), {
       day: "numeric",

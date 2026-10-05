@@ -62,8 +62,7 @@
         class="validation-disclosure"
       /><cedar-icon size="small" name="warning" />
       <span
-        >{{(validationErrors.length === 1 ? 'Metadata.ErrorsOne' :
-        'Metadata.ErrorsMany') | translate: {count: validationErrors.length}
+        >{{i18n.counted('Metadata.Errors', validationErrors.length)
         }}</span
       >
     </summary>
@@ -91,8 +90,7 @@
         class="validation-disclosure"
       /><cedar-icon size="small" name="warning" />
       <span
-        >{{(validationWarnings.length === 1 ? 'Metadata.WarningsOne' :
-        'Metadata.WarningsMany') | translate: {count: validationWarnings.length}
+        >{{i18n.counted('Metadata.Warnings', validationWarnings.length)
         }}</span
       >
     </summary>

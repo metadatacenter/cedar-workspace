@@ -699,8 +699,8 @@
         }
       </div>
       <p class="instance-count">
-        {{'Dashboard.InstanceCount' | translate: {shown: instances().length,
-        total: instanceTotal()} }}
+        {{i18n.counted('Dashboard.InstanceCount', instanceTotal(), {shown:
+        instances().length, total: instanceTotal()}) }}
       </p>
       } @else if(r.numberOfInstances===0){
       <p class="no-instances">{{'Dashboard.NoInstances' | translate}}</p>

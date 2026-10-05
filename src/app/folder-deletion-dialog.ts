@@ -172,7 +172,7 @@ export class FolderDeletionDialog implements AfterViewInit, OnDestroy {
   @Output() changed = new EventEmitter<void>();
   @ViewChild("dialog", { static: true }) dialog!: ElementRef<HTMLDialogElement>;
   private readonly api = inject(Backend);
-  private readonly i18n = inject(I18n);
+  protected readonly i18n = inject(I18n);
   readonly plan = signal<DeletionPlan | null>(null);
   readonly subfolderCount = computed(() =>
     Math.max(0, (this.plan()?.counts.folder ?? 0) - 1),
@@ -442,9 +442,7 @@ export class FolderDeletionDialog implements AfterViewInit, OnDestroy {
         : item.instancesOutside
           ? "ExternalCount"
           : "Eligible";
-    return this.i18n.t("FolderDeletion." + key, {
-      count: item.instancesOutside,
-    });
+    return this.i18n.counted("FolderDeletion." + key, item.instancesOutside);
   }
   parent(item: DeletionItem) {
     const parent = this.itemsById().get(item.parentId);

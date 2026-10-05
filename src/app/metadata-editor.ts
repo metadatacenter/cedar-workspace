@@ -189,7 +189,7 @@ export const leaveMetadata: CanDeactivateFn<MetadataEditor> = (editor) =>
 export class MetadataEditor implements AfterViewInit, OnDestroy {
   readonly confirmation = inject(Confirmation);
   readonly api = inject(Backend);
-  private readonly i18n = inject(I18n);
+  protected readonly i18n = inject(I18n);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly loader = inject(CeeLoader);
@@ -422,9 +422,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     if (this.missingRequired && !problems.some((p) => p.code === "required"))
       items.push({
         label: this.i18n.t("Metadata.Label"),
-        message: this.i18n.t("Metadata.RequiredMissing", {
-          count: this.missingRequired,
-        }),
+        message: this.i18n.counted("Metadata.RequiredMissing", this.missingRequired),
       });
     return items;
   }
