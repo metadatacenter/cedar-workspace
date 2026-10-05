@@ -301,10 +301,12 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
     void this.browse(this.target, 0, sort);
   }
   get destinationAllowed() {
-    if (this.action === "move" && this.resources.length)
+    // One item and several are held to the same rule: never into itself or below itself.
+    const moving = this.resources.length ? this.resources : this.resource ? [this.resource] : [];
+    if (this.action === "move" && moving.length)
       return (
         !!this.targetResource &&
-        validMoveTarget(this.resources, this.targetResource)
+        validMoveTarget(moving, this.targetResource)
       );
     return (
       !this.choosesFolder ||

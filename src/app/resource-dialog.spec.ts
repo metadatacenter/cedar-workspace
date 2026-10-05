@@ -145,6 +145,31 @@ describe("Conditional action dialogs", () => {
       "This item stays available through OpenView while a folder above it is open. Disable Openview on that folder to remove it.",
     );
   });
+  // A folder moved on its own is held to the rule a group of items meets: not into itself and not
+  // into any folder below it.
+  const moved: Resource = { "@id": "moved", resourceType: "folder", "schema:name": "Moved" };
+  const target = (id: string, path: string[], capabilities = ["moveIntoFolder"]): Resource => ({
+    "@id": id,
+    resourceType: "folder",
+    pathInfo: [...path, id].map((p) => ({ "@id": p, resourceType: "folder" as const })),
+    currentUserPermissions: { capabilities },
+  });
+  it.each([
+    ["the folder itself", target("moved", ["home"]), false],
+    ["a folder inside it", target("child", ["home", "moved"]), false],
+    ["a folder two levels inside it", target("grandchild", ["home", "moved", "child"]), false],
+    ["an unrelated folder", target("other", ["home"]), true],
+    ["a folder that does not accept moves", target("other", ["home"], ["readResource"]), false],
+  ] as const)("a single folder may move into %s: %s", (_, destination, allowed) => {
+    for (const bulk of [false, true]) {
+      const d = dialog("move");
+      d.resource = moved;
+      d.resources = bulk ? [moved] : [];
+      d.targetResource = destination;
+      d.target = destination["@id"];
+      expect(d.destinationAllowed).toBe(allowed);
+    }
+  });
   it("starts a draft at the next patch and refuses a version that does not raise it", async () => {
     const d = dialog("draft");
     d.resource = { ...resource, "pav:version": "1.2.3" };
