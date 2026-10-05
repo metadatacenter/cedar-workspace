@@ -413,7 +413,8 @@ tr.selected:hover {
 }
 .information dt,
 .information small,
-.information .identifiers {
+.information .identifiers,
+.information .open-view {
   font-size: var(--cedar-font-size);
 }
 .tabs {

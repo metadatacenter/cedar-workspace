@@ -30,6 +30,7 @@
     "LatestVersion": "Legújabb verzió",
     "AllVersions": "Összes verzió",
     "IdCopied": "Azonosító másolva.",
+    "LinkCopied": "Hivatkozás másolva.",
     "Unknown": "ismeretlen"
   },
   "ResourceTypes": {
@@ -198,6 +199,8 @@
     "NoInstances": "Nincsenek példányok",
     "NoAccessibleInstances": "Nincsenek elérhető példányok",
     "CopyIdentifier": "Azonosító másolása",
+    "OpenView": "OpenView",
+    "CopyOpenViewLink": "OpenView-hivatkozás másolása",
     "Status": "Állapot",
     "Unversioned": "Verzió nélkül",
     "SelectItem": "Válasszon ki egy elemet a részletek megtekintéséhez",

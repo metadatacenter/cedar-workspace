@@ -276,26 +276,86 @@ describe("Angular Workspace", () => {
       ).toBe(offered);
     });
   }
-  it("keeps OpenView out of the information panel, open itself or through a folder", async () => {
-    const f = await render();
-    const shared: Resource = {
+  // The information panel decides by the resource's path once it has one, so a
+  // stale listing flag neither shows the link nor hides it.
+  describe("the information panel's OpenView link", () => {
+    const uuid = "0f1e2d3c-4b5a-4968-8776-655443322110";
+    const artifact: Resource = {
+      ...template,
+      "@id": `https://repo.metadatacenter.orgx/templates/${uuid}`,
+    };
+    const openFolder: Resource = {
       "@id": "shared",
       resourceType: "folder",
       "schema:name": "Shared",
       isOpen: true,
     };
-    const headings = () =>
-      [...(f.nativeElement as HTMLElement).querySelectorAll(".info-section .description-heading")].map(
+    const closedFolder: Resource = { ...openFolder, isOpen: false };
+    const headings = (f: { nativeElement: HTMLElement }) =>
+      [...f.nativeElement.querySelectorAll(".info-section .description-heading")].map(
         (h) => h.textContent?.trim(),
       );
-    for (const selected of [
-      { ...template, isOpen: true, pathInfo: [folder, template] },
-      { ...template, isOpenImplicitly: true, pathInfo: [folder, shared, template] },
-    ]) {
-      f.componentInstance.selected.set(selected);
-      f.detectChanges();
-      expect(headings()).not.toContain("OpenView");
+    const cases: [string, Resource, boolean][] = [
+      ["made open", { ...artifact, isOpen: true, pathInfo: [folder, artifact] }, true],
+      [
+        "inside an open folder",
+        { ...artifact, isOpenImplicitly: true, pathInfo: [folder, openFolder, artifact] },
+        true,
+      ],
+      [
+        "whose listing says a folder above is open when its path says none is",
+        { ...artifact, isOpenImplicitly: true, pathInfo: [folder, closedFolder, artifact] },
+        false,
+      ],
+      ["neither made open nor inside an open folder", { ...artifact, pathInfo: [folder, artifact] }, false],
+    ];
+    for (const [label, selected, offered] of cases) {
+      it(`${offered ? "follows" : "is absent from"} the Identifier for a resource ${label}`, async () => {
+        const f = await render();
+        f.componentInstance.selected.set(selected);
+        f.detectChanges();
+        const shown = headings(f);
+        if (!offered) {
+          expect(shown).not.toContain("OpenView");
+          return;
+        }
+        expect(shown[shown.indexOf("Identifier") + 1]).toBe("OpenView");
+        const link = (f.nativeElement as HTMLElement).querySelector<HTMLAnchorElement>(".open-view a")!;
+        // The compact typed address, not the full IRI.
+        expect(link.getAttribute("href")).toBe(`https://openview.example/templates/${uuid}`);
+        expect(link.textContent?.trim()).toBe(link.getAttribute("href"));
+        expect(link.target).toBe("_blank");
+        expect(link.rel).toBe("noopener");
+      });
     }
+    it("is absent where the deployment does not run OpenView", async () => {
+      vi.stubGlobal("makeOpenEnabled", false);
+      const f = await render();
+      f.componentInstance.selected.set({ ...artifact, isOpen: true, pathInfo: [folder, artifact] });
+      f.detectChanges();
+      expect(headings(f)).not.toContain("OpenView");
+    });
+    it("copies the link and says a link was copied", async () => {
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      // jsdom has no clipboard, and replacing navigator wholesale loses its prototype.
+      Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+      try {
+        const f = await render();
+        f.componentInstance.selected.set({ ...artifact, isOpen: true, pathInfo: [folder, artifact] });
+        f.detectChanges();
+        const copy = (f.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
+          ".open-view .copy-icon",
+        )!;
+        expect(copy.getAttribute("aria-label")).toBe("Copy OpenView link");
+        copy.click();
+        await vi.waitFor(() =>
+          expect(f.componentInstance.notice()).toBe("Link copied."),
+        );
+        expect(writeText).toHaveBeenCalledWith(`https://openview.example/templates/${uuid}`);
+      } finally {
+        delete (navigator as { clipboard?: unknown }).clipboard;
+      }
+    });
   });
   it("exposes the artifact action set and gates it using the server capabilities", () => {
     const list = actions(template, TestBed.inject(I18n));

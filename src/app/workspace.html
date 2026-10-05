@@ -709,6 +709,20 @@
         />
       </div>
     </section>
+    @if(publicLink(r); as openViewLink){
+    <section class="info-section open-view">
+      <div class="description-heading">
+        {{'Dashboard.OpenView' | translate}}
+      </div>
+      <div class="detail-with-copy">
+        <a [href]="openViewLink" target="_blank" rel="noopener">{{openViewLink}}</a>
+        <cedar-copy-button
+          [label]="'Dashboard.CopyOpenViewLink' | translate"
+          (copied)="copyLink(openViewLink)"
+        />
+      </div>
+    </section>
+    }
     <section class="info-section">
       @for (item of [r]; track item['@id']) {
       <cedar-description-editor

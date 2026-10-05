@@ -49,6 +49,7 @@ import {
   title,
   can,
   inOpenView,
+  openThroughAFolder,
   listingPath,
   resourceLink,
   collections,
@@ -704,10 +705,16 @@ export class Workspace {
   parentId(r: Resource): string | undefined {
     return r.pathInfo?.filter((p) => p["@id"] !== r["@id"]).at(-1)?.["@id"];
   }
-  async copyId(value: string) {
+  copyId(value: string) {
+    return this.copy(value, "Common.IdCopied");
+  }
+  copyLink(value: string) {
+    return this.copy(value, "Common.LinkCopied");
+  }
+  private async copy(value: string, notice: string) {
     try {
       await navigator.clipboard.writeText(value);
-      this.notice.set(this.i18n.t("Common.IdCopied"));
+      this.notice.set(this.i18n.t(notice));
     } catch (e) {
       this.fail(e);
     }
@@ -912,6 +919,13 @@ export class Workspace {
       "/" +
       encodeURIComponent(resourcePathId(r["@id"]))
     );
+  }
+  // The resource's OpenView address, when this deployment runs OpenView and serves
+  // the resource there. Its path, once known, settles whether a folder above is open.
+  publicLink(r: Resource): string | undefined {
+    return window.makeOpenEnabled !== false && (r.isOpen || openThroughAFolder(r))
+      ? this.openView(r)
+      : undefined;
   }
   async act(id: string, r: Resource) {
     this.menuTrigger?.focus();

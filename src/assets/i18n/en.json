@@ -30,6 +30,7 @@
     "LatestVersion": "Latest version",
     "AllVersions": "All versions",
     "IdCopied": "ID copied.",
+    "LinkCopied": "Link copied.",
     "Unknown": "unknown"
   },
   "ResourceTypes": {
@@ -198,6 +199,8 @@
     "NoInstances": "No instances",
     "NoAccessibleInstances": "No accessible instances",
     "CopyIdentifier": "Copy identifier",
+    "OpenView": "OpenView",
+    "CopyOpenViewLink": "Copy OpenView link",
     "Status": "Status",
     "Unversioned": "Unversioned",
     "SelectItem": "Select an item to see its details",
