@@ -423,7 +423,12 @@ test("first instance copy help escapes the scrolling list and dismisses on scrol
   await expect(help).toBeVisible();
   await list.evaluate(el => { el.scrollTop = el.scrollHeight; });
   await expect(help).toHaveCount(0);
-  await list.getByRole('button').last().hover();
+  // After a scroll, WebKit's overlay scrollbar covers the list's right edge, where each copy button
+  // sits, and about 200 ms later WebKit hit-tests the resting pointer again. A pointer on the
+  // button's centre then lands on the scrollbar and leaves the button, which closes its help. The
+  // pointer therefore rests on the button's left edge.
+  const last = list.getByRole('button').last();
+  await last.hover({ position: { x: 2, y: (await last.boundingBox()).height / 2 } });
   await expect(help).toHaveText('Copy instance identifier');
   await page.keyboard.press('Escape');
   await expect(help).toHaveCount(0);
