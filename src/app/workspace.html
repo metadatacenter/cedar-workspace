@@ -334,6 +334,9 @@
                 }
               </button>
             </th>
+            @if(!grid()){
+            <th class="version-column">{{'Common.Version' | translate}}</th>
+            }
             <th class="sort-column">
               <span class="sr-only">{{'Dashboard.Actions' | translate}}</span>
               <cedar-sort-menu
@@ -450,6 +453,16 @@
               </span>
               }
             </td>
+            @if(!grid()){
+            <td class="explorer-version">
+              @if(versioned(r)){
+              {{r['pav:version'] || ('Dashboard.Unversioned' | translate)}}<span
+                aria-hidden="true"
+              > · </span
+              >{{status(r)}}
+              }
+            </td>
+            }
             <td class="row-actions" (click)="$event.stopPropagation()">
               @if(inOpenView(r)){<a
                 [href]="openView(r)"

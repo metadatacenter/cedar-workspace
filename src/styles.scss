@@ -677,6 +677,19 @@ th:first-child {
 th:nth-child(2) {
   width: 150px;
 }
+/* The list view's version and status column; the grid shows them on each card. The
+   listing grows by the column's width, so the name keeps the room it had. */
+table:has(.version-column) {
+  min-width: 720px;
+}
+.version-column {
+  width: 150px;
+  padding: var(--cedar-space-1) var(--cedar-space-3);
+}
+.explorer-version {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 th:last-child {
   width: 130px;
 }

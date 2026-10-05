@@ -135,6 +135,30 @@ describe("Angular Workspace", () => {
       }),
     );
   });
+  it("lists version and status after Last modified, blank for instances and folders", async () => {
+    const f = await render();
+    f.componentInstance.grid.set(false);
+    f.componentInstance.rows.set([
+      { ...template, "@id": "t", "pav:version": "1.2.0", "bibo:status": "bibo:published" },
+      { ...template, "@id": "e", resourceType: "element" },
+      { ...template, "@id": "i", resourceType: "instance", "pav:version": "1.0.0" },
+      { ...folder, "@id": "f" },
+    ]);
+    f.detectChanges();
+    const table: HTMLTableElement = f.nativeElement.querySelector("table");
+    expect(
+      [...table.querySelectorAll("th")].map((th) => th.textContent?.trim()),
+    ).toEqual(["Name", "Last modified", "Version", "Actions"]);
+    expect(
+      [...table.querySelectorAll("tbody tr")].map((tr) =>
+        tr.querySelectorAll("td")[2].textContent?.replace(/\s+/g, " ").trim(),
+      ),
+    ).toEqual(["1.2.0 · Published", "Unversioned · —", "", ""]);
+    // The grid shows version and status on each card instead.
+    f.componentInstance.grid.set(true);
+    f.detectChanges();
+    expect(table.querySelectorAll(".version-column, .explorer-version").length).toBe(0);
+  });
   it("renders the table and destinations with empty information until selection", async () => {
     const f = await render();
     const el = f.nativeElement as HTMLElement;
