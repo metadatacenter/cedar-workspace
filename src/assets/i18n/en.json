@@ -406,6 +406,8 @@
     "SavedWithChanges": "Saved. You have further unsaved changes.",
     "ConfigurationUnavailable": "Unable to load metadata editor configuration.",
     "NoTemplate": "Metadata does not identify its template.",
+    "UnreadableTemplate": "CEDAR cannot read this template, so metadata cannot be entered for it.",
+    "UnreadableInstance": "CEDAR cannot read this metadata or its template, so it cannot be shown.",
     "NoRevision": "No concurrency validator was returned. Reload before saving. Your edits have been kept.",
     "Label": "Metadata",
     "RequiredMissing": "{{count}} required fields are missing.",

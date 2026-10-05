@@ -131,6 +131,19 @@ describe("Modern metadata host", () => {
     expect(host.loading()).toBe(false);
     expect(host.dirty()).toBe(false);
   });
+  it.each([
+    ["a template", "create", "CEDAR cannot read this template, so metadata cannot be entered for it."],
+    ["metadata", "edit", "CEDAR cannot read this metadata or its template, so it cannot be shown."],
+  ])("says so when CEE refuses %s it cannot read, and offers no retry", async (_what, mode, message) => {
+    // CEE holds no artifact after refusing one, so its metadata stays empty.
+    Object.assign(cee, { currentMetadata: {} });
+    if (mode === "edit") await edit();
+    else await host.ngAfterViewInit();
+    expect(host.state.loadFailed()).toBe(true);
+    expect(host.unreadable()).toBe(true);
+    expect(host.error()).toBe(message);
+    expect(host.saveStatus).toBe("Metadata.LoadFailed");
+  });
   it("shows a new untouched instance as unmodified until it is edited", async () => {
     await host.ngAfterViewInit();
     expect(host.saveStatus).toBe("Metadata.UnmodifiedStatus");

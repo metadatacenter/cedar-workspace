@@ -200,6 +200,8 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   readonly dirty = signal(false);
   readonly writable = signal(false);
   readonly error = signal("");
+  /** CEE refused the stored template or instance as unreadable, so loading it again cannot help. */
+  readonly unreadable = signal(false);
   readonly notice = signal("");
   readonly state = new MetadataState();
   readonly quality = this.state.quality;
@@ -234,6 +236,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     const operation = this.state.begin("load", ["save"]);
     this.loading.set(true);
     this.state.loadFailed.set(false);
+    this.unreadable.set(false);
     this.error.set("");
     this.cee.removeEventListener("change", this.changed);
     try {
@@ -322,6 +325,13 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
           instanceObject: saved,
         };
       else this.cee.templateObject = template;
+      // CEE builds no form for an artifact it cannot read, such as a template whose child is stored
+      // under a reserved key. It then holds no artifact, so its metadata is empty straight after the
+      // assignment, which its public API names as the sign of a refusal.
+      if (Object.keys(this.cee.currentMetadata ?? {}).length === 0) {
+        this.unreadable.set(true);
+        throw new Error(this.i18n.t(saved ? "Metadata.UnreadableInstance" : "Metadata.UnreadableTemplate"));
+      }
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
       if (!operation.current()) return;
       this.baseline = metadataKey(this.cee.currentMetadata);

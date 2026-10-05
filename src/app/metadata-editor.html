@@ -29,7 +29,7 @@
 <main class="metadata-content">
   @if(error()){
   <p role="alert" class="alert">
-    {{error()}} @if(state.loadFailed() || (state.reloadRequired() &&
+    {{error()}} @if((state.loadFailed() && !unreadable()) || (state.reloadRequired() &&
     !state.uncertainCreation())) {
     <button type="button" (click)="reload()" [disabled]="saving()">
       {{(state.loadFailed() ? 'Common.Retry' : 'Metadata.Reload') | translate}}

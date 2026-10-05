@@ -406,6 +406,8 @@
     "SavedWithChanges": "Mentve. További, nem mentett módosításai vannak.",
     "ConfigurationUnavailable": "A metaadat-szerkesztő beállításai nem tölthetők be.",
     "NoTemplate": "A metaadatok nem hivatkoznak a sablonjukra.",
+    "UnreadableTemplate": "A CEDAR nem tudja beolvasni ezt a sablont, ezért nem adhatók meg hozzá metaadatok.",
+    "UnreadableInstance": "A CEDAR nem tudja beolvasni ezeket a metaadatokat vagy a sablonjukat, ezért nem jeleníthetők meg.",
     "NoRevision": "A szerver nem küldött egyidejűség-ellenőrző azonosítót. Mentés előtt töltse be újra az oldalt. A módosításai megmaradtak.",
     "Label": "Metaadatok",
     "RequiredMissing": "{{count}} kötelező mező hiányzik.",

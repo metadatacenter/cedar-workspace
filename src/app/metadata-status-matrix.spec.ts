@@ -25,7 +25,8 @@ type Stage =
   | "refused with 409"
   | "refused with 412"
   | "created without an identifier"
-  | "failed to load";
+  | "failed to load"
+  | "refused by the editor as unreadable";
 
 const good = { isValid: true, requiredFieldValueCount: 0, nonNullRequiredFieldValueCount: 0, problems: [] };
 const template = { "@id": "template", "schema:name": "Study", properties: {} };
@@ -44,9 +45,11 @@ for (const mode of ["create", "edit"] as const)
         "refused with 412",
         "created without an identifier",
         "failed to load",
+        "refused by the editor as unreadable",
       ] as const) {
         // A reader cannot save or edit, so only loading means anything for one.
-        if (!writable && (edit !== "none" || !["loaded", "failed to load"].includes(stage))) continue;
+        if (!writable && (edit !== "none" || !["loaded", "failed to load", "refused by the editor as unreadable"].includes(stage)))
+          continue;
         if (stage === "created without an identifier" && mode !== "create") continue;
         cases.push([mode, writable, edit, stage]);
       }
@@ -123,6 +126,8 @@ describe("metadata editor status matrix", () => {
     writable = w;
     loadFails = stage === "failed to load";
     start();
+    // CEE holds no artifact once it refuses one, so its metadata stays empty.
+    if (stage === "refused by the editor as unreadable") Object.assign(cee, { currentMetadata: {} });
     await host.ngAfterViewInit();
     apply(edit);
     // Save trims the name, so spaces around it are not a change.
@@ -152,8 +157,9 @@ describe("metadata editor status matrix", () => {
 
     const reloadRequired = ["refused with 409", "refused with 412", "created without an identifier"].includes(stage);
     const dirty = stage === "saved" ? false : stage === "saved, then edited" ? true : edited;
+    const failed = stage === "failed to load" || stage === "refused by the editor as unreadable";
     const status =
-      stage === "failed to load"
+      failed
         ? "Metadata.LoadFailed"
         : stage === "saving"
           ? "Common.Saving"
@@ -173,9 +179,9 @@ describe("metadata editor status matrix", () => {
       mayLeave: await host.mayLeave(),
     }).toEqual({
       status,
-      dirty: stage === "failed to load" ? false : dirty,
+      dirty: failed ? false : dirty,
       refused: reloadRequired,
-      mayLeave: stage !== "saving" && (stage === "failed to load" || !dirty),
+      mayLeave: stage !== "saving" && (failed || !dirty),
     });
     release?.();
     await pending;
