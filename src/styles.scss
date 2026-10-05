@@ -323,8 +323,16 @@ th {
 th:first-child {
   width: 62%;
 }
-th button {
+th button,
+th .column-label {
   padding: var(--cedar-space-1) var(--cedar-space-3);
+}
+/* A column that does not sort is labelled as the sortable ones are. */
+th .column-label {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--cedar-control-height-default);
+  color: var(--cedar-color-primary);
 }
 td {
   @include patterns.table-cell;
@@ -677,18 +685,20 @@ th:first-child {
 th:nth-child(2) {
   width: 150px;
 }
-/* The list view's version and status column; the grid shows them on each card. The
-   listing grows by the column's width, so the name keeps the room it had. */
-table:has(.version-column) {
-  min-width: 720px;
+/* The list view sizes Last modified and Version to their content and gives the name the
+   rest. */
+.table-scroll:not(.explorer-grid) > table {
+  table-layout: auto;
 }
-.version-column {
-  width: 150px;
-  padding: var(--cedar-space-1) var(--cedar-space-3);
+.table-scroll:not(.explorer-grid) > table th {
+  white-space: nowrap;
 }
-.explorer-version {
-  overflow: hidden;
-  text-overflow: ellipsis;
+.table-scroll:not(.explorer-grid) > table th:nth-child(2) {
+  width: auto;
+}
+.table-scroll:not(.explorer-grid) > table td:first-child {
+  width: 100%;
+  max-width: 0;
 }
 th:last-child {
   width: 130px;

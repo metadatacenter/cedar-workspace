@@ -325,17 +325,20 @@
             <th
               [attr.aria-sort]="sort==='lastUpdatedOnTS'?'ascending':sort==='-lastUpdatedOnTS'?'descending':'none'"
             >
+              <!-- The chevron keeps its place while another column sorts, so the column,
+                   sized to its content, does not change width when the sort does. -->
               <button (click)="changeSort('lastUpdatedOnTS')">
-                {{'Common.LastModified' | translate}} @if(sort ===
-                "lastUpdatedOnTS" || sort === "-lastUpdatedOnTS") {
+                {{'Common.LastModified' | translate}}
                 <cedar-icon
                   [name]="sort === 'lastUpdatedOnTS' ? 'chevron-up' : 'chevron-down'"
+                  [style.visibility]="sort === 'lastUpdatedOnTS' || sort === '-lastUpdatedOnTS' ? null : 'hidden'"
                 />
-                }
               </button>
             </th>
             @if(!grid()){
-            <th class="version-column">{{'Common.Version' | translate}}</th>
+            <th>
+              <span class="column-label">{{'Common.Version' | translate}}</span>
+            </th>
             }
             <th class="sort-column">
               <span class="sr-only">{{'Dashboard.Actions' | translate}}</span>
@@ -454,7 +457,7 @@
               }
             </td>
             @if(!grid()){
-            <td class="explorer-version">
+            <td>
               @if(versioned(r)){
               {{r['pav:version'] || ('Dashboard.Unversioned' | translate)}}<span
                 aria-hidden="true"

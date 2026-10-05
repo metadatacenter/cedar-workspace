@@ -157,7 +157,10 @@ describe("Angular Workspace", () => {
     // The grid shows version and status on each card instead.
     f.componentInstance.grid.set(true);
     f.detectChanges();
-    expect(table.querySelectorAll(".version-column, .explorer-version").length).toBe(0);
+    expect(
+      [...table.querySelectorAll("th")].map((th) => th.textContent?.trim()),
+    ).toEqual(["Name", "Last modified", "Actions"]);
+    expect(table.querySelector("tbody tr")!.querySelectorAll("td").length).toBe(3);
   });
   it("renders the table and destinations with empty information until selection", async () => {
     const f = await render();

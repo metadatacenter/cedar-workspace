@@ -735,3 +735,41 @@ test("new metadata is unmodified until edited, and saved once persisted", async 
   await expect(state).toHaveText("Saved");
   await expect(state).not.toHaveClass(/is-dirty/);
 });
+
+test("the Version header reads as the sortable ones, and the date and version columns fit their content", async ({ page, api }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await dashboard(page);
+  const headers = page.locator("thead th");
+  await expect(headers.nth(2)).toHaveText("Version");
+  const look = (el) => {
+    const style = getComputedStyle(el);
+    return [style.color, style.fontSize, style.fontWeight, style.paddingLeft, style.paddingTop, Math.round(el.getBoundingClientRect().height)];
+  };
+  expect(await headers.nth(2).locator(".column-label").evaluate(look)).toEqual(
+    await headers.nth(1).locator("button").evaluate(look),
+  );
+  // Each column is as wide as its widest header or cell, and no wider.
+  const slack = () =>
+    page.locator("table").evaluate((table) =>
+      [2, 3].map((column) => {
+        const cells = [...table.querySelectorAll(`tr > :nth-child(${column})`)];
+        const widest = Math.max(
+          ...cells.map((cell) => {
+            const range = document.createRange();
+            range.selectNodeContents(cell);
+            const style = getComputedStyle(cell);
+            return range.getBoundingClientRect().width + parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+          }),
+        );
+        return Math.round(cells[0].getBoundingClientRect().width - widest);
+      }),
+    );
+  expect(await slack()).toEqual([0, 0]);
+  // Sorting by date shows the chevron in the place kept for it, so the column keeps its width.
+  const width = () => headers.nth(1).evaluate((el) => el.getBoundingClientRect().width);
+  const before = await width();
+  await headers.nth(1).locator("button").click();
+  await expect(page).toHaveURL(/sort=lastUpdatedOnTS/);
+  await expect(headers.nth(1).locator("cedar-icon")).toBeVisible();
+  expect(await width()).toBe(before);
+});
