@@ -161,14 +161,11 @@ describe("Conditional action dialogs", () => {
     ["an unrelated folder", target("other", ["home"]), true],
     ["a folder that does not accept moves", target("other", ["home"], ["readResource"]), false],
   ] as const)("a single folder may move into %s: %s", (_, destination, allowed) => {
-    for (const bulk of [false, true]) {
-      const d = dialog("move");
-      d.resource = moved;
-      d.resources = bulk ? [moved] : [];
-      d.targetResource = destination;
-      d.target = destination["@id"];
-      expect(d.destinationAllowed).toBe(allowed);
-    }
+    const d = dialog("move");
+    d.resource = moved;
+    d.targetResource = destination;
+    d.target = destination["@id"];
+    expect(d.destinationAllowed).toBe(allowed);
   });
   it("starts a draft at the next patch and refuses a version that does not raise it", async () => {
     const d = dialog("draft");

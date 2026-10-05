@@ -252,7 +252,6 @@ export class Workspace {
     this.deletionSelection.set([...resources]);
   }
   readonly deletionSelection = signal<Resource[] | null>(null);
-  readonly moveDialog = signal<Resource[] | null>(null);
   readonly deleteDrop = signal(false);
   readonly dropTarget = signal("");
   readonly dragging = signal<Resource[]>([]);

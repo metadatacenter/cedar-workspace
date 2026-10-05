@@ -9,7 +9,8 @@ import { Config, Resource } from "./resource";
 
 /**
  * Where an item may be moved, asked three ways: dragging it onto a folder, the Move dialog, and the
- * move itself. Dragging judges what the listing shows. A breadcrumb entry carries no capabilities, so
+ * move itself. The dialog moves one item at a time; a group moves only by dragging. Dragging judges
+ * what the listing shows. A breadcrumb entry carries no capabilities, so
  * dragging onto one is allowed and the move reads the folder's capabilities before writing. The
  * dialog and the move judge the folder as the server reports it.
  */
@@ -89,14 +90,15 @@ describe("move eligibility across dragging, the Move dialog and the move", () =>
       expect(w.validDropIds().has(target["@id"]), "drag").toBe(dragAllowed);
     }
 
-    // The Move dialog, for one item and for a group.
-    const d = TestBed.runInInjectionContext(() => new ResourceDialog());
-    d.action = "move";
-    d.resource = sources[0];
-    d.resources = sources.length > 1 ? sources : [];
-    d.target = target["@id"];
-    d.targetResource = target;
-    expect(d.destinationAllowed, "dialog").toBe(shapeAllowed);
+    // The Move dialog, which moves one item.
+    if (sources.length === 1) {
+      const d = TestBed.runInInjectionContext(() => new ResourceDialog());
+      d.action = "move";
+      d.resource = sources[0];
+      d.target = target["@id"];
+      d.targetResource = target;
+      expect(d.destinationAllowed, "dialog").toBe(shapeAllowed);
+    }
 
     // The move reads the destination and every item afresh before writing anything.
     (api.request as ReturnType<typeof vi.fn>).mockImplementation(async (path: string) =>

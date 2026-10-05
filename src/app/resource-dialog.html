@@ -26,13 +26,7 @@
         <cedar-icon name="close" />
       </button>
     </header>
-    @if(resources.length){
-    <ul>
-      @for(item of resources;track item["@id"]){
-      <li>{{title(item)}}</li>
-      }
-    </ul>
-    } @if(resource){
+    @if(resource){
     <p class="resource-dialog-resource">
       <cedar-icon [name]="resource.resourceType" /><span
         >{{title(resource)}}</span

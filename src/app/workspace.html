@@ -850,14 +850,7 @@ d.resource) {
   [folder]="folder"
   (closed)="dialog.set(null)"
   (saved)="saved()"
-/>} } } @if(moveDialog();as items){<cedar-resource-dialog
-  action="move"
-  [resources]="items"
-  [folder]="folder"
-  (closed)="moveDialog.set(null)"
-  (changed)="load(true)"
-  (saved)="moveDialog.set(null); saved()"
-/>} @if(preview();as item){<cedar-artifact-preview
+/>} } } @if(preview();as item){<cedar-artifact-preview
   [resource]="item"
   (closed)="preview.set(null)"
 />}

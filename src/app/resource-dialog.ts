@@ -2,7 +2,7 @@ import { resourceSelector, resourcePathId } from "./resource-address";
 import { OperationCoordinator } from "./operation-coordinator";
 import { validListing } from "./resource";
 import { Tooltip } from "./tooltip";
-import { ResourceMoves, validMoveTarget } from "./resource-moves";
+import { validMoveTarget } from "./resource-moves";
 import { Confirmation } from "./confirmation";
 import { DialogKeyboard } from "./dialog-keyboard";
 import { Icon } from "./icon";
@@ -61,9 +61,6 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   private readonly i18n = inject(I18n);
   @Input({ required: true }) action = "";
   @Input() resource?: Resource;
-  @Input() resources: Resource[] = [];
-  @Output() changed = new EventEmitter<void>();
-  private moves = inject(ResourceMoves);
   @Input({ required: true }) folder = "";
   @Output() closed = new EventEmitter<void>();
   @Output() saved = new EventEmitter<void>();
@@ -301,12 +298,11 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
     void this.browse(this.target, 0, sort);
   }
   get destinationAllowed() {
-    // One item and several are held to the same rule: never into itself or below itself.
-    const moving = this.resources.length ? this.resources : this.resource ? [this.resource] : [];
-    if (this.action === "move" && moving.length)
+    // Moving is held to the rule dragging shares: never into itself or below itself.
+    if (this.action === "move" && this.resource)
       return (
         !!this.targetResource &&
-        validMoveTarget(moving, this.targetResource)
+        validMoveTarget([this.resource], this.targetResource)
       );
     return (
       !this.choosesFolder ||
@@ -350,34 +346,6 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
     if (this.nameError || this.versionError) return;
     this.busy.set(true);
     this.error.set("");
-    if (this.action === "move" && this.resources.length) {
-      try {
-        const result = await this.moves.move(this.resources, this.target);
-        if (result.failed.length) {
-          this.resources = result.failed.map((f) => f.resource);
-          this.error.set(
-            this.i18n.t(
-              result.moved.length === 1
-                ? "Explorer.MovedOne"
-                : "Explorer.Moved",
-              {
-                count: result.moved.length,
-              },
-            ) +
-              " " +
-              result.failed
-                .map((f) => this.title(f.resource) + ": " + f.message)
-                .join("; "),
-          );
-          if (result.moved.length) this.changed.emit();
-        } else if (this.alive) this.saved.emit();
-      } catch (e) {
-        this.fail(e);
-      } finally {
-        this.busy.set(false);
-      }
-      return;
-    }
     const r = this.resource;
     const id = r?.["@id"];
     try {
