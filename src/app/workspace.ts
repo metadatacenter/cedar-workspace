@@ -48,8 +48,7 @@ import {
   Listing,
   title,
   can,
-  inOpenView,
-  openThroughAFolder,
+  offeredInOpenView,
   versioned,
   listingPath,
   resourceLink,
@@ -131,7 +130,7 @@ export function actions(r: Resource, i18n: Pick<I18n, "t">): Action[] {
     {
       id: "openview",
       label: label("ResourceActions.OpenInOpenView"),
-      enabled: window.makeOpenEnabled !== false && inOpenView(r),
+      enabled: offeredInOpenView(r),
     },
   ].filter((action) => {
     // Applicability comes from the resource kind; capabilities still gate valid actions.
@@ -198,7 +197,7 @@ export class Workspace {
   private injector = inject(Injector);
   readonly title = (r: Resource) => title(r, this.i18n.t("Common.Untitled"));
   readonly can = can;
-  readonly inOpenView = inOpenView;
+  readonly offeredInOpenView = offeredInOpenView;
   readonly versioned = versioned;
   readonly actions = (r: Resource) => actions(r, this.i18n);
   attribution(userId?: string, name?: string): string {
@@ -959,12 +958,9 @@ export class Workspace {
       encodeURIComponent(resourcePathId(r["@id"]))
     );
   }
-  // The resource's OpenView address, when this deployment runs OpenView and serves
-  // the resource there. Its path, once known, settles whether a folder above is open.
+  // The resource's OpenView address, when a link to it is offered at all.
   publicLink(r: Resource): string | undefined {
-    return window.makeOpenEnabled !== false && (r.isOpen || openThroughAFolder(r))
-      ? this.openView(r)
-      : undefined;
+    return offeredInOpenView(r) ? this.openView(r) : undefined;
   }
   async act(id: string, r: Resource) {
     this.menuTrigger?.focus();

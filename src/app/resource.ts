@@ -102,9 +102,13 @@ export const title = (r: Resource, untitled = "Untitled") =>
 // Templates, elements and fields have versions; instances and folders do not.
 export const versioned = (r: Resource) =>
   r.resourceType === "template" || r.resourceType === "element" || r.resourceType === "field";
-// OpenView serves a resource made open and anything inside an open folder, so
-// either one offers the link.
-export const inOpenView = (r: Resource) => !!r.isOpen || !!r.isOpenImplicitly;
+// OpenView serves a resource made open and anything inside an open folder. Its path,
+// once read, settles the folders; until then the listing's flag stands in.
+export const inOpenView = (r: Resource) => !!r.isOpen || openThroughAFolder(r);
+// Whether a link to OpenView is offered: the deployment runs OpenView and serves the
+// resource there. The row, the menu and the Info panel all ask this one question.
+export const offeredInOpenView = (r: Resource) =>
+  window.makeOpenEnabled !== false && inOpenView(r);
 // The open folders above a resource, outermost first, once its path is known. It
 // stays in OpenView, whatever its own flag says, until each of them is made not open.
 export const openFoldersAbove = (r: Resource): Resource[] | undefined =>
