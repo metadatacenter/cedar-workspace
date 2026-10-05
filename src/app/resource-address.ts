@@ -15,6 +15,11 @@ export function useDeploymentBase(identity: string | null | undefined): void {
   deploymentBase = identity?.match(new RegExp(`^(https?://[^/]+/)(?:${COLLECTIONS})/${UUID}$`))?.[1] ?? null;
 }
 
+/** The same, from the deployment's domain, for an application that holds no identity it minted. */
+export function useDeploymentDomain(domain: string | null | undefined): void {
+  deploymentBase = domain ? `https://repo.${domain}/` : null;
+}
+
 /** HTTP selectors retain the resource type; document identities remain full IRIs. */
 export function resourceSelector(id: string): string {
   if (!deploymentBase || !id.startsWith(deploymentBase)) return id;

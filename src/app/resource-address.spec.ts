@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { resourceIri, resourcePathId, resourceSelector, useDeploymentBase } from "./resource-address";
+import { resourceIri, resourcePathId, resourceSelector, useDeploymentBase, useDeploymentDomain } from "./resource-address";
 
 /**
  * The compact address of a folder or artifact, across the deployment's base, the form an identifier
@@ -66,5 +66,17 @@ describe("compact resource addresses", () => {
         `https://repo.metadatacenter.orgx/templates/${UUID}`,
       );
     }
+  });
+
+  it("learns the base from the deployment's domain", () => {
+    useDeploymentDomain("metadatacenter.org");
+    expect(resourceSelector(`https://repo.metadatacenter.org/templates/${UUID}`)).toBe(`templates/${UUID}`);
+    expect(resourceSelector(`https://repo.metadatacenter.orgx/templates/${UUID}`)).toBe(
+      `https://repo.metadatacenter.orgx/templates/${UUID}`,
+    );
+    useDeploymentDomain(undefined);
+    expect(resourceSelector(`https://repo.metadatacenter.org/templates/${UUID}`)).toBe(
+      `https://repo.metadatacenter.org/templates/${UUID}`,
+    );
   });
 });
