@@ -3,6 +3,7 @@ import type { UserProfile } from "./account-types";
 import { Injectable, inject } from "@angular/core";
 import { I18n } from "./i18n";
 import { Config, Resource, collections } from "./resource";
+import { useDeploymentBase } from "./resource-address";
 interface Auth {
   initUserHandler(ok: (authenticated: boolean) => void, fail: () => void): void;
   refreshToken(seconds: number, ok: () => void, fail: () => void): void;
@@ -90,6 +91,8 @@ export class Backend {
         `${this.config.userRestAPI}/users/${encodeURIComponent(this.auth.getParsedToken().sub)}`,
       )
     ).data;
+    // The home folder is an identity this deployment minted, so it names the base to shorten against.
+    useDeploymentBase(this.profile.homeFolderId);
     return true;
   }
   async logout() {

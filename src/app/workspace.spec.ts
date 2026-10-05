@@ -5,6 +5,7 @@ import { Workspace, actions } from "./workspace";
 import { I18n } from "./i18n";
 import { Backend } from "./backend.service";
 import { Config, Resource } from "./resource";
+import { useDeploymentBase } from "./resource-address";
 const folder: Resource = {
   "@id": "home",
   resourceType: "folder",
@@ -306,6 +307,9 @@ describe("Angular Workspace", () => {
   // The information panel decides by the resource's path once it has one, so a
   // stale listing flag neither shows the link nor hides it.
   describe("the information panel's OpenView link", () => {
+    // The deployment mints on .orgx, so its identities are addressed in the compact form.
+    beforeEach(() => useDeploymentBase("https://repo.metadatacenter.orgx/folders/00000000-0000-4000-8000-000000000000"));
+    afterEach(() => useDeploymentBase(null));
     const uuid = "0f1e2d3c-4b5a-4968-8776-655443322110";
     const artifact: Resource = {
       ...template,
