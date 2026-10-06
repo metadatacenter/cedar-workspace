@@ -96,13 +96,14 @@ describe("metadata editor status matrix", () => {
           },
         },
         { provide: Router, useValue: { navigateByUrl: navigate } },
-        { provide: CeeLoader, useValue: { load: async () => {} } },
+        { provide: CeeLoader, useValue: { load: async () => {}, mountEditor: () => cee } },
         { provide: Confirmation, useValue: { confirm } },
       ],
     });
     cee = document.createElement("cedar-embeddable-editor") as CedarEmbeddableEditorElement;
     Object.assign(cee, { currentMetadata: { Value: { "@value": "first" } }, dataQualityReport: structuredClone(good) });
     host = TestBed.runInInjectionContext(() => new MetadataEditor());
+    host.editorHost = new ElementRef(document.createElement("div"));
     host.editor = new ElementRef(cee);
     vi.stubGlobal("fetch", vi.fn(async () => new Response("{}")));
   }

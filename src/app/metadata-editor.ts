@@ -193,7 +193,8 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly loader = inject(CeeLoader);
-  @ViewChild("editor", { static: true })
+  @ViewChild("editorHost", { static: true })
+  editorHost!: ElementRef<HTMLElement>;
   editor!: ElementRef<CedarEmbeddableEditorElement>;
   readonly loading = signal(true);
   readonly saving = signal(false);
@@ -238,7 +239,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     this.state.loadFailed.set(false);
     this.unreadable.set(false);
     this.error.set("");
-    this.cee.removeEventListener("change", this.changed);
+    this.editor?.nativeElement.removeEventListener("change", this.changed);
     try {
       if (!(await this.api.init()) || !operation.current()) return;
       this.folder =
@@ -301,6 +302,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         throw new Error(this.i18n.t("Metadata.NoTemplate"));
       await this.loader.load();
       if (!operation.current()) return;
+      this.editor = new ElementRef(this.loader.mountEditor(this.editorHost.nativeElement));
       this.saved = saved;
       this.etag = etag;
       this.template = template;
@@ -597,6 +599,6 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   ngOnDestroy() {
     this.alive = false;
     this.state.dispose();
-    this.cee.removeEventListener("change", this.changed);
+    this.editor?.nativeElement.removeEventListener("change", this.changed);
   }
 }

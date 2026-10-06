@@ -107,8 +107,5 @@
     </ul>
   </details>
   }
-  <cedar-embeddable-editor
-    #editor
-    [hidden]="loading()"
-  ></cedar-embeddable-editor>
+  <div #editorHost [hidden]="loading()"></div>
 </main>

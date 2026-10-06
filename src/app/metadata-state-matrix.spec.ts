@@ -229,7 +229,7 @@ describe("metadata save and recovery matrix", () => {
         },
         { provide: ActivatedRoute, useValue: route },
         { provide: Router, useValue: { navigateByUrl: navigate } },
-        { provide: CeeLoader, useValue: { load: async () => {} } },
+        { provide: CeeLoader, useValue: { load: async () => {}, mountEditor: () => cee } },
         { provide: Confirmation, useValue: { confirm } },
       ],
     });
@@ -242,6 +242,7 @@ describe("metadata save and recovery matrix", () => {
       reveal: vi.fn().mockResolvedValue(true),
     });
     host = TestBed.runInInjectionContext(() => new MetadataEditor());
+    host.editorHost = new ElementRef(document.createElement("div"));
     host.editor = new ElementRef(cee);
     vi.stubGlobal(
       "fetch",

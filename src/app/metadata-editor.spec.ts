@@ -86,7 +86,7 @@ describe("Modern metadata host", () => {
       { provide: Router, useValue: { navigateByUrl: address } },
       {
         provide: CeeLoader,
-        useValue: { load: vi.fn().mockResolvedValue(undefined) },
+        useValue: { load: vi.fn().mockResolvedValue(undefined), mountEditor: () => cee },
       },
     ];
     TestBed.configureTestingModule({ providers });
@@ -107,6 +107,7 @@ describe("Modern metadata host", () => {
       writable: true,
     });
     host = TestBed.runInInjectionContext(() => new MetadataEditor());
+    host.editorHost = new ElementRef(document.createElement("div"));
     host.editor = new ElementRef(cee);
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}")));
   });
@@ -177,6 +178,7 @@ describe("Modern metadata host", () => {
       providers: [...providers, ...provideWorkspaceTranslations("hu")],
     });
     host = TestBed.runInInjectionContext(() => new MetadataEditor());
+    host.editorHost = new ElementRef(document.createElement("div"));
     host.editor = new ElementRef(cee);
     await host.ngAfterViewInit();
     expect(cee.config.defaultLanguage).toBe("hu");

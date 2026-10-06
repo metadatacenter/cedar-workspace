@@ -84,8 +84,9 @@ export const test = base.extend({
       customElements.define('cedar-embeddable-editor', class extends HTMLElement {
         currentMetadata = {}; dataQualityReport = {isValid:true};
         connectedCallback() { queueMicrotask(() => this.eventHandler?.ready?.()); }
-        set templateAndInstanceObject(value) { this.currentMetadata = value.instanceObject; }
-        set templateObject(value) { this.currentMetadata = { 'schema:isBasedOn': value['@id'] }; }
+        accepted = false;
+        set templateAndInstanceObject(value) { if (this.accepted) throw Error('CEE inputs are set once'); this.accepted = true; this.currentMetadata = structuredClone(value.instanceObject); }
+        set templateObject(value) { if (this.accepted) throw Error('CEE inputs are set once'); this.accepted = true; this.currentMetadata = { 'schema:isBasedOn': value['@id'] }; }
         reveal(location) { (window.__ceeReveals ??= []).push(location); return Promise.resolve(true); }
       });
     `,
