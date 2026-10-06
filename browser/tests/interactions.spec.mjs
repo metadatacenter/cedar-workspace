@@ -773,3 +773,28 @@ test("the Version header reads as the sortable ones, and the date and version co
   await expect(headers.nth(1).locator("cedar-icon")).toBeVisible();
   expect(await width()).toBe(before);
 });
+
+test("column headers centre their labels and chevrons in the header row", async ({ page, api }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await dashboard(page);
+  // Labels that share every property can still render at different heights, so each label's
+  // text and chevron are measured where they are drawn, against the centre of the label.
+  const offsets = await page.locator("thead th").evaluateAll((headers) =>
+    headers.slice(0, 3).map((header) => {
+      const label = header.querySelector("button, .column-label");
+      const text = [...label.childNodes].find((node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+      const range = document.createRange();
+      range.selectNodeContents(text);
+      const centre = (rect) => rect.top + rect.height / 2;
+      // Rounding settles sub-pixel noise; adding zero turns -0 into 0.
+      const offset = (rect) => Math.round((centre(rect) - centre(label.getBoundingClientRect())) * 100) / 100 + 0;
+      const chevron = label.querySelector("cedar-icon");
+      return [text.textContent.trim(), offset(range.getBoundingClientRect()), chevron && offset(chevron.getBoundingClientRect())];
+    }),
+  );
+  expect(offsets).toEqual([
+    ["Name", 0, 0],
+    ["Last modified", 0, 0],
+    ["Version", 0, null],
+  ]);
+});

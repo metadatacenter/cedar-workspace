@@ -23,9 +23,6 @@ td:last-child:not([colspan]) {
   white-space: nowrap;
 }
 th button {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--cedar-space-1);
   text-align: left;
 }
 td {
