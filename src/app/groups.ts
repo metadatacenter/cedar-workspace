@@ -106,6 +106,7 @@ export class Groups implements OnInit, OnDestroy {
   }
   async selectTab(tab: "manage" | "create" | "delete") {
     if (!this.coordinator.active || this.busy() || this.selecting()) return;
+    if (tab !== this.activeTab) this.coordinator.invalidateDecisions();
     if (
       tab === "create" &&
       this.createdGroup &&

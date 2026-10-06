@@ -23,6 +23,10 @@ export class RevisionCoordinator {
     return () =>
       this.active && generation === this.generation && this.phase() === "idle";
   }
+  /** Navigation expires decisions without clearing revision recovery or active operations. */
+  invalidateDecisions() {
+    this.generation++;
+  }
   read() {
     return this.begin("read");
   }
@@ -53,10 +57,7 @@ export class RevisionCoordinator {
         op.fail(error);
         this.phase.set("idle");
         // Unknown write outcomes must be read back before another conditional mutation.
-        if (
-          kind === "write" &&
-          writeRequiresRecovery(error)
-        )
+        if (kind === "write" && writeRequiresRecovery(error))
           this.reloadRequired.set(true);
       },
     };

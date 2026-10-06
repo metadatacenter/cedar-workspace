@@ -243,13 +243,28 @@ Permission reads and writes use `RevisionCoordinator`: it owns pending operation
 invalidates old confirmations, and exposes a state report. Permission payloads and
 directories are validated before controls become available. Conflicts, lost access,
 missing revisions and uncertain writes require an explicit reload; a reload cannot
-overlap a write. Multi-step unit and browser matrices cover rejection and recovery.
+overlap a write. Resource rebinding discards the previous ACL, revision and pending
+results. ACL responses must acknowledge the submitted identities and roles, and
+ownership responses must name the requested owner. Multi-step unit and browser
+matrices cover rejection and recovery.
 
 Groups uses the same coordinator for directory loads, selection, membership, details,
 creation and deletion. Group and membership ETags remain independent. Incoming rosters
 require unique identifiers and boolean membership roles; the last administrator stays
 protected. Confirmation decisions expire across reads, writes, tabs and destruction.
-An uncertain creation requires a directory reload before another attempt.
+Leaving and returning to a tab does not revive a confirmation. An uncertain creation
+requires a directory reload before another attempt. Membership responses must match
+the submitted roster. Recovering a group revision preserves edited fields while
+untouched fields adopt the current server values, and refreshed membership controls
+whether the draft can be saved.
+
+Action dialogs require explicit recovery after conflicts, lost access or uncertain
+writes. Conditional actions reload the current revision and permissions while keeping
+the draft; uncertain create, copy, draft and publish outcomes require closing the dialog
+and inspecting Workspace before retrying. Settings ignores initialization, version and
+preference callbacks after destruction, including writes to the shared profile cache.
+Failed backend initialization can be retried explicitly; concurrent callers still share
+one pending attempt and successful authentication is reused.
 
 API-key management also uses `RevisionCoordinator`. It validates incoming key lists,
 rechecks the selected key and last-active-key rule after confirmation, and requires a
