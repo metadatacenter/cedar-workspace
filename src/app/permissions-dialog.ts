@@ -1,5 +1,6 @@
 import { RevisionCoordinator } from "./revision-coordinator";
 import {
+  samePermissions,
   uniquePrincipals,
   validAccessReport,
   validPermissions,
@@ -77,7 +78,11 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
   set resource(value: Resource) {
     // Own the input: later in-place host edits must not retarget an ACL operation.
     this.boundResource = structuredClone(value);
-    const context = JSON.stringify([value["@id"], value.resourceType, value.currentUserPermissions]);
+    const context = JSON.stringify([
+      value["@id"],
+      value.resourceType,
+      value.currentUserPermissions,
+    ]);
     if (context === this.context || !this.coordinator.active) return;
     this.context = context;
     this.coordinator.reset();
@@ -92,7 +97,9 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
     this.busy.set(false);
     if (this.initialized) void this.load();
   }
-  get resource() { return this.boundResource; }
+  get resource() {
+    return this.boundResource;
+  }
   @Output() closed = new EventEmitter<string | undefined>();
   @ViewChild("dialog", { static: true }) dialog!: ElementRef<HTMLDialogElement>;
   readonly api = inject(Backend);
@@ -263,13 +270,15 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
     const person = this.selectedPerson;
     if (!person || !this.options.some((p) => p.id === person["@id"])) return;
     if (
-      await this.save(
+      (await this.save(
         [...this.grants, { node: person, kind: person.kind, role: this.role }],
         this.i18n.t("Permissions.Changes.Add", {
           name: this.principalName(person),
           role: this.roleName(this.role),
         }),
-      ) && this.resource === resource && this.selectedPerson === person
+      )) &&
+      this.resource === resource &&
+      this.selectedPerson === person
     )
       this.personId = "";
   }
@@ -316,23 +325,28 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
       )
     )
       return false;
-    return this.write(description, () =>
-      this.api.request<Permissions>(
-        this.api.path(this.resource) + "/permissions",
-        "PUT",
-        {
-          owner: { "@id": this.permissions()!.owner["@id"] },
-          userPermissions: grants
-            .filter((g) => g.kind === "user")
-            .map((g) => ({ user: { "@id": g.node["@id"] }, role: g.role })),
-          groupPermissions: grants
-            .filter((g) => g.kind === "group")
-            .map((g) => ({ group: { "@id": g.node["@id"] }, role: g.role })),
-        },
-        this.revision(),
-      ),
+    const expected: Permissions = {
+      owner: { "@id": this.permissions()!.owner["@id"] },
+      userPermissions: grants
+        .filter((g) => g.kind === "user")
+        .map((g) => ({ user: { "@id": g.node["@id"] }, role: g.role })),
+      groupPermissions: grants
+        .filter((g) => g.kind === "group")
+        .map((g) => ({ group: { "@id": g.node["@id"] }, role: g.role })),
+    };
+    return this.write(
+      description,
+      () =>
+        this.api.request<Permissions>(
+          this.api.path(this.resource) + "/permissions",
+          "PUT",
+          expected,
+          this.revision(),
+        ),
+      (actual) => samePermissions(actual, expected),
     );
   }
+
   async transfer(grant: Grant) {
     if (
       this.busy() ||
@@ -377,6 +391,7 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
           { "@id": this.resource["@id"], newOwnerId: grant.node["@id"] },
           this.revision(),
         ),
+      (actual) => actual.owner["@id"] === grant.node["@id"],
     );
     if (transferred && this.coordinator.active && this.resource === resource)
       this.closed.emit(
@@ -388,6 +403,7 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
   private async write(
     description: string,
     action: () => Promise<{ data: Permissions; etag: string | null }>,
+    acknowledges: (actual: Permissions) => boolean,
   ) {
     const operation = this.coordinator.write();
     if (!operation) return false;
@@ -404,7 +420,8 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
         !validPermissions(
           reply.data,
           this.people().filter((p) => p.kind === "group"),
-        )
+        ) ||
+        !acknowledges(reply.data)
       )
         throw new Error(this.i18n.t("Permissions.InvalidResponse"));
       this.permissions.set(reply.data);

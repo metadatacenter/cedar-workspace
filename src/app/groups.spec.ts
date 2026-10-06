@@ -42,6 +42,54 @@ describe("Groups", () => {
     vi.spyOn(TestBed.inject(Confirmation), "confirm").mockResolvedValue(true);
   });
   afterEach(() => vi.restoreAllMocks());
+  it.each(["unchanged", "wrong-role", "extra-user"])(
+    "requires membership acknowledgement for a %s response",
+    async (outcome) => {
+      host.users.set([other.user]);
+      host.newMember = "other";
+      const before = host.members();
+      request.mockResolvedValue({
+        data: {
+          users:
+            outcome === "unchanged"
+              ? [me]
+              : [
+                  me,
+                  { ...other, administrator: outcome === "wrong-role" },
+                  ...(outcome === "extra-user"
+                    ? [{ ...other, user: { "@id": "unexpected" } }]
+                    : []),
+                ],
+        },
+        etag: '"unconfirmed"',
+      });
+      await host.addMember();
+      expect(host.stale()).toBe(true);
+      expect(host.members()).toBe(before);
+      expect(host.memberEtag).toBe('"members1"');
+      expect(host.newMember).toBe("other");
+      expect(host.notice()).toBe("");
+      await host.addMember();
+      expect(request).toHaveBeenCalledTimes(1);
+    },
+  );
+  it("accepts reordered membership acknowledgements with updated extracts", async () => {
+    host.users.set([other.user]);
+    host.newMember = "other";
+    request.mockResolvedValue({
+      data: {
+        users: [
+          { ...other, user: { ...other.user, firstName: "Updated" } },
+          me,
+        ],
+      },
+      etag: '"members2"',
+    });
+    await host.addMember();
+    expect(host.stale()).toBe(false);
+    expect(host.memberEtag).toBe('"members2"');
+    expect(host.notice()).not.toBe("");
+  });
   it("writes narrowed details with the group revision and advances it", async () => {
     host.editName = " Renamed ";
     host.editDescription = " Description ";

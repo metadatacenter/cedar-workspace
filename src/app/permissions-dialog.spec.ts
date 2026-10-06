@@ -58,6 +58,78 @@ describe("Permissions dialog", () => {
     vi.spyOn(TestBed.inject(Confirmation), "confirm").mockResolvedValue(true);
   });
   afterEach(() => vi.restoreAllMocks());
+  it.each(["unchanged", "wrong-role", "wrong-owner"])(
+    "rejects a valid but %s ACL acknowledgement",
+    async (outcome) => {
+      const before = host.permissions();
+      host.selectPerson("user");
+      host.role = "editor";
+      api.request.mockResolvedValue({
+        data: {
+          ...initial,
+          owner: outcome === "wrong-owner" ? user : owner,
+          userPermissions:
+            outcome === "unchanged"
+              ? []
+              : [
+                  {
+                    user,
+                    role: outcome === "wrong-role" ? "viewer" : "editor",
+                  },
+                ],
+        },
+        etag: '"unconfirmed"',
+      });
+      await host.add();
+      expect(host.stale()).toBe(true);
+      expect(host.permissions()).toBe(before);
+      expect(host.etag).toBe('"revision-1"');
+      expect(host.notice()).toBe("");
+      expect(host.personId).toBe("user");
+      await host.add();
+      expect(api.request).toHaveBeenCalledTimes(1);
+    },
+  );
+  it("does not close for an ownership response naming the old owner", async () => {
+    host.permissions.set({
+      ...initial,
+      userPermissions: [{ user, role: "editor" }],
+    });
+    const close = vi.spyOn(host.closed, "emit");
+    api.request.mockResolvedValue({
+      data: host.permissions(),
+      etag: '"unconfirmed"',
+    });
+    await host.transfer(host.grants[0]);
+    expect(host.stale()).toBe(true);
+    expect(close).not.toHaveBeenCalled();
+    expect(host.notice()).toBe("");
+    expect(host.etag).toBe('"revision-1"');
+  });
+  it("accepts reordered grants with refreshed display names", async () => {
+    const another = { "@id": "another" };
+    host.permissions.set({
+      ...initial,
+      userPermissions: [
+        { user, role: "viewer" },
+        { user: another, role: "viewer" },
+      ],
+    });
+    api.request.mockResolvedValue({
+      data: {
+        ...initial,
+        userPermissions: [
+          { user: { ...another, firstName: "Updated" }, role: "viewer" },
+          { user, role: "editor" },
+        ],
+      },
+      etag: '"revision-2"',
+    });
+    await host.changeRole(host.grants[0], "editor");
+    expect(host.stale()).toBe(false);
+    expect(host.notice()).not.toBe("");
+    expect(host.etag).toBe('"revision-2"');
+  });
   it("saves a selected principal immediately with identifier-only grants and the permissions revision", async () => {
     host.selectPerson("user");
     host.role = "editor";
@@ -121,7 +193,10 @@ describe("Permissions dialog", () => {
   });
   it("disables mutations when a successful save cannot refresh privileges", async () => {
     host.selectPerson("user");
-    api.request.mockResolvedValue({ data: initial, etag: '"revision-2"' });
+    api.request.mockResolvedValue({
+      data: { ...initial, userPermissions: [{ user, role: "viewer" }] },
+      etag: '"revision-2"',
+    });
     api.report.mockRejectedValue(new HttpError(403, "Access revoked"));
     await host.add();
     expect(host.canManage).toBe(false);

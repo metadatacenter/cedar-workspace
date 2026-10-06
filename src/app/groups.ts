@@ -2,7 +2,12 @@ import { RevisionCoordinator } from "./revision-coordinator";
 import { uncertainWrite } from "./write-failure";
 import { Operation } from "./operation-coordinator";
 import { uniquePrincipals } from "./access-validation";
-import { validGroup, validGroups, validMembers } from "./group-validation";
+import {
+  sameMembers,
+  validGroup,
+  validGroups,
+  validMembers,
+} from "./group-validation";
 import { Tooltip } from "./tooltip";
 import { Toast } from "./toast";
 import { WorkspaceReturn } from "./workspace-return";
@@ -520,7 +525,7 @@ export class Groups implements OnInit, OnDestroy {
       if (!operation.current()) return;
       if (
         !validMembers(r.data?.users) ||
-        !r.data.users.some((m) => m.administrator)
+        !sameMembers(r.data.users, body.users)
       )
         throw new Error(this.i18n.t("Groups.InvalidResponse"));
       this.memberEtag = r.etag;

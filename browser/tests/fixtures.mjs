@@ -46,6 +46,7 @@ export const test = base.extend({
   api: async ({ page, baseURL }, use) => {
     await page.clock.setFixedTime(new Date("2026-01-03T12:00:00Z"));
     const state = {
+      permissions: { owner, userPermissions: [{ user: collaborator, role: "viewer" }], groupPermissions: [] },
       readonly: false,
       monitoring: false,
       members: [
@@ -149,12 +150,16 @@ export const test = base.extend({
           email: "alex@example.org",
           uiPreferences: { preferredDateFormat: "yyyy-MM-dd" },
         };
-      else if (path.endsWith("/permissions"))
-        body = {
-          owner,
-          userPermissions: [{ user: collaborator, role: "viewer" }],
-          groupPermissions: [],
-        };
+      else if (path.endsWith("/permissions")) {
+        if (request.method() === "PUT") {
+          const submitted = request.postDataJSON();
+          state.permissions = { ...submitted,
+            userPermissions: submitted.userPermissions.map(g => ({ ...g, user: g.user["@id"] === owner["@id"] ? owner : collaborator })),
+            groupPermissions: submitted.groupPermissions.map(g => ({ ...g, group })),
+          };
+        }
+        body = state.permissions;
+      }
       else if (path.endsWith("/members"))
         body = {
           members: [

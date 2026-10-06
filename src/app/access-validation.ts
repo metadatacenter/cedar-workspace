@@ -78,3 +78,23 @@ export function validAccessReport(
     )
   );
 }
+
+/** Canonical identity/role rows, independent of response order. */
+export const canonicalRows = (rows: unknown[][]) =>
+  JSON.stringify(rows.map((row) => JSON.stringify(row)).sort());
+
+/** Display extracts are deliberately excluded from mutation acknowledgements. */
+export function samePermissions(
+  actual: Permissions,
+  expected: Permissions,
+): boolean {
+  const grants = (p: Permissions) =>
+    canonicalRows([
+      ...p.userPermissions.map((g) => ["user", g.user["@id"], g.role]),
+      ...p.groupPermissions.map((g) => ["group", g.group["@id"], g.role]),
+    ]);
+  return (
+    actual.owner["@id"] === expected.owner["@id"] &&
+    grants(actual) === grants(expected)
+  );
+}

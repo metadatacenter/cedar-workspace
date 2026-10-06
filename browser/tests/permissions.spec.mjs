@@ -114,3 +114,23 @@ for (const failure of [403, 409, 412, 428, 503, "invalid", "no-revision"]) {
     expect(writes).toBe(1);
   });
 }
+
+test("an unchanged ACL acknowledgement blocks repeat writes until reload", async ({ page, api }) => {
+  let writes = 0;
+  await page.route("**/templates/template/permissions", route => {
+    if (route.request().method() === "PUT") writes++;
+    return route.fulfill({ json: { owner, userPermissions: [{ user, role: "viewer" }], groupPermissions: [] }, headers: { ETag: '"acl"' } });
+  });
+  await dashboard(page);
+  await action(page, "Permissions…");
+  const dialog = page.getByRole("dialog", { name: "Permissions", exact: true });
+  const role = dialog.getByRole("combobox", { name: /Role for Sam/ });
+  await role.selectOption("editor");
+  await expect(dialog.getByRole("alert")).toBeVisible();
+  await expect(role).toBeDisabled();
+  expect(writes).toBe(1);
+  await dialog.getByRole("button", { name: /Reload/ }).click();
+  await expect(role).toBeEnabled();
+  await expect(role).toHaveValue("viewer");
+  expect(writes).toBe(1);
+});

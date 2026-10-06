@@ -1,4 +1,5 @@
 import {
+  canonicalRows,
   nonempty,
   record,
   uniquePrincipals,
@@ -30,4 +31,12 @@ export function validMembers(value: unknown): value is Member[] {
     ) &&
     uniquePrincipals(value.map((member) => member.user))
   );
+}
+
+export function sameMembers(actual: Member[], expected: Member[]): boolean {
+  const roster = (members: Member[]) =>
+    canonicalRows(
+      members.map((m) => [m.user["@id"], m.administrator, m.member]),
+    );
+  return roster(actual) === roster(expected);
 }
