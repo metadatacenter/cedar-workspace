@@ -156,12 +156,12 @@ test("unsaved metadata cannot be lost by leaving, and read-only mode cannot save
   // Read from the server and not yet saved here.
   await expect(saveState).toHaveText('Unmodified');
   // Nothing is unsaved, so the dot is hollow.
-  expect(await indicator()).toEqual({content: '""', fill: 'rgba(0, 0, 0, 0)', border: 'rgb(234, 179, 8)', width: '2px'});
+  expect(await indicator()).toEqual({content: '""', fill: 'rgba(0, 0, 0, 0)', border: 'rgb(180, 83, 9)', width: '2px'});
   await expect(page.locator('label[for="instance-name"]')).toHaveCSS('font-weight', '500');
   await input.fill("Working record");
   await expect(page.locator(".metadata-save-status")).toHaveClass(/is-dirty/);
   expect(await page.locator(".metadata-save-status").evaluate((el) =>
-    getComputedStyle(el, "::before").backgroundColor)).toBe("rgb(234, 179, 8)");
+    getComputedStyle(el, "::before").backgroundColor)).toBe("rgb(180, 83, 9)");
   await expect(page.locator(".metadata-toolbar")).toContainText(
     "Modified",
   );
@@ -329,7 +329,7 @@ test("group creation errors do not offer unrelated reloads, but stale edits can 
   await expect(page.getByLabel("Name", { exact: true })).toHaveValue("My edit");
   api.fail = false;
   await page.getByRole("button", { name: "Reload group" }).click();
-  await expect(page.getByLabel("Name", { exact: true })).toHaveValue("Research team");
+  await expect(page.getByLabel("Name", { exact: true })).toHaveValue("My edit");
   await expect(page.getByRole("alert")).toHaveCount(0);
 });
 
@@ -438,6 +438,35 @@ test("folder separators have no surrounding spacing in navigation, details and d
   await expect(
     page.locator("dialog .breadcrumbs button").filter({ hasText: "/" }),
   ).toHaveCount(0);
+});
+
+test("trails mute their ancestors and colour the current folder in navigation and destinations", async ({
+  page,
+  api,
+}) => {
+  api.pathInfo = [
+    { "@id": "root", "schema:name": "/" },
+    { "@id": "users", "schema:name": "Users" },
+    { "@id": "home", "schema:name": "My workspace" },
+  ];
+  await dashboard(page);
+  const trail = page.getByRole("navigation", { name: "Folder breadcrumb" });
+  await expect(trail.locator("a:not([aria-current])")).toHaveText(["All", "Users"]);
+  await tokenStyles(trail.locator("a:not([aria-current])"), { color: "--cedar-text-muted" });
+  await expect(trail.locator("[aria-current]")).toHaveText("My workspace");
+  await tokenStyles(trail.locator("[aria-current]"), { color: "--cedar-color-primary" });
+  await page
+    .getByRole("button", { name: "Actions for Study metadata" })
+    .click();
+  await page
+    .locator(".resource-menu")
+    .getByRole("button", { name: "Move", exact: true })
+    .click();
+  const destination = page.locator("dialog .breadcrumbs");
+  await expect(destination.locator("button:not([aria-current])")).toHaveText(["All", "Users"]);
+  await tokenStyles(destination.locator("button:not([aria-current])"), { color: "--cedar-text-muted" });
+  await expect(destination.locator("button[aria-current]")).toHaveText("My workspace");
+  await tokenStyles(destination.locator("button[aria-current]"), { color: "--cedar-color-primary" });
 });
 
 test("profile sections expose labelled copy actions for API examples", async ({
@@ -553,14 +582,17 @@ test("metadata errors and nonblocking warnings share centered, expandable summar
   const link = errors.getByRole("button", { name: "Email: Enter a valid email." });
   await expect(link).toHaveCSS("padding", "0px");
   await expect(link).toHaveCSS("text-decoration-line", "underline");
+  // A line of text takes no hover fill, whatever the page's buttons do.
+  await link.hover();
+  await expect(link).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await page
     .locator(".metadata-content")
     .screenshot({ path: testInfo.outputPath("metadata-problem-links.png") });
   await link.click();
   await warnings.getByRole("button", { name: "Title: A required value is missing." }).click();
   expect(await page.evaluate(() => window.__ceeReveals)).toEqual([
-    { path: ["Email"], code: "email", message: "Enter a valid email." },
-    { path: ["Title"], code: "required", message: "A value is required." },
+    { path: ["Email"], code: "email", message: "Enter a valid email.", severity: "error" },
+    { path: ["Title"], code: "required", message: "A value is required.", severity: "warning" },
   ]);
   await page
     .locator(".metadata-content")
@@ -629,6 +661,58 @@ test("links in the Info panel return to the artifact whose panel held them", asy
   await expect(info).toContainText("Study metadata");
 });
 
+// Leaving for an editor and coming back shows the Info panel on the tab it was left on.
+for (const tab of ["Details", "Version"]) {
+  test(`returning from the metadata editor keeps the Info panel on ${tab}`, async ({ page, api }) => {
+    await page.goto("/dashboard");
+    const card = page.locator('[data-resource-id="template"]');
+    await card.click({ position: { x: 8, y: 60 } });
+    await expect(card).toHaveAttribute("aria-selected", "true");
+    const info = page.locator(".information");
+    await info.getByRole("tab", { name: tab, exact: true }).click();
+    await card.locator(".explorer-populate").click();
+    await expect(page).toHaveURL(/\/instances\/create\/template/);
+    await page.locator("cedar-workspace-return").getByRole("button", { name: "Back to Workspace", exact: true }).click();
+    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(card).toHaveAttribute("aria-selected", "true");
+    await expect(info.getByRole("tab", { name: tab, exact: true })).toHaveAttribute("aria-selected", "true");
+    await expect(page).not.toHaveURL(/[?&](selected|tab)=/);
+  });
+}
+
+// A version opened from the Version tab returns to that tab, selecting the version when this
+// folder holds it and the artifact whose history named it when it does not.
+for (const listed of [false, true]) {
+  test(`a version opened from the Version tab returns on that tab, listed=${listed}`, async ({ page, api }) => {
+    const version = (id, number) => ({ ...resource, "@id": id, "pav:version": number, "bibo:status": "bibo:published" });
+    const newer = version("newer", "2.0.0");
+    const versions = [newer, version("template", "1.0.0")];
+    await page.route(/\/templates\/(template|newer)\/report/, (route) => {
+      const id = new URL(route.request().url()).pathname.split("/").at(-2);
+      return route.fulfill({ json: { ...(id === "newer" ? newer : resource), versions } });
+    });
+    if (listed)
+      await page.route(/\/folders\/[^/]+\/contents/, (route) =>
+        route.fulfill({ json: { resources: [resource, newer], totalCount: 2, pathInfo: [] } }),
+      );
+    await page.route((url) => url.pathname === "/templates/edit/newer", (route) =>
+      route.fulfill({ contentType: "text/html", body: "<h1>Designer</h1>" }),
+    );
+    await page.goto("/dashboard");
+    await page.locator('[data-resource-id="template"]').click({ position: { x: 8, y: 60 } });
+    const info = page.locator(".information");
+    await info.getByRole("tab", { name: "Version", exact: true }).click();
+    await info.locator(".latest-version").getByRole("link").click();
+    await expect(page).toHaveURL((url) => url.pathname === "/templates/edit/newer");
+    // The Designer returns to the address it was given.
+    await page.goto(new URL(page.url()).searchParams.get("returnTo"));
+    const back = page.locator(`[data-resource-id="${listed ? "newer" : "template"}"]`);
+    await expect(back).toHaveAttribute("aria-selected", "true");
+    await expect(info.getByRole("tab", { name: "Version", exact: true })).toHaveAttribute("aria-selected", "true");
+    await expect(page).not.toHaveURL(/[?&](selected|tab)=/);
+  });
+}
+
 test("new metadata is unmodified until edited, and saved once persisted", async ({ page, api }) => {
   await page.route(/\/template-instances(?:\?|$)/, route => route.fulfill({
     json: { ...route.request().postDataJSON(), "@id": "instance" },
@@ -650,4 +734,67 @@ test("new metadata is unmodified until edited, and saved once persisted", async 
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(state).toHaveText("Saved");
   await expect(state).not.toHaveClass(/is-dirty/);
+});
+
+test("the Version header reads as the sortable ones, and the date and version columns fit their content", async ({ page, api }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await dashboard(page);
+  const headers = page.locator("thead th");
+  await expect(headers.nth(2)).toHaveText("Version");
+  const look = (el) => {
+    const style = getComputedStyle(el);
+    return [style.color, style.fontSize, style.fontWeight, style.paddingLeft, style.paddingTop, Math.round(el.getBoundingClientRect().height)];
+  };
+  expect(await headers.nth(2).locator(".column-label").evaluate(look)).toEqual(
+    await headers.nth(1).locator("button").evaluate(look),
+  );
+  // Each column is as wide as its widest header or cell, and no wider.
+  const slack = () =>
+    page.locator("table").evaluate((table) =>
+      [2, 3].map((column) => {
+        const cells = [...table.querySelectorAll(`tr > :nth-child(${column})`)];
+        const widest = Math.max(
+          ...cells.map((cell) => {
+            const range = document.createRange();
+            range.selectNodeContents(cell);
+            const style = getComputedStyle(cell);
+            return range.getBoundingClientRect().width + parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+          }),
+        );
+        return Math.round(cells[0].getBoundingClientRect().width - widest);
+      }),
+    );
+  expect(await slack()).toEqual([0, 0]);
+  // Sorting by date shows the chevron in the place kept for it, so the column keeps its width.
+  const width = () => headers.nth(1).evaluate((el) => el.getBoundingClientRect().width);
+  const before = await width();
+  await headers.nth(1).locator("button").click();
+  await expect(page).toHaveURL(/sort=lastUpdatedOnTS/);
+  await expect(headers.nth(1).locator("cedar-icon")).toBeVisible();
+  expect(await width()).toBe(before);
+});
+
+test("column headers centre their labels and chevrons in the header row", async ({ page, api }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await dashboard(page);
+  // Labels that share every property can still render at different heights, so each label's
+  // text and chevron are measured where they are drawn, against the centre of the label.
+  const offsets = await page.locator("thead th").evaluateAll((headers) =>
+    headers.slice(0, 3).map((header) => {
+      const label = header.querySelector("button, .column-label");
+      const text = [...label.childNodes].find((node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+      const range = document.createRange();
+      range.selectNodeContents(text);
+      const centre = (rect) => rect.top + rect.height / 2;
+      // Rounding settles sub-pixel noise; adding zero turns -0 into 0.
+      const offset = (rect) => Math.round((centre(rect) - centre(label.getBoundingClientRect())) * 100) / 100 + 0;
+      const chevron = label.querySelector("cedar-icon");
+      return [text.textContent.trim(), offset(range.getBoundingClientRect()), chevron && offset(chevron.getBoundingClientRect())];
+    }),
+  );
+  expect(offsets).toEqual([
+    ["Name", 0, 0],
+    ["Last modified", 0, 0],
+    ["Version", 0, null],
+  ]);
 });

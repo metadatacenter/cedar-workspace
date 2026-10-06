@@ -1,8 +1,9 @@
 @use "@org.metadatacenter/cedar-design-tokens/patterns";
 @use "@org.metadatacenter/cedar-design-tokens/controls";
+@use "@org.metadatacenter/cedar-design-tokens/spacing";
 #groups-page {
   min-height: 100vh;
-  background: var(--cedar-color-on-primary);
+  background: var(--cedar-surface-raised);
 
   .groups-content {
     width: calc(100% - 32px);
@@ -26,9 +27,13 @@
     }
   }
 
-  .notice,
+  // A notice's text lines up with the cards' content edge.
+  .notice {
+    @include patterns.notice(info, $inset: var(--cedar-space-3));
+  }
+
   .alert {
-    padding: var(--cedar-space-2) var(--cedar-space-3);
+    @include patterns.notice(error, $inset: var(--cedar-space-3));
   }
 
   .groups-tabs {
@@ -44,15 +49,13 @@
     margin-bottom: 0;
     padding: var(--cedar-space-2) var(--cedar-space-3);
     border-bottom: 1px solid var(--cedar-border-rule);
-    background: var(--cedar-color-on-primary);
+    background: var(--cedar-surface-raised);
 
-    // Each tab's heading, and Members within it, take the size the Permissions dialog gives its sections.
+    // Each tab's heading, and Members within it, are section headings, as the Permissions dialog's are.
     h2,
     h3 {
-      line-height: var(--cedar-line-height-heading);
+      @include patterns.section-heading;
       margin-top: 0;
-      font-size: var(--cedar-font-size-element-heading);
-      font-weight: var(--cedar-font-weight-medium);
     }
 
     p {
@@ -235,7 +238,7 @@
   }
 
   .groups-member-row {
-    min-height: var(--cedar-table-row-height);
+    min-height: spacing.$table-row-height;
     padding: var(--cedar-space-1)
       var(--cedar-space-3);
   }
@@ -356,7 +359,7 @@
     min-height: var(--cedar-control-height-default);
     padding: var(--cedar-space-1) var(--cedar-space-3);
     font: inherit;
-    background: var(--cedar-color-on-primary);
+    background: var(--cedar-surface-raised);
     border: 1px solid var(--cedar-control-border-default);
     border-radius: var(--cedar-radius);
     box-shadow: none;

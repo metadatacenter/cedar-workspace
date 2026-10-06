@@ -1,3 +1,7 @@
+import { resourceSelector, resourcePathId, resourceIri } from "./resource-address";
+import { OperationCoordinator } from "./operation-coordinator";
+import { validListing } from "./resource";
+import { validResourceReport } from "./resource-report";
 import { DragPreview } from "./drag-preview";
 import { TooltipController } from "./tooltip-controller";
 import { Tooltip } from "./tooltip";
@@ -45,7 +49,8 @@ import {
   Listing,
   title,
   can,
-  inOpenView,
+  offeredInOpenView,
+  versioned,
   listingPath,
   resourceLink,
   collections,
@@ -126,7 +131,7 @@ export function actions(r: Resource, i18n: Pick<I18n, "t">): Action[] {
     {
       id: "openview",
       label: label("ResourceActions.OpenInOpenView"),
-      enabled: window.makeOpenEnabled !== false && inOpenView(r),
+      enabled: offeredInOpenView(r),
     },
   ].filter((action) => {
     // Applicability comes from the resource kind; capabilities still gate valid actions.
@@ -145,6 +150,15 @@ export function actions(r: Resource, i18n: Pick<I18n, "t">): Action[] {
 }
 /** The query parameter naming the artifact to select once the listing is loaded. */
 const SELECTED_PARAM = "selected";
+/** The query parameter naming the Info panel tab to show that artifact on. */
+const TAB_PARAM = "tab";
+/**
+ * The query parameter that keeps the listing in list view. Grid is the default and goes unnamed. The
+ * address carries the choice, as it carries sorting, so a return from an editor and a reload keep it.
+ */
+const VIEW_PARAM = "view";
+/** The Info panel's tabs: the artifact's details, and its version and its history. */
+type InfoTab = "info" | "version";
 
 @Component({
   selector: "cedar-workspace-page",
@@ -174,7 +188,7 @@ const SELECTED_PARAM = "selected";
 })
 export class Workspace {
   private readonly tooltips = inject(TooltipController);
-  private readonly i18n = inject(I18n);
+  protected readonly i18n = inject(I18n);
   readonly cedarVersion = window.cedarVersion || this.i18n.t("Common.Unknown");
   readonly api = inject(Backend);
   private router = inject(Router);
@@ -184,8 +198,8 @@ export class Workspace {
   private injector = inject(Injector);
   readonly title = (r: Resource) => title(r, this.i18n.t("Common.Untitled"));
   readonly can = can;
-  readonly inOpenView = inOpenView;
-  readonly openViewEnabled = window.makeOpenEnabled !== false;
+  readonly offeredInOpenView = offeredInOpenView;
+  readonly versioned = versioned;
   readonly actions = (r: Resource) => actions(r, this.i18n);
   attribution(userId?: string, name?: string): string {
     if (this.isCurrentUser(userId))
@@ -239,7 +253,6 @@ export class Workspace {
     this.deletionSelection.set([...resources]);
   }
   readonly deletionSelection = signal<Resource[] | null>(null);
-  readonly moveDialog = signal<Resource[] | null>(null);
   readonly deleteDrop = signal(false);
   readonly dropTarget = signal("");
   readonly dragging = signal<Resource[]>([]);
@@ -280,18 +293,22 @@ export class Workspace {
     null,
   );
   readonly menu = signal<string | null>(null);
-  tab = "info";
+  tab: InfoTab = "info";
   search = "";
   sort = "name";
   folder = "";
   params = new URLSearchParams();
-  // The listing the URL names, without the artifact to select in it: dropping that
-  // parameter once it has been applied must not load the listing again.
+  // The listing the URL names, without the artifact to select in it or the tab to show
+  // it on: dropping those parameters once applied must not load the listing again.
   private listingKey: string | null = null;
-  // An artifact to select once the listing holds it, as an editor returning here names it.
+  // An artifact to select once the listing holds it, as an editor returning here names it,
+  // and the Info panel tab it was left on.
   private reselect: string | null = null;
-  private listRead = 0;
-  private detailRead = 0;
+  private reselectTab: InfoTab = "info";
+  readonly state = new OperationCoordinator<"listing" | "folder" | "detail" | "instances" | "menu" | "enrichment" | "move">();
+  private listingGeneration = 0;
+  // Detail, menus and background enrichment publish into the same resource state.
+  private reports = new OperationCoordinator<string>();
   constructor() {
     effect(() => {
       document.body.classList.toggle("explorer-dragging", this.dragging().length > 0);
@@ -304,28 +321,33 @@ export class Workspace {
       clearTimeout(this.movedTimer);
       this.tooltips.resume();
       document.body.classList.remove("explorer-dragging", "explorer-can-drop");
-      this.listRead++;
-      this.detailRead++;
+      this.state.dispose();
+      this.reports.dispose();
     });
   }
   async start() {
     try {
-      if (!(await this.api.init())) return;
+      if (!(await this.api.init()) || !this.state.active) return;
       this.ready.set(true);
       this.route.queryParamMap
         .pipe(takeUntilDestroyed(this.destroy))
         .subscribe((map) => {
           this.params = new URLSearchParams();
+          // The view changes how the listing is shown, not what it holds, so it is not part of its key.
+          this.grid.set(map.get(VIEW_PARAM) !== "list");
           map.keys
-            .filter((key) => key !== SELECTED_PARAM)
+            .filter((key) => ![SELECTED_PARAM, TAB_PARAM, VIEW_PARAM].includes(key))
             .forEach((key) => this.params.set(key, map.get(key)!));
           const selected = map.get(SELECTED_PARAM);
-          if (selected) this.reselect = selected;
+          if (selected) {
+            this.reselect = resourceIri(selected, this.api.profile.homeFolderId);
+            this.reselectTab = map.get(TAB_PARAM) === "version" ? "version" : "info";
+          }
           const listingKey = this.params.toString();
           if (listingKey === this.listingKey && !selected) return;
           this.listingKey = listingKey;
           this.search = map.get("search") || "";
-          this.folder = map.get("folderId") || this.api.profile.homeFolderId;
+          this.folder = resourceIri(map.get("folderId") || this.api.profile.homeFolderId, this.api.profile.homeFolderId);
           const sort = map.get("sort") || "name";
           this.sort = [
             "name",
@@ -353,15 +375,23 @@ export class Workspace {
     this.error.set(e instanceof Error ? e.message : String(e));
   }
   async load(refresh = false) {
-    const read = ++this.listRead;
-    this.detailRead++;
+    if (!this.state.active) return;
+    this.listingGeneration++;
+    this.reports.dispose();
+    this.reports = new OperationCoordinator<string>();
+    clearTimeout(this.movedTimer);
+    this.movedTarget.set("");
+    const operation = this.state.begin("listing", ["folder", "detail", "instances", "menu", "enrichment"]);
     this.loading.set(true);
     this.refreshing.set(refresh);
     this.error.set("");
     this.selected.set(undefined);
     this.selectionIds.set([]);
+    this.currentFolder.set(undefined);
+    this.instances.set([]);
+    this.instanceTotal.set(0);
+    this.instancesLoaded.set(false);
     if (!refresh) {
-      this.currentFolder.set(undefined);
       this.path.set([]);
     }
     this.menu.set(null);
@@ -374,21 +404,27 @@ export class Workspace {
           this.offset(),
         ),
       );
-      if (read !== this.listRead) return;
+      if (!operation.current()) return;
+      if (!validListing(data)) throw new Error(this.i18n.t("Errors.InvalidListing"));
       this.rows.set(data.resources);
       this.total.set(data.totalCount);
       this.path.set(data.pathInfo || []);
-      this.restoreSelection();
-      void this.loadFolder(read);
+      void this.loadFolder();
       // Listings omit lifecycle actions. Enrich template links without blocking the table.
-      void this.loadTemplateActions(data.resources, read);
+      void this.loadTemplateActions(data.resources);
+      this.restoreSelection();
+      operation.finish();
     } catch (e) {
-      if (read === this.listRead) {
-        if (!refresh) this.rows.set([]);
+      operation.fail(e);
+      if (operation.current()) {
+        if (!refresh) {
+          this.rows.set([]);
+          this.total.set(0);
+        }
         this.fail(e);
       }
     } finally {
-      if (read === this.listRead) {
+      if (operation.current()) {
         this.loading.set(false);
         this.refreshing.set(false);
       }
@@ -399,16 +435,19 @@ export class Workspace {
    *
    * Opening an artifact leaves the dashboard for an editor, and coming back loaded a
    * fresh listing with nothing selected. The editor returns to the address it was
-   * given, which names the artifact; the parameter is dropped once applied, so a
-   * reload or a later return does not select it again.
+   * given, which names the artifact and the Info panel tab it was left on; both
+   * parameters are dropped once applied, so a reload or a later return does not
+   * select it again.
    */
   private restoreSelection() {
     const id = this.reselect;
     if (id === null) return;
+    const tab = this.reselectTab;
     this.reselect = null;
+    this.reselectTab = "info";
     const r = this.rows().find((row) => row["@id"] === id);
     if (r) {
-      void this.select(r);
+      void this.select(r, tab);
       afterNextRender(
         () =>
           this.host.nativeElement
@@ -419,7 +458,7 @@ export class Workspace {
     }
     void this.router.navigate([], {
       relativeTo: this.route,
-      queryParams: { [SELECTED_PARAM]: null },
+      queryParams: { [SELECTED_PARAM]: null, [TAB_PARAM]: null },
       queryParamsHandling: "merge",
       replaceUrl: true,
     });
@@ -428,6 +467,7 @@ export class Workspace {
    * Where an editor opened from here returns to: this listing, naming the artifact to
    * select again. That is the one opened when the listing shows it, and otherwise the
    * one selected now, as when a link in the Info panel opens an artifact kept elsewhere.
+   * The Info panel comes back on the tab it was left on.
    */
   private returnHere(opened?: Resource) {
     const listed =
@@ -442,42 +482,55 @@ export class Workspace {
     const params = url.search
       .slice(1)
       .split("&")
-      .filter((param) => param && param.split("=")[0] !== SELECTED_PARAM);
-    if (keep)
-      params.push(SELECTED_PARAM + "=" + encodeURIComponent(keep["@id"]));
+      .filter((param) => param && ![SELECTED_PARAM, TAB_PARAM].includes(param.split("=")[0]));
+    if (keep) {
+      params.push(SELECTED_PARAM + "=" + encodeURIComponent(resourceSelector(keep["@id"])));
+      if (this.tab !== "info") params.push(TAB_PARAM + "=" + this.tab);
+    }
     url.search = params.join("&");
     return url.toString();
   }
-  private async loadFolder(read: number) {
+  private async loadFolder() {
+    const operation = this.state.begin("folder");
     try {
       const { data } = await this.api.request<Resource>(
-        "/folders/" + encodeURIComponent(this.folder),
+        "/folders/" + encodeURIComponent(resourcePathId(this.folder)),
       );
-      if (read !== this.listRead) return;
+      if (!operation.current()) return;
+      this.checkReport({ "@id": this.folder, resourceType: "folder" }, data);
       this.currentFolder.set(data);
+      operation.finish();
     } catch (e) {
-      if (read === this.listRead) this.fail(e);
+      operation.fail(e);
+      if (operation.current()) this.fail(e);
     }
   }
-  private async loadTemplateActions(resources: Resource[], read: number) {
+  private async loadTemplateActions(resources: Resource[]) {
+    const operation = this.state.begin("enrichment");
     const templates = resources.filter((r) => r.resourceType === "template");
+    // Claim the whole background batch now, before a user requests fresher details.
+    const owners = templates.map((r) => this.reports.begin(r["@id"]));
     for (let i = 0; i < templates.length; i += 4) {
-      if (read !== this.listRead) return;
+      if (!operation.current()) return;
       const reports = await Promise.allSettled(
-        templates.slice(i, i + 4).map((r) => this.api.report(r)),
+        templates.slice(i, i + 4).map((r, index) =>
+          owners[i + index].current() ? this.api.report(r) : Promise.resolve(null)),
       );
-      if (read !== this.listRead) return;
-      reports.forEach((report, index) => {
-        if (report.status === "fulfilled")
-          this.rows.update((rows) =>
-            rows.map((r) =>
-              r["@id"] === templates[i + index]["@id"]
-                ? { ...r, ...report.value.data }
-                : r,
-            ),
-          );
-      });
+      if (!operation.current()) return;
+      for (const [index, report] of reports.entries()) {
+        if (owners[i + index].current() && report.status === "fulfilled" && report.value) {
+          try {
+            this.checkReport(templates[i + index], report.value.data);
+            this.publishReport(templates[i + index], report.value.data);
+          } catch (e) {
+            operation.fail(e);
+            this.fail(e);
+            return;
+          }
+        }
+      }
     }
+    operation.finish();
   }
   private menuTrigger: HTMLElement | null = null;
   menuTop = signal(8);
@@ -524,27 +577,34 @@ export class Workspace {
             buttons.length;
     buttons[next]?.focus();
   }
-  async select(r: Resource) {
-    const read = ++this.detailRead;
+  async select(r: Resource, tab?: InfoTab) {
+    if (!this.state.active) return;
+    // Selecting the artifact the panel already shows, as the first click of a double-click does, keeps
+    // its tab. Another artifact starts on Details unless a return names its tab.
+    tab ??= this.selected()?.["@id"] === r["@id"] ? this.tab : "info";
+    const operation = this.state.begin("detail", ["instances"]);
+    const owner = this.reports.begin(r["@id"]);
+    this.error.set("");
     this.selectionIds.set([r["@id"]]);
     this.selected.set(r);
     this.instances.set([]);
     this.instanceTotal.set(0);
     this.instancesLoaded.set(false);
-    this.tab = "info";
+    // Only an artifact with versions has the Version tab.
+    this.tab = tab === "version" && versioned(r) ? "version" : "info";
     try {
       const { data } = await this.api.report(r);
-      if (read === this.detailRead) {
-        this.selected.set({ ...r, ...data });
-        if (r.resourceType === "template") void this.loadInstances(r, read);
-        this.rows.update((rows) =>
-          rows.map((row) =>
-            row["@id"] === r["@id"] ? { ...row, ...data } : row,
-          ),
-        );
+      if (operation.current()) {
+        if (owner.current()) {
+          this.checkReport(r, data);
+          this.publishReport(r, data);
+        }
+        if (r.resourceType === "template") void this.loadInstances(r);
       }
+      operation.finish();
     } catch (e) {
-      if (read === this.detailRead) this.fail(e);
+      operation.fail(e);
+      if (operation.current() && owner.current()) this.fail(e);
     }
   }
   setSelection(ids: string[]) {
@@ -554,8 +614,11 @@ export class Workspace {
       const r = this.rows().find((r) => r["@id"] === ids[0]);
       if (r) void this.select(r);
     } else {
-      this.detailRead++;
+      this.state.cancel("detail", "instances");
       this.selected.set(undefined);
+      this.instances.set([]);
+      this.instanceTotal.set(0);
+      this.instancesLoaded.set(false);
     }
   }
   doubleClickItem(r: Resource, event: MouseEvent) {
@@ -607,19 +670,28 @@ export class Workspace {
     if (this.canMoveSelection()) this.cutItems.set([...this.selection()]);
   }
   async moveItems(resources: Resource[], target: string) {
-    if (this.moving() || !resources.length) return;
+    if (!this.state.active || this.moving() || !resources.length) return;
+    const operation = this.state.begin("move");
+    let generation = this.listingGeneration;
+    const current = () => operation.current() && generation === this.listingGeneration;
     this.moving.set(true);
     this.error.set("");
     try {
       const result = await this.moves.move(resources, target);
+      if (!current()) return;
       this.cutItems.update((items) =>
         items.filter((r) => !result.moved.includes(r["@id"])),
       );
-      await this.load(true);
+      const reload = this.load(true);
+      generation = this.listingGeneration;
+      await reload;
+      if (!current()) return;
       if (result.moved.length) {
         clearTimeout(this.movedTimer);
         this.movedTarget.set(target);
-        this.movedTimer = setTimeout(() => this.movedTarget.set(""), 1600);
+        this.movedTimer = setTimeout(() => {
+          if (current()) this.movedTarget.set("");
+        }, 1600);
       }
       this.selectionIds.set(
         result.failed
@@ -627,7 +699,7 @@ export class Workspace {
           .filter((id) => this.rows().some((r) => r["@id"] === id)),
       );
       this.notice.set(
-        this.i18n.t(result.moved.length === 1 ? "Explorer.MovedOne" : "Explorer.Moved", {
+        this.i18n.counted("Explorer.Moved", result.moved.length, {
           count: result.moved.length,
         }),
       );
@@ -637,10 +709,12 @@ export class Workspace {
             .map((f) => this.title(f.resource) + ": " + f.message)
             .join("; "),
         );
+      operation.finish();
     } catch (e) {
-      this.fail(e);
+      operation.fail(e);
+      if (current()) this.fail(e);
     } finally {
-      this.moving.set(false);
+      if (operation.current()) this.moving.set(false);
     }
   }
   explorerKeys(event: KeyboardEvent) {
@@ -662,38 +736,52 @@ export class Workspace {
       void this.moveItems(this.cutItems(), this.folder);
     }
   }
-  private async loadInstances(r: Resource, read: number) {
+  private async loadInstances(r: Resource) {
+    const operation = this.state.begin("instances");
     try {
       const { data } = await this.api.request<Listing>(
         "/search?is_based_on=" +
-          encodeURIComponent(r["@id"]) +
+          encodeURIComponent(resourceSelector(r["@id"])) +
           "&limit=50&offset=0",
       );
-      if (read === this.detailRead) {
+      if (operation.current()) {
+        if (!validListing(data)) throw new Error(this.i18n.t("Errors.InvalidListing"));
         this.instances.set(data.resources);
         this.instanceTotal.set(data.totalCount);
         this.instancesLoaded.set(true);
       }
+      operation.finish();
     } catch (e) {
-      if (read === this.detailRead) this.fail(e);
+      operation.fail(e);
+      if (operation.current()) this.fail(e);
     }
   }
   parentId(r: Resource): string | undefined {
     return r.pathInfo?.filter((p) => p["@id"] !== r["@id"]).at(-1)?.["@id"];
   }
-  async copyId(value: string) {
+  copyId(value: string) {
+    return this.copy(value, "Common.IdCopied");
+  }
+  copyLink(value: string) {
+    return this.copy(value, "Common.LinkCopied");
+  }
+  private async copy(value: string, notice: string) {
     try {
       await navigator.clipboard.writeText(value);
-      this.notice.set(this.i18n.t("Common.IdCopied"));
+      this.notice.set(this.i18n.t(notice));
     } catch (e) {
       this.fail(e);
     }
   }
   async toggleMenu(r: Resource, event: MouseEvent) {
+    if (!this.state.active) return;
     if (this.menu() === r["@id"]) {
+      this.state.cancel("menu");
       this.menu.set(null);
       return;
     }
+    const operation = this.state.begin("menu");
+    const owner = this.reports.begin(r["@id"]);
     this.menuTrigger = event.currentTarget as HTMLElement;
     const rect = this.menuTrigger.getBoundingClientRect();
     this.menuLeft.set(
@@ -703,7 +791,7 @@ export class Workspace {
     this.menu.set(r["@id"]);
     afterNextRender(
       () => {
-        if (this.menu() !== r["@id"]) return;
+        if (!operation.current() || this.menu() !== r["@id"]) return;
         const menu =
           this.host.nativeElement.querySelector<HTMLElement>(".resource-menu");
         menu
@@ -724,28 +812,41 @@ export class Workspace {
     );
     try {
       const { data } = await this.api.report(r);
-      this.rows.update((rows) =>
-        rows.map((row) =>
-          row["@id"] === r["@id"] ? { ...row, ...data } : row,
-        ),
-      );
+      if (!operation.current()) return;
+      if (owner.current() && this.menu() === r["@id"]) {
+        this.checkReport(r, data);
+        this.publishReport(r, data);
+      }
+      operation.finish();
     } catch (e) {
-      this.fail(e);
+      operation.fail(e);
+      if (operation.current() && owner.current() && this.menu() === r["@id"]) this.fail(e);
     }
   }
   navigationQuery(destination: Record<string, string> = {}) {
-    // Sorting is a view preference; location, search, filters and paging are not.
+    // Sorting and the view are preferences; location, search, filters and paging are not.
     return {
       ...(this.params.has("sort") ? { sort: this.sort } : {}),
       ...(this.params.get("folders") === "first" ? { folders: "first" } : {}),
+      ...(this.grid() ? {} : { [VIEW_PARAM]: "list" }),
       ...destination,
     };
+  }
+  setView(grid: boolean) {
+    this.grid.set(grid);
+    // A preference, not a place: switching views adds no history entry.
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParamsHandling: "merge",
+      queryParams: { [VIEW_PARAM]: grid ? null : "list" },
+      replaceUrl: true,
+    });
   }
   submitSearch() {
     void this.router.navigate(["/dashboard"], {
       queryParams: this.navigationQuery(this.search.trim()
         ? { search: this.search.trim() }
-        : { folderId: this.folder }),
+        : { folderId: resourceSelector(this.folder) }),
     });
   }
   get filters(): ListingFilters {
@@ -782,14 +883,22 @@ export class Workspace {
     });
   }
   descriptionSaved(resource: Resource) {
+    if (!this.state.active) return;
+    this.reports.begin(resource["@id"]);
+    this.publishReport(resource, resource);
+    this.notice.set(this.i18n.t("Dashboard.DescriptionSaved"));
+  }
+  private checkReport(expected: Resource, data: unknown) {
+    if (!validResourceReport(data, expected)) throw new Error(this.i18n.t("Errors.InvalidResourceReport"));
+  }
+  private publishReport(resource: Resource, data: Resource) {
     if (this.selected()?.["@id"] === resource["@id"])
-      this.selected.update((current) => ({ ...current!, ...resource }));
+      this.selected.update((current) => ({ ...current!, ...data }));
     this.rows.update((rows) =>
       rows.map((row) =>
-        row["@id"] === resource["@id"] ? { ...row, ...resource } : row,
+        row["@id"] === resource["@id"] ? { ...row, ...data } : row,
       ),
     );
-    this.notice.set(this.i18n.t("Dashboard.DescriptionSaved"));
   }
   setSort(sort: string) {
     void this.router.navigate([], {
@@ -871,7 +980,7 @@ export class Workspace {
       kind +
       "/create?" +
       new URLSearchParams({
-        folderId: this.folder,
+        folderId: resourceSelector(this.folder),
         returnTo: this.returnHere(),
       })
     );
@@ -882,8 +991,12 @@ export class Workspace {
       "/" +
       collections[r.resourceType] +
       "/" +
-      encodeURIComponent(r["@id"])
+      encodeURIComponent(resourcePathId(r["@id"]))
     );
+  }
+  // The resource's OpenView address, when a link to it is offered at all.
+  publicLink(r: Resource): string | undefined {
+    return offeredInOpenView(r) ? this.openView(r) : undefined;
   }
   async act(id: string, r: Resource) {
     this.menuTrigger?.focus();
@@ -894,7 +1007,7 @@ export class Workspace {
       if (id === "open" || id === "populate") {
         if (r.resourceType === "folder")
           void this.router.navigate(["/dashboard"], {
-            queryParams: this.navigationQuery({ folderId: r["@id"] }),
+            queryParams: this.navigationQuery({ folderId: resourceSelector(r["@id"]) }),
           });
         else location.assign(this.link(r, id === "populate"));
         return;

@@ -18,11 +18,13 @@ async function setup(page, extra = []) {
   await page.route("**/api/resource/**", async (route) => {
     const request = route.request(),
       path = new URL(request.url()).pathname;
+    if (path.endsWith('/search'))
+      return route.fulfill({ json: { resources: [], totalCount: 0 } });
     if (path.includes("/contents"))
       return route.fulfill({
         json: {
           resources: [folder, ...items.filter((r) => !moved.has(r["@id"])), ...extra],
-          totalCount: 4 - moved.size,
+          totalCount: 4 - moved.size + extra.length,
           pathInfo: [],
         },
       });
@@ -31,10 +33,11 @@ async function setup(page, extra = []) {
       return route.fulfill({ json: {} });
     }
     const id = decodeURIComponent(path.split("/").filter(Boolean).at(-1));
-    const r =
-      [...items, ...extra].find(
-        (r) => path.includes("/" + r["@id"] + "/") || id === r["@id"],
-      ) || folder;
+    const r = [folder, ...items, ...extra].find(
+      (r) => path.includes("/" + r["@id"] + "/") || id === r["@id"],
+    );
+    // Anything else, the home folder included, is the shared fixture's to answer or refuse.
+    if (!r) return route.fallback();
     return route.fulfill({ json: r, headers: { ETag: '"' + r["@id"] + '"' } });
   });
   await page.goto("/dashboard");
@@ -130,6 +133,33 @@ test('a return that names an artifact selects it once, and the address forgets i
   await expect(page).not.toHaveURL(/selected=/);
 });
 
+// A return can also name the Info panel tab the artifact was left on. Only an artifact with
+// versions has the Version tab, so an instance named with it shows Details.
+const template = {...resource, '@id': 'tpl', 'schema:name': 'Sample template'};
+for (const [id, tab, shown] of [
+  ['tpl', 'version', 'Version'],
+  ['tpl', 'info', 'Details'],
+  ['tpl', 'unknown', 'Details'],
+  ['b', 'version', 'Details'],
+]) {
+  test(`a return that names ${id} on the ${tab} tab shows ${shown}, and the address forgets both`, async ({page, api}) => {
+    await setup(page, [template]);
+    let listings = 0;
+    page.on('request', r => { if (new URL(r.url()).pathname.endsWith('/contents')) listings++; });
+    await page.goto(`/dashboard?selected=${id}&tab=${tab}`);
+    await expect(page.locator(`[data-resource-id="${id}"]`)).toHaveAttribute('aria-selected', 'true');
+    const info = page.locator('.information');
+    await expect(info.getByRole('tab', {name: shown, exact: true})).toHaveAttribute('aria-selected', 'true');
+    await expect(info.locator('.version')).toHaveCount(shown === 'Version' ? 1 : 0);
+    await expect(page).not.toHaveURL(/[?&](selected|tab)=/);
+    // Dropping the two parameters does not load the listing again.
+    expect(listings).toBe(1);
+    // Another selection starts on Details, as it always has.
+    await page.locator('[data-resource-id="a"]').click();
+    await expect(info.getByRole('tab', {name: 'Details', exact: true})).toHaveAttribute('aria-selected', 'true');
+  });
+}
+
 test('artifact card actions and list metadata do not trigger the double-click shortcut', async ({page, api}) => {
   await setup(page, [resource]);
   const card = page.locator('[data-resource-id="template"]');
@@ -139,7 +169,8 @@ test('artifact card actions and list metadata do not trigger the double-click sh
   await card.locator('.resource-icon').dblclick();
   await card.locator('time').dblclick();
   await expect(card).toHaveAttribute('aria-selected', 'true');
-  await expect(page).toHaveURL(/\/dashboard$/);
+  // Still the dashboard; list view is the only thing the address records.
+  await expect(page).toHaveURL(/\/dashboard\?view=list$/);
 });
 
 test("grid retains compact sizing, range and list selection, and moves a group with revisions", async ({
@@ -433,3 +464,32 @@ for (const grid of [true, false]) {
     });
   }
 }
+
+test('list view survives a reload, opening a folder and a return from an editor', async ({page, api}) => {
+  await setup(page);
+  const view = page.locator('.table-scroll');
+  const depth = await page.evaluate(() => history.length);
+  await page.getByRole('button', {name: 'List view', exact: true}).click();
+  await expect(page).toHaveURL(/[?&]view=list/);
+  await expect(view).not.toHaveClass(/explorer-grid/);
+  // A preference, not a place: switching adds no history entry.
+  expect(await page.evaluate(() => history.length)).toBe(depth);
+  await page.reload();
+  await expect(view).not.toHaveClass(/explorer-grid/);
+  await page.locator('[data-resource-id="destination"] .resource-icon').dblclick();
+  await expect(page).toHaveURL(/folderId=destination/);
+  await expect(page).toHaveURL(/[?&]view=list/);
+  await expect(view).not.toHaveClass(/explorer-grid/);
+  // An editor returns to the address it was given, and that address keeps the view.
+  await page.goto('/dashboard?view=list');
+  const href = await page.locator('[data-resource-id="a"] td:first-child a').getAttribute('href');
+  const back = new URL(new URL(href, page.url()).searchParams.get('returnTo'));
+  expect(back.searchParams.get('view')).toBe('list');
+  await page.goto(back.href);
+  await expect(view).not.toHaveClass(/explorer-grid/);
+  await expect(page.getByRole('button', {name: 'List view', exact: true})).toHaveAttribute('aria-pressed', 'true');
+  // Grid is the default and drops the parameter.
+  await page.getByRole('button', {name: 'Grid view', exact: true}).click();
+  await expect(view).toHaveClass(/explorer-grid/);
+  await expect(page).not.toHaveURL(/view=/);
+});

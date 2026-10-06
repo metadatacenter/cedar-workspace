@@ -30,6 +30,7 @@
     "LatestVersion": "Legújabb verzió",
     "AllVersions": "Összes verzió",
     "IdCopied": "Azonosító másolva.",
+    "LinkCopied": "Hivatkozás másolva.",
     "Unknown": "ismeretlen"
   },
   "ResourceTypes": {
@@ -72,15 +73,21 @@
     "About": "Névjegy"
   },
   "Errors": {
+    "InvalidResourceReport": "A kiszolgáló hiányos vagy eltérő erőforrásadatokat adott vissza. Próbálja újra.",
+    "InvalidListing": "A kiszolgáló hiányos erőforráslistát adott vissza. Próbálja újra.",
     "ConfigurationUnavailable": "A munkaterület beállításai nem tölthetők be.",
     "SignInFailed": "A bejelentkezés sikertelen. Kérjük, töltse be újra az oldalt.",
     "SessionExpired": "A munkamenete lejárt. Kérjük, jelentkezzen be újra.",
     "UntrustedDestination": "Nem megbízható API-cím.",
-    "ItemDeleted": "Ezt az elemet törölték. A módosításai megmaradtak. Térjen vissza a munkaterületre, és válasszon másik elemet.",
-    "ItemChanged": "Ez az elem megváltozott, mióta megnyitotta. A módosításai megmaradtak. A legújabb verzió áttekintéséhez válassza a Mégse gombot, és nyissa meg újra.",
+    "ItemDeleted": "Ez az elem már nem létezik.",
+    "ItemChanged": "Ez az elem megváltozott, mióta betöltötte. Frissítsen, majd próbálja újra.",
     "RequestFailed": "A kérés sikertelen ({{status}}).",
     "EditorUnavailable": "A metaadat-szerkesztő nem tölthető be. Kérjük, töltse be újra az oldalt.",
-    "StartupFailed": "A CEDAR Munkaterület nem indítható el."
+    "StartupFailed": "A CEDAR Munkaterület nem indítható el.",
+    "Unreachable": "A kiszolgáló nem érhető el. Ellenőrizze a kapcsolatot, és próbálja újra.",
+    "UnreadableResponse": "A kiszolgáló olyan választ küldött, amelyet a CEDAR nem tud értelmezni. Próbálja újra.",
+    "ChangedEditsKept": "Ez az elem megváltozott, mióta megnyitotta. A módosításai megmaradtak. A legújabb verzió áttekintéséhez válassza a Mégse gombot, és nyissa meg újra.",
+    "DeletedEditsKept": "Ezt az elemet törölték. A módosításai megmaradtak."
   },
   "Confirmation": {
     "Title": "Biztos benne?"
@@ -96,11 +103,11 @@
   },
   "FriendlyDate": {
     "JustNow": "Az imént",
-    "MinuteAgo": "{{count}} perce",
+    "MinutesAgoOne": "{{count}} perce",
     "MinutesAgo": "{{count}} perce",
-    "HourAgo": "{{count}} órája",
+    "HoursAgoOne": "{{count}} órája",
     "HoursAgo": "{{count}} órája",
-    "DayAgo": "{{count}} napja",
+    "DaysAgoOne": "{{count}} napja",
     "DaysAgo": "{{count}} napja"
   },
   "Filters": {
@@ -194,9 +201,12 @@
     "CopyIdentifierFor": "Azonosító másolása: {{name}}",
     "CopyInstanceIdentifier": "Példányazonosító másolása",
     "InstanceCount": "{{total}} elérhető példányból {{shown}} látható.",
+    "InstanceCountOne": "{{total}} elérhető példányból {{shown}} látható.",
     "NoInstances": "Nincsenek példányok",
     "NoAccessibleInstances": "Nincsenek elérhető példányok",
     "CopyIdentifier": "Azonosító másolása",
+    "OpenView": "OpenView",
+    "CopyOpenViewLink": "OpenView-hivatkozás másolása",
     "Status": "Állapot",
     "Unversioned": "Verzió nélkül",
     "SelectItem": "Válasszon ki egy elemet a részletek megtekintéséhez",
@@ -234,6 +244,9 @@
     "OpenInOpenView": "Megnyitás az OpenView-ban"
   },
   "ResourceDialog": {
+    "InspectOutcome": "A művelet már végrehajtódhatott. Zárja be ezt az ablakot, és frissítse a munkaterületet az eredmény ellenőrzéséhez, mielőtt újra próbálkozik.",
+    "RecoverRevision": "Újabb mentés előtt töltse be az aktuális változatot. A módosításai megmaradnak.",
+    "RecoveryDenied": "Az erőforrás jelenlegi jogosultságai nem engedélyezik ezt a műveletet.",
     "Headings": {
       "NewFolder": "Új mappa",
       "Rename": "Átnevezés",
@@ -328,7 +341,8 @@
       "Set": "{{name}} szerepkörének módosítása erre: {{role}}",
       "Remove": "{{name}} hozzáférésének megszüntetése",
       "Transfer": "A tulajdonjog átruházása: {{name}}"
-    }
+    },
+    "InvalidResponse": "A szerver hiányos vagy nem egyértelmű jogosultságokat küldött. Módosítás előtt töltse be újra a jogosultságokat."
   },
   "Groups": {
     "Title": "Csoportok",
@@ -370,7 +384,9 @@
     "Created": "Csoport létrehozva.",
     "DetailsSaved": "A csoport adatai mentve.",
     "Deleted": "Csoport törölve.",
-    "MembersSaved": "A csoport tagjai mentve."
+    "MembersSaved": "A csoport tagjai mentve.",
+    "InvalidResponse": "A szerver hiányos vagy nem egyértelmű csoportadatokat küldött. Módosítás előtt töltse be újra az adatokat.",
+    "ReloadDirectory": "Csoportok újratöltése"
   },
   "Logout": {
     "Title": "Kijelentkezés",
@@ -389,21 +405,30 @@
     "ReadOnlyAccess": "Ezekhez a metaadatokhoz csak olvasási hozzáférése van.",
     "ErrorsRegion": "Metaadathibák",
     "ErrorsOne": "{{count}} hiba – mentés előtt ellenőrizze",
-    "ErrorsMany": "{{count}} hiba – mentés előtt ellenőrizze",
+    "Errors": "{{count}} hiba – mentés előtt ellenőrizze",
     "WarningsRegion": "Metaadat-figyelmeztetések",
     "WarningsOne": "{{count}} figyelmeztetés – a metaadatok így is menthetők",
-    "WarningsMany": "{{count}} figyelmeztetés – a metaadatok így is menthetők",
+    "Warnings": "{{count}} figyelmeztetés – a metaadatok így is menthetők",
     "ProblemRequired": "Egy kötelező érték hiányzik.",
     "ProblemMinItems": "{{count}} van belőle, legalább {{min}} szükséges.",
     "DiscardChanges": "Elveti a metaadatok nem mentett módosításait?",
     "SavedWithChanges": "Mentve. További, nem mentett módosításai vannak.",
     "ConfigurationUnavailable": "A metaadat-szerkesztő beállításai nem tölthetők be.",
     "NoTemplate": "A metaadatok nem hivatkoznak a sablonjukra.",
+    "UnreadableTemplate": "A CEDAR nem tudja beolvasni ezt a sablont, ezért nem adhatók meg hozzá metaadatok.",
+    "UnreadableInstance": "A CEDAR nem tudja beolvasni ezeket a metaadatokat vagy a sablonjukat, ezért nem jeleníthetők meg.",
     "NoRevision": "A szerver nem küldött egyidejűség-ellenőrző azonosítót. Mentés előtt töltse be újra az oldalt. A módosításai megmaradtak.",
     "Label": "Metaadatok",
     "RequiredMissing": "{{count}} kötelező mező hiányzik.",
+    "RequiredMissingOne": "{{count}} kötelező mező hiányzik.",
     "ReviewInvalid": "Mentés előtt ellenőrizze az érvénytelen metaadatokat.",
-    "DefaultName": "{{template}} – metaadatok"
+    "DefaultName": "{{template}} – metaadatok",
+    "LoadFailed": "Nem tölthető be",
+    "ReloadRequired": "Újratöltés szükséges",
+    "Reload": "Metaadatok újratöltése",
+    "SaveUnconfirmed": "A kiszolgáló elfogadta a mentést, de hiányos visszaigazolást küldött. Újabb mentés előtt ellenőrizze a mentett elemet a Workspace-ben.",
+    "ItemDeleted": "Ezt az elemet törölték. A módosításai megmaradtak. Térjen vissza a munkaterületre, és válasszon másik elemet.",
+    "ItemChanged": "Ez az elem megváltozott, mióta megnyitotta. A módosításai megmaradtak. A legújabb verzió áttekintéséhez válassza a Mégse gombot, és nyissa meg újra."
   },
   "Account": {
     "Profile": {
@@ -448,7 +473,9 @@
         "Create": "Sablon létrehozása",
         "Update": "Sablon frissítése (a GET által visszaadott ETag használatával)",
         "Instances": "Egy sablonon alapuló metaadatok lekérése"
-      }
+      },
+      "InvalidResponse": "A szerver nem adott vissza érvényes API-kulcsállapotot. Újabb módosítás előtt töltse be újra a profilját.",
+      "Reload": "Profil újratöltése"
     },
     "Settings": {
       "Title": "Beállítások",
@@ -495,7 +522,6 @@
     "Selected": "{{count}} kijelölve",
     "Clear": "Kijelölés törlése",
     "Cut": "Kivágás",
-    "Paste": "{{count}} elem beillesztése",
     "View": "Találatok nézete",
     "List": "Listanézet",
     "Grid": "Rácsnézet",
@@ -512,7 +538,9 @@
     "Counts": "Leltár erőforrástípusonként",
     "Permissions": "{{count}} elem törléséhez nincs jogosultsága.",
     "Protected": "{{count}} saját vagy rendszermappa nem törölhető.",
+    "ProtectedOne": "{{count}} saját vagy rendszermappa nem törölhető.",
     "Outside": "{{templates}} sablonhoz {{instances}} példány tartozik a mappán kívül. Ezek a sablonok nem törölhetők.",
+    "OutsideOne": "{{templates}} sablonhoz {{instances}} példány tartozik a mappán kívül. Ezek a sablonok nem törölhetők.",
     "Inside": "Ezeknek a sablonoknak minden példánya a mappán belül van, és először a példányok törlődnek.",
     "Inventory": "Teljes leltár megtekintése",
     "Type": "Típus",
@@ -522,6 +550,7 @@
     "NoPermission": "Nincs törlési jogosultság",
     "ProtectedItem": "Védett mappa",
     "ExternalCount": "{{count}} külső példány",
+    "ExternalCountOne": "{{count}} külső példány",
     "Eligible": "Törölhető",
     "Refresh": "Leltár frissítése",
     "Delete": "Mappa és tartalmának törlése",
@@ -560,6 +589,7 @@
     "Folders": "A rendszer minden mappát külön ellenőriz. A mappán kívüli példányokkal rendelkező sablon megakadályozza a törlést akkor is, ha a példányok másik kijelölt mappában vannak.",
     "Inside": "Az egyes mappákban a példányok a hozzájuk tartozó sablonok előtt törlődnek.",
     "References": "A törlendő mappájukon kívüli példányokkal rendelkező, illetve egyenként kijelölt, példányokkal rendelkező sablonok: {{templates}} ({{instances}} példány). Először törölje a példányokat, majd ellenőrizze az új leltárt.",
+    "ReferencesOne": "A törlendő mappájukon kívüli példányokkal rendelkező, illetve egyenként kijelölt, példányokkal rendelkező sablonok: {{templates}} ({{instances}} példány). Először törölje a példányokat, majd ellenőrizze az új leltárt.",
     "DeleteContents": "Kijelölt elemek és tartalmuk törlése",
     "Delete": "Kijelölt elemek törlése",
     "InventoryUnavailable": "A teljes kijelölés nem ellenőrizhető. A törléshez minden leltárnak, jogosultságnak és verziónak elérhetőnek kell lennie. Zárja be az ablakot és ellenőrizze a kijelölést, vagy frissítse a leltárt.",
@@ -568,6 +598,7 @@
     "SimpleConfirm": "Törölni szeretné ezt a(z) {{count}} elemet?",
     "CheckingItems": "Törlési jogosultságok ellenőrzése…",
     "ItemReferences": "A kijelölt sablonokhoz még {{instances}} példány tartozik. Először törölje ezeket a példányokat.",
+    "ItemReferencesOne": "A kijelölt sablonokhoz még {{instances}} példány tartozik. Először törölje ezeket a példányokat.",
     "Retry": "Újraellenőrzés",
     "DropToConfirm": "Ejtse ide a törlés megerősítéséhez"
   }

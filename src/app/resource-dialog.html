@@ -26,13 +26,7 @@
         <cedar-icon name="close" />
       </button>
     </header>
-    @if(resources.length){
-    <ul>
-      @for(item of resources;track item["@id"]){
-      <li>{{title(item)}}</li>
-      }
-    </ul>
-    } @if(resource){
+    @if(resource){
     <p class="resource-dialog-resource">
       <cedar-icon [name]="resource.resourceType" /><span
         >{{title(resource)}}</span
@@ -41,10 +35,15 @@
     } @if(error()){
     <p class="alert" role="alert">{{error()}}</p>
     }
+    @if(reloadRequired()) {
+    <p role="status">{{(inspectionRequired() ? 'ResourceDialog.InspectOutcome' : 'ResourceDialog.RecoverRevision') | translate}}</p>
+    @if(!inspectionRequired()) {<button type="button" (click)="load()" [disabled]="busy()">{{'Common.Retry' | translate}}</button>}
+    }
     <fieldset class="dialog-stack" [disabled]="busy()">
       @if(['new-folder','rename','copy'].includes(action)){<label
         ><span class="field-label">{{(action === 'copy' ? 'ResourceDialog.NameOfCopy' : 'Common.Name') | translate}}</span><input
           spellcheck="false"
+          autocomplete="off"
           [attr.aria-invalid]="submitted && nameError ? true : null"
           [attr.aria-describedby]="submitted && nameError ? 'name-error' : null"
           name="name"
@@ -58,6 +57,7 @@
       } } @if(['new-folder','rename'].includes(action)){<label
         ><span class="field-label">{{'Common.Description' | translate}}</span><textarea
           spellcheck="false"
+          autocomplete="off"
           name="description"
           [(ngModel)]="description"
           rows="3"
@@ -82,11 +82,15 @@
       >
         <h3>{{'ResourceDialog.Destination' | translate}}</h3>
         <nav class="breadcrumbs">
-          @for(p of path();track p['@id'];let first=$first){@if(!first){<span
+          @for(p of path();track p['@id'];let first=$first;let last=$last){@if(!first){<span
             class="breadcrumb-separator"
             aria-hidden="true"
             >/</span
-          >}<button type="button" (click)="browse(p['@id'])">
+          >}<button
+            type="button"
+            [attr.aria-current]="last ? 'location' : null"
+            (click)="browse(p['@id'])"
+          >
             {{title(p)==='/'?('Common.All' | translate):title(p)}}</button
           >}
         </nav>
@@ -134,7 +138,7 @@
       ><button
         class="primary"
         type="submit"
-        [disabled]="busy()||!destinationAllowed"
+        [disabled]="busy()||reloadRequired()||!destinationAllowed"
       >
         {{submitLabel | translate}}
       </button>

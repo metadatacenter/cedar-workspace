@@ -19,7 +19,8 @@ async function setup(page, kind, options = {}) {
       return route.fulfill(options.fail ? {status:403,json:{message:'Forbidden'}} : {json:artifact});
     }
     if (path.includes('/templates/') && kind === 'instance') return route.fulfill({json:documents.template});
-    return route.fulfill({json:item});
+    if (path.includes('/preview-item/')) return route.fulfill({json:item});
+    return route.fallback();
   });
   await page.goto('/dashboard');
   await page.getByRole('button',{name:'Grid view',exact:true}).click();

@@ -1,3 +1,5 @@
+import { RevisionCoordinator } from "./revision-coordinator";
+import { validDeletionPlan, validDeletionOutcome } from "./deletion-validation";
 import {
   SelectionInventoryError,
   SelectionDeletion,
@@ -105,8 +107,7 @@ export interface DeletionOutcome {
         overflow-wrap: anywhere;
       }
       th {
-        padding: var(--cedar-space-2)
-          var(--cedar-space-3);
+        padding: var(--cedar-space-2) var(--cedar-space-3);
         overflow-wrap: normal;
       }
       .inventory-name {
@@ -171,7 +172,7 @@ export class FolderDeletionDialog implements AfterViewInit, OnDestroy {
   @Output() changed = new EventEmitter<void>();
   @ViewChild("dialog", { static: true }) dialog!: ElementRef<HTMLDialogElement>;
   private readonly api = inject(Backend);
-  private readonly i18n = inject(I18n);
+  protected readonly i18n = inject(I18n);
   readonly plan = signal<DeletionPlan | null>(null);
   readonly subfolderCount = computed(() =>
     Math.max(0, (this.plan()?.counts.folder ?? 0) - 1),
@@ -188,7 +189,18 @@ export class FolderDeletionDialog implements AfterViewInit, OnDestroy {
   readonly busy = signal(false);
   readonly deleting = signal(false);
   readonly error = signal("");
-  private alive = true;
+  readonly coordinator = new RevisionCoordinator();
+  private readonly consumed = new WeakSet<DeletionPlan>();
+  private preparedContext = "";
+  private progressContext = "";
+  private get context() {
+    return JSON.stringify(
+      (this.bulk ? this.resources : [this.resource]).map((r) => [
+        r["@id"],
+        r.resourceType,
+      ]),
+    );
+  }
   private readonly returnFocus = document.activeElement as HTMLElement | null;
   get name() {
     return title(this.resource, this.i18n.t("Common.Untitled"));
@@ -201,7 +213,7 @@ export class FolderDeletionDialog implements AfterViewInit, OnDestroy {
     void this.load();
   }
   ngOnDestroy() {
-    this.alive = false;
+    this.coordinator.dispose();
     this.dialog.nativeElement.close();
     if (this.returnFocus?.isConnected) this.returnFocus.focus();
   }
@@ -210,6 +222,16 @@ export class FolderDeletionDialog implements AfterViewInit, OnDestroy {
   }
   async load() {
     if (this.busy()) return;
+    const operation = this.coordinator.read();
+    if (!operation) return;
+    const context = this.context;
+    if (this.progressContext !== context) {
+      this.progressContext = context;
+      this.confirmedCounts.set(emptyCounts());
+      this.completedIds.clear();
+      this.outcome.set(null);
+    }
+    this.preparedContext = "";
     this.busy.set(true);
     this.error.set("");
     this.plan.set(null);
@@ -219,16 +241,24 @@ export class FolderDeletionDialog implements AfterViewInit, OnDestroy {
         const prepared = await this.selectionDeletion.prepare(
           this.resources.filter((r) => !this.completedIds.has(r["@id"])),
         );
-        if (this.alive) {
+        if (operation.current() && context === this.context) {
+          this.preparedContext = context;
           this.prepared = prepared;
           this.plan.set(prepared.inventory);
+          operation.finish();
         }
         return;
       }
       const response = await this.api.request<DeletionPlan>(this.path);
-      if (this.alive) this.plan.set(response.data);
+      if (!operation.current() || context !== this.context) return;
+      if (!validDeletionPlan(response.data, this.resource["@id"]))
+        throw new Error(this.i18n.t("FolderDeletion.InventoryUnavailable"));
+      this.preparedContext = context;
+      this.plan.set(response.data);
+      operation.finish();
     } catch (e) {
-      if (this.alive)
+      if (operation.current()) {
+        operation.fail(e);
         this.error.set(
           e instanceof SelectionInventoryError
             ? title(e.resource, this.i18n.t("Common.Untitled")) +
@@ -238,17 +268,37 @@ export class FolderDeletionDialog implements AfterViewInit, OnDestroy {
               ? this.i18n.t("SelectionDeletion.InventoryUnavailable")
               : this.errorMessage(e, false),
         );
+      }
     } finally {
-      if (this.alive) this.busy.set(false);
+      if (operation.current()) this.busy.set(false);
     }
   }
   async confirm() {
     const plan = this.plan();
-    if (this.busy() || !plan?.allowed) return;
+    if (
+      this.busy() ||
+      !this.coordinator.active ||
+      !plan?.allowed ||
+      this.consumed.has(plan)
+    )
+      return;
+    if (this.preparedContext && this.preparedContext !== this.context) {
+      this.plan.set(null);
+      this.error.set(this.i18n.t("SelectionDeletion.InventoryUnavailable"));
+      return;
+    }
     if (this.bulk) {
       await this.confirmSelection();
       return;
     }
+    if (!validDeletionPlan(plan, this.resource["@id"])) {
+      this.plan.set(null);
+      this.error.set(this.i18n.t("FolderDeletion.InventoryUnavailable"));
+      return;
+    }
+    const operation = this.coordinator.write();
+    if (!operation) return;
+    this.consumed.add(plan);
     this.busy.set(true);
     this.deleting.set(true);
     this.error.set("");
@@ -258,7 +308,10 @@ export class FolderDeletionDialog implements AfterViewInit, OnDestroy {
         "POST",
         { token: plan.token },
       );
-      if (!this.alive) return;
+      if (!operation.current()) return;
+      if (!validDeletionOutcome(response.data, plan))
+        throw new Error(this.i18n.t("FolderDeletion.Uncertain"));
+      operation.finish();
       if (response.data.status === "completed") {
         // Close before notifying the parent: success must never render the stopped outcome.
         this.dialog.nativeElement.close();
@@ -266,17 +319,22 @@ export class FolderDeletionDialog implements AfterViewInit, OnDestroy {
         return;
       }
       this.plan.set(null);
-      this.outcome.set(response.data);
+      const counts = { ...this.confirmedCounts() };
+      for (const type of this.resourceTypes)
+        counts[type.value] += response.data.deleted[type.value];
+      this.confirmedCounts.set(counts);
+      this.outcome.set({ ...response.data, deleted: counts });
       this.changed.emit();
     } catch (e) {
-      if (!this.alive) return;
+      if (!operation.current()) return;
+      operation.fail(e);
       // A timeout may have followed a successful delete. Never repeat the confirmed request;
       // refresh the listing and require a new inventory and an explicit new confirmation.
       this.plan.set(null);
       this.error.set(this.errorMessage(e, true));
       this.changed.emit();
     } finally {
-      if (this.alive) {
+      if (operation.current()) {
         this.busy.set(false);
         this.deleting.set(false);
       }
@@ -284,6 +342,8 @@ export class FolderDeletionDialog implements AfterViewInit, OnDestroy {
   }
   private async confirmSelection() {
     if (!this.prepared) return;
+    const operation = this.coordinator.write();
+    if (!operation) return;
     const prepared = this.prepared;
     this.prepared = null; // Each confirmation is consumed once, even if the response is lost.
     this.busy.set(true);
@@ -293,7 +353,7 @@ export class FolderDeletionDialog implements AfterViewInit, OnDestroy {
     try {
       for (const root of prepared.roots) {
         const result = await this.selectionDeletion.execute(root);
-        if (!this.alive) return;
+        if (!operation.current()) return;
         const counts = { ...this.confirmedCounts() };
         for (const type of this.resourceTypes)
           counts[type.value] += result.deleted[type.value];
@@ -301,6 +361,7 @@ export class FolderDeletionDialog implements AfterViewInit, OnDestroy {
         if (result.status !== "completed") {
           this.plan.set(null);
           this.outcome.set({ ...result, deleted: counts });
+          operation.finish();
           this.changed.emit();
           return;
         }
@@ -309,10 +370,12 @@ export class FolderDeletionDialog implements AfterViewInit, OnDestroy {
           if (item.id) this.completedIds.add(item.id);
         });
       }
+      operation.finish();
       this.dialog.nativeElement.close();
       this.saved.emit();
     } catch (e) {
-      if (this.alive) {
+      if (operation.current()) {
+        operation.fail(e);
         this.plan.set(null);
         this.error.set(this.i18n.t("SelectionDeletion.Uncertain"));
         this.outcome.set({
@@ -323,7 +386,7 @@ export class FolderDeletionDialog implements AfterViewInit, OnDestroy {
         this.changed.emit();
       }
     } finally {
-      if (this.alive) {
+      if (operation.current()) {
         this.busy.set(false);
         this.deleting.set(false);
       }
@@ -379,9 +442,7 @@ export class FolderDeletionDialog implements AfterViewInit, OnDestroy {
         : item.instancesOutside
           ? "ExternalCount"
           : "Eligible";
-    return this.i18n.t("FolderDeletion." + key, {
-      count: item.instancesOutside,
-    });
+    return this.i18n.counted("FolderDeletion." + key, item.instancesOutside);
   }
   parent(item: DeletionItem) {
     const parent = this.itemsById().get(item.parentId);

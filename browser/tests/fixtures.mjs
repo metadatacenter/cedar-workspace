@@ -36,7 +36,8 @@ export const resource = {
   ownedByUserName: "Alex Researcher",
   currentUserPermissions: { capabilities, owner: true },
 };
-const folder = {
+/** The signed-in user's home folder, where the dashboard opens. */
+const home = {
   ...resource,
   "@id": "home",
   resourceType: "folder",
@@ -46,6 +47,7 @@ export const test = base.extend({
   api: async ({ page, baseURL }, use) => {
     await page.clock.setFixedTime(new Date("2026-01-03T12:00:00Z"));
     const state = {
+      permissions: { owner, userPermissions: [{ user: collaborator, role: "viewer" }], groupPermissions: [] },
       readonly: false,
       monitoring: false,
       members: [
@@ -84,7 +86,9 @@ export const test = base.extend({
       customElements.define('cedar-embeddable-editor', class extends HTMLElement {
         currentMetadata = {}; dataQualityReport = {isValid:true};
         connectedCallback() { queueMicrotask(() => this.eventHandler?.ready?.()); }
-        set templateAndInstanceObject(value) { this.currentMetadata = value.instanceObject; }
+        accepted = false;
+        set templateAndInstanceObject(value) { if (this.accepted) throw Error('CEE inputs are set once'); this.accepted = true; this.currentMetadata = structuredClone(value.instanceObject); }
+        set templateObject(value) { if (this.accepted) throw Error('CEE inputs are set once'); this.accepted = true; this.currentMetadata = { 'schema:isBasedOn': value['@id'] }; }
         reveal(location) { (window.__ceeReveals ??= []).push(location); return Promise.resolve(true); }
       });
     `,
@@ -147,12 +151,16 @@ export const test = base.extend({
           email: "alex@example.org",
           uiPreferences: { preferredDateFormat: "yyyy-MM-dd" },
         };
-      else if (path.endsWith("/permissions"))
-        body = {
-          owner,
-          userPermissions: [{ user: collaborator, role: "viewer" }],
-          groupPermissions: [],
-        };
+      else if (path.endsWith("/permissions")) {
+        if (request.method() === "PUT") {
+          const submitted = request.postDataJSON();
+          state.permissions = { ...submitted,
+            userPermissions: submitted.userPermissions.map(g => ({ ...g, user: g.user["@id"] === owner["@id"] ? owner : collaborator })),
+            groupPermissions: submitted.groupPermissions.map(g => ({ ...g, group })),
+          };
+        }
+        body = state.permissions;
+      }
       else if (path.endsWith("/members"))
         body = {
           members: [
@@ -177,9 +185,9 @@ export const test = base.extend({
             ? []
             : [{ ...item, pathInfo: state.pathInfo }],
           totalCount: 1,
-          pathInfo: state.pathInfo ?? [folder],
+          pathInfo: state.pathInfo ?? [home],
         };
-      else if (path.includes("/folders/home")) body = folder;
+      else if (path.includes("/folders/home")) body = home;
       else if (path.includes("/template-instances/instance"))
         body = path.endsWith("/report")
           ? item

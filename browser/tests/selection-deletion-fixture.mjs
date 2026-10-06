@@ -19,7 +19,8 @@ export async function selectionFixture(page, {plan = deletionPlan, failAt, denie
     if(path.includes('/contents')) return route.fulfill({json:{resources:selectionResources.filter(r => !deleted.has(r['@id'])),totalCount:selectionResources.filter(r => !deleted.has(r['@id'])).length,pathInfo:[]}});
     if(path.endsWith('/folder/deletion')) return route.fulfill({json:plan});
     if(path.endsWith('/nested/deletion')) return route.fulfill({json:{...plan,items:plan.items.filter(i => ['nested','instance1','instance2'].includes(i.id)),counts:{folder:1,template:0,element:0,field:0,instance:2}}});
-    const r = selectionResources.find(r => path.split('/').includes(r['@id'])) || {...resource,'@id':'home',resourceType:'folder'};
+    const r = selectionResources.find(r => path.split('/').includes(r['@id']));
+    if(!r) return route.fallback();
     return route.fulfill({json:denied && path.includes('/separate/report') ? {...r,currentUserPermissions:{capabilities:[]}} : r,headers:{ETag:'"content-7"'}});
   });
   await page.goto('/dashboard');

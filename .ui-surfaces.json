@@ -87,36 +87,84 @@
       "id": "workspace.manage-groups",
       "name": "Manage Groups",
       "section": "Management",
-      "parent": "workspace.groups"
+      "parent": "workspace.groups",
+      "contract": "page",
+      "scenario": "manage-groups",
+      "selector": "#manage-groups-panel",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/groups.html",
+          "anchor": "id=\"manage-groups-panel\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.create-group",
       "name": "Create Group",
       "section": "Management",
-      "parent": "workspace.groups"
+      "parent": "workspace.groups",
+      "contract": "page",
+      "scenario": "create-group",
+      "selector": "#create-group-panel",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/groups.html",
+          "anchor": "id=\"create-group-panel\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.delete-group-tab",
       "name": "Delete Group",
       "section": "Management",
       "parent": "workspace.groups",
+      "contract": "page",
+      "scenario": "delete-group-tab",
+      "selector": "#delete-group-panel",
+      "states": ["open"],
       "source": [
         {
           "file": "src/app/groups.html",
           "anchor": "id=\"delete-group-panel\""
         }
       ],
-      "test": "browser/tests/group-tabs.spec.mjs"
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.logout",
       "name": "Logout",
-      "section": "Management"
+      "section": "Management",
+      "contract": "page",
+      "scenario": "logout-page",
+      "selector": "cedar-workspace",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/logout.ts",
+          "anchor": "class=\"account-header\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.workspace",
       "name": "Workspace",
-      "section": "Menus"
+      "section": "Menus",
+      "contract": "page",
+      "scenario": "grid-page",
+      "selector": "cedar-workspace",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/workspace.html",
+          "anchor": "class=\"workspace\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.artifact-menu",
@@ -231,7 +279,18 @@
     {
       "id": "workspace.workspace-view",
       "name": "Workspace",
-      "section": "Resource Dialogs"
+      "section": "Resource Dialogs",
+      "contract": "page",
+      "scenario": "dashboard-page",
+      "selector": "cedar-workspace",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/workspace.html",
+          "anchor": "class=\"workspace\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.new-folder",
@@ -305,13 +364,35 @@
       "id": "workspace.folder-list",
       "name": "Folder List",
       "section": "Resource Dialogs",
-      "parent": "workspace.destination-folder-picker"
+      "parent": "workspace.destination-folder-picker",
+      "contract": "page",
+      "scenario": "folder-picker",
+      "selector": "cedar-resource-dialog cedar-folder-list",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/folder-list.html",
+          "anchor": "class=\"folder-scroll\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.destination-folder-picker",
       "name": "Destination Folder Picker",
       "section": "Resource Dialogs",
-      "parent": "workspace.workspace-view"
+      "parent": "workspace.workspace-view",
+      "contract": "page",
+      "scenario": "folder-picker",
+      "selector": "cedar-resource-dialog .folder-picker",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/resource-dialog.html",
+          "anchor": "class=\"folder-picker dialog-stack\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.publish",
@@ -350,7 +431,18 @@
     {
       "id": "workspace.workspace-management",
       "name": "Workspace / Management",
-      "section": "Confirmation / Warning / Error"
+      "section": "Confirmation / Warning / Error",
+      "contract": "page",
+      "scenario": "dashboard-page",
+      "selector": "cedar-workspace",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/workspace.html",
+          "anchor": "class=\"workspace\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.delete-artifact-folder",
@@ -373,7 +465,22 @@
       "id": "workspace.delete-group",
       "name": "Delete Group",
       "section": "Confirmation / Warning / Error",
-      "parent": "workspace.workspace-management"
+      "parent": "workspace.workspace-management",
+      "contract": "dialog",
+      "scenario": "delete-group",
+      "selector": ".confirmation-dialog",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/confirmation.ts",
+          "anchor": "class=\"confirmation-dialog dialog-stack\""
+        },
+        {
+          "file": "src/app/groups.ts",
+          "anchor": "\"Groups.ConfirmDelete\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.enable-openview-disable-openview",
@@ -396,19 +503,64 @@
       "id": "workspace.transfer-ownership",
       "name": "Transfer Ownership",
       "section": "Confirmation / Warning / Error",
-      "parent": "workspace.workspace-management"
+      "parent": "workspace.workspace-management",
+      "contract": "dialog",
+      "scenario": "transfer-ownership",
+      "selector": ".confirmation-dialog",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/confirmation.ts",
+          "anchor": "class=\"confirmation-dialog dialog-stack\""
+        },
+        {
+          "file": "src/app/permissions-dialog.ts",
+          "anchor": "\"Permissions.ConfirmTransfer\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.grant-remove-group-administrator",
       "name": "Grant / Remove Group Administrator",
       "section": "Confirmation / Warning / Error",
-      "parent": "workspace.workspace-management"
+      "parent": "workspace.workspace-management",
+      "contract": "dialog",
+      "scenario": "group-administrator",
+      "selector": ".confirmation-dialog",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/confirmation.ts",
+          "anchor": "class=\"confirmation-dialog dialog-stack\""
+        },
+        {
+          "file": "src/app/groups.ts",
+          "anchor": "\"Groups.ConfirmMakeAdministrator\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.delete-regenerate-api-key",
       "name": "Delete / Regenerate API Key",
       "section": "Confirmation / Warning / Error",
-      "parent": "workspace.workspace-management"
+      "parent": "workspace.workspace-management",
+      "contract": "dialog",
+      "scenario": "delete-api-key",
+      "selector": ".confirmation-dialog",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/confirmation.ts",
+          "anchor": "class=\"confirmation-dialog dialog-stack\""
+        },
+        {
+          "file": "src/app/profile.ts",
+          "anchor": "\"Account.Profile.ConfirmDelete\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.discard-unsaved-changes",
@@ -431,7 +583,18 @@
       "id": "workspace.error-alert",
       "name": "Error Alert",
       "section": "Confirmation / Warning / Error",
-      "parent": "workspace.workspace-management"
+      "parent": "workspace.workspace-management",
+      "contract": "error-alert",
+      "scenario": "error-alert",
+      "selector": "div.alert[role=\"alert\"]",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/workspace.html",
+          "anchor": "<div class=\"alert\" role=\"alert\">"
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.metadata-editor-cee",
@@ -453,13 +616,39 @@
       "id": "workspace.discard-unsaved-metadata-changes",
       "name": "Discard Unsaved Metadata Changes",
       "section": "Confirmation / Warning / Error",
-      "parent": "workspace.metadata-editor-cee"
+      "parent": "workspace.metadata-editor-cee",
+      "contract": "dialog",
+      "scenario": "discard-metadata",
+      "selector": ".confirmation-dialog",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/confirmation.ts",
+          "anchor": "class=\"confirmation-dialog dialog-stack\""
+        },
+        {
+          "file": "src/app/metadata-editor.ts",
+          "anchor": "\"Metadata.DiscardChanges\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.metadata-errors-warnings",
       "name": "Metadata Errors / Warnings",
       "section": "Confirmation / Warning / Error",
-      "parent": "workspace.metadata-editor-cee"
+      "parent": "workspace.metadata-editor-cee",
+      "contract": "page",
+      "scenario": "metadata-quality",
+      "selector": ".metadata-content",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/metadata-editor.html",
+          "anchor": "class=\"metadata-content\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.field-validation-errors",
@@ -482,7 +671,18 @@
     {
       "id": "workspace.metadata-errors-warnings-view",
       "name": "Metadata Errors / Warnings",
-      "section": "Metadata Editor"
+      "section": "Metadata Editor",
+      "contract": "page",
+      "scenario": "metadata-quality",
+      "selector": "cedar-workspace",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/metadata-editor.html",
+          "anchor": "class=\"metadata-content\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.workspace-view-40",
@@ -504,55 +704,158 @@
       "id": "workspace.header",
       "name": "Header",
       "section": "Workspace",
-      "parent": "workspace.workspace-view-40"
+      "parent": "workspace.workspace-view-40",
+      "contract": "page",
+      "scenario": "dashboard-page",
+      "selector": "header.topbar",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/workspace.html",
+          "anchor": "<header class=\"topbar\">"
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.left-panel",
       "name": "Left Panel",
       "section": "Workspace",
-      "parent": "workspace.workspace-view-40"
+      "parent": "workspace.workspace-view-40",
+      "contract": "page",
+      "scenario": "dashboard-page",
+      "selector": "#workspace-navigation",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/workspace.html",
+          "anchor": "id=\"workspace-navigation\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.main-panel",
       "name": "Main Panel",
       "section": "Workspace",
-      "parent": "workspace.workspace-view-40"
+      "parent": "workspace.workspace-view-40",
+      "contract": "page",
+      "scenario": "dashboard-page",
+      "selector": ".workspace > main",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/workspace.html",
+          "anchor": "<main (keydown)=\"explorerKeys($event)\">"
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.list-view",
       "name": "List View",
       "section": "Workspace",
-      "parent": "workspace.main-panel"
+      "parent": "workspace.main-panel",
+      "contract": "page",
+      "scenario": "dashboard-page",
+      "selector": ".table-scroll",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/workspace.html",
+          "anchor": "class=\"table-scroll\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.grid-view",
       "name": "Grid View",
       "section": "Workspace",
-      "parent": "workspace.main-panel"
+      "parent": "workspace.main-panel",
+      "contract": "page",
+      "scenario": "grid-page",
+      "selector": ".table-scroll.explorer-grid",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/workspace.html",
+          "anchor": "[class.explorer-grid]=\"grid()\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.drag-preview",
       "name": "Drag Preview",
       "section": "Workspace",
-      "parent": "workspace.main-panel"
+      "parent": "workspace.main-panel",
+      "contract": "page",
+      "scenario": "drag-preview",
+      "selector": "cedar-drag-preview",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/drag-preview.ts",
+          "anchor": "class=\"stack\""
+        },
+        {
+          "file": "src/app/workspace.html",
+          "anchor": "<cedar-drag-preview"
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.information-panel",
       "name": "Information Panel",
       "section": "Workspace",
-      "parent": "workspace.workspace-view-40"
+      "parent": "workspace.workspace-view-40",
+      "contract": "page",
+      "scenario": "information-panel",
+      "selector": "#workspace-information",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/workspace.html",
+          "anchor": "id=\"workspace-information\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.info-tab",
       "name": "Details Tab",
       "section": "Workspace",
-      "parent": "workspace.information-panel"
+      "parent": "workspace.information-panel",
+      "contract": "page",
+      "scenario": "info-tab",
+      "selector": "#workspace-information",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/workspace.html",
+          "anchor": "[attr.aria-selected]=\"tab==='info'\""
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.version-tab",
       "name": "Version Tab",
       "section": "Workspace",
-      "parent": "workspace.information-panel"
+      "parent": "workspace.information-panel",
+      "contract": "page",
+      "scenario": "version-tab",
+      "selector": "#workspace-information [role=\"tabpanel\"]",
+      "states": ["open"],
+      "source": [
+        {
+          "file": "src/app/workspace.html",
+          "anchor": "<article class=\"version\">"
+        }
+      ],
+      "test": "browser/tests/surfaces.spec.mjs"
     },
     {
       "id": "workspace.type-filter",

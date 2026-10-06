@@ -33,11 +33,11 @@
   user-select: none;
 }
 .explorer-item:focus-visible {
-  outline: 2px solid var(--cedar-color-primary);
+  outline: var(--cedar-focus-ring-width) solid var(--cedar-color-primary);
   outline-offset: -2px;
 }
 .explorer-drop-target {
-  outline: 2px solid var(--cedar-color-primary) !important;
+  outline: var(--cedar-focus-ring-width) solid var(--cedar-color-primary) !important;
   background: var(--cedar-surface-selected) !important;
 }
 .explorer-drop-eligible:not(.explorer-drop-target) {
@@ -51,7 +51,7 @@
   color: var(--cedar-color-primary);
 }
 .explorer-move-complete {
-  outline: 2px solid var(--cedar-status-success-text);
+  outline: var(--cedar-focus-ring-width) solid var(--cedar-status-success-text);
   outline-offset: -2px;
   background: var(--cedar-status-success-surface) !important;
 }
@@ -64,7 +64,7 @@ body.explorer-dragging.explorer-can-drop * {
   cursor: grabbing !important;
 }
 .explorer-grid {
-  min-height: calc(10 * var(--cedar-space-6));
+  min-height: spacing.$resource-grid-min-height;
   @include spacing.apply(padding, resource-list-inset);
 }
 .explorer-grid table {
@@ -116,7 +116,7 @@ body.explorer-dragging.explorer-can-drop * {
 }
 .explorer-grid .row-actions button {
   @include spacing.apply(padding, compact);
-  min-height: var(--cedar-space-6);
+  min-height: spacing.$icon-button-small;
 }
 .cdk-drag-preview {
   pointer-events: none !important;
@@ -141,7 +141,7 @@ body.explorer-dragging.explorer-can-drop * {
   max-height: 36px;
 }
 .explorer-grid .explorer-schema td:nth-child(2) {
-  line-height: var(--cedar-font-size);
+  line-height: spacing.$card-meta-line-height;
   flex-shrink: 0;
 }
 .explorer-grid .explorer-heading {
@@ -162,7 +162,7 @@ body.explorer-dragging.explorer-can-drop * {
   display: block;
   min-width: 0;
   font-size: var(--cedar-font-size-small);
-  line-height: var(--cedar-font-size);
+  line-height: spacing.$card-meta-line-height;
   white-space: normal;
   color: var(--cedar-text-primary);
   overflow: hidden;
@@ -171,13 +171,7 @@ body.explorer-dragging.explorer-can-drop * {
 
 .explorer-grid .row-actions > a,
 .explorer-grid .row-actions > button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--cedar-space-6);
-  min-width: var(--cedar-space-6);
-  height: var(--cedar-space-6);
-  padding: 0;
+  @include patterns.icon-button;
 }
 .explorer-grid .explorer-schema .row-actions {
   top: calc(var(--cedar-space-1) + var(--cedar-space-1) / 2);
@@ -195,18 +189,11 @@ body.explorer-dragging.explorer-can-drop * {
   text-overflow: ellipsis;
 }
 .explorer-grid .explorer-item:has(.explorer-preview) .explorer-modified {
-  padding-right: var(--cedar-control-height-default);
+  @include spacing.apply(padding-right, control-reserve);
 }
 .explorer-grid .explorer-preview {
   position: absolute;
   right: var(--cedar-space-1);
   bottom: var(--cedar-space-1);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--cedar-space-6);
-  min-width: var(--cedar-space-6);
-  min-height: var(--cedar-space-6);
-  height: var(--cedar-space-6);
-  padding: 0;
+  @include patterns.icon-button;
 }

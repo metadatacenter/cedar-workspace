@@ -168,3 +168,101 @@ for (const width of [1440, 375]) {
     expect(placements["Manage groups"].size).toBe("18px");
   });
 }
+
+for (const failure of [403, 409, 412, 428, 503, "invalid", "no-revision"]) {
+  test(`group details ${failure} preserve edits and recover through reload`, async ({ page, api }) => {
+    let writes = 0;
+    await page.route("**/api/group/groups/team", async route => {
+      if (route.request().method() === "PUT") {
+        writes++;
+        if (typeof failure === "number") return route.fulfill({ status: failure, json: { errorMessage: "Group rejected" } });
+        return route.fulfill({ json: failure === "invalid" ? {} : { "@id": "team", "schema:name": "Edited" }, headers: failure === "invalid" ? { ETag: '"bad"' } : {} });
+      }
+      return route.fulfill({ json: { "@id": "team", "schema:name": "Research team" }, headers: { ETag: '"group"' } });
+    });
+    await page.goto("/groups");
+    const search = page.getByRole("combobox", { name: "Find a group", exact: true });
+    await search.fill("Research"); await search.press("Enter");
+    const name = page.getByLabel("Name", { exact: true });
+    await name.fill("Edited");
+    const save = page.getByRole("button", { name: "Save", exact: true });
+    await save.click();
+    await expect(page.getByRole("alert")).toBeVisible();
+    await expect(name).toHaveValue("Edited");
+    await expect(save).toBeDisabled();
+    expect(writes).toBe(1);
+    await page.getByRole("button", { name: "Reload group", exact: true }).click();
+    await expect(save).toBeEnabled();
+    await expect(name).toHaveValue(failure === "no-revision" ? "Research team" : "Edited");
+    await expect(page.getByRole("alert")).toHaveCount(0);
+  });
+}
+
+test("uncertain group creation requires directory recovery and preserves the entered name", async ({ page, api }) => {
+  let writes = 0;
+  await page.route("**/api/group/groups", async route => {
+    if (route.request().method() !== "POST") return route.fallback();
+    writes++;
+    return route.fulfill({ status: 503, json: { errorMessage: "Response unavailable" } });
+  });
+  await page.goto("/groups");
+  await page.getByRole("tab", { name: "Create group", exact: true }).click();
+  const name = page.getByLabel("Group name", { exact: true });
+  await name.fill("New team");
+  const create = page.getByRole("button", { name: "Create group", exact: true });
+  await create.click();
+  await expect(create).toBeDisabled();
+  await expect(name).toHaveValue("New team");
+  await page.getByRole("button", { name: "Reload groups", exact: true }).click();
+  await expect(create).toBeEnabled();
+  await expect(name).toHaveValue("New team");
+  expect(writes).toBe(1);
+});
+
+test("an externally deleted created group does not trap the Create tab", async ({ page, api }) => {
+  await page.goto("/groups");
+  const createTab = page.getByRole("tab", { name: "Create group", exact: true });
+  await createTab.click();
+  await page.getByLabel("Group name", { exact: true }).fill("Research team");
+  await page.getByRole("button", { name: "Create group", exact: true }).click();
+  await expect(page.getByLabel("Name", { exact: true })).toHaveValue("Research team");
+  await page.getByRole("tab", { name: "Manage groups", exact: true }).click();
+  const creation = api.requests.find(r => r.method === "POST" && r.path.endsWith("/groups"));
+  expect(creation).toBeTruthy();
+  await page.route("**/api/group/groups/*", route => route.request().method() === "GET" ? route.fulfill({ status: 404, json: { message: "Group deleted" } }) : route.fallback());
+  await createTab.click();
+  await expect(createTab).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("alert")).toContainText("Group deleted");
+  await expect(page.getByLabel("Group name", { exact: true })).toBeEnabled();
+  await page.getByLabel("Group name", { exact: true }).fill("Replacement group");
+  await expect(page.getByRole("button", { name: "Create group", exact: true })).toBeEnabled();
+});
+
+test("recovering a group conflict keeps the draft and refreshes the save revision", async ({ page, api }) => {
+  let conflict = false;
+  const revisions = [];
+  await page.route("**/api/group/groups/team", route => {
+    if (route.request().method() === "PUT") {
+      revisions.push(route.request().headers()["if-match"]);
+      if (!conflict) {
+        conflict = true;
+        return route.fulfill({ status: 412, json: { message: "Changed elsewhere" } });
+      }
+      return route.fulfill({ json: { "@id": "team", ...route.request().postDataJSON() }, headers: { ETag: '"saved"' } });
+    }
+    return route.fulfill({ json: { "@id": "team", "schema:name": conflict ? "Server name" : "Research team", "schema:description": conflict ? "Server description" : "Original" }, headers: { ETag: conflict ? '"fresh"' : '"old"' } });
+  });
+  await page.goto("/groups");
+  const search = page.getByRole("combobox", { name: "Find a group", exact: true });
+  await search.fill("Research"); await search.press("Enter");
+  const name = page.getByLabel("Name", { exact: true });
+  await name.fill("My unsaved name");
+  const save = page.getByRole("button", { name: "Save", exact: true });
+  await save.click(); await expect(save).toBeDisabled();
+  await page.getByRole("button", { name: "Reload group", exact: true }).click();
+  await expect(name).toHaveValue("My unsaved name");
+  await expect(page.getByLabel("Description", { exact: true })).toHaveValue("Server description");
+  await expect(save).toBeEnabled(); await save.click();
+  await expect(page.getByRole("status")).toContainText("saved");
+  expect(revisions).toEqual(['"old"', '"fresh"']);
+});

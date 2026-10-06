@@ -4,12 +4,28 @@ import { Backend, HttpError } from "./backend.service";
 import { FolderDeletionDialog, DeletionPlan } from "./folder-deletion-dialog";
 import { provideWorkspaceTranslations, translations } from "./i18n";
 
-const plan = {
+const counts = { folder: 0, template: 0, element: 0, field: 0, instance: 0 };
+const plan: DeletionPlan = {
   token: "a".repeat(64),
   allowed: true,
-  items: [],
-} as unknown as DeletionPlan;
-const counts = { folder: 0, template: 0, element: 0, field: 0, instance: 0 };
+  counts: { ...counts, folder: 1, instance: 4 },
+  items: Array.from({ length: 5 }, (_, i) => ({
+    id: i ? `instance-${i}` : "folder",
+    name: "Item",
+    type: i ? ("instance" as const) : ("folder" as const),
+    parentId: i ? "folder" : null,
+    depth: i ? 1 : 0,
+    deletable: true,
+    protectedFolder: false,
+    instancesInside: 0,
+    instancesOutside: 0,
+  })),
+  restrictedItems: 0,
+  protectedFolders: 0,
+  templatesWithInstances: 0,
+  templatesWithOutsideInstances: 0,
+  instancesOutside: 0,
+};
 function setup(language: "en" | "hu") {
   const request = vi.fn();
   TestBed.configureTestingModule({
@@ -102,7 +118,9 @@ it("closes a completed deletion without rendering a stopped outcome", async () =
   const close = vi.fn();
   host.dialog = { nativeElement: { close } } as unknown as typeof host.dialog;
   host.plan.set(plan);
-  request.mockResolvedValue({data: {status: "completed", deleted: counts, remaining: 0}});
+  request.mockResolvedValue({
+    data: { status: "completed", deleted: plan.counts, remaining: 0 },
+  });
   const saved = vi.fn(() => {
     expect(close).toHaveBeenCalledOnce();
     expect(host.outcome()).toBeNull();

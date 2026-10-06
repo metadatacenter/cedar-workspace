@@ -3,7 +3,7 @@ import { beforeEach, describe, it, expect, vi } from "vitest";
 import { Settings } from "./settings";
 import { Backend } from "./backend.service";
 import { CeeLoader } from "./cee-loader";
-import { dateFormat, dateFormats } from "./date-format";
+import { dateFormats } from "./date-format";
 import { formatDate } from "@angular/common";
 describe("Settings", () => {
   let host: Settings;
@@ -70,8 +70,8 @@ describe("Settings", () => {
   it("maps every stored format without month/minute or year-boundary errors", () => {
     const d = new Date(2027, 0, 2, 15, 4);
     expect(
-      Object.keys(dateFormats).map((f) =>
-        formatDate(d, dateFormat(f), "en-US"),
+      Object.values(dateFormats).map((format) =>
+        formatDate(d, format, "en-US"),
       ),
     ).toEqual([
       "01/02/2027",
@@ -84,6 +84,5 @@ describe("Settings", () => {
       "Jan 2, 2027",
       "Sat, 2 Jan 2027",
     ]);
-    expect(dateFormat("invalid")).toBe("MM/dd/yyyy");
   });
 });

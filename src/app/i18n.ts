@@ -88,6 +88,16 @@ export class I18n {
   }
 
   /**
+   * The text for `key` with a number in it, in the singular when the number is one. A message's
+   * singular is its key with `One` appended. Hungarian keeps a noun singular after any number, so
+   * its two texts read alike; English needs both. `params` defaults to `{ count }` and is passed
+   * whole when the message names its number otherwise.
+   */
+  counted(key: string, count: number, params: InterpolationParameters = { count }): string {
+    return this.t(count === 1 ? key + "One" : key, params);
+  }
+
+  /**
    * The text for `key` when a language defines it, and `fallback` otherwise.
    * Values received from the server, such as a role or a status, use this so
    * that one Workspace does not know yet is still shown rather than a raw key.

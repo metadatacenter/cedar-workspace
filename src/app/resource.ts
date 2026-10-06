@@ -1,3 +1,4 @@
+import { resourceSelector, resourcePathId } from "./resource-address";
 import { applyListingFilters } from "./listing-filters";
 import type { I18n } from "./i18n";
 export type ResourceType =
@@ -43,7 +44,39 @@ export interface Resource {
 export interface Listing {
   resources: Resource[];
   totalCount: number;
-  pathInfo?: Resource[];
+  pathInfo?: Resource[] | null;
+}
+
+/** Reject incomplete or ambiguous listing replies before they become selectable rows. */
+export function validListing(value: unknown): value is Listing {
+  if (!value || typeof value !== "object") return false;
+  const listing = value as Listing;
+  if (
+    !Array.isArray(listing.resources) ||
+    !Number.isSafeInteger(listing.totalCount) ||
+    listing.totalCount < listing.resources.length
+  )
+    return false;
+  const ids = new Set<string>();
+  for (const item of listing.resources) {
+    if (
+      !item ||
+      typeof item["@id"] !== "string" ||
+      !item["@id"].trim() ||
+      !Object.hasOwn(collections, item.resourceType) ||
+      ids.has(item["@id"])
+    )
+      return false;
+    ids.add(item["@id"]);
+  }
+  return (
+    listing.pathInfo == null ||
+    (Array.isArray(listing.pathInfo) &&
+      listing.pathInfo.every(
+        (item) =>
+          item && typeof item["@id"] === "string" && !!item["@id"].trim(),
+      ))
+  );
 }
 export interface Config {
   resourceRestAPI: string;
@@ -66,9 +99,16 @@ export const collections: Record<ResourceType, string> = {
 // the translated word instead.
 export const title = (r: Resource, untitled = "Untitled") =>
   r["schema:name"] || r.name || untitled;
-// OpenView serves a resource made open and anything inside an open folder, so
-// either one offers the link.
-export const inOpenView = (r: Resource) => !!r.isOpen || !!r.isOpenImplicitly;
+// Templates, elements and fields have versions; instances and folders do not.
+export const versioned = (r: Resource) =>
+  r.resourceType === "template" || r.resourceType === "element" || r.resourceType === "field";
+// OpenView serves a resource made open and anything inside an open folder. Its path,
+// once read, settles the folders; until then the listing's flag stands in.
+export const inOpenView = (r: Resource) => !!r.isOpen || openThroughAFolder(r);
+// Whether a link to OpenView is offered: the deployment runs OpenView and serves the
+// resource there. The row, the menu and the Info panel all ask this one question.
+export const offeredInOpenView = (r: Resource) =>
+  window.makeOpenEnabled !== false && inOpenView(r);
 // The open folders above a resource, outermost first, once its path is known. It
 // stays in OpenView, whatever its own flag says, until each of them is made not open.
 export const openFoldersAbove = (r: Resource): Resource[] | undefined =>
@@ -129,7 +169,7 @@ export function listingPath(
   } else
     path =
       "/folders/" +
-      encodeURIComponent(params.get("folderId") || home) +
+      encodeURIComponent(resourcePathId(params.get("folderId") || home)) +
       "/contents";
   return path + "?" + query;
 }
@@ -141,7 +181,7 @@ export function resourceLink(
   populate = false,
 ): string {
   if (r.resourceType === "folder")
-    return "/dashboard?folderId=" + encodeURIComponent(r["@id"]);
+    return "/dashboard?folderId=" + encodeURIComponent(resourceSelector(r["@id"]));
   const instance = r.resourceType === "instance" || populate;
   const kind = instance
     ? "instances"
@@ -155,6 +195,6 @@ export function resourceLink(
     instance ? config.workspaceFrontend : config.templateDesignerFrontend
   ).replace(/\/$/, "");
   const query = new URLSearchParams({ returnTo });
-  if (populate) query.set("folderId", folder);
-  return `${base}/${kind}/${populate ? "create" : "edit"}/${encodeURIComponent(r["@id"])}?${query}`;
+  if (populate) query.set("folderId", resourceSelector(folder));
+  return `${base}/${kind}/${populate ? "create" : "edit"}/${encodeURIComponent(resourcePathId(r["@id"]))}?${query}`;
 }

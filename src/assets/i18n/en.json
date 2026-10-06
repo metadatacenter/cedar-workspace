@@ -30,6 +30,7 @@
     "LatestVersion": "Latest version",
     "AllVersions": "All versions",
     "IdCopied": "ID copied.",
+    "LinkCopied": "Link copied.",
     "Unknown": "unknown"
   },
   "ResourceTypes": {
@@ -72,15 +73,21 @@
     "About": "About"
   },
   "Errors": {
+    "InvalidResourceReport": "The server returned incomplete or mismatched resource details. Please retry.",
+    "InvalidListing": "The server returned an incomplete resource list. Please retry.",
     "ConfigurationUnavailable": "Unable to load workspace configuration.",
     "SignInFailed": "Sign-in failed. Please reload.",
     "SessionExpired": "Your session expired. Please sign in again.",
     "UntrustedDestination": "Untrusted API destination.",
-    "ItemDeleted": "This item was deleted. Your edits have been kept. Return to Workspace to choose another item.",
-    "ItemChanged": "This item changed since you opened it. Your edits have been kept. Cancel and reopen to review the latest version.",
+    "ItemDeleted": "This item no longer exists.",
+    "ItemChanged": "This item changed since it was read. Refresh, then try again.",
     "RequestFailed": "Request failed ({{status}}).",
     "EditorUnavailable": "Unable to load the metadata editor. Please reload.",
-    "StartupFailed": "Unable to start CEDAR Workspace."
+    "StartupFailed": "Unable to start CEDAR Workspace.",
+    "Unreachable": "The server could not be reached. Check your connection and try again.",
+    "UnreadableResponse": "The server sent an answer CEDAR cannot read. Please retry.",
+    "ChangedEditsKept": "This item changed since you opened it. Your edits have been kept. Cancel and reopen to review the latest version.",
+    "DeletedEditsKept": "This item was deleted. Your edits have been kept."
   },
   "Confirmation": {
     "Title": "Are you sure?"
@@ -96,11 +103,11 @@
   },
   "FriendlyDate": {
     "JustNow": "Just now",
-    "MinuteAgo": "{{count}} minute ago",
+    "MinutesAgoOne": "{{count}} minute ago",
     "MinutesAgo": "{{count}} minutes ago",
-    "HourAgo": "{{count}} hour ago",
+    "HoursAgoOne": "{{count}} hour ago",
     "HoursAgo": "{{count}} hours ago",
-    "DayAgo": "{{count}} day ago",
+    "DaysAgoOne": "{{count}} day ago",
     "DaysAgo": "{{count}} days ago"
   },
   "Filters": {
@@ -194,9 +201,12 @@
     "CopyIdentifierFor": "Copy identifier for {{name}}",
     "CopyInstanceIdentifier": "Copy instance identifier",
     "InstanceCount": "{{shown}} of {{total}} accessible instances.",
+    "InstanceCountOne": "{{shown}} of {{total}} accessible instance.",
     "NoInstances": "No instances",
     "NoAccessibleInstances": "No accessible instances",
     "CopyIdentifier": "Copy identifier",
+    "OpenView": "OpenView",
+    "CopyOpenViewLink": "Copy OpenView link",
     "Status": "Status",
     "Unversioned": "Unversioned",
     "SelectItem": "Select an item to see its details",
@@ -234,6 +244,9 @@
     "OpenInOpenView": "Open in OpenView"
   },
   "ResourceDialog": {
+    "InspectOutcome": "This operation may already have completed. Close this dialog and refresh Workspace to check the result before trying again.",
+    "RecoverRevision": "Reload the current revision before saving again. Your edits will be kept.",
+    "RecoveryDenied": "The current resource permissions do not allow this operation.",
     "Headings": {
       "NewFolder": "New folder",
       "Rename": "Rename",
@@ -328,7 +341,8 @@
       "Set": "Set {{name}} to {{role}}",
       "Remove": "Remove access for {{name}}",
       "Transfer": "Transfer ownership to {{name}}"
-    }
+    },
+    "InvalidResponse": "The server returned incomplete or ambiguous permissions. Reload permissions before making changes."
   },
   "Groups": {
     "Title": "Groups",
@@ -370,7 +384,9 @@
     "Created": "Group created.",
     "DetailsSaved": "Group details saved.",
     "Deleted": "Group deleted.",
-    "MembersSaved": "Group members saved."
+    "MembersSaved": "Group members saved.",
+    "InvalidResponse": "The server returned incomplete or ambiguous group data. Reload before making changes.",
+    "ReloadDirectory": "Reload groups"
   },
   "Logout": {
     "Title": "Logout",
@@ -389,21 +405,30 @@
     "ReadOnlyAccess": "You have read-only access to this metadata.",
     "ErrorsRegion": "Metadata errors",
     "ErrorsOne": "{{count}} error — review before saving",
-    "ErrorsMany": "{{count}} errors — review before saving",
+    "Errors": "{{count}} errors — review before saving",
     "WarningsRegion": "Metadata warnings",
     "WarningsOne": "{{count}} warning — metadata can still be saved",
-    "WarningsMany": "{{count}} warnings — metadata can still be saved",
+    "Warnings": "{{count}} warnings — metadata can still be saved",
     "ProblemRequired": "A required value is missing.",
     "ProblemMinItems": "Has {{count}} of a minimum {{min}}.",
     "DiscardChanges": "Discard unsaved metadata changes?",
     "SavedWithChanges": "Saved. You have further unsaved changes.",
     "ConfigurationUnavailable": "Unable to load metadata editor configuration.",
     "NoTemplate": "Metadata does not identify its template.",
+    "UnreadableTemplate": "CEDAR cannot read this template, so metadata cannot be entered for it.",
+    "UnreadableInstance": "CEDAR cannot read this metadata or its template, so it cannot be shown.",
     "NoRevision": "No concurrency validator was returned. Reload before saving. Your edits have been kept.",
     "Label": "Metadata",
     "RequiredMissing": "{{count}} required fields are missing.",
+    "RequiredMissingOne": "{{count}} required field is missing.",
     "ReviewInvalid": "Review invalid metadata before saving.",
-    "DefaultName": "{{template}} metadata"
+    "DefaultName": "{{template}} metadata",
+    "LoadFailed": "Unable to load",
+    "ReloadRequired": "Reload required",
+    "Reload": "Reload metadata",
+    "SaveUnconfirmed": "The server accepted the save but returned an incomplete confirmation. Check the saved artifact in Workspace before saving again.",
+    "ItemDeleted": "This item was deleted. Your edits have been kept. Return to Workspace to choose another item.",
+    "ItemChanged": "This item changed since you opened it. Your edits have been kept. Cancel and reopen to review the latest version."
   },
   "Account": {
     "Profile": {
@@ -448,7 +473,9 @@
         "Create": "Create a template",
         "Update": "Update a template (use the ETag returned by GET)",
         "Instances": "Get metadata based on a template"
-      }
+      },
+      "InvalidResponse": "The server did not return a valid API-key state. Reload your profile before making another change.",
+      "Reload": "Reload profile"
     },
     "Settings": {
       "Title": "Settings",
@@ -495,7 +522,6 @@
     "Selected": "{{count}} selected",
     "Clear": "Clear selection",
     "Cut": "Cut",
-    "Paste": "Paste {{count}} items",
     "View": "Result view",
     "List": "List view",
     "Grid": "Grid view",
@@ -512,7 +538,9 @@
     "Counts": "Inventory by resource type",
     "Permissions": "Items without delete permission: {{count}}.",
     "Protected": "{{count}} home or system folders cannot be deleted.",
+    "ProtectedOne": "{{count}} home or system folder cannot be deleted.",
     "Outside": "Templates with outside instances: {{templates}} ({{instances}} instances). These templates cannot be deleted.",
+    "OutsideOne": "Templates with outside instances: {{templates}} ({{instances}} instance). These templates cannot be deleted.",
     "Inside": "All instances of these templates are inside this folder and will be deleted first.",
     "Inventory": "View complete inventory",
     "Type": "Type",
@@ -522,6 +550,7 @@
     "NoPermission": "No delete permission",
     "ProtectedItem": "Protected folder",
     "ExternalCount": "{{count}} outside instances",
+    "ExternalCountOne": "{{count}} outside instance",
     "Eligible": "Eligible",
     "Refresh": "Refresh inventory",
     "Delete": "Delete folder and contents",
@@ -560,6 +589,7 @@
     "Folders": "Each folder is checked separately. A template with instances outside its folder blocks deletion, even when those instances are in another selected folder.",
     "Inside": "Instances within each folder will be deleted before the templates they use.",
     "References": "Templates with instances outside their deletion folder, or individually selected templates with instances: {{templates}} ({{instances}} instances). Delete those instances first, then review a new inventory.",
+    "ReferencesOne": "Templates with instances outside their deletion folder, or individually selected templates with instances: {{templates}} ({{instances}} instance). Delete that instance first, then review a new inventory.",
     "DeleteContents": "Delete selected items and contents",
     "Delete": "Delete selected items",
     "InventoryUnavailable": "The complete selection could not be checked. Nothing can be deleted until all inventories, permissions and revisions are available. Close and review your selection, or refresh the inventory.",
@@ -568,6 +598,7 @@
     "SimpleConfirm": "Do you want to delete these {{count}} items?",
     "CheckingItems": "Checking delete permissions…",
     "ItemReferences": "Selected templates still have {{instances}} instances. Delete those instances first.",
+    "ItemReferencesOne": "Selected templates still have {{instances}} instance. Delete that instance first.",
     "Retry": "Check again",
     "DropToConfirm": "Drop to confirm deletion"
   }

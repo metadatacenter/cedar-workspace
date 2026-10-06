@@ -39,7 +39,7 @@ describe("Authorized backend", () => {
     fetcher.mockResolvedValue(new Response("", { status: 412 }));
     await expect(
       api.request("/folders/id", "PUT", {}, '"stale"'),
-    ).rejects.toThrow("Your edits have been kept");
+    ).rejects.toThrow("This item changed since it was read");
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
   it("distinguishes deletion conflicts from concurrent updates", async () => {
@@ -51,7 +51,7 @@ describe("Authorized backend", () => {
     );
     await expect(
       api.request("/template-instances/id", "PUT", {}, '"loaded"'),
-    ).rejects.toThrow("This item was deleted. Your edits have been kept.");
+    ).rejects.toThrow("This item no longer exists.");
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
   it("refreshes once on 401 and keeps the conditional request", async () => {
@@ -91,4 +91,31 @@ describe("Authorized backend", () => {
     fetcher.mockResolvedValue(new Response(null, { status: 204 }));
     expect((await api.request("/folders/id", "DELETE")).data).toBeUndefined();
   });
+  for (const envelope of ["objects", "direct"])
+    it(`preserves ${envelope} server validation findings`, async () => {
+      const validationReport = {
+        errors: [{ message: "Invalid IRI", location: "/Child/2/Link/@id" }],
+        warnings: [],
+      };
+      fetcher.mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            errorKey: "invalidData",
+            message: "Validation failed",
+            ...(envelope === "objects"
+              ? { objects: { validationReport } }
+              : { validationReport }),
+          }),
+          { status: 400 },
+        ),
+      );
+      await expect(
+        api.request("/template-instances/id", "PUT", {}, '"one"'),
+      ).rejects.toMatchObject({
+        status: 400,
+        code: "invalidData",
+        validationReport,
+      });
+      expect(fetcher).toHaveBeenCalledTimes(1);
+    });
 });

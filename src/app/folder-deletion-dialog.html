@@ -27,8 +27,7 @@
   <section class="deletion-body dialog-stack">
     @if(simpleConfirmation) {
     <p id="simple-deletion-message">
-      {{ (simpleCount === 1 ? 'SelectionDeletion.SimpleConfirmOne' :
-      'SelectionDeletion.SimpleConfirm') | translate: {count: simpleCount} }}
+      {{ i18n.counted('SelectionDeletion.SimpleConfirm', simpleCount) }}
     </p>
     } @else if(bulk) {
     <ul
@@ -119,15 +118,15 @@
     </p>
     } @if(inventory.protectedFolders) {
     <p class="alert" role="alert">
-      {{ 'FolderDeletion.Protected' | translate: {count:
-      inventory.protectedFolders} }}
+      {{ i18n.counted('FolderDeletion.Protected', inventory.protectedFolders) }}
     </p>
     } @if(inventory.templatesWithOutsideInstances) {
     <p class="alert" role="alert">
-      {{ (simpleConfirmation ? 'SelectionDeletion.ItemReferences' : bulk ?
-      'SelectionDeletion.References' : 'FolderDeletion.Outside') | translate:
-      {templates: inventory.templatesWithOutsideInstances, instances:
-      inventory.instancesOutside} }}
+      {{ i18n.counted(simpleConfirmation ? 'SelectionDeletion.ItemReferences' :
+      bulk ? 'SelectionDeletion.References' : 'FolderDeletion.Outside',
+      inventory.instancesOutside, {templates:
+      inventory.templatesWithOutsideInstances, instances:
+      inventory.instancesOutside}) }}
     </p>
     } @if(!simpleConfirmation) {
     <details>

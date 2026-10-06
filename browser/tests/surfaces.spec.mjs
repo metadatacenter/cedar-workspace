@@ -110,6 +110,18 @@ for (const route of ["groups", "profile", "settings", "privacy"])
     await expect(page.getByRole("heading", { name: route[0].toUpperCase() + route.slice(1), exact: true })).toBeVisible();
     await expect(page.getByText("Loading…", { exact: true })).toHaveCount(0);
   };
+// A successful sign-out leaves the page, so the sign-out fails and the page shows its error.
+scenarios["logout-page"] = async (page) => {
+  await page.route("**/scripts/handlers/KeycloakUserHandler.js", (route) =>
+    route.fulfill({
+      contentType: "text/javascript",
+      body: "KeycloakUserHandler.prototype.doLogout = () => Promise.reject(new Error('Sign-out unavailable'));",
+    }),
+  );
+  await page.goto("/logout");
+  await expect(page.getByRole("heading", { name: "Logout", exact: true })).toBeVisible();
+  await expect(page.getByRole("alert")).toHaveText("Sign-out unavailable");
+};
 for (const [key, label] of Object.entries({
   rename: "Rename",
   copy: "Copy",
@@ -160,11 +172,183 @@ scenarios['recursive-delete-owner'] = page => openFolderDeletion(page, deletionO
 for (const kind of ['confirmation', 'permissions', 'references']) {
   scenarios['recursive-delete-' + kind] = async page => {
     const plan = structuredClone(deletionPlan);
-    if (kind === 'permissions') { plan.allowed = false; plan.restrictedItems = 1; }
-    if (kind === 'references') { plan.allowed = false; plan.templatesWithOutsideInstances = 1; plan.instancesOutside = 3; }
+    if (kind === 'permissions') { plan.allowed = false; plan.restrictedItems = 1; plan.items[4].deletable = false; }
+    if (kind === 'references') { plan.allowed = false; plan.templatesWithOutsideInstances = 1; plan.instancesOutside = 3; plan.items[2].instancesOutside = 3; }
     await openFolderDeletion(page, plan);
   };
 }
+// Pages, panels and tabs, each shown with content rather than empty.
+async function selectFirst(page) {
+  await page.locator("tbody tr").first().press("Enter");
+  await expect(page.locator("#workspace-information h1")).toBeVisible();
+}
+const version = (id, number, extra = {}) => ({...resource, "@id": id, "pav:version": number, "bibo:status": "bibo:published", ...extra});
+Object.assign(scenarios, {
+  "grid-page": async (page) => {
+    await page.goto("/dashboard");
+    await expect(page.getByRole("button", { name: "Grid view", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator(".table-scroll")).toHaveAttribute("aria-busy", "false");
+    await expect(page.locator(".explorer-item")).toHaveCount(1);
+  },
+  "information-panel": async (page) => {
+    await dashboard(page);
+    await selectFirst(page);
+  },
+  "info-tab": async (page) => {
+    await page.route("**/templates/template/report", (route) => route.fulfill({json: {
+      ...resource,
+      pathInfo: [{ "@id": "home", "schema:name": "Home" }, resource],
+      everybodyPermission: "read",
+      derivedFrom: {...resource, "@id": "source", "schema:name": "Source template"},
+      numberOfInstances: 1,
+    }}));
+    await page.route("**/search?is_based_on=*", (route) => route.fulfill({json: {
+      resources: [{...resource, "@id": "instance-id", resourceType: "instance"}], totalCount: 1,
+    }}));
+    await dashboard(page);
+    await selectFirst(page);
+    const info = page.locator("#workspace-information");
+    await expect(info.getByText("Derived from", { exact: true })).toBeVisible();
+    await expect(info.locator(".instance-list")).toBeVisible();
+  },
+  "version-tab": async (page) => {
+    await page.route("**/templates/template/report", (route) => route.fulfill({json: {
+      ...version("template", "2.0.0"),
+      versions: [
+        version("latest", "4.0.0", { "bibo:status": "bibo:draft" }),
+        version("next", "3.0.0", { "schema:name": "Study metadata, third edition" }),
+        version("template", "2.0.0"),
+        version("older", "1.0.0"),
+      ],
+    }}));
+    await dashboard(page);
+    await selectFirst(page);
+    const info = page.locator("#workspace-information");
+    await info.getByRole("tab", { name: "Version", exact: true }).click();
+    await expect(info.locator(".latest-version, .next-version, .previous-versions")).toHaveCount(3);
+  },
+  // An item held over a folder it can move into.
+  "drag-preview": async (page) => {
+    const folder = {...resource, "@id": "destination", resourceType: "folder", "schema:name": "Archive",
+      currentUserPermissions: { capabilities: ["readResource", "moveIntoFolder"] }};
+    const item = {...resource, "@id": "a", resourceType: "instance", "schema:name": "Sample a"};
+    await page.route("**/api/resource/**", (route) => {
+      const path = new URL(route.request().url()).pathname;
+      if (path.endsWith("/contents"))
+        return route.fulfill({json: { resources: [folder, item], totalCount: 2, pathInfo: [] }});
+      const found = [item, folder].find((r) => path.includes("/" + r["@id"] + "/") || path.endsWith("/" + r["@id"]));
+      if (!found) return route.fallback();
+      return route.fulfill({ json: found, headers: { ETag: `"${found["@id"]}"` } });
+    });
+    await page.goto("/dashboard");
+    await expect(page.locator(".table-scroll")).toHaveAttribute("aria-busy", "false");
+    const source = page.locator('[data-resource-id="a"]');
+    await expect(source).not.toHaveClass(/cdk-drag-disabled/);
+    const from = await source.boundingBox();
+    const to = await page.locator('[data-resource-id="destination"]').boundingBox();
+    await page.mouse.move(from.x + 20, from.y + from.height - 10);
+    await page.mouse.down();
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 12 });
+    await expect(page.locator("cedar-drag-preview .destination.ready")).toBeVisible();
+  },
+  "error-alert": async (page) => {
+    await page.route("**/api/resource/folders/home/contents?*", (route) =>
+      route.fulfill({ status: 503, json: { message: "The workspace is temporarily unavailable." } }));
+    await page.goto("/dashboard");
+    await expect(page.locator('div.alert[role="alert"]')).toContainText("temporarily unavailable");
+  },
+  "folder-picker": async (page) => {
+    const folder = (id, name, allowed = true) => ({
+      "@id": id, resourceType: "folder", "schema:name": name, "pav:lastUpdatedOn": "2026-01-02T12:00:00Z",
+      currentUserPermissions: { capabilities: allowed ? ["copyIntoFolder", "moveIntoFolder"] : [] },
+    });
+    const home = folder("home", "My workspace");
+    const children = [folder("archive", "Archive"), folder("restricted", "Read only", false)];
+    await page.route("**/folders/**", (route) => {
+      const url = new URL(route.request().url());
+      if (!url.searchParams.has("resource_types") && url.pathname.endsWith("/contents")) return route.fallback();
+      const id = decodeURIComponent(url.pathname.split("/folders/")[1].split("/")[0]);
+      if (url.pathname.endsWith("/contents"))
+        return route.fulfill({json: {
+          resources: id === "home" ? children : [], totalCount: id === "home" ? children.length : 0, pathInfo: [home],
+        }});
+      return route.fulfill({ json: [home, ...children].find((f) => f["@id"] === id) ?? home });
+    });
+    await dashboard(page);
+    await page.getByRole("button", { name: "Actions for Study metadata" }).click();
+    await page.locator(".resource-menu").getByRole("button", { name: "Move", exact: true }).click();
+    await expect(page.locator("dialog .folder-scroll")).toHaveAttribute("aria-busy", "false");
+    await expect(page.locator("dialog .folder-scroll tbody tr")).toHaveCount(2);
+  },
+  "metadata-quality": async (page) => {
+    await scenarios["metadata-errors"](page);
+    await expect(page.locator(".metadata-quality")).toHaveCount(2);
+  },
+  "manage-groups": async (page) => {
+    await scenarios["groups-page"](page);
+    const search = page.getByRole("combobox", { name: "Find a group", exact: true });
+    await search.fill("Research");
+    await search.press("Enter");
+    await expect(page.getByLabel("Name", { exact: true })).toHaveValue("Research team");
+    await expect(page.locator(".groups-member-row")).toHaveCount(2);
+  },
+  "create-group": async (page) => {
+    await scenarios["groups-page"](page);
+    await page.getByRole("tab", { name: "Create group", exact: true }).click();
+    await expect(page.getByLabel("Group name", { exact: true })).toBeVisible();
+  },
+  "delete-group-tab": async (page) => {
+    await scenarios["groups-page"](page);
+    await page.getByRole("tab", { name: "Delete group", exact: true }).click();
+    const panel = page.getByRole("tabpanel", { name: "Delete group", exact: true });
+    const search = panel.getByRole("combobox", { name: "Group name", exact: true });
+    await search.fill("Research");
+    await search.press("Enter");
+    await expect(panel.getByLabel("Name", { exact: true })).toHaveValue("Research team");
+  },
+});
+// Each confirmation opens the shared dialog from the control that asks for it.
+const confirmationDialog = (page) => expect(page.locator("dialog.confirmation-dialog")).toBeVisible();
+Object.assign(scenarios, {
+  "delete-group": async (page) => {
+    await scenarios["delete-group-tab"](page);
+    await page.getByRole("tabpanel", { name: "Delete group", exact: true })
+      .getByRole("button", { name: "Delete group", exact: true }).click();
+    await confirmationDialog(page);
+  },
+  "group-administrator": async (page) => {
+    await scenarios["manage-groups"](page);
+    await page.getByRole("checkbox", { name: "Sam Curator is a Group Administrator", exact: true }).click();
+    await confirmationDialog(page);
+  },
+  "transfer-ownership": async (page) => {
+    await scenarios.permissions(page);
+    await page.getByRole("checkbox", { name: "Make Sam Curator the owner", exact: true }).click();
+    await confirmationDialog(page);
+  },
+  "delete-api-key": async (page) => {
+    const key = (id, description) => ({
+      id, key: `${id}-0123456789abcdef`, enabled: true, description, serviceName: "CEDAR", creationDate: "2026-01-01T12:00:00Z",
+    });
+    await page.route("**/api/user/users/owner", (route) => route.fulfill({json: {
+      "@id": "owner", firstName: "Alex", lastName: "Researcher", email: "alex@example.org", homeFolderId: "home",
+      permissions: [], uiPreferences: { preferredDateFormat: "yyyy-MM-dd" },
+      apiKeys: [key("analysis", "Analysis scripts"), key("notebook", "Notebook")],
+    }}));
+    await scenarios["profile-page"](page);
+    await page.getByRole("article", { name: "Analysis scripts", exact: true })
+      .getByRole("button", { name: "Delete", exact: true }).click();
+    await confirmationDialog(page);
+  },
+  "discard-metadata": async (page) => {
+    await page.goto("/instances/edit/instance");
+    const name = page.getByLabel("Instance name", { exact: true });
+    await expect(name).toHaveValue("Study record");
+    await name.fill("Changed record");
+    await page.getByRole("button", { name: "Back to Workspace", exact: true }).click();
+    await confirmationDialog(page);
+  },
+});
 // Token adoption alone cannot catch two valid margins accumulating into an
 // oversized gap. Check the rendered rhythm, including nested form/body stacks.
 async function checkDialogSpacing(dialog) {
@@ -204,6 +388,7 @@ const stackedDialogs = new Set([
   'new-folder', 'rename', 'copy', 'move', 'publish', 'draft', 'delete', 'make-open',
   'selection-delete-simple', 'selection-delete', 'confirmation', 'recursive-delete-owner', 'recursive-delete-confirmation',
   'recursive-delete-permissions', 'recursive-delete-references',
+  'delete-group', 'group-administrator', 'transfer-ownership', 'delete-api-key', 'discard-metadata',
 ]);
 
 async function checkOverlaySpacing(page, surface) {
@@ -314,12 +499,20 @@ test("surface contracts detect computed-style drift and honor host tokens", asyn
   const surface = registry.surfaces.find((s) => s.scenario === "artifact-menu");
   await scenarios["artifact-menu"](page);
   const menu = page.locator(surface.selector);
+  // A host themes the surface from an ancestor; the vocabulary resolves in that context.
   await menu.evaluate((element) =>
-    element.style.setProperty("--cedar-surface-raised", "rgb(210, 220, 230)"),
+    element.parentElement.style.setProperty("--cedar-surface-raised", "rgb(210, 220, 230)"),
   );
   await checkSurface(page, surface, "open", expect, testInfo);
   await menu.evaluate(
     (element) => (element.style.backgroundColor = "rgb(255, 0, 255)"),
+  );
+  await expect(
+    checkSurface(page, surface, "open", expect, testInfo),
+  ).rejects.toThrow("values outside the shared vocabulary");
+  // A vocabulary colour in the wrong role still breaks the surface's contract.
+  await menu.evaluate(
+    (element) => (element.style.backgroundColor = "var(--cedar-surface-subtle)"),
   );
   await expect(
     checkSurface(page, surface, "open", expect, testInfo),

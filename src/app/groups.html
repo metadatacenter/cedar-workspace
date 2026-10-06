@@ -1,4 +1,4 @@
-<header class="topbar groups-topbar">
+<header class="topbar">
   <a
     href="/dashboard"
     class="brand"
@@ -12,6 +12,7 @@
   <form class="search" action="/dashboard">
     <input
       spellcheck="false"
+      autocomplete="off"
       [attr.aria-label]="'Header.SearchWorkspace' | translate"
       name="search"
       [placeholder]="'Header.SearchPlaceholder' | translate"
@@ -88,6 +89,8 @@
       <button (click)="select(group)" [disabled]="busy() || selecting()">
         {{'Groups.Reload' | translate}}
       </button>
+      } @else if(!ready() || uncertainCreation()) {
+      <button (click)="ngOnInit()" [disabled]="busy() || selecting() || loading()">{{'Groups.ReloadDirectory' | translate}}</button>
       }
     </div>
     } @if(notice()) {
@@ -153,6 +156,7 @@
           <div class="groups-inline-controls">
             <input
               spellcheck="false"
+              autocomplete="off"
               id="new-group-name"
               class="form-control"
               name="newName"
@@ -163,7 +167,7 @@
             />
             <button
               class="btn btn-primary groups-primary-action"
-              [disabled]="busy() || selecting() || !newName.trim()"
+              [disabled]="busy() || selecting() || uncertainCreation() || !newName.trim()"
             >
               {{'Groups.Create' | translate}}
             </button>
@@ -209,7 +213,7 @@
     } @else {
     <section
       id="manage-groups-panel"
-      class="groups-card groups-manage-card"
+      class="groups-card"
       role="tabpanel"
       aria-labelledby="manage-groups-tab"
     >
@@ -246,10 +250,11 @@
     </div>
     }
     <form class="groups-details-form" (ngSubmit)="!deleting && save()">
-      <div class="groups-field">
+      <div>
         <label for="group-name">{{'Common.Name' | translate}}</label>
         <input
           spellcheck="false"
+          autocomplete="off"
           id="group-name"
           class="form-control"
           name="editName"
@@ -260,12 +265,13 @@
           required
         />
       </div>
-      <div class="groups-field">
+      <div>
         <label for="group-description"
           >{{'Common.Description' | translate}}</label
         >
         <textarea
           spellcheck="false"
+          autocomplete="off"
           id="group-description"
           class="form-control"
           rows="1"
@@ -283,7 +289,7 @@
         <button
           type="button"
           class="btn groups-delete-button"
-          [disabled]="busy()"
+          [disabled]="busy() || stale()"
           (click)="remove()"
           [attr.aria-label]="'Groups.Delete' | translate"
           [cedarTooltip]="'Groups.Delete' | translate"
@@ -293,7 +299,7 @@
         } @else {
         <button
           class="btn btn-primary groups-primary-action"
-          [disabled]="busy() || !editName.trim()"
+          [disabled]="busy() || stale() || !editName.trim()"
         >
           {{'Common.Save' | translate}}
         </button>
@@ -320,12 +326,12 @@
             [placeholder]="'Groups.SearchUsers' | translate"
             [options]="memberOptions"
             [(value)]="newMember"
-            [disabled]="busy()"
+            [disabled]="busy() || stale()"
           />
         </div>
         <button
           class="btn btn-primary groups-primary-action"
-          [disabled]="busy() || !newMember"
+          [disabled]="busy() || stale() || !newMember"
         >
           {{'Groups.AddMember' | translate}}
         </button>
@@ -361,7 +367,7 @@
               type="checkbox"
               [checked]="m.administrator"
               (click)="$event.preventDefault(); toggleAdmin(m)"
-              [disabled]="!canAdmin || busy() || onlyAdmin(m)"
+              [disabled]="!canAdmin || busy() || stale() || onlyAdmin(m)"
               [attr.aria-label]="'Groups.IsAdministrator' | translate: {name: userName(m.user)}"
             />
           </label>
@@ -373,7 +379,7 @@
             <button
               type="button"
               class="btn groups-remove-member"
-              [disabled]="busy() || onlyAdmin(m)"
+              [disabled]="busy() || stale() || onlyAdmin(m)"
               (click)="removeMember(m)"
               [attr.aria-label]="'Groups.RemoveMember' | translate: {name: userName(m.user)}"
             >

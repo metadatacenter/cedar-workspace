@@ -1,5 +1,10 @@
+import { resourceSelector, resourcePathId } from "./resource-address";
+import { OperationCoordinator } from "./operation-coordinator";
+import { writeRequiresRecovery } from "./write-failure";
+import { validAccessReport } from "./access-validation";
+import { validListing } from "./resource";
 import { Tooltip } from "./tooltip";
-import { ResourceMoves, validMoveTarget } from "./resource-moves";
+import { validMoveTarget } from "./resource-moves";
 import { Confirmation } from "./confirmation";
 import { DialogKeyboard } from "./dialog-keyboard";
 import { Icon } from "./icon";
@@ -30,7 +35,7 @@ import {
 } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { TranslatePipe } from "@ngx-translate/core";
-import { Backend } from "./backend.service";
+import { Backend, failureText } from "./backend.service";
 import {
   Resource,
   Listing,
@@ -58,9 +63,6 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   private readonly i18n = inject(I18n);
   @Input({ required: true }) action = "";
   @Input() resource?: Resource;
-  @Input() resources: Resource[] = [];
-  @Output() changed = new EventEmitter<void>();
-  private moves = inject(ResourceMoves);
   @Input({ required: true }) folder = "";
   @Output() closed = new EventEmitter<void>();
   @Output() saved = new EventEmitter<void>();
@@ -92,6 +94,11 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   readonly can = can;
   readonly busy = signal(true);
   readonly preparing = signal(true);
+  readonly reloadRequired = signal(false);
+  readonly inspectionRequired = signal(false);
+  private get conditional() {
+    return ["rename", "move", "delete", "make-open", "make-not-open"].includes(this.action);
+  }
   private readonly injector = inject(Injector);
   readonly error = signal("");
   readonly folders = signal<Resource[]>([]);
@@ -108,13 +115,24 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   private initialValues: string | null = null;
   private etag: string | null = null;
   private alive = true;
+  readonly state = new OperationCoordinator<"load" | "browse" | "write">();
   private originalFocus = document.activeElement as HTMLElement | null;
   get headingIcon() {
-    return ({
-      "new-folder": "folder", rename: "edit", copy: "copy", move: "move",
-      delete: "delete", publish: "publish",
-      draft: "new-record", "make-open": "globe", "make-not-open": "lock",
-    } as Record<string, string>)[this.action] ?? "info";
+    return (
+      (
+        {
+          "new-folder": "folder",
+          rename: "edit",
+          copy: "copy",
+          move: "move",
+          delete: "delete",
+          publish: "publish",
+          draft: "new-record",
+          "make-open": "globe",
+          "make-not-open": "lock",
+        } as Record<string, string>
+      )[this.action] ?? "info"
+    );
   }
   get heading() {
     const key = (
@@ -150,6 +168,7 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   }
   ngOnDestroy() {
     this.alive = false;
+    this.state.dispose();
     this.originalFocus?.focus();
   }
   ngOnInit() {
@@ -157,14 +176,14 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   }
   private values() {
     // Browsing a destination changes navigation, not authored content to preserve.
-    return JSON.stringify([
-      this.name,
-      this.description,
-      this.version,
-    ]);
+    return JSON.stringify([this.name, this.description, this.version]);
   }
   async close() {
-    if (this.busy() && !this.preparing()) return;
+    if (!this.alive || (this.busy() && !this.preparing())) return;
+    const decision = this.state.checkpoint();
+    const values = this.values();
+    const resource = this.resource;
+    const action = this.action;
     // Publishing and drafting ask only for a version, which is quick to choose again.
     if (
       !["publish", "draft"].includes(this.action) &&
@@ -175,16 +194,31 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
       ))
     )
       return;
+    if (
+      !decision() || this.values() !== values || this.resource !== resource ||
+      this.action !== action || (this.busy() && !this.preparing())
+    ) return;
+    this.alive = false;
+    this.state.dispose();
     this.closed.emit();
   }
   async load() {
+    if (!this.alive || this.inspectionRequired() || (this.busy() && !this.preparing())) return;
+    const recovering = this.reloadRequired();
+    const draft = { name: this.name, description: this.description, version: this.version };
+    const destination = recovering ? this.target : this.folder;
+    const operation = this.state.begin("load", ["browse"]);
+    this.busy.set(true);
+    this.etag = null;
+    this.error.set("");
     try {
       const r = this.resource;
       this.target = this.folder;
       if (r) {
-        this.name = this.action === "copy"
-          ? this.i18n.t("ResourceDialog.CopyName", { name: this.title(r) })
-          : this.title(r);
+        this.name =
+          this.action === "copy"
+            ? this.i18n.t("ResourceDialog.CopyName", { name: this.title(r) })
+            : this.title(r);
         this.description = r["schema:description"] || "";
         const current = parseVersion(r["pav:version"]);
         // A draft starts at the next patch, the first version it may take.
@@ -200,18 +234,37 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
             r,
             this.action === "delete" || this.action === "rename",
           );
+          if (!operation.current()) return;
+          if (recovering) {
+            if (reply.data?.["@id"] !== r["@id"] || !reply.etag?.trim())
+              throw new Error(this.i18n.t("ResourceDialog.NoRevision"));
+            const report = await this.api.report(r);
+            if (!operation.current()) return;
+            const capability = ({ rename: "updateResource", move: "moveResource", delete: "deleteResource", "make-open": "enableOpenView", "make-not-open": "disableOpenView" } as Record<string, string>)[this.action];
+            if (!validAccessReport(report.data, r) || !can(report.data, capability))
+              throw new Error(this.i18n.t("ResourceDialog.RecoveryDenied"));
+          }
           this.etag = reply.etag;
           this.openViewPath = reply.data.pathInfo;
           this.name = this.title({ ...r, ...reply.data });
           this.description = reply.data["schema:description"] || "";
         }
       }
-      if (this.choosesFolder) await this.browse(this.folder);
+      if (!operation.current()) return;
+      if (this.choosesFolder) await this.browse(destination);
+      if (!operation.current()) return;
+      if (!this.error()) this.reloadRequired.set(false);
+      operation.finish();
     } catch (e) {
-      this.fail(e);
+      operation.fail(e);
+      if (operation.current()) this.fail(e);
     } finally {
-      this.busy.set(false);
+      if (!operation.current()) return;
+      this.busy.set(
+        this.state.report.some((entry) => entry.status === "pending"),
+      );
       this.initialValues = this.values();
+      if (recovering) Object.assign(this, draft);
       if (this.alive) {
         this.preparing.set(false);
         afterNextRender(
@@ -230,22 +283,29 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
     }
   }
   fail(e: unknown) {
-    this.error.set(e instanceof Error ? e.message : String(e));
+    // Only a rename holds what the person typed; the dialog's other actions have nothing to keep.
+    this.error.set(failureText(e, this.i18n, this.action === "rename"));
   }
   async browse(id: string, offset = 0, sort: FolderSort = this.folderSort) {
+    if (!this.alive || this.state.report.some(op => op.scope === "write" && op.status === "pending")) return;
+    const operation = this.state.begin("browse");
+    this.error.set("");
     this.busy.set(true);
     try {
       const [reply, targetReply] = await Promise.all([
         this.api.request<Listing>(
           "/folders/" +
-            encodeURIComponent(id) +
+            encodeURIComponent(resourcePathId(id)) +
             "/contents?resource_types=folder&sort=" +
             sort +
             "&limit=50&offset=" +
             offset,
         ),
-        this.api.request<Resource>("/folders/" + encodeURIComponent(id)),
+        this.api.request<Resource>("/folders/" + encodeURIComponent(resourcePathId(id))),
       ]);
+      if (!operation.current()) return;
+      if (!validListing(reply.data))
+        throw new Error(this.i18n.t("Errors.InvalidListing"));
       const targetResource = targetReply.data;
       this.target = id;
       this.folderSort = sort;
@@ -255,20 +315,26 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
       this.path.set(reply.data.pathInfo || []);
       this.targetResource = targetResource;
       this.error.set("");
+      operation.finish();
     } catch (e) {
-      this.fail(e);
+      operation.fail(e);
+      if (operation.current()) this.fail(e);
     } finally {
-      this.busy.set(false);
+      if (operation.current())
+        this.busy.set(
+          this.state.report.some((entry) => entry.status === "pending"),
+        );
     }
   }
   sortFolders(sort: FolderSort) {
     void this.browse(this.target, 0, sort);
   }
   get destinationAllowed() {
-    if (this.action === "move" && this.resources.length)
+    // Moving is held to the rule dragging shares: never into itself or below itself.
+    if (this.action === "move" && this.resource)
       return (
         !!this.targetResource &&
-        validMoveTarget(this.resources, this.targetResource)
+        validMoveTarget([this.resource], this.targetResource)
       );
     return (
       !this.choosesFolder ||
@@ -307,41 +373,15 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
     return "";
   }
   async submit() {
-    if (this.busy() || !this.destinationAllowed) return;
+    if (!this.alive || this.busy() || this.reloadRequired() || !this.destinationAllowed) return;
     this.submitted = true;
     if (this.nameError || this.versionError) return;
+    const operation = this.state.begin("write", ["load", "browse"]);
     this.busy.set(true);
     this.error.set("");
-    if (this.action === "move" && this.resources.length) {
-      try {
-        const result = await this.moves.move(this.resources, this.target);
-        if (result.failed.length) {
-          this.resources = result.failed.map((f) => f.resource);
-          this.error.set(
-            this.i18n.t(
-              result.moved.length === 1
-                ? "Explorer.MovedOne"
-                : "Explorer.Moved",
-              {
-                count: result.moved.length,
-              },
-            ) +
-              " " +
-              result.failed
-                .map((f) => this.title(f.resource) + ": " + f.message)
-                .join("; "),
-          );
-          if (result.moved.length) this.changed.emit();
-        } else if (this.alive) this.saved.emit();
-      } catch (e) {
-        this.fail(e);
-      } finally {
-        this.busy.set(false);
-      }
-      return;
-    }
     const r = this.resource;
     const id = r?.["@id"];
+    let attempted = false;
     try {
       if (
         ["rename", "move", "delete", "make-open", "make-not-open"].includes(
@@ -350,10 +390,11 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
         !this.etag
       )
         throw new Error(this.i18n.t("ResourceDialog.NoRevision"));
+      attempted = true;
       switch (this.action) {
         case "new-folder":
           await this.api.request("/folders", "POST", {
-            folderId: this.folder,
+            folderId: resourceSelector(this.folder),
             name: this.name.trim(),
             // The folder API requires a nonempty description even though it is
             // optional in the dialog. Use the folder name as the initial value.
@@ -365,7 +406,7 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
             "/command/rename-resource",
             "POST",
             {
-              "@id": id,
+              "@id": resourceSelector(id!),
               "schema:name": this.name.trim(),
               "schema:description": this.description,
             },
@@ -374,8 +415,8 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
           break;
         case "copy":
           await this.api.request("/command/copy-artifact-to-folder", "POST", {
-            "@id": id,
-            targetFolderId: this.target,
+            "@id": resourceSelector(id!),
+            targetFolderId: resourceSelector(this.target),
             nameTemplate: this.name.trim(),
           });
           break;
@@ -383,21 +424,21 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
           await this.api.request(
             "/command/move-resource-to-folder",
             "POST",
-            { "@id": id, targetFolderId: this.target },
+            { "@id": resourceSelector(id!), targetFolderId: resourceSelector(this.target) },
             this.etag,
           );
           break;
         case "publish":
           await this.api.request("/command/publish-artifact", "POST", {
-            "@id": id,
+            "@id": resourceSelector(id!),
             newVersion: formatVersion(this.version),
           });
           break;
         case "draft":
           await this.api.request("/command/create-draft-artifact", "POST", {
-            "@id": id,
+            "@id": resourceSelector(id!),
             newVersion: formatVersion(this.version),
-            folderId: this.target,
+            folderId: resourceSelector(this.target),
             // The draft is shared as the version it is drafted from is.
             propagateSharing: true,
             newFolderName: null,
@@ -418,18 +459,29 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
               (r!.resourceType === "folder" ? "folder" : "artifact") +
               (this.action === "make-open" ? "-open" : "-not-open"),
             "POST",
-            { "@id": id },
+            { "@id": resourceSelector(id!) },
             this.etag,
           );
           break;
         default:
           throw new Error(this.i18n.t("ResourceDialog.UnknownAction"));
       }
-      if (this.alive) this.saved.emit();
+      if (operation.current()) {
+        operation.finish();
+        this.saved.emit();
+      }
     } catch (e) {
-      this.fail(e);
+      operation.fail(e);
+      if (operation.current()) {
+        if (writeRequiresRecovery(e)) {
+          this.reloadRequired.set(true);
+          // Creation/copy/publication lack a read-time validator: inspect the result in Workspace.
+          this.inspectionRequired.set(attempted && !this.conditional);
+        }
+        this.fail(e);
+      }
     } finally {
-      this.busy.set(false);
+      if (operation.current()) this.busy.set(false);
     }
   }
 }

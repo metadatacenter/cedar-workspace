@@ -9,6 +9,10 @@ unexplained failure. Failure traces and image diffs are uploaded by CI.
 
 The tests load the real built application with explicit API fixtures. Unknown API
 requests fail, dates are fixed, and no live account or network API is required.
+A spec that routes API requests itself answers only the requests it is about and
+passes the rest on with `route.fallback()`, so the shared fixture answers them or
+fails the test. A route that answers every request hides one nobody mocked, and can
+hand the application a resource other than the one it asked for.
 The editor-host fixture replaces only CEE's SDK boundary: host toolbar states are
 covered here; CEE/CEF pixels and behavior remain covered by their own approved suite
 and the real-stack `smoke:workspace:modern` journey. Neither replaces the other.

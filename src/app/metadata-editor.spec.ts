@@ -46,7 +46,9 @@ describe("Modern metadata host", () => {
     api = {
       init: vi.fn().mockResolvedValue(true),
       profile: { homeFolderId: "home" },
-      request: vi.fn(async (path: string) => {
+      request: vi.fn(async (path: string, method = "GET") => {
+        if (method !== "GET")
+          return { data: { "@id": "instance-id" }, etag: '"i2"' };
         if (path === "/templates/template-id")
           return { data: template, etag: '"t1"' };
         if (path === "/template-instances/instance-id")
@@ -84,7 +86,7 @@ describe("Modern metadata host", () => {
       { provide: Router, useValue: { navigateByUrl: address } },
       {
         provide: CeeLoader,
-        useValue: { load: vi.fn().mockResolvedValue(undefined) },
+        useValue: { load: vi.fn().mockResolvedValue(undefined), mountEditor: () => cee },
       },
     ];
     TestBed.configureTestingModule({ providers });
@@ -105,6 +107,7 @@ describe("Modern metadata host", () => {
       writable: true,
     });
     host = TestBed.runInInjectionContext(() => new MetadataEditor());
+    host.editorHost = new ElementRef(document.createElement("div"));
     host.editor = new ElementRef(cee);
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}")));
   });
@@ -128,6 +131,19 @@ describe("Modern metadata host", () => {
     expect(host.returnTo).toBe("/dashboard?search=Study");
     expect(host.loading()).toBe(false);
     expect(host.dirty()).toBe(false);
+  });
+  it.each([
+    ["a template", "create", "CEDAR cannot read this template, so metadata cannot be entered for it."],
+    ["metadata", "edit", "CEDAR cannot read this metadata or its template, so it cannot be shown."],
+  ])("says so when CEE refuses %s it cannot read, and offers no retry", async (_what, mode, message) => {
+    // CEE holds no artifact after refusing one, so its metadata stays empty.
+    Object.assign(cee, { currentMetadata: {} });
+    if (mode === "edit") await edit();
+    else await host.ngAfterViewInit();
+    expect(host.state.loadFailed()).toBe(true);
+    expect(host.unreadable()).toBe(true);
+    expect(host.error()).toBe(message);
+    expect(host.saveStatus).toBe("Metadata.LoadFailed");
   });
   it("shows a new untouched instance as unmodified until it is edited", async () => {
     await host.ngAfterViewInit();
@@ -162,6 +178,7 @@ describe("Modern metadata host", () => {
       providers: [...providers, ...provideWorkspaceTranslations("hu")],
     });
     host = TestBed.runInInjectionContext(() => new MetadataEditor());
+    host.editorHost = new ElementRef(document.createElement("div"));
     host.editor = new ElementRef(cee);
     await host.ngAfterViewInit();
     expect(cee.config.defaultLanguage).toBe("hu");
@@ -263,23 +280,24 @@ describe("Modern metadata host", () => {
     expect(api.request).not.toHaveBeenCalled();
     expect(host.error()).toContain("validator");
   });
-  it("counts a whitespace edit to the name as an edit, and saves the trimmed name", async () => {
+  it("does not count spaces around the name as an edit, and saves the trimmed name", async () => {
     await edit();
     const typed = host.name;
-    host.name = typed + " ";
-    host.changed();
-    expect(host.dirty()).toBe(true);
-    host.name = typed;
+    host.name = `  ${typed} `;
     host.changed();
     expect(host.dirty()).toBe(false);
-    host.name = typed + " ";
+    host.name = ` ${typed} renamed `;
     host.changed();
+    expect(host.dirty()).toBe(true);
     api.request.mockResolvedValue({
       data: { "@id": "instance-id" },
       etag: '"i2"',
     });
     await host.save();
-    expect(api.request.mock.lastCall?.[2]?.["schema:name"]).toBe(typed.trim());
+    expect(api.request.mock.lastCall?.[2]?.["schema:name"]).toBe(`${typed} renamed`);
+    expect(host.dirty()).toBe(false);
+    host.name = `${typed} renamed`;
+    host.changed();
     expect(host.dirty()).toBe(false);
   });
   it("keeps edits made while a save is pending dirty and prevents double submission", async () => {
@@ -342,7 +360,10 @@ describe("Modern metadata host", () => {
     const reveal = vi.fn().mockResolvedValue(true);
     Object.defineProperty(cee, "reveal", { value: reveal });
     host.reveal(host.validationErrors[0]);
-    expect(reveal).toHaveBeenCalledWith(cee.dataQualityReport.problems[1]);
+    expect(reveal).toHaveBeenCalledWith({
+      ...cee.dataQualityReport.problems[1],
+      severity: "error",
+    });
     api.request.mockClear();
     await host.save();
     expect(api.request).not.toHaveBeenCalled();

@@ -146,3 +146,48 @@ test('pending deletion keeps the dialog and action positions steady', async ({pa
   finish();
   await expect(dialog).not.toBeVisible();
 });
+
+for (const corruption of ["count", "duplicate", "cycle", "hidden-blocker", "string-allowed"]) {
+  test(`malformed ${corruption} inventory disables deletion and recovers after refresh`, async ({ page, api }) => {
+    const plan = structuredClone(deletionPlan);
+    const dialog = await openFolderDeletion(page, plan);
+    if (corruption === "count") plan.counts.instance = 99;
+    if (corruption === "duplicate") plan.items[1].id = plan.items[0].id;
+    if (corruption === "cycle") plan.items[1].parentId = plan.items[1].id;
+    if (corruption === "hidden-blocker") { plan.items[1].deletable = false; plan.restrictedItems = 1; }
+    if (corruption === "string-allowed") plan.allowed = "true";
+    await dialog.getByRole("button", { name: "Refresh inventory", exact: true }).click();
+    await expect(dialog.getByRole("alert")).toContainText("complete inventory");
+    await expect(dialog.getByRole("button", { name: "Delete folder and contents", exact: true })).toBeDisabled();
+    Object.assign(plan, structuredClone(deletionPlan));
+    await dialog.getByRole("button", { name: "Refresh inventory", exact: true }).click();
+    await expect(dialog.getByRole("button", { name: "Delete folder and contents", exact: true })).toBeEnabled();
+    await expect(dialog.getByRole("alert")).toHaveCount(0);
+  });
+}
+for (const outcome of [{}, { status: "completed", deleted: { ...deletionPlan.counts, instance: 0 }, remaining: 0 }, { status: "stopped", deleted: deletionPlan.counts, remaining: -1 }]) {
+  test(`invalid deletion outcome ${JSON.stringify(outcome)} never closes as success or repeats the request`, async ({ page, api }) => {
+    let attempts = 0;
+    const dialog = await openFolderDeletion(page, deletionPlan, route => { attempts++; return route.fulfill({ json: outcome }); });
+    const remove = dialog.getByRole("button", { name: "Delete folder and contents", exact: true });
+    await remove.click();
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole("alert")).toContainText("may already have been deleted");
+    await expect(remove).toBeDisabled(); expect(attempts).toBe(1);
+    await dialog.getByRole("button", { name: "Refresh inventory", exact: true }).click();
+    await expect(remove).toBeEnabled(); expect(attempts).toBe(1);
+  });
+}
+
+for (const rootDepth of [3, 12]) {
+  test(`a folder at absolute depth ${rootDepth} retains its relative inventory and can be confirmed`, async ({ page, api }) => {
+    const plan = structuredClone(deletionPlan);
+    plan.items.forEach(item => item.depth += rootDepth);
+    let attempts = 0;
+    const dialog = await openFolderDeletion(page, plan, route => {
+      attempts++; return route.fulfill({ json: { status: "completed", deleted: plan.counts, remaining: 0 } });
+    });
+    await dialog.getByRole("button", { name: "Delete folder and contents", exact: true }).click();
+    await expect(dialog).not.toBeVisible(); expect(attempts).toBe(1);
+  });
+}

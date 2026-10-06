@@ -265,7 +265,7 @@
         [attr.aria-label]="'Explorer.View' | translate"
       >
         <button
-          (click)="grid.set(false)"
+          (click)="setView(false)"
           [attr.aria-pressed]="!grid()"
           [attr.aria-label]="'Explorer.List' | translate"
           [cedarTooltip]="'Explorer.List' | translate"
@@ -273,7 +273,7 @@
           <cedar-icon name="list" size="small" />
         </button>
         <button
-          (click)="grid.set(true)"
+          (click)="setView(true)"
           [attr.aria-pressed]="grid()"
           [attr.aria-label]="'Explorer.Grid' | translate"
           [cedarTooltip]="'Explorer.Grid' | translate"
@@ -325,15 +325,21 @@
             <th
               [attr.aria-sort]="sort==='lastUpdatedOnTS'?'ascending':sort==='-lastUpdatedOnTS'?'descending':'none'"
             >
+              <!-- The chevron keeps its place while another column sorts, so the column,
+                   sized to its content, does not change width when the sort does. -->
               <button (click)="changeSort('lastUpdatedOnTS')">
-                {{'Common.LastModified' | translate}} @if(sort ===
-                "lastUpdatedOnTS" || sort === "-lastUpdatedOnTS") {
+                {{'Common.LastModified' | translate}}
                 <cedar-icon
                   [name]="sort === 'lastUpdatedOnTS' ? 'chevron-up' : 'chevron-down'"
+                  [style.visibility]="sort === 'lastUpdatedOnTS' || sort === '-lastUpdatedOnTS' ? null : 'hidden'"
                 />
-                }
               </button>
             </th>
+            @if(!grid()){
+            <th>
+              <span class="column-label">{{'Common.Version' | translate}}</span>
+            </th>
+            }
             <th class="sort-column">
               <span class="sr-only">{{'Dashboard.Actions' | translate}}</span>
               <cedar-sort-menu
@@ -450,8 +456,18 @@
               </span>
               }
             </td>
+            @if(!grid()){
+            <td>
+              @if(versioned(r)){
+              {{r['pav:version'] || ('Dashboard.Unversioned' | translate)}}<span
+                aria-hidden="true"
+              > · </span
+              >{{status(r)}}
+              }
+            </td>
+            }
             <td class="row-actions" (click)="$event.stopPropagation()">
-              @if(inOpenView(r)){<a
+              @if(offeredInOpenView(r)){<a
                 [href]="openView(r)"
                 target="_blank"
                 rel="noopener"
@@ -520,8 +536,8 @@
       <button (click)="page(-1)" [disabled]="offset()===0||loading()">
         {{'Common.Previous' | translate}}</button
       ><span
-        >{{'Dashboard.Displaying' | translate: {first: total()?offset()+1:0,
-        last: offset()+rows().length, total: total()} }}</span
+        >{{'Dashboard.Displaying' | translate: {first: rows().length?offset()+1:0,
+        last: rows().length?offset()+rows().length:0, total: total()} }}</span
       ><button
         (click)="page(1)"
         [disabled]="offset()+rows().length>=total()||loading()"
@@ -553,8 +569,7 @@
       >
         {{'Dashboard.Info' | translate}}
       </button>
-      @if(r.resourceType === "template" || r.resourceType === "element" ||
-      r.resourceType === "field"){
+      @if(versioned(r)){
       <button
         role="tab"
         [attr.aria-selected]="tab==='version'"
@@ -639,10 +654,7 @@
         {{'Dashboard.Template' | translate}}
       </div>
       <div class="detail-with-copy">
-        <span
-          ><a [href]="link(based)">{{title(based)}}</a
-          >{{versionAndStatus(based)}}</span
-        >
+        <a [href]="link(based)">{{title(based)}}{{versionAndStatus(based)}}</a>
         <cedar-copy-button
           [label]="'Dashboard.CopyTemplateIdentifier' | translate"
           (copied)="copyId(based['@id'])"
@@ -687,8 +699,8 @@
         }
       </div>
       <p class="instance-count">
-        {{'Dashboard.InstanceCount' | translate: {shown: instances().length,
-        total: instanceTotal()} }}
+        {{i18n.counted('Dashboard.InstanceCount', instanceTotal(), {shown:
+        instances().length, total: instanceTotal()}) }}
       </p>
       } @else if(r.numberOfInstances===0){
       <p class="no-instances">{{'Dashboard.NoInstances' | translate}}</p>
@@ -709,6 +721,20 @@
         />
       </div>
     </section>
+    @if(publicLink(r); as openViewLink){
+    <section class="info-section open-view">
+      <div class="description-heading">
+        {{'Dashboard.OpenView' | translate}}
+      </div>
+      <div class="detail-with-copy">
+        <a [href]="openViewLink" target="_blank" rel="noopener">{{openViewLink}}</a>
+        <cedar-copy-button
+          [label]="'Dashboard.CopyOpenViewLink' | translate"
+          (copied)="copyLink(openViewLink)"
+        />
+      </div>
+    </section>
+    }
     <section class="info-section">
       @for (item of [r]; track item['@id']) {
       <cedar-description-editor
@@ -741,10 +767,7 @@
         </div>
         <div class="detail-with-copy">
           @if(latest.activeUserCanRead !== false){
-          <span
-            ><a [href]="link(latest)">{{title(latest)}}</a
-            >{{versionAndStatus(latest)}}</span
-          >
+          <a [href]="link(latest)">{{title(latest)}}{{versionAndStatus(latest)}}</a>
           } @else {
           <span
             >{{'Dashboard.UnreadableVersion' | translate}}{{versionAndStatus(latest)}}</span
@@ -764,10 +787,7 @@
         </div>
         <div class="detail-with-copy">
           @if(next.activeUserCanRead !== false){
-          <span
-            ><a [href]="link(next)">{{title(next)}}</a
-            >{{versionAndStatus(next)}}</span
-          >
+          <a [href]="link(next)">{{title(next)}}{{versionAndStatus(next)}}</a>
           } @else {
           <span
             >{{'Dashboard.UnreadableVersion' | translate}}{{versionAndStatus(next)}}</span
@@ -789,10 +809,7 @@
           @for(v of previous;track v['@id']){
           <div class="detail-with-copy">
             @if(v.activeUserCanRead !== false){
-            <span
-              ><a [href]="link(v)">{{title(v)}}</a
-              >{{versionAndStatus(v)}}</span
-            >
+            <a [href]="link(v)">{{title(v)}}{{versionAndStatus(v)}}</a>
             } @else {
             <span
               >{{'Dashboard.UnreadableVersion' | translate}}{{versionAndStatus(v)}}</span
@@ -833,14 +850,7 @@ d.resource) {
   [folder]="folder"
   (closed)="dialog.set(null)"
   (saved)="saved()"
-/>} } } @if(moveDialog();as items){<cedar-resource-dialog
-  action="move"
-  [resources]="items"
-  [folder]="folder"
-  (closed)="moveDialog.set(null)"
-  (changed)="load(true)"
-  (saved)="moveDialog.set(null); saved()"
-/>} @if(preview();as item){<cedar-artifact-preview
+/>} } } @if(preview();as item){<cedar-artifact-preview
   [resource]="item"
   (closed)="preview.set(null)"
 />}

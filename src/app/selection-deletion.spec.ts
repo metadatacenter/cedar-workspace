@@ -87,7 +87,7 @@ describe("selection deletion preparation", () => {
     request.mockResolvedValue({
       data: {
         status: "completed",
-        deleted: result.inventory.counts,
+        deleted: result.roots[0].plan!.counts,
         remaining: 0,
       },
     } as never);

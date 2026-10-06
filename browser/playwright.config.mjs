@@ -5,7 +5,7 @@ export default defineConfig({
   fullyParallel: true,
   projects: [
     { name: "", use: { browserName: "chromium" } },
-    { name: "webkit", testMatch: ["workspace-return.spec.mjs", "folder-deletion.spec.mjs", "selection-deletion.spec.mjs", "folder-list.spec.mjs", "explorer.spec.mjs", "sorting.spec.mjs", "permissions.spec.mjs", "group-tabs.spec.mjs", "information.spec.mjs", "refresh.spec.mjs", "tooltip.spec.mjs", "native-choices.spec.mjs", "preview.spec.mjs"], use: { browserName: "webkit" } },
+    { name: "webkit", testMatch: ["api-key-state.spec.mjs", "state-coordination.spec.mjs", "workspace-return.spec.mjs", "folder-deletion.spec.mjs", "selection-deletion.spec.mjs", "folder-list.spec.mjs", "explorer.spec.mjs", "sorting.spec.mjs", "permissions.spec.mjs", "group-tabs.spec.mjs", "information.spec.mjs", "refresh.spec.mjs", "tooltip.spec.mjs", "native-choices.spec.mjs", "preview.spec.mjs", "return-matrix.spec.mjs"], use: { browserName: "webkit" } },
   ],
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,

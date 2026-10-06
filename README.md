@@ -239,6 +239,45 @@ for an empty destination, and deliberately injected overrides prove the guards
 fail. Tooltip, toast and suggestion-list tests cover their spacing too. These
 checks supplement the shared surface contract, which checks color and radius.
 
+Permission reads and writes use `RevisionCoordinator`: it owns pending operations,
+invalidates old confirmations, and exposes a state report. Permission payloads and
+directories are validated before controls become available. Conflicts, lost access,
+missing revisions and uncertain writes require an explicit reload; a reload cannot
+overlap a write. Resource rebinding discards the previous ACL, revision and pending
+results. ACL responses must acknowledge the submitted identities and roles, and
+ownership responses must name the requested owner. Multi-step unit and browser
+matrices cover rejection and recovery.
+
+Groups uses the same coordinator for directory loads, selection, membership, details,
+creation and deletion. Group and membership ETags remain independent. Incoming rosters
+require unique identifiers and boolean membership roles; the last administrator stays
+protected. Confirmation decisions expire across reads, writes, tabs and destruction.
+Leaving and returning to a tab does not revive a confirmation. An uncertain creation
+requires a directory reload before another attempt. Membership responses must match
+the submitted roster. Recovering a group revision preserves edited fields while
+untouched fields adopt the current server values, and refreshed membership controls
+whether the draft can be saved.
+
+Action dialogs require explicit recovery after conflicts, lost access or uncertain
+writes. Conditional actions reload the current revision and permissions while keeping
+the draft; uncertain create, copy, draft and publish outcomes require closing the dialog
+and inspecting Workspace before retrying. Settings ignores initialization, version and
+preference callbacks after destruction, including writes to the shared profile cache.
+Failed backend initialization can be retried explicitly; concurrent callers still share
+one pending attempt and successful authentication is reused.
+
+API-key management also uses `RevisionCoordinator`. It validates incoming key lists,
+rechecks the selected key and last-active-key rule after confirmation, and requires a
+profile reload after an uncertain mutation. A successful response must acknowledge
+the requested creation, rotation or deletion. Refreshes reset secret visibility and
+keep an unfinished creation description.
+
+Recursive and selection deletion validate each inventory against its root, topology,
+counts and blockers, including absolute Workspace depths and redacted descendants. Responses must account for the
+confirmed inventory before reporting completion or partial progress. The coordinator
+consumes each confirmation once, stops after uncertainty, and retains confirmed
+deletions across explicit inventory refreshes.
+
 Use the shared `Confirmation` service for in-app confirmation, awaiting its result
 before writing and rechecking the target and permissions afterward. The root outlet
 provides a styled, labelled modal with Cancel focused, Escape cancellation, focus
@@ -250,3 +289,27 @@ Use `Toast` for successful modifications and copy feedback. It announces politel
 can be dismissed, expires after six seconds and pauses on hover or focus. Render it
 inside the owning dialog when one is open, so it remains accessible in the modal's
 layer. Errors, stale-write conflicts and actionable recovery messages stay inline.
+
+Workspace report reads share ownership by resource across background enrichment,
+selection and menus. A newer request or saved description supersedes older reports,
+including their permissions; report identity and consumed fields are validated
+before publication. Move completion belongs to the listing and component that
+started it and cannot refresh a replacement view.
+
+Metadata recovery recreates CEE because its artifact/configuration inputs are set
+once. Normal saves retain the component. The new component receives the recovered
+contents and current permissions before establishing a clean baseline. Description
+recovery instead retains the local draft while replacing its revision. Network
+failures, unusable success responses, timeouts and server errors are uncertain write
+outcomes: another conditional write requires recovery. An uncertain metadata create
+cannot be resubmitted from that editor; inspect Workspace for the resulting record.
+Discard confirmations expire after changes to their draft, operation or component.
+
+`workspace-lifecycle-matrix.spec.ts` crosses report scopes, arrival order, component
+recreation, permission changes and version changes. `metadata-lifecycle-matrix.spec.ts`
+crosses reload/leave confirmations with write uncertainty, permissions, ETags, later
+edits, intervening writes and recreation. `dialog-confirmation-matrix.spec.ts` covers
+accepted/cancelled dismissal decisions across reads, writes, edits and destruction.
+The browser state-coordination suite checks these host contracts in Chromium and
+WebKit using a CEE fixture that enforces set-once inputs; CEE's own rendering and
+controller suites remain in its repository.

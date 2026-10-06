@@ -42,6 +42,54 @@ describe("Groups", () => {
     vi.spyOn(TestBed.inject(Confirmation), "confirm").mockResolvedValue(true);
   });
   afterEach(() => vi.restoreAllMocks());
+  it.each(["unchanged", "wrong-role", "extra-user"])(
+    "requires membership acknowledgement for a %s response",
+    async (outcome) => {
+      host.users.set([other.user]);
+      host.newMember = "other";
+      const before = host.members();
+      request.mockResolvedValue({
+        data: {
+          users:
+            outcome === "unchanged"
+              ? [me]
+              : [
+                  me,
+                  { ...other, administrator: outcome === "wrong-role" },
+                  ...(outcome === "extra-user"
+                    ? [{ ...other, user: { "@id": "unexpected" } }]
+                    : []),
+                ],
+        },
+        etag: '"unconfirmed"',
+      });
+      await host.addMember();
+      expect(host.stale()).toBe(true);
+      expect(host.members()).toBe(before);
+      expect(host.memberEtag).toBe('"members1"');
+      expect(host.newMember).toBe("other");
+      expect(host.notice()).toBe("");
+      await host.addMember();
+      expect(request).toHaveBeenCalledTimes(1);
+    },
+  );
+  it("accepts reordered membership acknowledgements with updated extracts", async () => {
+    host.users.set([other.user]);
+    host.newMember = "other";
+    request.mockResolvedValue({
+      data: {
+        users: [
+          { ...other, user: { ...other.user, firstName: "Updated" } },
+          me,
+        ],
+      },
+      etag: '"members2"',
+    });
+    await host.addMember();
+    expect(host.stale()).toBe(false);
+    expect(host.memberEtag).toBe('"members2"');
+    expect(host.notice()).not.toBe("");
+  });
   it("writes narrowed details with the group revision and advances it", async () => {
     host.editName = " Renamed ";
     host.editDescription = " Description ";
@@ -78,6 +126,7 @@ describe("Groups", () => {
     expect(host.newName).toBe("Existing name");
     expect(host.selected()).toEqual(g);
     expect(host.recoveryGroup()).toBeNull();
+    expect(host.uncertainCreation()).toBe(false);
   });
   it("offers the failed read's group for recovery even before it can be selected", async () => {
     request.mockRejectedValue(new HttpError(503, "Temporarily unavailable"));
@@ -248,7 +297,7 @@ describe("Groups", () => {
       } as Member["user"]),
     ).toBe("Unnamed user");
   });
-  it("serializes creation, retains failed input, and permits retry", async () => {
+  it("serializes creation, retains failed input, and requires reading back an uncertain outcome", async () => {
     let reject!: (e: Error) => void;
     host.newName = "Researchers";
     request.mockImplementationOnce(() => new Promise((_, r) => (reject = r)));
@@ -258,9 +307,15 @@ describe("Groups", () => {
     reject(new Error("Unavailable"));
     await pending;
     expect(host.newName).toBe("Researchers");
-    request.mockRejectedValueOnce(new Error("Still unavailable"));
     await host.create();
-    expect(request).toHaveBeenCalledTimes(2);
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(host.uncertainCreation()).toBe(true);
+    request
+      .mockResolvedValueOnce({ data: { groups: [g] } })
+      .mockResolvedValueOnce({ data: { users: [me.user] } });
+    await host.ngOnInit();
+    expect(host.uncertainCreation()).toBe(false);
+    expect(host.newName).toBe("Researchers");
   });
   it("stays in Create, clears Manage's selection, and restores the created editor on return", async () => {
     await host.selectTab("create");
@@ -476,4 +531,268 @@ describe("Groups", () => {
       expect(host.groupEtag).toBe('"group1"');
     }
   });
+  for (const status of [400, 401, 403, 404, 409, 412, 422, 428, 500, 503]) {
+    for (const action of ["details", "members", "delete"]) {
+      it(`${action}: HTTP ${status} retains the draft and coordinates recovery`, async () => {
+        host.editName = "Local draft";
+        host.users.set([other.user]);
+        host.newMember = "other";
+        const run = () =>
+          action === "details"
+            ? host.save()
+            : action === "members"
+              ? host.addMember()
+              : host.remove();
+        request.mockRejectedValue(new HttpError(status, "Rejected"));
+        await run();
+        expect(host.selected()).toBe(g);
+        expect(host.members()).toEqual([me]);
+        expect(host.editName).toBe("Local draft");
+        expect(host.newMember).toBe("other");
+        expect(host.stale()).toBe(![400, 422].includes(status));
+        await run();
+        expect(request).toHaveBeenCalledTimes(
+          [400, 422].includes(status) ? 2 : 1,
+        );
+        request
+          .mockResolvedValueOnce({ data: g, etag: '"fresh-group"' })
+          .mockResolvedValueOnce({
+            data: { users: [me] },
+            etag: '"fresh-members"',
+          });
+        await host.select(g);
+        expect(host.error()).toBe("");
+        expect(host.stale()).toBe(false);
+        expect(host.groupEtag).toBe('"fresh-group"');
+        expect(host.memberEtag).toBe('"fresh-members"');
+      });
+    }
+  }
+  for (const boundary of ["detail", "roster", "directory", "users"]) {
+    for (const invalid of [
+      null,
+      {},
+      [null],
+      [{ "@id": "duplicate" }, { "@id": "duplicate" }],
+    ]) {
+      it(`rejects malformed ${boundary}: ${JSON.stringify(invalid)} and recovers`, async () => {
+        if (boundary === "directory" || boundary === "users") {
+          request
+            .mockResolvedValueOnce({
+              data: { groups: boundary === "directory" ? invalid : [g] },
+            })
+            .mockResolvedValueOnce({
+              data: { users: boundary === "users" ? invalid : [me.user] },
+            });
+          await host.ngOnInit();
+          expect(host.ready()).toBe(false);
+          request
+            .mockResolvedValueOnce({ data: { groups: [g] } })
+            .mockResolvedValueOnce({ data: { users: [me.user] } });
+          await host.ngOnInit();
+          expect(host.ready()).toBe(true);
+        } else {
+          request.mockResolvedValueOnce({
+            data: boundary === "detail" ? invalid : g,
+            etag: '"g"',
+          });
+          if (boundary === "roster")
+            request.mockResolvedValueOnce({
+              data: { users: invalid },
+              etag: '"m"',
+            });
+          await host.select(g);
+          expect(host.canAdmin).toBe(false);
+          expect(host.error()).toContain("incomplete");
+          request
+            .mockResolvedValueOnce({ data: g, etag: '"g"' })
+            .mockResolvedValueOnce({ data: { users: [me] }, etag: '"m"' });
+          await host.select(g);
+          expect(host.canAdmin).toBe(true);
+        }
+        expect(host.error()).toBe("");
+      });
+    }
+  }
+  for (const action of ["details", "members", "create", "delete"]) {
+    for (const outcome of ["success", "failure"]) {
+      it(`ignores ${action} ${outcome} after destruction`, async () => {
+        host.newName = "New";
+        host.users.set([other.user]);
+        host.newMember = "other";
+        let resolve!: (v: unknown) => void, reject!: (e: Error) => void;
+        request.mockImplementationOnce(
+          () =>
+            new Promise((yes, no) => {
+              resolve = yes;
+              reject = no;
+            }),
+        );
+        const pending =
+          action === "details"
+            ? host.save()
+            : action === "members"
+              ? host.addMember()
+              : action === "create"
+                ? host.create()
+                : host.remove();
+        await vi.waitFor(() => expect(resolve).toBeDefined());
+        host.ngOnDestroy();
+        const state = [
+          host.selected(),
+          host.members(),
+          host.groups(),
+          host.notice(),
+          host.error(),
+        ];
+        if (outcome === "success")
+          resolve({
+            data:
+              action === "members"
+                ? { users: [me, other] }
+                : { ...g, "schema:name": "New" },
+            etag: '"next"',
+          });
+        else reject(new Error("Late failure"));
+        await pending;
+        expect([
+          host.selected(),
+          host.members(),
+          host.groups(),
+          host.notice(),
+          host.error(),
+        ]).toEqual(state);
+        expect(request).toHaveBeenCalledTimes(1);
+      });
+    }
+  }
+  for (const action of ["delete", "administrator"]) {
+    for (const transition of ["destroy", "reload", "failed-write", "tab"]) {
+      it(`${action} confirmation expires after ${transition}`, async () => {
+        host.members.set([me, other]);
+        let decide!: (value: boolean) => void;
+        vi.mocked(TestBed.inject(Confirmation).confirm).mockImplementationOnce(
+          () => new Promise((resolve) => (decide = resolve)),
+        );
+        const pending =
+          action === "delete" ? host.remove() : host.toggleAdmin(other);
+        if (transition === "destroy") host.ngOnDestroy();
+        if (transition === "tab") await host.selectTab("create");
+        if (transition === "reload") {
+          request
+            .mockResolvedValueOnce({ data: g, etag: '"g"' })
+            .mockResolvedValueOnce({
+              data: { users: [me, other] },
+              etag: '"m"',
+            });
+          await host.select(g);
+        }
+        if (transition === "failed-write") {
+          request.mockRejectedValueOnce(new HttpError(400, "Rejected"));
+          await host.save();
+        }
+        request.mockClear();
+        decide(true);
+        await pending;
+        expect(request).not.toHaveBeenCalled();
+      });
+    }
+  }
+  for (const missing of ["group", "members", "both"]) {
+    it(`missing ${missing} revision disables mutations immediately and can reload`, async () => {
+      request
+        .mockResolvedValueOnce({
+          data: g,
+          etag: missing === "members" ? '"g"' : null,
+        })
+        .mockResolvedValueOnce({
+          data: { users: [me] },
+          etag: missing === "group" ? '"m"' : null,
+        });
+      await host.select(g);
+      expect(host.stale()).toBe(true);
+      expect(host.error()).toContain("revision");
+      request.mockClear();
+      await host.save();
+      await host.remove();
+      expect(request).not.toHaveBeenCalled();
+    });
+  }
+  for (const action of ["details", "members", "create"]) {
+    for (const payload of [
+      null,
+      {},
+      { "@id": "wrong", "schema:name": "Wrong" },
+      { users: [{ ...me, administrator: "true" }] },
+    ]) {
+      it(`${action} refuses an invalid acknowledgement ${JSON.stringify(payload)}`, async () => {
+        host.newName = "New";
+        host.users.set([other.user]);
+        host.newMember = "other";
+        request.mockResolvedValue({ data: payload, etag: '"next"' });
+        if (action === "details") await host.save();
+        else if (action === "members") await host.addMember();
+        else await host.create();
+        // A new identifier is a valid create acknowledgement; it must still load a valid roster.
+        if (action === "create" && payload && "@id" in payload) {
+          expect(host.error()).toContain("incomplete");
+          return;
+        }
+        expect(host.selected()).toBe(g);
+        expect(host.members()).toEqual([me]);
+        expect(host.notice()).toBe("");
+        expect(
+          action === "create" ? host.uncertainCreation() : host.stale(),
+        ).toBe(true);
+      });
+    }
+  }
+  it("accepts empty directories and rosters as empty, never as malformed data", async () => {
+    request
+      .mockResolvedValueOnce({ data: { groups: [] } })
+      .mockResolvedValueOnce({ data: { users: [] } });
+    await host.ngOnInit();
+    expect(host.ready()).toBe(true);
+    expect(host.groups()).toEqual([]);
+    request
+      .mockResolvedValueOnce({ data: g, etag: '"g"' })
+      .mockResolvedValueOnce({ data: { users: [] }, etag: '"m"' });
+    await host.select(g);
+    expect(host.members()).toEqual([]);
+    expect(host.canAdmin).toBe(false);
+    expect(host.error()).toBe("");
+  });
+  for (const recovery of ["tab", "directory"]) {
+    it(`an externally deleted created group cannot trap the Create tab after ${recovery} recovery`, async () => {
+      host.createdGroup = { ...g, "@id": "deleted", "schema:name": "Deleted" };
+      if (recovery === "tab") {
+        request.mockRejectedValueOnce(new HttpError(404, "Group deleted"));
+        await host.selectTab("create");
+        expect(host.activeTab).toBe("create");
+        expect(host.recoveryGroup()).toBeNull();
+        expect(host.selected()).toBe(g);
+      } else {
+        request
+          .mockResolvedValueOnce({ data: { groups: [g] } })
+          .mockResolvedValueOnce({ data: { users: [me.user] } });
+        await host.ngOnInit();
+        await host.selectTab("create");
+      }
+      expect(host.createdGroup).toBeNull();
+      const created = {
+        ...g,
+        "@id": "replacement",
+        "schema:name": "Replacement",
+      };
+      host.newName = "Replacement";
+      request
+        .mockResolvedValueOnce({ data: created })
+        .mockResolvedValueOnce({ data: created, etag: '"g"' })
+        .mockResolvedValueOnce({ data: { users: [me] }, etag: '"m"' });
+      await host.create();
+      expect(host.createdGroup).toEqual(created);
+      expect(host.selected()).toEqual(created);
+      expect(host.error()).toBe("");
+    });
+  }
 });

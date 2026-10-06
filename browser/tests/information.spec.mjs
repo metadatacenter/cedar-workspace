@@ -52,7 +52,7 @@ for (const readonly of [false, true]) {
       expect(Math.abs(titleTop - rowTop), "Info title aligns with neighbouring top rows").toBeLessThanOrEqual(1);
     }
     await expect(
-      info.getByRole("link", { name: "Source template", exact: true }),
+      info.getByRole("link", { name: "Source template · 1.0.0 · Draft", exact: true }),
     ).toHaveAttribute("href", /source-template/);
     const folderCopy = info.getByRole("button", {
       name: "Copy location", exact: true,
@@ -276,6 +276,7 @@ test("derived-from and previous versions link to their artifacts beside copy con
   const version = (id, number, extra = {}) => ({...resource, '@id': id, 'pav:version': number, 'bibo:status': 'bibo:published', ...extra});
   await page.route('**/templates/template/report', route => route.fulfill({json: {
     ...version('template', '2.0.0'),
+    isOpen: true,
     everybodyPermission: 'read',
     derivedFrom: {...resource, '@id': 'source', 'schema:name': 'Source template'},
     // Newest first, and including the template itself.
@@ -297,6 +298,21 @@ test("derived-from and previous versions link to their artifacts beside copy con
   await info.getByRole('button', {name: 'Copy identifier for Source template', exact: true}).click();
   await expect.poll(() => page.evaluate(() => window.copiedId)).toBe('source');
 
+  // The artifact is in OpenView, so its public link follows the Identifier and can be copied.
+  const openView = info.locator('.open-view');
+  await expect(info.locator('.identifiers + .open-view')).toHaveCount(1);
+  await expect(openView.locator('.description-heading')).toHaveText('OpenView');
+  const publicLink = openView.getByRole('link');
+  await expect(publicLink).toHaveAttribute('href', /\/templates\/template$/);
+  await expect(publicLink).toHaveAttribute('target', '_blank');
+  await expect(publicLink).toHaveText(await publicLink.getAttribute('href'));
+  await openView.getByRole('button', {name: 'Copy OpenView link', exact: true}).click();
+  await expect.poll(() => page.evaluate(() => window.copiedId)).toMatch(/\/templates\/template$/);
+  await expect(page.getByText('Link copied.', {exact: true})).toBeVisible();
+  // It reads as the Identifier does.
+  const look = el => { const style = getComputedStyle(el); return [style.fontSize, style.color]; };
+  expect(await publicLink.evaluate(look)).toEqual(await info.locator('.identifiers a').evaluate(look));
+
   // The latest version is named on the Version tab, not here.
   await expect(info.locator('.latest-version')).toHaveCount(0);
 
@@ -307,24 +323,24 @@ test("derived-from and previous versions link to their artifacts beside copy con
   // The tab describes the selected version alone, which is not the latest.
   await expect(info.locator('.version')).toHaveCount(1);
   await expect(info.locator('.version dd')).toHaveText(['Template', '2.0.0', 'Published']);
-  // A newer version is named with its version and status beside it, the name alone linked.
+  // A newer version is named with its version and status, all three linked.
   const latest = info.locator('.latest-version');
   await expect(latest.locator('.description-heading')).toHaveText('Latest version');
   // The next version is named even when it is also the latest.
-  await expect(info.locator('.next-version .detail-with-copy > span')).toHaveText('Study metadata · 3.0.0 · Published');
-  await expect(latest.locator('.detail-with-copy > span')).toHaveText('Study metadata · 3.0.0 · Published');
-  await expect(latest.getByRole('link')).toHaveText('Study metadata');
+  await expect(info.locator('.next-version').getByRole('link')).toHaveText('Study metadata · 3.0.0 · Published');
+  await expect(latest.getByRole('link')).toHaveText('Study metadata · 3.0.0 · Published');
   await expect(latest.getByRole('link')).toHaveAttribute('href', /\/templates\/edit\/newer\?/);
   await latest.getByRole('button', {name: 'Copy identifier for Study metadata', exact: true}).click();
   await expect.poll(() => page.evaluate(() => window.copiedId)).toBe('newer');
   // Previous versions read the same way.
   const previous = info.locator('.previous-versions');
   await expect(previous.locator('.description-heading')).toHaveText('Previous versions');
-  await expect(previous.locator('.detail-with-copy > span')).toHaveText([
+  await expect(previous.locator('.detail-with-copy > :first-child')).toHaveText([
     'Study metadata, first edition · 1.0.0 · Published',
     'A version you cannot open · 0.9.0',
   ]);
-  await expect(previous.getByRole('link')).toHaveText(['Study metadata, first edition']);
+  // A version the user cannot open is not linked.
+  await expect(previous.getByRole('link')).toHaveText(['Study metadata, first edition · 1.0.0 · Published']);
   await expect(previous.getByRole('link')).toHaveAttribute('href', /\/templates\/edit\/older\?/);
   await previous.getByRole('button', {name: 'Copy identifier for Study metadata, first edition', exact: true}).click();
   await expect.poll(() => page.evaluate(() => window.copiedId)).toBe('older');
@@ -346,21 +362,20 @@ test("a version two behind the latest names its next version between the latest 
   await page.locator('tbody tr').first().press('Enter');
   const info = page.getByRole('complementary', {name: 'Resource information'});
   await info.getByRole('tab', {name: 'Version', exact: true}).click();
-  await expect(info.locator('.latest-version .detail-with-copy > span')).toHaveText('Study metadata · 4.0.0 · Draft');
+  await expect(info.locator('.latest-version').getByRole('link')).toHaveText('Study metadata · 4.0.0 · Draft');
   const next = info.locator('.next-version');
   await expect(next.locator('.description-heading')).toHaveText('Next version');
-  await expect(next.locator('.detail-with-copy > span')).toHaveText('Study metadata, third edition · 3.0.0 · Published');
-  await expect(next.getByRole('link')).toHaveText('Study metadata, third edition');
+  await expect(next.getByRole('link')).toHaveText('Study metadata, third edition · 3.0.0 · Published');
   await expect(next.getByRole('link')).toHaveAttribute('href', /\/templates\/edit\/next\?/);
   await next.getByRole('button', {name: 'Copy identifier for Study metadata, third edition', exact: true}).click();
   await expect.poll(() => page.evaluate(() => window.copiedId)).toBe('next');
-  await expect(info.locator('.previous-versions .detail-with-copy > span')).toHaveText(['Study metadata · 1.0.0 · Published']);
+  await expect(info.locator('.previous-versions').getByRole('link')).toHaveText(['Study metadata · 1.0.0 · Published']);
   // Latest, next, then previous, as the history runs.
   const order = await info.locator('.latest-version, .next-version, .previous-versions').evaluateAll(sections => sections.map(s => s.className));
   expect(order.map(name => name.split(' ').at(-1))).toEqual(['latest-version', 'next-version', 'previous-versions']);
 });
 
-test("an instance names its template with the template's version and status, linking the name alone", async ({page, api}) => {
+test("an instance names its template with the template's version and status, all three linked", async ({page, api}) => {
   const instance = {...resource, '@id': 'instance', resourceType: 'instance', 'schema:name': 'Study record'};
   await page.route(/\/folders\/[^/]+\/contents/, route => route.fulfill({json: {resources: [resource, instance], totalCount: 2, pathInfo: []}}));
   await page.route(/\/template-instances\/instance\/report/, route => route.fulfill({json: {
@@ -370,12 +385,12 @@ test("an instance names its template with the template's version and status, lin
   await dashboard(page);
   await page.locator('tbody tr', {hasText: 'Study record'}).press('Enter');
   const info = page.getByRole('complementary', {name: 'Resource information'});
-  const template = info.locator('.info-section').filter({hasText: 'Template'}).locator('.detail-with-copy > span');
-  await expect(template).toHaveText('Study metadata · 0.0.1 · Draft');
-  await expect(template.getByRole('link')).toHaveText('Study metadata');
-  // Nothing is shared with everyone, and no newer version is claimed.
+  const template = info.locator('.info-section').filter({hasText: 'Template'}).locator('.detail-with-copy');
+  await expect(template.getByRole('link')).toHaveText('Study metadata · 0.0.1 · Draft');
+  await expect(template.getByRole('link')).toHaveAttribute('href', /\/templates\/edit\/template\?/);
+  // Nothing is shared with everyone, and no newer version or OpenView link is claimed.
   await expect(info.locator('dd small')).not.toContainText(['Everyone']);
-  await expect(info.locator('.latest-version')).toHaveCount(0);
+  await expect(info.locator('.latest-version, .open-view')).toHaveCount(0);
 });
 
 test("first instance copy help escapes the scrolling list and dismisses on scroll", async ({ page, api }) => {
@@ -408,7 +423,12 @@ test("first instance copy help escapes the scrolling list and dismisses on scrol
   await expect(help).toBeVisible();
   await list.evaluate(el => { el.scrollTop = el.scrollHeight; });
   await expect(help).toHaveCount(0);
-  await list.getByRole('button').last().hover();
+  // After a scroll, WebKit's overlay scrollbar covers the list's right edge, where each copy button
+  // sits, and about 200 ms later WebKit hit-tests the resting pointer again. A pointer on the
+  // button's centre then lands on the scrollbar and leaves the button, which closes its help. The
+  // pointer therefore rests on the button's left edge.
+  const last = list.getByRole('button').last();
+  await last.hover({ position: { x: 2, y: (await last.boundingBox()).height / 2 } });
   await expect(help).toHaveText('Copy instance identifier');
   await page.keyboard.press('Escape');
   await expect(help).toHaveCount(0);
