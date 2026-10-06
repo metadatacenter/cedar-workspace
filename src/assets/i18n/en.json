@@ -73,6 +73,7 @@
     "About": "About"
   },
   "Errors": {
+    "InvalidResourceReport": "The server returned incomplete or mismatched resource details. Please retry.",
     "InvalidListing": "The server returned an incomplete resource list. Please retry.",
     "ConfigurationUnavailable": "Unable to load workspace configuration.",
     "SignInFailed": "Sign-in failed. Please reload.",

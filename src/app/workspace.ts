@@ -1,6 +1,7 @@
 import { resourceSelector, resourcePathId, resourceIri } from "./resource-address";
 import { OperationCoordinator } from "./operation-coordinator";
 import { validListing } from "./resource";
+import { validResourceReport } from "./resource-report";
 import { DragPreview } from "./drag-preview";
 import { TooltipController } from "./tooltip-controller";
 import { Tooltip } from "./tooltip";
@@ -496,6 +497,7 @@ export class Workspace {
         "/folders/" + encodeURIComponent(resourcePathId(this.folder)),
       );
       if (!operation.current()) return;
+      this.checkReport({ "@id": this.folder, resourceType: "folder" }, data);
       this.currentFolder.set(data);
       operation.finish();
     } catch (e) {
@@ -515,10 +517,18 @@ export class Workspace {
           owners[i + index].current() ? this.api.report(r) : Promise.resolve(null)),
       );
       if (!operation.current()) return;
-      reports.forEach((report, index) => {
-        if (owners[i + index].current() && report.status === "fulfilled" && report.value)
-          this.publishReport(templates[i + index], report.value.data);
-      });
+      for (const [index, report] of reports.entries()) {
+        if (owners[i + index].current() && report.status === "fulfilled" && report.value) {
+          try {
+            this.checkReport(templates[i + index], report.value.data);
+            this.publishReport(templates[i + index], report.value.data);
+          } catch (e) {
+            operation.fail(e);
+            this.fail(e);
+            return;
+          }
+        }
+      }
     }
     operation.finish();
   }
@@ -585,7 +595,10 @@ export class Workspace {
     try {
       const { data } = await this.api.report(r);
       if (operation.current()) {
-        if (owner.current()) this.publishReport(r, data);
+        if (owner.current()) {
+          this.checkReport(r, data);
+          this.publishReport(r, data);
+        }
         if (r.resourceType === "template") void this.loadInstances(r);
       }
       operation.finish();
@@ -800,6 +813,7 @@ export class Workspace {
     try {
       const { data } = await this.api.report(r);
       if (!operation.current() || !owner.current() || this.menu() !== r["@id"]) return;
+      this.checkReport(r, data);
       this.publishReport(r, data);
       operation.finish();
     } catch (e) {
@@ -871,6 +885,9 @@ export class Workspace {
     this.reports.begin(resource["@id"]);
     this.publishReport(resource, resource);
     this.notice.set(this.i18n.t("Dashboard.DescriptionSaved"));
+  }
+  private checkReport(expected: Resource, data: unknown) {
+    if (!validResourceReport(data, expected)) throw new Error(this.i18n.t("Errors.InvalidResourceReport"));
   }
   private publishReport(resource: Resource, data: Resource) {
     if (this.selected()?.["@id"] === resource["@id"])

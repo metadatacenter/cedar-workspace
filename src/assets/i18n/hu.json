@@ -73,6 +73,7 @@
     "About": "Névjegy"
   },
   "Errors": {
+    "InvalidResourceReport": "A kiszolgáló hiányos vagy eltérő erőforrásadatokat adott vissza. Próbálja újra.",
     "InvalidListing": "A kiszolgáló hiányos erőforráslistát adott vissza. Próbálja újra.",
     "ConfigurationUnavailable": "A munkaterület beállításai nem tölthetők be.",
     "SignInFailed": "A bejelentkezés sikertelen. Kérjük, töltse be újra az oldalt.",
