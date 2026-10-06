@@ -306,6 +306,8 @@ export class Workspace {
   private reselectTab: InfoTab = "info";
   readonly state = new OperationCoordinator<"listing" | "folder" | "detail" | "instances" | "menu" | "enrichment" | "move">();
   private listingGeneration = 0;
+  // Detail, menus and background enrichment publish into the same resource state.
+  private reports = new OperationCoordinator<string>();
   constructor() {
     effect(() => {
       document.body.classList.toggle("explorer-dragging", this.dragging().length > 0);
@@ -319,6 +321,7 @@ export class Workspace {
       this.tooltips.resume();
       document.body.classList.remove("explorer-dragging", "explorer-can-drop");
       this.state.dispose();
+      this.reports.dispose();
     });
   }
   async start() {
@@ -373,6 +376,8 @@ export class Workspace {
   async load(refresh = false) {
     if (!this.state.active) return;
     this.listingGeneration++;
+    this.reports.dispose();
+    this.reports = new OperationCoordinator<string>();
     clearTimeout(this.movedTimer);
     this.movedTarget.set("");
     const operation = this.state.begin("listing", ["folder", "detail", "instances", "menu", "enrichment"]);
@@ -403,10 +408,10 @@ export class Workspace {
       this.rows.set(data.resources);
       this.total.set(data.totalCount);
       this.path.set(data.pathInfo || []);
-      this.restoreSelection();
       void this.loadFolder();
       // Listings omit lifecycle actions. Enrich template links without blocking the table.
       void this.loadTemplateActions(data.resources);
+      this.restoreSelection();
       operation.finish();
     } catch (e) {
       operation.fail(e);
@@ -501,21 +506,18 @@ export class Workspace {
   private async loadTemplateActions(resources: Resource[]) {
     const operation = this.state.begin("enrichment");
     const templates = resources.filter((r) => r.resourceType === "template");
+    // Claim the whole background batch now, before a user requests fresher details.
+    const owners = templates.map((r) => this.reports.begin(r["@id"]));
     for (let i = 0; i < templates.length; i += 4) {
       if (!operation.current()) return;
       const reports = await Promise.allSettled(
-        templates.slice(i, i + 4).map((r) => this.api.report(r)),
+        templates.slice(i, i + 4).map((r, index) =>
+          owners[i + index].current() ? this.api.report(r) : Promise.resolve(null)),
       );
       if (!operation.current()) return;
       reports.forEach((report, index) => {
-        if (report.status === "fulfilled")
-          this.rows.update((rows) =>
-            rows.map((r) =>
-              r["@id"] === templates[i + index]["@id"]
-                ? { ...r, ...report.value.data }
-                : r,
-            ),
-          );
+        if (owners[i + index].current() && report.status === "fulfilled" && report.value)
+          this.publishReport(templates[i + index], report.value.data);
       });
     }
     operation.finish();
@@ -566,10 +568,12 @@ export class Workspace {
     buttons[next]?.focus();
   }
   async select(r: Resource, tab?: InfoTab) {
+    if (!this.state.active) return;
     // Selecting the artifact the panel already shows, as the first click of a double-click does, keeps
     // its tab. Another artifact starts on Details unless a return names its tab.
     tab ??= this.selected()?.["@id"] === r["@id"] ? this.tab : "info";
     const operation = this.state.begin("detail", ["instances"]);
+    const owner = this.reports.begin(r["@id"]);
     this.error.set("");
     this.selectionIds.set([r["@id"]]);
     this.selected.set(r);
@@ -581,18 +585,13 @@ export class Workspace {
     try {
       const { data } = await this.api.report(r);
       if (operation.current()) {
-        this.selected.set({ ...r, ...data });
+        if (owner.current()) this.publishReport(r, data);
         if (r.resourceType === "template") void this.loadInstances(r);
-        this.rows.update((rows) =>
-          rows.map((row) =>
-            row["@id"] === r["@id"] ? { ...row, ...data } : row,
-          ),
-        );
       }
       operation.finish();
     } catch (e) {
       operation.fail(e);
-      if (operation.current()) this.fail(e);
+      if (operation.current() && owner.current()) this.fail(e);
     }
   }
   setSelection(ids: string[]) {
@@ -762,12 +761,14 @@ export class Workspace {
     }
   }
   async toggleMenu(r: Resource, event: MouseEvent) {
+    if (!this.state.active) return;
     if (this.menu() === r["@id"]) {
       this.state.cancel("menu");
       this.menu.set(null);
       return;
     }
     const operation = this.state.begin("menu");
+    const owner = this.reports.begin(r["@id"]);
     this.menuTrigger = event.currentTarget as HTMLElement;
     const rect = this.menuTrigger.getBoundingClientRect();
     this.menuLeft.set(
@@ -798,16 +799,12 @@ export class Workspace {
     );
     try {
       const { data } = await this.api.report(r);
-      if (!operation.current() || this.menu() !== r["@id"]) return;
-      this.rows.update((rows) =>
-        rows.map((row) =>
-          row["@id"] === r["@id"] ? { ...row, ...data } : row,
-        ),
-      );
+      if (!operation.current() || !owner.current() || this.menu() !== r["@id"]) return;
+      this.publishReport(r, data);
       operation.finish();
     } catch (e) {
       operation.fail(e);
-      if (operation.current() && this.menu() === r["@id"]) this.fail(e);
+      if (operation.current() && owner.current() && this.menu() === r["@id"]) this.fail(e);
     }
   }
   navigationQuery(destination: Record<string, string> = {}) {
@@ -870,14 +867,19 @@ export class Workspace {
     });
   }
   descriptionSaved(resource: Resource) {
+    if (!this.state.active) return;
+    this.reports.begin(resource["@id"]);
+    this.publishReport(resource, resource);
+    this.notice.set(this.i18n.t("Dashboard.DescriptionSaved"));
+  }
+  private publishReport(resource: Resource, data: Resource) {
     if (this.selected()?.["@id"] === resource["@id"])
-      this.selected.update((current) => ({ ...current!, ...resource }));
+      this.selected.update((current) => ({ ...current!, ...data }));
     this.rows.update((rows) =>
       rows.map((row) =>
-        row["@id"] === resource["@id"] ? { ...row, ...resource } : row,
+        row["@id"] === resource["@id"] ? { ...row, ...data } : row,
       ),
     );
-    this.notice.set(this.i18n.t("Dashboard.DescriptionSaved"));
   }
   setSort(sort: string) {
     void this.router.navigate([], {
