@@ -244,6 +244,9 @@
     "OpenInOpenView": "Open in OpenView"
   },
   "ResourceDialog": {
+    "InspectOutcome": "This operation may already have completed. Close this dialog and refresh Workspace to check the result before trying again.",
+    "RecoverRevision": "Reload the current revision before saving again. Your edits will be kept.",
+    "RecoveryDenied": "The current resource permissions do not allow this operation.",
     "Headings": {
       "NewFolder": "New folder",
       "Rename": "Rename",

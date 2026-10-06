@@ -244,6 +244,9 @@
     "OpenInOpenView": "Megnyitás az OpenView-ban"
   },
   "ResourceDialog": {
+    "InspectOutcome": "A művelet már végrehajtódhatott. Zárja be ezt az ablakot, és frissítse a munkaterületet az eredmény ellenőrzéséhez, mielőtt újra próbálkozik.",
+    "RecoverRevision": "Újabb mentés előtt töltse be az aktuális változatot. A módosításai megmaradnak.",
+    "RecoveryDenied": "Az erőforrás jelenlegi jogosultságai nem engedélyezik ezt a műveletet.",
     "Headings": {
       "NewFolder": "Új mappa",
       "Rename": "Átnevezés",

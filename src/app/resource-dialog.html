@@ -35,6 +35,10 @@
     } @if(error()){
     <p class="alert" role="alert">{{error()}}</p>
     }
+    @if(reloadRequired()) {
+    <p role="status">{{(inspectionRequired() ? 'ResourceDialog.InspectOutcome' : 'ResourceDialog.RecoverRevision') | translate}}</p>
+    @if(!inspectionRequired()) {<button type="button" (click)="load()" [disabled]="busy()">{{'Common.Retry' | translate}}</button>}
+    }
     <fieldset class="dialog-stack" [disabled]="busy()">
       @if(['new-folder','rename','copy'].includes(action)){<label
         ><span class="field-label">{{(action === 'copy' ? 'ResourceDialog.NameOfCopy' : 'Common.Name') | translate}}</span><input
@@ -134,7 +138,7 @@
       ><button
         class="primary"
         type="submit"
-        [disabled]="busy()||!destinationAllowed"
+        [disabled]="busy()||reloadRequired()||!destinationAllowed"
       >
         {{submitLabel | translate}}
       </button>
