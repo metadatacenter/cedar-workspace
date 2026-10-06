@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { test, expect, resource } from './fixtures.mjs';
+import { test, expect, resource, home } from './fixtures.mjs';
 const documents = JSON.parse(await readFile(new URL('../fixtures/preview.json', import.meta.url), 'utf8'));
 async function setup(page, kind, options = {}) {
   const requests = [];
@@ -14,6 +14,7 @@ async function setup(page, kind, options = {}) {
     const req = route.request(), path = decodeURIComponent(new URL(req.url()).pathname);
     requests.push({path,method:req.method()});
     if (path.endsWith('/contents')) return route.fulfill({json:{resources:[item,{...resource,'@id':'folder',resourceType:'folder','schema:name':'Folder'}],totalCount:2,pathInfo:[]}});
+    if (path.endsWith('/folders/home')) return route.fulfill({json:home});
     if (path.endsWith('/preview-item')) {
       if (options.delay) await options.delay;
       return route.fulfill(options.fail ? {status:403,json:{message:'Forbidden'}} : {json:artifact});

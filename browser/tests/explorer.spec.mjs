@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import { test, expect, resource } from "./fixtures.mjs";
+import { test, expect, resource, home } from "./fixtures.mjs";
 const folder = {
   ...resource,
   "@id": "destination",
@@ -28,6 +28,8 @@ async function setup(page, extra = []) {
           pathInfo: [],
         },
       });
+    // The dashboard reads the folder it opens, and refuses a report about any other.
+    if (path.endsWith("/folders/home")) return route.fulfill({ json: home });
     if (path.endsWith("/move-resource-to-folder")) {
       moved.add(request.postDataJSON()["@id"]);
       return route.fulfill({ json: {} });

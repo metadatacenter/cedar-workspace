@@ -36,7 +36,8 @@ export const resource = {
   ownedByUserName: "Alex Researcher",
   currentUserPermissions: { capabilities, owner: true },
 };
-const folder = {
+/** The signed-in user's home folder, where the dashboard opens. */
+export const home = {
   ...resource,
   "@id": "home",
   resourceType: "folder",
@@ -184,9 +185,9 @@ export const test = base.extend({
             ? []
             : [{ ...item, pathInfo: state.pathInfo }],
           totalCount: 1,
-          pathInfo: state.pathInfo ?? [folder],
+          pathInfo: state.pathInfo ?? [home],
         };
-      else if (path.includes("/folders/home")) body = folder;
+      else if (path.includes("/folders/home")) body = home;
       else if (path.includes("/template-instances/instance"))
         body = path.endsWith("/report")
           ? item

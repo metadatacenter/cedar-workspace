@@ -1,6 +1,6 @@
 import { selectionFixture, selectDeletion } from "./selection-deletion-fixture.mjs";
 import { readFileSync } from "node:fs";
-import { test, expect, dashboard, action, resource } from "./fixtures.mjs";
+import { test, expect, dashboard, action, resource, home } from "./fixtures.mjs";
 import { surfaceCases, checkSurface } from "./surface-contracts.generated.mjs";
 import { tokenStyles, menuItemSpacing } from './overlay-spacing.mjs';
 import { deletionPlan, deletionOwnerRefusal, openFolderDeletion } from "./folder-deletion-fixture.mjs";
@@ -236,6 +236,7 @@ Object.assign(scenarios, {
       const path = new URL(route.request().url()).pathname;
       if (path.endsWith("/contents"))
         return route.fulfill({json: { resources: [folder, item], totalCount: 2, pathInfo: [] }});
+      if (path.endsWith("/folders/home")) return route.fulfill({ json: home });
       const found = path.includes("/a/") || path.endsWith("/a") ? item : folder;
       return route.fulfill({ json: found, headers: { ETag: `"${found["@id"]}"` } });
     });
