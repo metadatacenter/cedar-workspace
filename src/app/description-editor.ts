@@ -1,4 +1,4 @@
-import { OperationCoordinator } from "./operation-coordinator";
+import { RevisionCoordinator } from "./revision-coordinator";
 import { I18n } from "./i18n";
 import {
   Component,
@@ -40,7 +40,7 @@ import { Resource, can, title } from "./resource";
           <button
             type="button"
             class="primary"
-            [disabled]="busy()"
+            [disabled]="busy() || state.reloadRequired()"
             (click)="save()"
           >
             {{ (busy() ? "Common.Saving" : "Common.Save") | translate }}
@@ -57,8 +57,8 @@ import { Resource, can, title } from "./resource";
     }
     @if (error()) {
       <p role="alert">{{ error() }}</p>
-      @if (!snapshot()) {
-        <button type="button" (click)="load()">
+      @if (!snapshot() || state.reloadRequired()) {
+        <button type="button" [disabled]="busy()" (click)="load(true)">
           {{ "Common.Retry" | translate }}
         </button>
       }
@@ -76,7 +76,7 @@ export class DescriptionEditor {
   private readonly api = inject(Backend);
   private loaded = "";
   private readonly i18n = inject(I18n);
-  readonly state = new OperationCoordinator<"read" | "write">();
+  state = new RevisionCoordinator();
   get editable() {
     return can(this.resource(), "updateResource");
   }
@@ -93,7 +93,8 @@ export class DescriptionEditor {
       const key = JSON.stringify([r["@id"], this.editable]);
       if (key === this.loaded) return;
       this.loaded = key;
-      this.state.cancel("read", "write");
+      this.state.dispose();
+      this.state = new RevisionCoordinator();
       this.snapshot.set(null);
       this.draft.set(r["schema:description"] || "");
       this.error.set("");
@@ -101,20 +102,21 @@ export class DescriptionEditor {
       if (this.editable) void this.load();
     });
   }
-  async load() {
+  async load(preserveDraft = false) {
     const r = this.resource();
     if (!this.editable) return;
-    const operation = this.state.begin("read", ["write"]);
+    const operation = this.state.read();
+    if (!operation) return;
     this.busy.set(true);
     this.error.set("");
-    this.snapshot.set(null);
+    if (!preserveDraft) this.snapshot.set(null);
     try {
       const reply = await this.api.snapshot(r, true);
       if (!operation.current()) return;
       if (!reply.etag)
         throw new Error(this.i18n.t("ResourceDialog.NoRevision"));
       this.snapshot.set({ ...reply, data: { ...r, ...reply.data } });
-      this.draft.set(reply.data["schema:description"] || "");
+      if (!preserveDraft) this.draft.set(reply.data["schema:description"] || "");
       operation.finish();
     } catch (e) {
       operation.fail(e);
@@ -125,13 +127,15 @@ export class DescriptionEditor {
     }
   }
   cancel() {
+    if (!this.state.active || this.busy()) return;
     this.draft.set(this.snapshot()?.data["schema:description"] || "");
     void this.load();
   }
   async save() {
     const snapshot = this.snapshot();
     if (!snapshot || !this.editable || !this.dirty || this.busy()) return;
-    const operation = this.state.begin("write", ["read"]);
+    const operation = this.state.write();
+    if (!operation) return;
     this.busy.set(true);
     this.error.set("");
     const updated = { ...snapshot.data, "schema:description": this.draft() };
