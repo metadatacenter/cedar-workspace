@@ -65,4 +65,12 @@ export class RevisionCoordinator {
     this.generation++;
     this.operations.dispose();
   }
+  /** Rebind a live view to a new context without accepting its predecessor's results. */
+  reset() {
+    if (!this.active) return;
+    this.generation++;
+    this.operations.cancel("read", "write");
+    this.phase.set("idle");
+    this.reloadRequired.set(false);
+  }
 }

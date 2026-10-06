@@ -70,7 +70,29 @@ export const principalName = (p: Principal, i18n: Pick<I18n, "t">) =>
 export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
   readonly confirmation = inject(Confirmation);
   private readonly i18n = inject(I18n);
-  @Input({ required: true }) resource!: Resource;
+  private boundResource!: Resource;
+  private context = "";
+  private initialized = false;
+  @Input({ required: true })
+  set resource(value: Resource) {
+    // Own the input: later in-place host edits must not retarget an ACL operation.
+    this.boundResource = structuredClone(value);
+    const context = JSON.stringify([value["@id"], value.resourceType, value.currentUserPermissions]);
+    if (context === this.context || !this.coordinator.active) return;
+    this.context = context;
+    this.coordinator.reset();
+    this.current.set(null);
+    this.permissions.set(null);
+    this.people.set([]);
+    this.etag = null;
+    this.selectPerson("");
+    this.error.set("");
+    this.notice.set("");
+    this.failedChange.set("");
+    this.busy.set(false);
+    if (this.initialized) void this.load();
+  }
+  get resource() { return this.boundResource; }
   @Output() closed = new EventEmitter<string | undefined>();
   @ViewChild("dialog", { static: true }) dialog!: ElementRef<HTMLDialogElement>;
   readonly api = inject(Backend);
@@ -144,6 +166,7 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
     return this.people().find((p) => p["@id"] === this.personId);
   }
   ngOnInit() {
+    this.initialized = true;
     void this.load();
   }
   ngAfterViewInit() {
@@ -236,6 +259,7 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
     this.role = "viewer";
   }
   async add() {
+    const resource = this.resource;
     const person = this.selectedPerson;
     if (!person || !this.options.some((p) => p.id === person["@id"])) return;
     if (
@@ -245,7 +269,7 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
           name: this.principalName(person),
           role: this.roleName(this.role),
         }),
-      )
+      ) && this.resource === resource && this.selectedPerson === person
     )
       this.personId = "";
   }
@@ -354,7 +378,7 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
           this.revision(),
         ),
     );
-    if (transferred && this.coordinator.active)
+    if (transferred && this.coordinator.active && this.resource === resource)
       this.closed.emit(
         this.i18n.t("Permissions.Transferred", {
           name: this.principalName(grant.node),
