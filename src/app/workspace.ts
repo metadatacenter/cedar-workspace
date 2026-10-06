@@ -812,9 +812,11 @@ export class Workspace {
     );
     try {
       const { data } = await this.api.report(r);
-      if (!operation.current() || !owner.current() || this.menu() !== r["@id"]) return;
-      this.checkReport(r, data);
-      this.publishReport(r, data);
+      if (!operation.current()) return;
+      if (owner.current() && this.menu() === r["@id"]) {
+        this.checkReport(r, data);
+        this.publishReport(r, data);
+      }
       operation.finish();
     } catch (e) {
       operation.fail(e);

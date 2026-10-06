@@ -274,3 +274,27 @@ Use `Toast` for successful modifications and copy feedback. It announces politel
 can be dismissed, expires after six seconds and pauses on hover or focus. Render it
 inside the owning dialog when one is open, so it remains accessible in the modal's
 layer. Errors, stale-write conflicts and actionable recovery messages stay inline.
+
+Workspace report reads share ownership by resource across background enrichment,
+selection and menus. A newer request or saved description supersedes older reports,
+including their permissions; report identity and consumed fields are validated
+before publication. Move completion belongs to the listing and component that
+started it and cannot refresh a replacement view.
+
+Metadata recovery recreates CEE because its artifact/configuration inputs are set
+once. Normal saves retain the component. The new component receives the recovered
+contents and current permissions before establishing a clean baseline. Description
+recovery instead retains the local draft while replacing its revision. Network
+failures, unusable success responses, timeouts and server errors are uncertain write
+outcomes: another conditional write requires recovery. An uncertain metadata create
+cannot be resubmitted from that editor; inspect Workspace for the resulting record.
+Discard confirmations expire after changes to their draft, operation or component.
+
+`workspace-lifecycle-matrix.spec.ts` crosses report scopes, arrival order, component
+recreation, permission changes and version changes. `metadata-lifecycle-matrix.spec.ts`
+crosses reload/leave confirmations with write uncertainty, permissions, ETags, later
+edits, intervening writes and recreation. `dialog-confirmation-matrix.spec.ts` covers
+accepted/cancelled dismissal decisions across reads, writes, edits and destruction.
+The browser state-coordination suite checks these host contracts in Chromium and
+WebKit using a CEE fixture that enforces set-once inputs; CEE's own rendering and
+controller suites remain in its repository.

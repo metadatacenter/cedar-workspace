@@ -355,12 +355,17 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   }
   async reload() {
     if (!this.alive || this.saving() || this.state.uncertainCreation()) return;
+    const decision = this.state.checkpoint();
+    const draft = this.editor ? this.draftKey() : null;
     if (
       this.dirty() &&
       !(await this.confirmation.confirm(this.i18n.t("Metadata.DiscardChanges")))
     )
       return;
-    if (this.alive) await this.load();
+    if (
+      decision() && !this.saving() && !this.state.uncertainCreation() &&
+      draft === (this.editor ? this.draftKey() : null)
+    ) await this.load();
   }
   private draftKey() {
     return metadataKey([this.cee.currentMetadata, this.name]);
@@ -570,24 +575,27 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       }
       // A conflict here leaves the edits on screen, which only this editor can say.
       this.error.set(
-        e instanceof HttpError && e.status === 412
-          ? this.i18n.t(e.deleted ? "Metadata.ItemDeleted" : "Metadata.ItemChanged")
-          : e instanceof Error
-            ? e.message
-            : String(e),
+        this.state.uncertainCreation()
+          ? this.i18n.t("Metadata.SaveUnconfirmed")
+          : e instanceof HttpError && e.status === 412
+            ? this.i18n.t(e.deleted ? "Metadata.ItemDeleted" : "Metadata.ItemChanged")
+            : e instanceof Error
+              ? e.message
+              : String(e),
       );
     } finally {
       if (operation.current()) this.saving.set(false);
     }
   }
   async mayLeave() {
+    if (this.updatingAddress) return true;
+    if (!this.alive || this.saving()) return false;
+    if (!this.dirty()) return true;
+    const decision = this.state.checkpoint();
+    const draft = this.draftKey();
     return (
-      this.updatingAddress ||
-      (!this.saving() &&
-        (!this.dirty() ||
-          (await this.confirmation.confirm(
-            this.i18n.t("Metadata.DiscardChanges"),
-          ))))
+      await this.confirmation.confirm(this.i18n.t("Metadata.DiscardChanges")) &&
+      decision() && !this.saving() && draft === this.draftKey()
     );
   }
   back() {

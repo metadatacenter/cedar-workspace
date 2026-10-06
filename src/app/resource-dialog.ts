@@ -108,7 +108,7 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   private initialValues: string | null = null;
   private etag: string | null = null;
   private alive = true;
-  readonly state = new OperationCoordinator<"load" | "browse">();
+  readonly state = new OperationCoordinator<"load" | "browse" | "write">();
   private originalFocus = document.activeElement as HTMLElement | null;
   get headingIcon() {
     return (
@@ -172,7 +172,11 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
     return JSON.stringify([this.name, this.description, this.version]);
   }
   async close() {
-    if (this.busy() && !this.preparing()) return;
+    if (!this.alive || (this.busy() && !this.preparing())) return;
+    const decision = this.state.checkpoint();
+    const values = this.values();
+    const resource = this.resource;
+    const action = this.action;
     // Publishing and drafting ask only for a version, which is quick to choose again.
     if (
       !["publish", "draft"].includes(this.action) &&
@@ -183,11 +187,16 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
       ))
     )
       return;
+    if (
+      !decision() || this.values() !== values || this.resource !== resource ||
+      this.action !== action || (this.busy() && !this.preparing())
+    ) return;
     this.alive = false;
     this.state.dispose();
     this.closed.emit();
   }
   async load() {
+    if (!this.alive || (this.busy() && !this.preparing())) return;
     const operation = this.state.begin("load", ["browse"]);
     this.busy.set(true);
     this.etag = null;
@@ -345,6 +354,7 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
     if (!this.alive || this.busy() || !this.destinationAllowed) return;
     this.submitted = true;
     if (this.nameError || this.versionError) return;
+    const operation = this.state.begin("write", ["load", "browse"]);
     this.busy.set(true);
     this.error.set("");
     const r = this.resource;
@@ -432,11 +442,15 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
         default:
           throw new Error(this.i18n.t("ResourceDialog.UnknownAction"));
       }
-      if (this.alive) this.saved.emit();
+      if (operation.current()) {
+        operation.finish();
+        this.saved.emit();
+      }
     } catch (e) {
-      this.fail(e);
+      operation.fail(e);
+      if (operation.current()) this.fail(e);
     } finally {
-      this.busy.set(false);
+      if (operation.current()) this.busy.set(false);
     }
   }
 }

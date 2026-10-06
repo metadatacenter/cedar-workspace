@@ -11,7 +11,9 @@ for (const transition of ["destroy", "navigate", "none"])
       if (transition === "destroy") m.fixture.destroy();
       if (transition === "navigate") await m.host.load();
       m.api.request.mockClear();
-      failure ? pending.reject(new Error("Move failed")) : pending.resolve({ moved: ["item"], failed: [] });
+      failure
+        ? pending.reject(new Error("Move failed"))
+        : pending.resolve({ moved: ["item"], failed: [] });
       await moving;
       if (transition !== "none") {
         expect(m.api.request).not.toHaveBeenCalled();

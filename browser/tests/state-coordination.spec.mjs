@@ -133,3 +133,74 @@ test('an empty page after the collection shrinks reports no displayed rows and c
   await expect(page.locator('tbody tr')).toHaveCount(1);
   await expect(page.locator('.paging')).toContainText('Displaying 1–1 of 20');
 });
+
+for (const outcome of ['lost connection', 'malformed success', 'server error']) {
+  test(`an uncertain metadata create (${outcome}) cannot be repeated`, async ({page, api}) => {
+    let writes = 0;
+    await page.route('**/api/resource/template-instances?**', route => {
+      writes++;
+      if (outcome === 'lost connection') return route.abort('failed');
+      if (outcome === 'malformed success') return route.fulfill({status: 201, contentType: 'application/json', body: '{broken'});
+      return route.fulfill({status: 503, json: {message: 'No acknowledgement'}});
+    });
+    await page.goto('/instances/create/template');
+    const name = page.getByLabel('Instance name', {exact: true});
+    await name.fill('Draft to retain');
+    const save = page.getByRole('button', {name: 'Save', exact: true});
+    await save.click();
+    await expect(save).toBeDisabled();
+    await expect(page.locator('.metadata-save-status')).toHaveText('Reload required');
+    await expect(page.getByRole('alert')).toContainText('Workspace');
+    await expect(page.getByRole('button', {name: 'Reload metadata', exact: true})).toHaveCount(0);
+    await name.fill('Still my draft');
+    await expect(save).toBeDisabled();
+    expect(writes).toBe(1);
+  });
+}
+
+for (const writable of [true, false]) {
+  test(`metadata recovery replaces CEE contents and applies writable=${writable}`, async ({page, api}) => {
+    let recovering = false;
+    await page.route('**/api/resource/template-instances/instance', route => {
+      if (route.request().method() === 'PUT') return route.fulfill({status: 412, json: {message: 'Changed'}});
+      return route.fulfill({json: {'@id': 'instance', 'schema:isBasedOn': 'template', 'schema:name': recovering ? 'Server revision' : 'Original', Value: {'@value': recovering ? 'new' : 'old'}}, headers: {ETag: recovering ? '"new"' : '"old"'}});
+    });
+    await page.route('**/api/resource/template-instances/instance/report', route => route.fulfill({json: {currentUserPermissions: {capabilities: !recovering || writable ? ['updateResource'] : []}}}));
+    await page.goto('/instances/edit/instance');
+    const name = page.getByLabel('Instance name', {exact: true});
+    await name.fill('Draft');
+    await page.evaluate(() => { window.previousEditor = document.querySelector('cedar-embeddable-editor'); });
+    await page.getByRole('button', {name: 'Save', exact: true}).click();
+    await page.getByRole('button', {name: 'Reload metadata', exact: true}).click();
+    recovering = true;
+    await page.locator('.confirmation-dialog').getByRole('button', {name: 'OK', exact: true}).click();
+    await expect(name).toHaveValue('Server revision');
+    expect(await page.evaluate(() => {
+      const editor = document.querySelector('cedar-embeddable-editor');
+      return {recreated: editor !== window.previousEditor, oldDisconnected: !window.previousEditor.isConnected, value: editor.currentMetadata.Value['@value'], readOnly: editor.config.readOnlyMode};
+    })).toEqual({recreated: true, oldDisconnected: true, value: 'new', readOnly: !writable});
+    if (writable) await expect(name).toBeEditable(); else await expect(name).not.toBeEditable();
+  });
+}
+
+test('a description conflict requires Retry and keeps the draft on the new revision', async ({page, api}) => {
+  let revision = '"old"', written;
+  await page.route('**/api/resource/templates/template', route => route.fulfill({json: {...resource, 'schema:description': revision === '"old"' ? 'Original' : 'Changed elsewhere'}, headers: {ETag: revision}}));
+  await page.route('**/api/resource/command/rename-resource', route => {
+    written = route.request().headers()['if-match'];
+    return revision === '"old"' ? route.fulfill({status: 412, json: {message: 'Changed'}}) : route.fulfill({json: resource, headers: {ETag: '"saved"'}});
+  });
+  await page.goto('/dashboard');
+  await page.locator('.explorer-item[data-resource-id="template"]').click();
+  const description = page.getByRole('textbox', {name: 'Description', exact: true});
+  await description.fill('My draft');
+  const save = page.getByRole('button', {name: 'Save', exact: true});
+  await save.click();
+  await expect(save).toBeDisabled();
+  revision = '"new"';
+  await page.getByRole('button', {name: 'Retry', exact: true}).click();
+  await expect(description).toHaveValue('My draft');
+  await expect(save).toBeEnabled();
+  await save.click();
+  await expect.poll(() => written).toBe('"new"');
+});

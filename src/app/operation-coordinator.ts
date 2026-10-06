@@ -11,6 +11,13 @@ export class OperationCoordinator<Scope extends string> {
     { status: "pending" | "ready" | "error"; message: string }
   >();
   private disposed = false;
+  private generation = 0;
+
+  /** A decision may apply only to the operations that were current when it was asked. */
+  checkpoint() {
+    const generation = this.generation;
+    return () => this.active && generation === this.generation;
+  }
 
   begin(scope: Scope, invalidate: Scope[] = []): Operation {
     this.cancel(...invalidate);
@@ -35,6 +42,7 @@ export class OperationCoordinator<Scope extends string> {
   }
 
   cancel(...scopes: Scope[]) {
+    this.generation++;
     scopes.forEach((scope) => this.operations.delete(scope));
   }
   dispose() {
