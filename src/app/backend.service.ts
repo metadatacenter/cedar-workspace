@@ -77,10 +77,16 @@ export class Backend {
   private initialization?: Promise<boolean>;
   private authentication?: Promise<boolean>;
   private authenticate() {
-    return (this.authentication ||= this.initializeAuth());
+    return (this.authentication ||= this.initializeAuth().catch((error) => {
+      this.authentication = undefined;
+      throw error;
+    }));
   }
   init(): Promise<boolean> {
-    return (this.initialization ||= this.initialize());
+    return (this.initialization ||= this.initialize().catch((error) => {
+      this.initialization = undefined;
+      throw error;
+    }));
   }
   private async initializeAuth() {
     const response = await fetch("/config/url-service.conf.json", {
