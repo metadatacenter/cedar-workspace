@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import { test, expect, resource, home } from "./fixtures.mjs";
+import { test, expect, resource } from "./fixtures.mjs";
 const folder = {
   ...resource,
   "@id": "destination",
@@ -28,17 +28,16 @@ async function setup(page, extra = []) {
           pathInfo: [],
         },
       });
-    // The dashboard reads the folder it opens, and refuses a report about any other.
-    if (path.endsWith("/folders/home")) return route.fulfill({ json: home });
     if (path.endsWith("/move-resource-to-folder")) {
       moved.add(request.postDataJSON()["@id"]);
       return route.fulfill({ json: {} });
     }
     const id = decodeURIComponent(path.split("/").filter(Boolean).at(-1));
-    const r =
-      [...items, ...extra].find(
-        (r) => path.includes("/" + r["@id"] + "/") || id === r["@id"],
-      ) || folder;
+    const r = [folder, ...items, ...extra].find(
+      (r) => path.includes("/" + r["@id"] + "/") || id === r["@id"],
+    );
+    // Anything else, the home folder included, is the shared fixture's to answer or refuse.
+    if (!r) return route.fallback();
     return route.fulfill({ json: r, headers: { ETag: '"' + r["@id"] + '"' } });
   });
   await page.goto("/dashboard");

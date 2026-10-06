@@ -37,7 +37,7 @@ export const resource = {
   currentUserPermissions: { capabilities, owner: true },
 };
 /** The signed-in user's home folder, where the dashboard opens. */
-export const home = {
+const home = {
   ...resource,
   "@id": "home",
   resourceType: "folder",

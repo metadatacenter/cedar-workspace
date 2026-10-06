@@ -31,7 +31,7 @@ async function setup(page, type, listed) {
       return route.fulfill({ json: { resources: listing, totalCount: listing.length, pathInfo: [] } });
     const found = [current, newer].find((r) => path.includes("/" + r["@id"] + "/") || path.endsWith("/" + r["@id"]));
     if (found) return route.fulfill({ json: { ...found, versions }, headers: { ETag: '"1"' } });
-    return route.fulfill({ json: { ...resource, "@id": "home", resourceType: "folder", "schema:name": "Home" } });
+    return route.fallback();
   });
   // Every editor is a stand-in page; the test follows its return address as a real editor would.
   await page.route(
