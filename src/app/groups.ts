@@ -1,4 +1,5 @@
 import { RevisionCoordinator } from "./revision-coordinator";
+import { uncertainWrite } from "./write-failure";
 import { Operation } from "./operation-coordinator";
 import { uniquePrincipals } from "./access-validation";
 import { validGroup, validGroups, validMembers } from "./group-validation";
@@ -342,9 +343,7 @@ export class Groups implements OnInit, OnDestroy {
       if (!operation.current()) return;
       operation.fail(e);
       if (!needsRevision) {
-        this.uncertainCreation.set(
-          !(e instanceof HttpError) || e.status >= 500,
-        );
+        this.uncertainCreation.set(uncertainWrite(e));
         this.stale.set(previousReload);
       }
       const needsReload = needsRevision && this.stale();
