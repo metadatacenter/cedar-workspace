@@ -304,7 +304,8 @@ export class Workspace {
   // and the Info panel tab it was left on.
   private reselect: string | null = null;
   private reselectTab: InfoTab = "info";
-  readonly state = new OperationCoordinator<"listing" | "folder" | "detail" | "instances" | "menu" | "enrichment">();
+  readonly state = new OperationCoordinator<"listing" | "folder" | "detail" | "instances" | "menu" | "enrichment" | "move">();
+  private listingGeneration = 0;
   constructor() {
     effect(() => {
       document.body.classList.toggle("explorer-dragging", this.dragging().length > 0);
@@ -370,6 +371,10 @@ export class Workspace {
     this.error.set(e instanceof Error ? e.message : String(e));
   }
   async load(refresh = false) {
+    if (!this.state.active) return;
+    this.listingGeneration++;
+    clearTimeout(this.movedTimer);
+    this.movedTarget.set("");
     const operation = this.state.begin("listing", ["folder", "detail", "instances", "menu", "enrichment"]);
     this.loading.set(true);
     this.refreshing.set(refresh);
@@ -653,19 +658,28 @@ export class Workspace {
     if (this.canMoveSelection()) this.cutItems.set([...this.selection()]);
   }
   async moveItems(resources: Resource[], target: string) {
-    if (this.moving() || !resources.length) return;
+    if (!this.state.active || this.moving() || !resources.length) return;
+    const operation = this.state.begin("move");
+    let generation = this.listingGeneration;
+    const current = () => operation.current() && generation === this.listingGeneration;
     this.moving.set(true);
     this.error.set("");
     try {
       const result = await this.moves.move(resources, target);
+      if (!current()) return;
       this.cutItems.update((items) =>
         items.filter((r) => !result.moved.includes(r["@id"])),
       );
-      await this.load(true);
+      const reload = this.load(true);
+      generation = this.listingGeneration;
+      await reload;
+      if (!current()) return;
       if (result.moved.length) {
         clearTimeout(this.movedTimer);
         this.movedTarget.set(target);
-        this.movedTimer = setTimeout(() => this.movedTarget.set(""), 1600);
+        this.movedTimer = setTimeout(() => {
+          if (current()) this.movedTarget.set("");
+        }, 1600);
       }
       this.selectionIds.set(
         result.failed
@@ -683,10 +697,12 @@ export class Workspace {
             .map((f) => this.title(f.resource) + ": " + f.message)
             .join("; "),
         );
+      operation.finish();
     } catch (e) {
-      this.fail(e);
+      operation.fail(e);
+      if (current()) this.fail(e);
     } finally {
-      this.moving.set(false);
+      if (operation.current()) this.moving.set(false);
     }
   }
   explorerKeys(event: KeyboardEvent) {
