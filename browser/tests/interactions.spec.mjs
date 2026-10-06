@@ -329,7 +329,7 @@ test("group creation errors do not offer unrelated reloads, but stale edits can 
   await expect(page.getByLabel("Name", { exact: true })).toHaveValue("My edit");
   api.fail = false;
   await page.getByRole("button", { name: "Reload group" }).click();
-  await expect(page.getByLabel("Name", { exact: true })).toHaveValue("Research team");
+  await expect(page.getByLabel("Name", { exact: true })).toHaveValue("My edit");
   await expect(page.getByRole("alert")).toHaveCount(0);
 });
 

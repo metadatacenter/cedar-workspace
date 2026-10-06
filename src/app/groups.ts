@@ -226,15 +226,31 @@ export class Groups implements OnInit, OnDestroy {
   private async load(g: Group, returningToCreate = false, parent?: Operation) {
     const operation = parent ?? this.coordinator.read();
     if (!operation) return;
+    const previous = this.selected();
+    const recovering =
+      previous?.["@id"] === g["@id"] &&
+      (this.stale() || this.recoveryGroup()?.["@id"] === g["@id"]);
+    // Preserve only edited fields; untouched fields adopt the recovered server baseline.
+    const draftName =
+      recovering && this.editName !== this.groupName(previous!)
+        ? this.editName
+        : undefined;
+    const draftDescription =
+      recovering &&
+      this.editDescription !== (previous!["schema:description"] || "")
+        ? this.editDescription
+        : undefined;
     // Keep the current panel intact until both reads complete when changing tabs.
     if (returningToCreate) this.busy.set(true);
     else {
-      this.selected.set(null);
-      this.members.set(null);
-      this.stale.set(false);
-      this.restricted.set(false);
+      if (!recovering) {
+        this.selected.set(null);
+        this.members.set(null);
+        this.stale.set(false);
+        this.restricted.set(false);
+        this.groupEtag = this.memberEtag = null;
+      }
       this.selecting.set(true);
-      this.groupEtag = this.memberEtag = null;
     }
     this.error.set("");
     this.recoveryGroup.set(null);
@@ -277,8 +293,9 @@ export class Groups implements OnInit, OnDestroy {
         ),
       );
       this.groupEtag = detail.etag;
-      this.editName = this.groupName(detail.data);
-      this.editDescription = detail.data["schema:description"] || "";
+      this.editName = draftName ?? this.groupName(detail.data);
+      this.editDescription =
+        draftDescription ?? detail.data["schema:description"] ?? "";
       if (returningToCreate) this.activeTab = "create";
       if (!this.error()) {
         if (!parent) operation.finish();
