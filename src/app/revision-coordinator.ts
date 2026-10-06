@@ -1,5 +1,5 @@
 import { signal } from "@angular/core";
-import { HttpError } from "./backend.service";
+import { writeRequiresRecovery } from "./write-failure";
 import { Operation, OperationCoordinator } from "./operation-coordinator";
 
 /** Owns a revision-bearing screen's reads, writes and confirmation decisions. */
@@ -55,9 +55,7 @@ export class RevisionCoordinator {
         // Unknown write outcomes must be read back before another conditional mutation.
         if (
           kind === "write" &&
-          (!(error instanceof HttpError) ||
-            [401, 403, 404, 409, 412, 428].includes(error.status) ||
-            error.status >= 500)
+          writeRequiresRecovery(error)
         )
           this.reloadRequired.set(true);
       },

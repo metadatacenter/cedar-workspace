@@ -295,7 +295,7 @@ describe("metadata save and recovery matrix", () => {
         expect(host.validationErrors).toHaveLength(
           transition === "edited" ? 0 : 1,
         );
-        expect(host.state.reloadRequired()).toBe(![400, 500].includes(status));
+        expect(host.state.reloadRequired()).toBe(status !== 400);
         const calls = request.mock.calls.length;
         await host.save();
         if (host.state.reloadRequired() || transition === "unchanged")

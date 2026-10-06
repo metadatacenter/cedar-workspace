@@ -31,6 +31,7 @@ import type {
   CeeValidationProblem,
 } from "cedar-embeddable-editor";
 import { Backend, HttpError } from "./backend.service";
+import { uncertainWrite, writeRequiresRecovery } from "./write-failure";
 import {
   MetadataState,
   MetadataProblem,
@@ -478,6 +479,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     this.saving.set(true);
     this.error.set("");
     this.notice.set("");
+    let attempted = false;
     try {
       if (this.saved && !this.etag) {
         this.state.reloadRequired.set(true);
@@ -502,6 +504,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
           this.template["schema:description"] || "",
         );
       }
+      attempted = true;
       const reply = await this.api.request<CeeJsonObject>(
         path,
         this.saved ? "PUT" : "POST",
@@ -558,10 +561,12 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       if (!operation.current()) return;
       operation.fail(e);
       this.refreshQuality();
+      if (attempted && writeRequiresRecovery(e)) {
+        this.state.reloadRequired.set(true);
+        if (!this.saved && uncertainWrite(e)) this.state.uncertainCreation.set(true);
+      }
       if (e instanceof HttpError) {
         this.state.reject(e.validationReport, submittedKey, this.template);
-        if ([403, 404, 409, 412, 428].includes(e.status))
-          this.state.reloadRequired.set(true);
       }
       // A conflict here leaves the edits on screen, which only this editor can say.
       this.error.set(
