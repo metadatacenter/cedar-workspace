@@ -424,6 +424,10 @@ test("folder separators have no surrounding spacing in navigation, details and d
   await page.locator("tbody tr").first().focus();
   await page.keyboard.press("Enter");
   await unspaced(page.locator(".information .breadcrumb-separator"), 2);
+  // A path without the resource at its end still names every folder, the last included.
+  await expect(page.locator(".information .location-label + dd > span")).toHaveText(
+    "All/Users/My workspace",
+  );
   await page
     .getByRole("button", { name: "Actions for Study metadata" })
     .click();

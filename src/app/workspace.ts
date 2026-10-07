@@ -756,8 +756,12 @@ export class Workspace {
       if (operation.current()) this.fail(e);
     }
   }
+  // The folders above a resource, outermost first. A path may end with the resource itself.
+  location(r: Resource): Resource[] {
+    return r.pathInfo?.filter((p) => p["@id"] !== r["@id"]) ?? [];
+  }
   parentId(r: Resource): string | undefined {
-    return r.pathInfo?.filter((p) => p["@id"] !== r["@id"]).at(-1)?.["@id"];
+    return this.location(r).at(-1)?.["@id"];
   }
   copyId(value: string) {
     return this.copy(value, "Common.IdCopied");

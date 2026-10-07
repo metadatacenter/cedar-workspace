@@ -586,11 +586,12 @@
       <dt class="location-label">{{'Dashboard.Location' | translate}}</dt>
       <dd class="detail-with-copy">
         <span
-          >@for(p of r.pathInfo;track p['@id'];let last=$last){@if(!last){<a
+          >@for(p of location(r);track p['@id'];let last=$last){<a
             routerLink="/dashboard"
             [queryParams]="navigationQuery({folderId:p['@id']})"
             >{{title(p)==='/'?('Common.All' | translate):title(p)}}</a
-          ><span class="breadcrumb-separator" aria-hidden="true">/</span
+          >@if(!last){<span class="breadcrumb-separator" aria-hidden="true"
+            >/</span
           >}}</span
         >
         @if(parentId(r); as id){
@@ -667,13 +668,6 @@
         {{'Dashboard.TrustedBy' | translate}}
       </div>
       {{r.trustedBy}}
-    </section>
-    } @if(r['schema:identifier']){
-    <section class="info-section">
-      <div class="description-heading">
-        {{'Dashboard.Identifier' | translate}}
-      </div>
-      {{r['schema:identifier']}}
     </section>
     } @if(r.doi){
     <section class="info-section">

@@ -16,6 +16,8 @@ for (const readonly of [false, true]) {
     const selected = {
       ...resource,
       pathInfo: [{ "@id": "home", "schema:name": "Home" }, resource],
+      // An identifier that is not an IRI, such as a CDE's, which the panel does not show.
+      "schema:identifier": "m1cGPHlsxqZ",
       isBasedOn: {
         ...resource,
         "@id": "source-template",
@@ -102,6 +104,9 @@ for (const readonly of [false, true]) {
       });
     });
     expect(Math.abs(locationCenters[0] - locationCenters[1])).toBeLessThan(2);
+    // The location names the folders above the resource, with no separator after the last.
+    await expect(info.locator(".location-label + dd > span")).toHaveText("Home");
+    await expect(info.getByText("m1cGPHlsxqZ")).toHaveCount(0);
     await info.locator("h1").hover();
     if (process.env.WORKSPACE_VISUAL && !readonly && browserName === "chromium")
       await expect(info).toHaveScreenshot("information-details.png");
