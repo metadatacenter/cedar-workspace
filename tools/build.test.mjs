@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtemp, cp, readFile, rm, mkdir, writeFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
-import { tmpdir } from "node:os";
+import { devNull, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
@@ -93,6 +93,52 @@ test("deployment configuration completes writes and preserves explicit split ori
     );
     assert.equal(context.window.cedarCeeHostFonts, false);
     await assert.rejects(readFile(staged), { code: "ENOENT" });
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+test("server configuration leaves a clean checkout clean", async () => {
+  // The native server build refuses a dirty checkout. The reactor tests a copy
+  // without .git, so the checkout is rebuilt here from the ignore rules.
+  const { configure } = await import("./workspace.mjs");
+  const dir = await mkdtemp(join(tmpdir(), "workspace-clean-"));
+  const git = (...args) =>
+    execFileSync("git", args, {
+      cwd: dir,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      env: { ...process.env, GIT_CONFIG_GLOBAL: devNull, GIT_CONFIG_NOSYSTEM: "1" },
+    });
+  try {
+    await cp(join(root, ".gitignore"), join(dir, ".gitignore"));
+    await cp(join(root, "app/config"), join(dir, "app/config"), {
+      recursive: true,
+    });
+    git("init", "-q");
+    git("add", "-A");
+    const before = git("status", "--porcelain", "--untracked-files=normal");
+    await configure(dir, {
+      CEDAR_FRONTEND_BEHAVIOR: "server",
+      CEDAR_FRONTEND_TARGET: "fixture",
+      CEDAR_FRONTEND_fixture_UI_HOST: "ui.example",
+      CEDAR_FRONTEND_fixture_REST_HOST: "api.example",
+      CEDAR_VERSION: "1.2.3-test",
+      CEDAR_VERSION_MODIFIER: "",
+      CEDAR_GA4_TRACKING_ID: "",
+      CEDAR_DATACITE_ENABLED: "false",
+      CEDAR_SOURCE_COMMIT: "3".repeat(40),
+    });
+    const cee = JSON.parse(
+      await readFile(
+        join(dir, "app/config/embeddable-editor-config.json"),
+        "utf8",
+      ),
+    );
+    assert.equal(cee.bridgeBaseUrl, "https://bridge.api.example/");
+    assert.equal(
+      git("status", "--porcelain", "--untracked-files=normal"),
+      before,
+    );
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -190,11 +236,17 @@ test("installed lock and packed source contain no retired runtime or vendor tree
     ),
     [],
   );
+  // The image configures itself from the template; a packed output would carry one environment's hosts.
+  assert.deepEqual(
+    files.filter((file) => /^app\/config\/[^/]+$/.test(file)),
+    [],
+  );
   for (const required of [
     "src/main.ts",
     "src/index.html",
     "angular.json",
     "tools/workspace.mjs",
+    "app/config/src/embeddable-editor-config.json",
     "app/index.html",
     "app/scripts/handlers/KeycloakUserHandler.js",
     "app/scripts/keycloak/keycloak.min.js",
