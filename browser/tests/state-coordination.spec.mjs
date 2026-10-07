@@ -97,7 +97,7 @@ test('a failed metadata load can retry and a conflict requires an explicit reloa
   await page.locator('.confirmation-dialog').getByRole('button', {name:'Cancel',exact:true}).click();
   await expect(name).toHaveValue('Unsaved');
   await page.getByRole('button', {name:'Reload metadata',exact:true}).click();
-  await page.locator('.confirmation-dialog').getByRole('button', {name:'OK',exact:true}).click();
+  await page.locator('.confirmation-dialog').getByRole('button', {name:'Yes',exact:true}).click();
   await expect(name).toHaveValue('Study record'); await expect(save).toBeEnabled();
 });
 
@@ -173,7 +173,7 @@ for (const writable of [true, false]) {
     await page.getByRole('button', {name: 'Save', exact: true}).click();
     await page.getByRole('button', {name: 'Reload metadata', exact: true}).click();
     recovering = true;
-    await page.locator('.confirmation-dialog').getByRole('button', {name: 'OK', exact: true}).click();
+    await page.locator('.confirmation-dialog').getByRole('button', {name: 'Yes', exact: true}).click();
     await expect(name).toHaveValue('Server revision');
     expect(await page.evaluate(() => {
       const editor = document.querySelector('cedar-embeddable-editor');

@@ -74,7 +74,7 @@ export class Confirmation {
         <button autofocus (click)="decide(false)">
           {{ "Common.Cancel" | translate }}</button
         ><button class="primary" (click)="decide(true)">
-          {{ "Common.OK" | translate }}
+          {{ "Common.Yes" | translate }}
         </button>
       </footer>
     </dialog>

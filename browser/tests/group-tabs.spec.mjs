@@ -57,7 +57,7 @@ for (const width of [1440, 375]) {
     await expect(name).toHaveValue("Research team");
     expect(api.requests.filter(r => r.method !== "GET")).toEqual([]);
     await bin.click();
-    await confirmation.getByRole("button", { name: "OK", exact: true }).click();
+    await confirmation.getByRole("button", { name: "Yes", exact: true }).click();
     await expect(panel.locator(".groups-selected")).toHaveCount(0);
     await expect(page.getByRole("status")).toHaveText("Group deleted.");
     expect(api.requests.filter(r => r.method !== "GET")).toEqual([

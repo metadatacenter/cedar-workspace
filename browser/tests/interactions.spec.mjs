@@ -97,7 +97,7 @@ test("failed save retains input, sends its revision, and blocks duplicate submis
   await page.keyboard.press("Escape");
   await page
     .locator(".confirmation-dialog")
-    .getByRole("button", { name: "OK", exact: true })
+    .getByRole("button", { name: "Yes", exact: true })
     .click();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
 });
