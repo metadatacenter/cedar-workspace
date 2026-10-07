@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { resourceIri, resourcePathId, resourceSelector, useDeploymentBase, useDeploymentDomain } from "./resource-address";
+import { resourceIri, resourcePathId, resourceSelector, useDeploymentApi, useDeploymentDomain } from "./resource-address";
 
 /**
  * The compact address of a folder or artifact, across the deployment's base, the form an identifier
@@ -30,11 +30,11 @@ for (const base of Object.keys(BASES))
   for (const form of Object.keys(FORMS)) for (const collection of COLLECTIONS) cases.push([base, form, collection]);
 
 describe("compact resource addresses", () => {
-  afterEach(() => useDeploymentBase(null));
+  afterEach(() => useDeploymentDomain(null));
 
   it.each(cases)("on %s, %s in %s", (baseName, formName, collection) => {
     const base = BASES[baseName];
-    useDeploymentBase(base ? `${base}folders/${UUID}` : null);
+    useDeploymentDomain(base ? new URL(base).hostname.replace(/^repo\./, "") : null);
     const home = `${base ?? "https://repo.metadatacenter.orgx/"}folders/${UUID}`;
     const { id, own } = FORMS[formName](collection, base);
     const uuid = id.slice(id.lastIndexOf("/") + 1);
@@ -51,7 +51,7 @@ describe("compact resource addresses", () => {
       `https://repo.metadatacenter.orgy/${selector}`,
     );
     expect(resourceIri(selector, "home")).toBe(selector);
-    useDeploymentBase(`https://repo.metadatacenter.orgx/folders/${UUID}`);
+    useDeploymentDomain("metadatacenter.orgx");
     expect(resourceIri(selector, `https://repo.metadatacenter.orgy/folders/${UUID}`)).toBe(
       `https://repo.metadatacenter.orgx/${selector}`,
     );
@@ -59,12 +59,39 @@ describe("compact resource addresses", () => {
     expect(resourceSelector(selector)).toBe(selector);
   });
 
-  it("learns no base from an identity that is not a folder or artifact", () => {
-    for (const identity of [`https://repo.metadatacenter.orgx/users/${UUID}`, "home", "", undefined]) {
-      useDeploymentBase(identity);
-      expect(resourceSelector(`https://repo.metadatacenter.orgx/templates/${UUID}`)).toBe(
-        `https://repo.metadatacenter.orgx/templates/${UUID}`,
+  it.each([
+    ["https://resource.metadatacenter.org", "https://repo.metadatacenter.org/"],
+    ["https://resource.metadatacenter.org/", "https://repo.metadatacenter.org/"],
+    ["https://resource.staging.metadatacenter.org", "https://repo.staging.metadatacenter.org/"],
+    ["https://resource.metadatacenter.orgx", "https://repo.metadatacenter.orgx/"],
+  ])("learns the base from the resource API %s", (api, base) => {
+    useDeploymentApi(api);
+    expect(resourceSelector(`${base}templates/${UUID}`)).toBe(`templates/${UUID}`);
+    expect(resourcePathId(`${base}folders/${UUID}`)).toBe(UUID);
+  });
+
+  it("learns no base from a resource API on any other host", () => {
+    for (const api of ["https://api.example", "https://user.metadatacenter.org", "https://metadatacenter.org", "not a URL", "", null, undefined]) {
+      useDeploymentApi(api);
+      expect(resourceSelector(`https://repo.metadatacenter.org/templates/${UUID}`)).toBe(
+        `https://repo.metadatacenter.org/templates/${UUID}`,
       );
+    }
+  });
+
+  // An account created when CEDAR ran on metadatacenter.net keeps its home folder and its older
+  // resources on that base. The server would expand a short selector for one onto .org instead.
+  it("keeps an earlier domain's identities absolute while shortening the deployment's own", () => {
+    useDeploymentApi("https://resource.metadatacenter.org");
+    const home = `https://repo.metadatacenter.net/folders/${UUID}`;
+    for (const collection of COLLECTIONS) {
+      const legacy = `https://repo.metadatacenter.net/${collection}/${UUID}`;
+      expect(resourceSelector(legacy)).toBe(legacy);
+      expect(resourcePathId(legacy)).toBe(legacy);
+      expect(resourceIri(resourceSelector(legacy), home)).toBe(legacy);
+      const own = `https://repo.metadatacenter.org/${collection}/${UUID}`;
+      expect(resourceSelector(own)).toBe(`${collection}/${UUID}`);
+      expect(resourceIri(resourceSelector(own), home)).toBe(own);
     }
   });
 
