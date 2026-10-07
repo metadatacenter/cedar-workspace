@@ -3,7 +3,7 @@ import type { UserProfile } from "./account-types";
 import { Injectable, inject } from "@angular/core";
 import { I18n } from "./i18n";
 import { Config, Resource, collections } from "./resource";
-import { useDeploymentBase } from "./resource-address";
+import { useDeploymentApi } from "./resource-address";
 interface Auth {
   initUserHandler(ok: (authenticated: boolean) => void, fail: () => void): void;
   refreshToken(seconds: number, ok: () => void, fail: () => void): void;
@@ -95,6 +95,7 @@ export class Backend {
     if (!response.ok)
       throw new Error(this.i18n.t("Errors.ConfigurationUnavailable"));
     this.config = await response.json();
+    useDeploymentApi(this.config.resourceRestAPI);
     this.auth = new window.KeycloakUserHandler();
     const authenticated = await new Promise<boolean>((resolve, reject) =>
       this.auth.initUserHandler(resolve, () =>
@@ -113,8 +114,6 @@ export class Backend {
         `${this.config.userRestAPI}/users/${encodeURIComponent(this.auth.getParsedToken().sub)}`,
       )
     ).data;
-    // The home folder is an identity this deployment minted, so it names the base to shorten against.
-    useDeploymentBase(this.profile.homeFolderId);
     return true;
   }
   async logout() {

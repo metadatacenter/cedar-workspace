@@ -5,7 +5,7 @@ import { Workspace, actions } from "./workspace";
 import { I18n } from "./i18n";
 import { Backend } from "./backend.service";
 import { Config, Resource } from "./resource";
-import { useDeploymentBase } from "./resource-address";
+import { useDeploymentApi, useDeploymentDomain } from "./resource-address";
 const folder: Resource = {
   "@id": "home",
   resourceType: "folder",
@@ -304,12 +304,55 @@ describe("Angular Workspace", () => {
       ).toBe(offered);
     });
   }
+  // An account created when CEDAR ran on metadatacenter.net keeps its home folder on that base, while
+  // the deployment mints on .org and expands a short selector onto .org.
+  describe("an account whose home folder is on an earlier domain's base", () => {
+    const uuid = "7f0a0f3e-f0e5-4c29-85fa-e646e0fbee22";
+    const home = `https://repo.metadatacenter.net/folders/${uuid}`;
+    // The backend answers with the folder asked for, as the server does.
+    const useHome = (id: string) => {
+      const current = { ...folder, "@id": id };
+      api.profile.homeFolderId = id;
+      api.request = vi.fn(async (path: string) => ({
+        data:
+          path.includes("/contents") || path.includes("/search")
+            ? { resources: [template], totalCount: 1, pathInfo: [current] }
+            : current,
+      }));
+    };
+    beforeEach(() => {
+      useDeploymentApi("https://resource.metadatacenter.org");
+      useHome(home);
+    });
+    afterEach(() => useDeploymentDomain(null));
+    const requested = () => api.request.mock.calls.map(([path]) => String(path));
+    it("reads the home folder and its contents by their full identifier", async () => {
+      await render();
+      const folderRequests = requested().filter((path) => path.startsWith("/folders/"));
+      expect(folderRequests.length).toBeGreaterThan(0);
+      for (const path of folderRequests)
+        expect(path.startsWith(`/folders/${encodeURIComponent(home)}`)).toBe(true);
+    });
+    it("hands the full identifier to Designer as the folder to create in", async () => {
+      const f = await render();
+      const link = new URL(f.componentInstance.createLink("templates"));
+      expect(link.searchParams.get("folderId")).toBe(home);
+    });
+    it("still shortens a folder the deployment minted", async () => {
+      useHome(`https://repo.metadatacenter.org/folders/${uuid}`);
+      const f = await render();
+      expect(requested()).toContain(`/folders/${uuid}`);
+      expect(new URL(f.componentInstance.createLink("templates")).searchParams.get("folderId")).toBe(
+        `folders/${uuid}`,
+      );
+    });
+  });
   // The information panel decides by the resource's path once it has one, so a
   // stale listing flag neither shows the link nor hides it.
   describe("the information panel's OpenView link", () => {
     // The deployment mints on .orgx, so its identities are addressed in the compact form.
-    beforeEach(() => useDeploymentBase("https://repo.metadatacenter.orgx/folders/00000000-0000-4000-8000-000000000000"));
-    afterEach(() => useDeploymentBase(null));
+    beforeEach(() => useDeploymentDomain("metadatacenter.orgx"));
+    afterEach(() => useDeploymentDomain(null));
     const uuid = "0f1e2d3c-4b5a-4968-8776-655443322110";
     const artifact: Resource = {
       ...template,
