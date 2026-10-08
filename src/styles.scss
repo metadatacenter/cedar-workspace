@@ -19,6 +19,14 @@ body {
   color: var(--cedar-text-primary);
   background: var(--cedar-surface-raised);
 }
+// CEDAR has no monospace face: code and preformatted text are set in the body font, not the
+// browser's monospace.
+code,
+pre,
+kbd,
+samp {
+  font-family: inherit;
+}
 
 button,
 input,
