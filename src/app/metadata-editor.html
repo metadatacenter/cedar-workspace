@@ -50,7 +50,9 @@
   />
   @if(!writable()){
   <p role="status">{{'Metadata.ReadOnlyAccess' | translate}}</p>
-  } } @if(validationErrors.length){
+  } }
+  <!-- Both summaries are about saving, which someone with read-only access cannot do. -->
+  @if(writable() && validationErrors.length){
   <details
     class="metadata-quality"
     [attr.aria-label]="'Metadata.ErrorsRegion' | translate"
@@ -78,7 +80,7 @@
       }
     </ul>
   </details>
-  } @if(validationWarnings.length){
+  } @if(writable() && validationWarnings.length){
   <details
     class="metadata-quality validation-summary--warning"
     [attr.aria-label]="'Metadata.WarningsRegion' | translate"
