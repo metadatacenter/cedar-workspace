@@ -398,6 +398,33 @@ test("an instance names its template with the template's version and status, all
   await expect(info.locator('.latest-version, .open-view')).toHaveCount(0);
 });
 
+// The server reduces a template or source the user may not read to its identifier. The panel says
+// so, rather than calling it Untitled and Unversioned behind a link that cannot open.
+test("an instance whose template and source the user cannot read says so, without links", async ({page, api}) => {
+  const instance = {...resource, '@id': 'instance', resourceType: 'instance', 'schema:name': 'Study record'};
+  await page.route(/\/folders\/[^/]+\/contents/, route => route.fulfill({json: {resources: [resource, instance], totalCount: 2, pathInfo: []}}));
+  await page.route(/\/template-instances\/instance\/report/, route => route.fulfill({json: {
+    ...instance,
+    isBasedOn: {'@id': 'template', resourceType: 'template', activeUserCanRead: false},
+    derivedFrom: {'@id': 'source', resourceType: 'instance', activeUserCanRead: false},
+  }}));
+  await page.addInitScript(() => Object.defineProperty(navigator, 'clipboard', {value: {writeText: async value => { window.copiedId = value; }}}));
+  await dashboard(page);
+  await page.locator('tbody tr', {hasText: 'Study record'}).press('Enter');
+  const info = page.getByRole('complementary', {name: 'Resource information'});
+  const template = info.locator('.info-section').filter({hasText: 'Template'}).locator('.detail-with-copy');
+  await expect(template).toHaveText('A template you cannot open');
+  await expect(template.getByRole('link')).toHaveCount(0);
+  await template.getByRole('button', {name: 'Copy template identifier', exact: true}).click();
+  await expect.poll(() => page.evaluate(() => window.copiedId)).toBe('template');
+  const source = info.locator('.info-section').filter({hasText: 'Derived from'});
+  await expect(source.locator('.detail-with-copy')).toHaveText('An item you cannot open');
+  await expect(source.getByRole('link')).toHaveCount(0);
+  await expect(source.locator('small')).toHaveCount(0);
+  await expect(info).not.toContainText('Untitled');
+  await expect(info).not.toContainText('Unversioned');
+});
+
 test("first instance copy help escapes the scrolling list and dismisses on scroll", async ({ page, api }) => {
   const instances = Array.from({ length: 12 }, (_, i) => ({
     ...resource,

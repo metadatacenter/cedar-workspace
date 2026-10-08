@@ -79,6 +79,16 @@ for (const depth of [1, 3, 8]) for (const severity of ["errors", "warnings"]) {
   });
 }
 
+// Metadata can be shared with someone its template is not. The server's refusal speaks of "the
+// artifact", which reads as the metadata, and loading again cannot help.
+test('metadata whose template the user cannot read says so and offers no retry', async ({page, api}) => {
+  await page.route('**/api/resource/templates/template', route =>
+    route.fulfill({status: 403, json: {message: 'You do not have the required capability on the artifact'}}));
+  await page.goto('/instances/edit/instance');
+  await expect(page.getByRole('alert')).toHaveText("You do not have access to this instance's template, so it cannot be shown.");
+  await expect(page.getByRole('button', {name: 'Retry', exact: true})).toHaveCount(0);
+});
+
 test('a failed metadata load can retry and a conflict requires an explicit reload', async ({page, api}) => {
   let failLoad = true, conflict = false;
   await page.route('**/api/resource/template-instances/instance', route => {

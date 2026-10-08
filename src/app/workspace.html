@@ -633,13 +633,18 @@
         {{'Dashboard.DerivedFrom' | translate}}
       </div>
       <div class="detail-with-copy">
+        @if(derived.activeUserCanRead !== false){
         <a [href]="link(derived)">{{title(derived)}}</a>
+        } @else {
+        <span>{{'Dashboard.UnreadableSource' | translate}}</span>
+        }
         <cedar-copy-button
-          [label]="'Dashboard.CopyIdentifierFor' | translate: {name: title(derived)}"
+          [label]="'Dashboard.CopyIdentifierFor' | translate: {name: derived.activeUserCanRead !== false ? title(derived) : derived['@id']}"
           [help]="'Dashboard.CopySourceIdentifier' | translate"
           (copied)="copyId(derived['@id'])"
         />
       </div>
+      @if(derived.activeUserCanRead !== false){
       <small
         >{{'Dashboard.Modified' | translate}}
         <time
@@ -648,6 +653,7 @@
           >{{derived['pav:lastUpdatedOn']|friendlyDate:now()}}</time
         ></small
       >
+      }
     </section>
     } @if(r.isBasedOn;as based){
     <section class="info-section">
@@ -655,7 +661,12 @@
         {{'Dashboard.Template' | translate}}
       </div>
       <div class="detail-with-copy">
+        <!-- The server names only a template the user may read; it reduces any other to its identifier. -->
+        @if(based.activeUserCanRead !== false){
         <a [href]="link(based)">{{title(based)}}{{versionAndStatus(based)}}</a>
+        } @else {
+        <span>{{'Dashboard.UnreadableTemplate' | translate}}</span>
+        }
         <cedar-copy-button
           [label]="'Dashboard.CopyTemplateIdentifier' | translate"
           (copied)="copyId(based['@id'])"

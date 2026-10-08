@@ -22,7 +22,7 @@ import type {
   CeeConfig,
   CeeJsonObject,
 } from "cedar-embeddable-editor";
-import { Backend } from "./backend.service";
+import { Backend, refusedRead } from "./backend.service";
 import { CeeLoader } from "./cee-loader";
 import { I18n, fallbackLanguage } from "./i18n";
 import { Icon } from "./icon";
@@ -94,15 +94,15 @@ export function previewElement(element: CeeJsonObject): CeeJsonObject {
         [attr.aria-label]="'Preview.Label' | translate"
         [attr.aria-busy]="loading()"
       >
-        @if (error()) {
-          <p role="alert">{{ "Preview.Unavailable" | translate }}</p>
+        @if (error(); as message) {
+          <p role="alert">{{ message | translate }}</p>
         }
         @if (trying() && !error()) {
           <p class="try-out-notice" role="status">
             {{ "Preview.Unsaved" | translate }}
           </p>
         }
-        <div #mount [hidden]="error()"></div>
+        <div #mount [hidden]="error() !== null"></div>
       </section>
     </dialog>
   `,
@@ -118,7 +118,8 @@ export class ArtifactPreview implements AfterViewInit, OnDestroy {
   private readonly i18n = inject(I18n);
   private readonly injector = inject(Injector);
   readonly loading = signal(true);
-  readonly error = signal(false);
+  /** The translation key of what went wrong, or null while nothing has. */
+  readonly error = signal<string | null>(null);
   readonly trying = signal(false);
   private source?: {
     artifact: CeeJsonObject;
@@ -132,10 +133,10 @@ export class ArtifactPreview implements AfterViewInit, OnDestroy {
   get name() {
     return title(this.resource, this.i18n.t("Common.Untitled"));
   }
-  private fail = () => {
+  private fail = (message = "Preview.Unavailable") => {
     if (!this.alive) return;
     clearTimeout(this.timer);
-    this.error.set(true);
+    this.error.set(message);
     this.mount.nativeElement.replaceChildren();
     this.reveal();
   };
@@ -178,11 +179,17 @@ export class ArtifactPreview implements AfterViewInit, OnDestroy {
       if (this.resource.resourceType === "instance") {
         const id = artifact["schema:isBasedOn"];
         if (typeof id !== "string" || !id) throw new Error();
-        template = (
-          await this.api.request<CeeJsonObject>(
-            "/templates/" + encodeURIComponent(resourcePathId(id)),
-          )
-        ).data;
+        try {
+          template = (
+            await this.api.request<CeeJsonObject>(
+              "/templates/" + encodeURIComponent(resourcePathId(id)),
+            )
+          ).data;
+        } catch (e) {
+          // The instance can be shared with someone its template is not, and trying again will not help.
+          if (refusedRead(e)) return this.fail("Errors.TemplateUnreadable");
+          throw e;
+        }
       } else if (this.resource.resourceType === "element")
         template = previewElement(artifact);
       if (!this.alive || this.error()) return;
