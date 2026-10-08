@@ -513,14 +513,15 @@ cedar-description-editor .no-description {
   display: block;
   color: var(--cedar-text-muted);
 }
+// The icons sit only their own padding apart, as the listing's row actions do.
 .detail-with-copy {
   display: flex;
   align-items: center;
-  gap: var(--cedar-space-2);
 }
 .detail-with-copy > :first-child {
   flex: 1;
   min-width: 0;
+  margin-right: var(--cedar-space-2);
 }
 .detail-with-copy .copy-icon,
 .detail-with-copy .detail-action {
