@@ -305,15 +305,22 @@ test("derived-from and previous versions link to their artifacts beside copy con
   await expect(source).toHaveAttribute('href', /\/templates\/edit\/source\?/);
   await info.getByRole('button', {name: 'Copy identifier for Source template', exact: true}).click();
   await expect.poll(() => page.evaluate(() => window.copiedId)).toBe('source');
+  // Each artifact the panel names can be previewed beside its copy control.
+  await expect(info.getByRole('button', {name: 'Preview Source template', exact: true})).toBeVisible();
+  await expect(info.locator('.identifiers').getByRole('button', {name: 'Preview Study metadata', exact: true})).toBeVisible();
 
   // The artifact is in OpenView, so its public link follows the Identifier and can be copied.
   const openView = info.locator('.open-view');
   await expect(info.locator('.identifiers + .open-view')).toHaveCount(1);
   await expect(openView.locator('.description-heading')).toHaveText('OpenView');
-  const publicLink = openView.getByRole('link');
+  const publicLink = openView.getByRole('link', {name: /\/templates\/template$/});
   await expect(publicLink).toHaveAttribute('href', /\/templates\/template$/);
   await expect(publicLink).toHaveAttribute('target', '_blank');
   await expect(publicLink).toHaveText(await publicLink.getAttribute('href'));
+  // An icon beside it opens the same address.
+  const openInOpenView = openView.getByRole('link', {name: 'Open in OpenView', exact: true});
+  await expect(openInOpenView).toHaveAttribute('href', await publicLink.getAttribute('href'));
+  await expect(openInOpenView).toHaveAttribute('target', '_blank');
   await openView.getByRole('button', {name: 'Copy OpenView link', exact: true}).click();
   await expect.poll(() => page.evaluate(() => window.copiedId)).toMatch(/\/templates\/template$/);
   await expect(page.getByText('Link copied.', {exact: true})).toBeVisible();
@@ -352,6 +359,11 @@ test("derived-from and previous versions link to their artifacts beside copy con
   await expect(previous.getByRole('link')).toHaveAttribute('href', /\/templates\/edit\/older\?/);
   await previous.getByRole('button', {name: 'Copy identifier for Study metadata, first edition', exact: true}).click();
   await expect.poll(() => page.evaluate(() => window.copiedId)).toBe('older');
+  // Only the versions the user may open can be previewed.
+  await expect(latest.getByRole('button', {name: 'Preview Study metadata', exact: true})).toBeVisible();
+  const previews = previous.getByRole('button', {name: /^Preview /});
+  await expect(previews).toHaveCount(1);
+  await expect(previews).toHaveAccessibleName('Preview Study metadata, first edition');
 });
 
 test("a version two behind the latest names its next version between the latest and the previous ones", async ({page, api}) => {
@@ -444,7 +456,7 @@ test("first instance copy help escapes the scrolling list and dismisses on scrol
   await dashboard(page);
   await page.locator('tbody tr').first().press('Enter');
   const list = page.locator('.instance-list');
-  const first = list.getByRole('button').first();
+  const first = list.locator('.copy-icon').first();
   await first.hover();
   const help = page.getByRole('tooltip');
   await expect(help).toHaveText('Copy instance identifier');
@@ -462,7 +474,7 @@ test("first instance copy help escapes the scrolling list and dismisses on scrol
   // sits, and about 200 ms later WebKit hit-tests the resting pointer again. A pointer on the
   // button's centre then lands on the scrollbar and leaves the button, which closes its help. The
   // pointer therefore rests on the button's left edge.
-  const last = list.getByRole('button').last();
+  const last = list.locator('.copy-icon').last();
   await last.hover({ position: { x: 2, y: (await last.boundingBox()).height / 2 } });
   await expect(help).toHaveText('Copy instance identifier');
   await page.keyboard.press('Escape');

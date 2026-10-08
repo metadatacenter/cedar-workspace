@@ -968,6 +968,14 @@ export class Workspace {
     const here = versions.findIndex((v) => v["@id"] === r["@id"]);
     return here > 0 ? versions[here - 1] : undefined;
   }
+  /** Whether the Info panel offers a preview of an artifact it names: one the user may read. */
+  previewable(r: Resource): boolean {
+    return (
+      r.activeUserCanRead !== false &&
+      r.resourceType !== "folder" &&
+      Object.hasOwn(collections, r.resourceType)
+    );
+  }
   link(r: Resource, populate = false) {
     return resourceLink(
       r,

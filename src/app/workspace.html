@@ -595,6 +595,14 @@
           >}}</span
         >
         @if(parentId(r); as id){
+        <a
+          class="detail-action"
+          routerLink="/dashboard"
+          [queryParams]="navigationQuery({folderId:id})"
+          [attr.aria-label]="'Dashboard.OpenLocation' | translate"
+          [cedarTooltip]="'Dashboard.OpenLocation' | translate"
+          ><cedar-icon name="external"
+        /></a>
         <cedar-copy-button
           [label]="'Dashboard.CopyLocation' | translate"
           (copied)="copyId(id)"
@@ -637,6 +645,16 @@
         <a [href]="link(derived)">{{title(derived)}}</a>
         } @else {
         <span>{{'Dashboard.UnreadableSource' | translate}}</span>
+        } @if(previewable(derived)){
+        <button
+          type="button"
+          class="detail-action"
+          [cedarTooltip]="'Preview.Label' | translate"
+          [attr.aria-label]="'Preview.For' | translate:{name:title(derived)}"
+          (click)="preview.set(derived)"
+        >
+          <cedar-icon name="preview" />
+        </button>
         }
         <cedar-copy-button
           [label]="'Dashboard.CopyIdentifierFor' | translate: {name: derived.activeUserCanRead !== false ? title(derived) : derived['@id']}"
@@ -666,6 +684,16 @@
         <a [href]="link(based)">{{title(based)}}{{versionAndStatus(based)}}</a>
         } @else {
         <span>{{'Dashboard.UnreadableTemplate' | translate}}</span>
+        } @if(previewable(based)){
+        <button
+          type="button"
+          class="detail-action"
+          [cedarTooltip]="'Preview.Label' | translate"
+          [attr.aria-label]="'Preview.For' | translate:{name:title(based)}"
+          (click)="preview.set(based)"
+        >
+          <cedar-icon name="preview" />
+        </button>
         }
         <cedar-copy-button
           [label]="'Dashboard.CopyTemplateIdentifier' | translate"
@@ -695,6 +723,17 @@
         @for(instance of instances();track instance['@id']){
         <div class="detail-with-copy">
           <a [href]="link(instance)">{{title(instance)}}</a>
+          @if(previewable(instance)){
+          <button
+            type="button"
+            class="detail-action"
+            [cedarTooltip]="'Preview.Label' | translate"
+            [attr.aria-label]="'Preview.For' | translate:{name:title(instance)}"
+            (click)="preview.set(instance)"
+          >
+            <cedar-icon name="preview" />
+          </button>
+          }
           <cedar-copy-button
             [label]="'Dashboard.CopyIdentifierFor' | translate: {name: title(instance)}"
             [help]="'Dashboard.CopyInstanceIdentifier' | translate"
@@ -720,6 +759,26 @@
       </div>
       <div class="detail-with-copy">
         <a [href]="link(r)">{{r['@id']}}</a>
+        @if(r.resourceType === 'folder'){
+        <a
+          class="detail-action"
+          routerLink="/dashboard"
+          [queryParams]="navigationQuery({folderId:r['@id']})"
+          [attr.aria-label]="'Dashboard.OpenFolder' | translate"
+          [cedarTooltip]="'Dashboard.OpenFolder' | translate"
+          ><cedar-icon name="external"
+        /></a>
+        } @else if(previewable(r)){
+        <button
+          type="button"
+          class="detail-action"
+          [cedarTooltip]="'Preview.Label' | translate"
+          [attr.aria-label]="'Preview.For' | translate:{name:title(r)}"
+          (click)="preview.set(r)"
+        >
+          <cedar-icon name="preview" />
+        </button>
+        }
         <cedar-copy-button
           [label]="'Dashboard.CopyIdentifier' | translate"
           (copied)="copyId(r['@id'])"
@@ -733,6 +792,15 @@
       </div>
       <div class="detail-with-copy">
         <a [href]="openViewLink" target="_blank" rel="noopener">{{openViewLink}}</a>
+        <a
+          class="detail-action"
+          [href]="openViewLink"
+          target="_blank"
+          rel="noopener"
+          [attr.aria-label]="'Dashboard.OpenInOpenView' | translate"
+          [cedarTooltip]="'Dashboard.OpenInOpenView' | translate"
+          ><cedar-icon name="external"
+        /></a>
         <cedar-copy-button
           [label]="'Dashboard.CopyOpenViewLink' | translate"
           (copied)="copyLink(openViewLink)"
@@ -777,6 +845,16 @@
           <span
             >{{'Dashboard.UnreadableVersion' | translate}}{{versionAndStatus(latest)}}</span
           >
+          } @if(previewable(latest)){
+          <button
+            type="button"
+            class="detail-action"
+            [cedarTooltip]="'Preview.Label' | translate"
+            [attr.aria-label]="'Preview.For' | translate:{name:title(latest)}"
+            (click)="preview.set(latest)"
+          >
+            <cedar-icon name="preview" />
+          </button>
           }
           <cedar-copy-button
             [label]="'Dashboard.CopyIdentifierFor' | translate: {name: latest.activeUserCanRead !== false ? title(latest) : (latest['pav:version'] || latest['@id'])}"
@@ -797,6 +875,16 @@
           <span
             >{{'Dashboard.UnreadableVersion' | translate}}{{versionAndStatus(next)}}</span
           >
+          } @if(previewable(next)){
+          <button
+            type="button"
+            class="detail-action"
+            [cedarTooltip]="'Preview.Label' | translate"
+            [attr.aria-label]="'Preview.For' | translate:{name:title(next)}"
+            (click)="preview.set(next)"
+          >
+            <cedar-icon name="preview" />
+          </button>
           }
           <cedar-copy-button
             [label]="'Dashboard.CopyIdentifierFor' | translate: {name: next.activeUserCanRead !== false ? title(next) : (next['pav:version'] || next['@id'])}"
@@ -819,6 +907,16 @@
             <span
               >{{'Dashboard.UnreadableVersion' | translate}}{{versionAndStatus(v)}}</span
             >
+            } @if(previewable(v)){
+            <button
+              type="button"
+              class="detail-action"
+              [cedarTooltip]="'Preview.Label' | translate"
+              [attr.aria-label]="'Preview.For' | translate:{name:title(v)}"
+              (click)="preview.set(v)"
+            >
+              <cedar-icon name="preview" />
+            </button>
             }
             <cedar-copy-button
               [label]="'Dashboard.CopyIdentifierFor' | translate: {name: v.activeUserCanRead !== false ? title(v) : (v['pav:version'] || v['@id'])}"
