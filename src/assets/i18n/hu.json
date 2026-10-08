@@ -48,9 +48,9 @@
     "instance": "példány"
   },
   "Roles": {
-    "viewer": "megtekintő",
-    "editor": "szerkesztő",
-    "manager": "kezelő"
+    "viewer": "Megtekintő",
+    "editor": "Szerkesztő",
+    "manager": "Kezelő"
   },
   "Status": {
     "draft": "Vázlat",
@@ -190,7 +190,7 @@
     "By": "{{name}} által",
     "ByYou": "általad",
     "You": "te",
-    "Access": "Hozzáférés",
+    "Access": "Az Ön hozzáférése",
     "DerivedFrom": "Származtatva ebből",
     "Modified": "Módosítva",
     "Template": "Sablon",

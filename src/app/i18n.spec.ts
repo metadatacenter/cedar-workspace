@@ -40,7 +40,7 @@ describe("Workspace translations", () => {
   });
   it("shows a server value it cannot translate as it arrived", () => {
     const i18n = TestBed.inject(I18n);
-    expect(i18n.known("Roles.viewer", "viewer")).toBe("viewer");
+    expect(i18n.known("Roles.viewer", "viewer")).toBe("Viewer");
     expect(i18n.known("Roles.auditor", "auditor")).toBe("auditor");
   });
 });

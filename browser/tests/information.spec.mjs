@@ -24,6 +24,7 @@ for (const readonly of [false, true]) {
         "schema:name": "Source template",
       },
       currentUserPermissions: {
+        ...(readonly ? { role: "viewer" } : {}),
         capabilities: readonly ? ["readResource"] : capabilities,
       },
     };
@@ -107,6 +108,8 @@ for (const readonly of [false, true]) {
     // The location names the folders above the resource, with no separator after the last.
     await expect(info.locator(".location-label + dd > span")).toHaveText("Home");
     await expect(info.getByText("m1cGPHlsxqZ")).toHaveCount(0);
+    // The row states the current user's own access, by the role's name.
+    await expect(info.locator('dt:text-is("Your access") + dd')).toHaveText(readonly ? "Viewer" : "—");
     await info.locator("h1").hover();
     if (process.env.WORKSPACE_VISUAL && !readonly && browserName === "chromium")
       await expect(info).toHaveScreenshot("information-details.png");

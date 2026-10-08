@@ -48,9 +48,9 @@
     "instance": "instance"
   },
   "Roles": {
-    "viewer": "viewer",
-    "editor": "editor",
-    "manager": "manager"
+    "viewer": "Viewer",
+    "editor": "Editor",
+    "manager": "Manager"
   },
   "Status": {
     "draft": "Draft",
@@ -190,7 +190,7 @@
     "By": "by {{name}}",
     "ByYou": "by you",
     "You": "you",
-    "Access": "Access",
+    "Access": "Your access",
     "DerivedFrom": "Derived from",
     "Modified": "Modified",
     "Template": "Template",
