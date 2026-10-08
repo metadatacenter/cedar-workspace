@@ -601,7 +601,7 @@
           [queryParams]="navigationQuery({folderId:id})"
           [attr.aria-label]="'Dashboard.OpenLocation' | translate"
           [cedarTooltip]="'Dashboard.OpenLocation' | translate"
-          ><cedar-icon name="external"
+          ><cedar-icon name="go-to"
         /></a>
         <cedar-copy-button
           [label]="'Dashboard.CopyLocation' | translate"
@@ -766,7 +766,7 @@
           [queryParams]="navigationQuery({folderId:r['@id']})"
           [attr.aria-label]="'Dashboard.OpenFolder' | translate"
           [cedarTooltip]="'Dashboard.OpenFolder' | translate"
-          ><cedar-icon name="external"
+          ><cedar-icon name="go-to"
         /></a>
         } @else if(previewable(r)){
         <button

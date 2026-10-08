@@ -472,6 +472,10 @@ describe("Angular Workspace", () => {
       expect(actionLabels(el)).toEqual(["Open location", "Open folder"]);
       expect(folderQuery(el.querySelector('[aria-label="Open location"]'))).toBe("home");
       expect(folderQuery(el.querySelector('[aria-label="Open folder"]'))).toBe("child");
+      // Moving within Workspace is not opening a new tab, so it is not drawn as one.
+      expect(
+        [...el.querySelectorAll(".detail-action svg")].map((svg) => svg.getAttribute("data-cedar-icon")),
+      ).toEqual(["go-to", "go-to"]);
     });
     it("opens the OpenView address in a new tab", async () => {
       const f = await render();
@@ -482,6 +486,7 @@ describe("Angular Workspace", () => {
         ".open-view .detail-action",
       )!;
       expect(link.getAttribute("aria-label")).toBe("Open in OpenView");
+      expect(link.querySelector("svg")?.getAttribute("data-cedar-icon")).toBe("external");
       expect(link.getAttribute("href")).toBe(f.componentInstance.openView(selected));
       expect(link.target).toBe("_blank");
       expect(link.rel).toBe("noopener");
