@@ -14,5 +14,4 @@ export interface UserProfile {
   homeFolderId: string;
   permissions?: string[];
   apiKeys?: ApiKey[];
-  uiPreferences?: { preferredDateFormat?: string; [key: string]: unknown };
 }

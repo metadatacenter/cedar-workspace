@@ -502,22 +502,6 @@ test("profile sections expose labelled copy actions for API examples", async ({
   expect(text).toContain("<API_KEY>");
 });
 
-test("the settings form label reads like the facts above it", async ({
-  page,
-  api,
-}) => {
-  await page.goto("/settings");
-  const style = (locator) =>
-    locator.evaluate((el) => {
-      const s = getComputedStyle(el);
-      return [s.fontSize, s.fontWeight, s.color];
-    });
-  await expect(page.locator("label[for=date-format]")).toBeVisible();
-  expect(await style(page.locator("label[for=date-format]"))).toEqual(
-    await style(page.locator(".account-facts dt").first()),
-  );
-});
-
 for (const route of ["settings", "privacy", "profile"]) {
   test(`${route} is a styled standalone account page`, async ({
     page,

@@ -444,7 +444,6 @@
       "Id": "@id",
       "HomeFolderId": "Saját mappa azonosítója",
       "EncodedHomeFolderId": "Saját mappa kódolt azonosítója",
-      "PreferredDateFormat": "Előnyben részesített dátumformátum",
       "CopyField": "Másolás: {{field}}",
       "MemberSince": "Tag ekkortól",
       "ApiKeys": "API-kulcsok",
@@ -483,14 +482,10 @@
     "Settings": {
       "Title": "Beállítások",
       "About": "A CEDAR névjegye",
-      "Version": "Verzió",
+      "Version": "CEDAR-verzió",
       "VersionModifier": "Verziómódosító",
       "CacheVersion": "– a felület gyorsítótárának verziója",
       "CeeVersion": "CEE-verzió",
-      "DateFormatHeading": "Előnyben részesített dátumformátum",
-      "DateFormatIntro": "A dátumok megjelenítése a munkaterületen. A beállítás a fiókjába kerül, és a CEDAR többi eszköze is használhatja.",
-      "DateFormat": "Dátumformátum",
-      "Saved": "Dátumformátum mentve.",
       "Unavailable": "Nem érhető el"
     },
     "Privacy": {

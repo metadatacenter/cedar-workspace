@@ -127,10 +127,6 @@ export class Profile implements OnInit, OnDestroy {
             encodeURIComponent(resourcePathId(p.homeFolderId)),
             true,
           ),
-          field(
-            "Account.Profile.PreferredDateFormat",
-            p.uiPreferences?.preferredDateFormat || "MM/DD/YYYY",
-          ),
         ]
       : [];
   }

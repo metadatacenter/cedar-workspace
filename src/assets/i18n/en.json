@@ -444,7 +444,6 @@
       "Id": "@id",
       "HomeFolderId": "Home folder id",
       "EncodedHomeFolderId": "Encoded home folder id",
-      "PreferredDateFormat": "Preferred date format",
       "CopyField": "Copy {{field}}",
       "MemberSince": "Member since",
       "ApiKeys": "API Keys",
@@ -483,14 +482,10 @@
     "Settings": {
       "Title": "Settings",
       "About": "About CEDAR",
-      "Version": "Version",
+      "Version": "CEDAR version",
       "VersionModifier": "Version modifier",
       "CacheVersion": "— UI cache version",
       "CeeVersion": "CEE version",
-      "DateFormatHeading": "Preferred date format",
-      "DateFormatIntro": "How dates are shown in Workspace. Saved to your account and available to CEDAR tools.",
-      "DateFormat": "Date format",
-      "Saved": "Date format saved.",
       "Unavailable": "Unavailable"
     },
     "Privacy": {
