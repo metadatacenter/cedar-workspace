@@ -649,6 +649,32 @@ test("links in the Info panel return to the artifact whose panel held them", asy
   await expect(info).toContainText("Study metadata");
 });
 
+test("Back from a folder opened in the Info panel selects that folder again", async ({ page, api }) => {
+  const folder = { ...resource, "@id": "child", resourceType: "folder", "schema:name": "Study folder" };
+  await page.route(/\/folders\/home\/contents/, (route) =>
+    route.fulfill({ json: { resources: [resource, folder], totalCount: 2, pathInfo: [] } }),
+  );
+  await page.route(/\/folders\/child(?:\/contents)?(?:\?|$)/, (route) =>
+    route.fulfill({
+      json: new URL(route.request().url()).pathname.endsWith("/contents")
+        ? { resources: [], totalCount: 0, pathInfo: [folder] }
+        : folder,
+    }),
+  );
+  await page.goto("/dashboard");
+  const card = page.locator('[data-resource-id="child"]');
+  await card.click({ position: { x: 8, y: 60 } });
+  await expect(card).toHaveAttribute("aria-selected", "true");
+  const info = page.locator(".information");
+  await info.getByRole("link", { name: "Open folder", exact: true }).click();
+  await expect(page).toHaveURL(/folderId=child/);
+  await expect(info).toContainText("Select an item to see its details");
+  await page.goBack();
+  await expect(card).toHaveAttribute("aria-selected", "true");
+  await expect(info.locator("h1")).toHaveText("Study folder");
+  await expect(page).not.toHaveURL(/selected=/);
+});
+
 // Leaving for an editor and coming back shows the Info panel on the tab it was left on.
 for (const tab of ["Details", "Version"]) {
   test(`returning from the metadata editor keeps the Info panel on ${tab}`, async ({ page, api }) => {
