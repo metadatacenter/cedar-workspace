@@ -35,6 +35,9 @@ export class HttpError extends Error {
     super(message);
   }
 }
+/** Whether a request was refused because the user may not read what it asked for. */
+export const refusedRead = (error: unknown): boolean =>
+  error instanceof HttpError && error.status === 403;
 /**
  * What to tell a person about a failed request. The transport's text says what happened. A conflict
  * met by an editor that keeps the person's edits on screen also says so, which only that editor

@@ -28,11 +28,10 @@ const reference = maps.en;
 
 /**
  * Hungarian values that are legitimately identical to the English: product
- * names, acronyms, identifiers and the universal "OK". Every other identical
- * value is an untranslated string.
+ * names, acronyms and identifiers. Every other identical value is an
+ * untranslated string.
  */
 const identical = new Set([
-  "Common.OK",
   "Dashboard.Doi",
   "Dashboard.OpenView",
   "Account.Profile.Uuid",

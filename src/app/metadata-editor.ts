@@ -30,7 +30,7 @@ import type {
   CeeJsonObject,
   CeeValidationProblem,
 } from "cedar-embeddable-editor";
-import { Backend, HttpError } from "./backend.service";
+import { Backend, HttpError, refusedRead } from "./backend.service";
 import { uncertainWrite, writeRequiresRecovery } from "./write-failure";
 import {
   MetadataState,
@@ -202,7 +202,10 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   readonly dirty = signal(false);
   readonly writable = signal(false);
   readonly error = signal("");
-  /** CEE refused the stored template or instance as unreadable, so loading it again cannot help. */
+  /**
+   * Loading again cannot help: CEE refused the stored template or instance as unreadable, or the
+   * user may not read the instance's template.
+   */
   readonly unreadable = signal(false);
   readonly notice = signal("");
   readonly state = new MetadataState();
@@ -277,11 +280,21 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         const templateId = saved?.["schema:isBasedOn"];
         if (typeof templateId !== "string" || !templateId.trim())
           throw new Error(this.i18n.t("Metadata.NoTemplate"));
-        template = (
-          await this.api.request<CeeJsonObject>(
-            "/templates/" + encodeURIComponent(resourcePathId(templateId)),
-          )
-        ).data;
+        try {
+          template = (
+            await this.api.request<CeeJsonObject>(
+              "/templates/" + encodeURIComponent(resourcePathId(templateId)),
+            )
+          ).data;
+        } catch (e) {
+          // An instance can be shared with someone its template is not. The server's own refusal
+          // speaks of "the artifact", which reads as the instance this page opened.
+          if (refusedRead(e)) {
+            this.unreadable.set(true);
+            throw new Error(this.i18n.t("Errors.TemplateUnreadable"));
+          }
+          throw e;
+        }
       } else {
         const [result, folder] = await Promise.all([
           this.api.request<CeeJsonObject>(

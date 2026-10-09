@@ -97,7 +97,7 @@ test("failed save retains input, sends its revision, and blocks duplicate submis
   await page.keyboard.press("Escape");
   await page
     .locator(".confirmation-dialog")
-    .getByRole("button", { name: "OK", exact: true })
+    .getByRole("button", { name: "Yes", exact: true })
     .click();
   await expect(page.locator("dialog[open]")).toHaveCount(0);
 });
@@ -424,6 +424,10 @@ test("folder separators have no surrounding spacing in navigation, details and d
   await page.locator("tbody tr").first().focus();
   await page.keyboard.press("Enter");
   await unspaced(page.locator(".information .breadcrumb-separator"), 2);
+  // A path without the resource at its end still names every folder, the last included.
+  await expect(page.locator(".information .location-label + dd > span")).toHaveText(
+    "All/Users/My workspace",
+  );
   await page
     .getByRole("button", { name: "Actions for Study metadata" })
     .click();
@@ -496,22 +500,6 @@ test("profile sections expose labelled copy actions for API examples", async ({
     .click();
   await expect.poll(() => page.evaluate(() => window.profileCopied)).toBe(text);
   expect(text).toContain("<API_KEY>");
-});
-
-test("the settings form label reads like the facts above it", async ({
-  page,
-  api,
-}) => {
-  await page.goto("/settings");
-  const style = (locator) =>
-    locator.evaluate((el) => {
-      const s = getComputedStyle(el);
-      return [s.fontSize, s.fontWeight, s.color];
-    });
-  await expect(page.locator("label[for=date-format]")).toBeVisible();
-  expect(await style(page.locator("label[for=date-format]"))).toEqual(
-    await style(page.locator(".account-facts dt").first()),
-  );
 });
 
 for (const route of ["settings", "privacy", "profile"]) {
@@ -659,6 +647,32 @@ test("links in the Info panel return to the artifact whose panel held them", asy
   await expect(page).toHaveURL(/\/dashboard/);
   await expect(card).toHaveAttribute("aria-selected", "true");
   await expect(info).toContainText("Study metadata");
+});
+
+test("Back from a folder opened in the Info panel selects that folder again", async ({ page, api }) => {
+  const folder = { ...resource, "@id": "child", resourceType: "folder", "schema:name": "Study folder" };
+  await page.route(/\/folders\/home\/contents/, (route) =>
+    route.fulfill({ json: { resources: [resource, folder], totalCount: 2, pathInfo: [] } }),
+  );
+  await page.route(/\/folders\/child(?:\/contents)?(?:\?|$)/, (route) =>
+    route.fulfill({
+      json: new URL(route.request().url()).pathname.endsWith("/contents")
+        ? { resources: [], totalCount: 0, pathInfo: [folder] }
+        : folder,
+    }),
+  );
+  await page.goto("/dashboard");
+  const card = page.locator('[data-resource-id="child"]');
+  await card.click({ position: { x: 8, y: 60 } });
+  await expect(card).toHaveAttribute("aria-selected", "true");
+  const info = page.locator(".information");
+  await info.getByRole("link", { name: "Open folder", exact: true }).click();
+  await expect(page).toHaveURL(/folderId=child/);
+  await expect(info).toContainText("Select an item to see its details");
+  await page.goBack();
+  await expect(card).toHaveAttribute("aria-selected", "true");
+  await expect(info.locator("h1")).toHaveText("Study folder");
+  await expect(page).not.toHaveURL(/selected=/);
 });
 
 // Leaving for an editor and coming back shows the Info panel on the tab it was left on.

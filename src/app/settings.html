@@ -2,7 +2,6 @@
   [title]="'Account.Settings.Title' | translate"
   [loading]="loading()"
   [error]="error()"
-  [notice]="notice()"
 >
   @if(ready()){
   <section class="account-card">
@@ -20,27 +19,6 @@
         <dt>{{'Account.Settings.CeeVersion' | translate}}</dt>
         <dd>{{ceeVersion()}}</dd>
       </dl>
-    </div>
-  </section>
-  <section class="account-card">
-    <h2 class="account-section-heading">
-      {{'Account.Settings.DateFormatHeading' | translate}}
-    </h2>
-    <div class="account-section-body">
-      <p>{{'Account.Settings.DateFormatIntro' | translate}}</p>
-      <label for="date-format"
-        >{{'Account.Settings.DateFormat' | translate}}</label
-      >
-      <select
-        id="date-format"
-        [ngModel]="selected"
-        (ngModelChange)="save($event)"
-        [disabled]="busy()"
-      >
-        @for(format of formats;track format.value){
-        <option [value]="format.value">{{format.label}}</option>
-        }
-      </select>
     </div>
   </section>
   }

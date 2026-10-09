@@ -18,7 +18,8 @@ async function setup(page, kind, options = {}) {
       if (options.delay) await options.delay;
       return route.fulfill(options.fail ? {status:403,json:{message:'Forbidden'}} : {json:artifact});
     }
-    if (path.includes('/templates/') && kind === 'instance') return route.fulfill({json:documents.template});
+    if (path.includes('/templates/') && kind === 'instance')
+      return route.fulfill(options.templateStatus ? {status:options.templateStatus,json:{message:'You do not have the required capability on the artifact'}} : {json:documents.template});
     if (path.includes('/preview-item/')) return route.fulfill({json:item});
     return route.fallback();
   });
@@ -96,6 +97,20 @@ test('a denied preview can be closed and does not offer editing',async ({page,ap
   await expect(page.getByRole('dialog').getByRole('alert')).toBeVisible();
   await page.getByRole('button',{name:'Close preview'}).click();
   await expect(button).toBeFocused();
+});
+// An instance can be shared with someone its template is not. Trying again cannot help, so the
+// preview says why, rather than that it could not be loaded.
+test('an instance preview whose template is not readable says so',async ({page,api}) => {
+  const {button} = await setup(page,'instance',{templateStatus:403});
+  await button.click();
+  await expect(page.getByRole('dialog').getByRole('alert')).toHaveText(
+    "You do not have access to this instance's template, so it cannot be shown.");
+});
+test('an instance preview whose template fails otherwise asks to try again',async ({page,api}) => {
+  const {button} = await setup(page,'instance',{templateStatus:500});
+  await button.click();
+  await expect(page.getByRole('dialog').getByRole('alert')).toHaveText(
+    'This preview could not be loaded. Close it and try again.');
 });
 test('closing during a pending preview never mounts the late result',async ({page,api}) => {
   let release;

@@ -106,7 +106,7 @@ export class Profile implements OnInit, OnDestroy {
       }
     }
   }
-  // Each label is a translation key; identifiers are shown in a monospace face.
+  // Each label is a translation key; an identifier is marked so the page sets it as it sets the API key.
   get fields(): { label: string; value: string; identifier: boolean }[] {
     const p = this.profile;
     const field = (label: string, value: string, identifier = false) => ({
@@ -126,10 +126,6 @@ export class Profile implements OnInit, OnDestroy {
             "Account.Profile.EncodedHomeFolderId",
             encodeURIComponent(resourcePathId(p.homeFolderId)),
             true,
-          ),
-          field(
-            "Account.Profile.PreferredDateFormat",
-            p.uiPreferences?.preferredDateFormat || "MM/DD/YYYY",
           ),
         ]
       : [];

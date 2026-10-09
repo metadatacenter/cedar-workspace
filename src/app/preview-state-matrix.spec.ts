@@ -61,7 +61,7 @@ for (const type of ["template", "element", "field", "instance"]) {
       if (staleEvent === "error") first.eventHandler.error("obsolete error");
       else first.eventHandler.ready();
       expect(viewer()).toBe(second);
-      expect(preview.error()).toBe(false);
+      expect(preview.error()).toBeNull();
       expect(preview.loading()).toBe(true);
       second.eventHandler.ready();
       expect(preview.loading()).toBe(false);
@@ -69,11 +69,11 @@ for (const type of ["template", "element", "field", "instance"]) {
       const third = viewer();
       second.eventHandler.error("old trial error");
       third.eventHandler.ready();
-      expect(preview.error()).toBe(false);
+      expect(preview.error()).toBeNull();
       expect(preview.trying()).toBe(false);
       fixture.destroy();
       third.eventHandler.error("disposed error");
-      expect(preview.error()).toBe(false);
+      expect(preview.error()).toBeNull();
     });
   }
 }

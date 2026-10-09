@@ -163,17 +163,6 @@ const SITES = {
       await page.getByRole("button", { name: t("Groups.Create"), exact: true }).click();
     },
   },
-  "saving settings": {
-    request: (method, path) => method === "PUT" && path === "/api/user/users/owner",
-    before: async (page) => page.goto("/settings"),
-    // The choice saves as it changes.
-    act: async (page) => {
-      const format = page.locator("#date-format");
-      const other = await format.evaluate((select) =>
-        [...select.options].find((option) => option.value !== select.value).value);
-      await format.selectOption(other);
-    },
-  },
   "loading metadata": {
     request: (method, path) => method === "GET" && path.endsWith("/template-instances/instance"),
     arm: "before",

@@ -79,6 +79,37 @@ for (const depth of [1, 3, 8]) for (const severity of ["errors", "warnings"]) {
   });
 }
 
+// The error and warning summaries say what to review before saving, which a reader cannot do.
+test('read-only metadata shows no error or warning summary', async ({page, api}) => {
+  await page.route('**/api/resource/template-instances/instance/report', route =>
+    route.fulfill({json: {currentUserPermissions: {capabilities: []}}}));
+  await page.goto('/instances/edit/instance');
+  await expect(page.getByLabel('Instance name')).toHaveValue('Study record');
+  await expect(page.getByText('You have read-only access to this metadata.', {exact: true})).toBeVisible();
+  await page.evaluate(() => {
+    const editor = document.querySelector('cedar-embeddable-editor');
+    editor.dataQualityReport = {
+      isValid: false,
+      problems: [
+        {path: ['Title'], code: 'required', message: 'Required'},
+        {path: ['Email'], code: 'email', message: 'Invalid email'},
+      ],
+    };
+    editor.dispatchEvent(new CustomEvent('change'));
+  });
+  await expect(page.locator('.metadata-quality')).toHaveCount(0);
+});
+
+// Metadata can be shared with someone its template is not. The server's refusal speaks of "the
+// artifact", which reads as the metadata, and loading again cannot help.
+test('metadata whose template the user cannot read says so and offers no retry', async ({page, api}) => {
+  await page.route('**/api/resource/templates/template', route =>
+    route.fulfill({status: 403, json: {message: 'You do not have the required capability on the artifact'}}));
+  await page.goto('/instances/edit/instance');
+  await expect(page.getByRole('alert')).toHaveText("You do not have access to this instance's template, so it cannot be shown.");
+  await expect(page.getByRole('button', {name: 'Retry', exact: true})).toHaveCount(0);
+});
+
 test('a failed metadata load can retry and a conflict requires an explicit reload', async ({page, api}) => {
   let failLoad = true, conflict = false;
   await page.route('**/api/resource/template-instances/instance', route => {
@@ -97,7 +128,7 @@ test('a failed metadata load can retry and a conflict requires an explicit reloa
   await page.locator('.confirmation-dialog').getByRole('button', {name:'Cancel',exact:true}).click();
   await expect(name).toHaveValue('Unsaved');
   await page.getByRole('button', {name:'Reload metadata',exact:true}).click();
-  await page.locator('.confirmation-dialog').getByRole('button', {name:'OK',exact:true}).click();
+  await page.locator('.confirmation-dialog').getByRole('button', {name:'Yes',exact:true}).click();
   await expect(name).toHaveValue('Study record'); await expect(save).toBeEnabled();
 });
 
@@ -173,7 +204,7 @@ for (const writable of [true, false]) {
     await page.getByRole('button', {name: 'Save', exact: true}).click();
     await page.getByRole('button', {name: 'Reload metadata', exact: true}).click();
     recovering = true;
-    await page.locator('.confirmation-dialog').getByRole('button', {name: 'OK', exact: true}).click();
+    await page.locator('.confirmation-dialog').getByRole('button', {name: 'Yes', exact: true}).click();
     await expect(name).toHaveValue('Server revision');
     expect(await page.evaluate(() => {
       const editor = document.querySelector('cedar-embeddable-editor');

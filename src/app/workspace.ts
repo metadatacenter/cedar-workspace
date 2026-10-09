@@ -41,7 +41,7 @@ import { FriendlyDatePipe } from "./friendly-date";
 import { TitleCasePipe } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { TranslatePipe } from "@ngx-translate/core";
-import { ActivatedRoute, Router, RouterLink } from "@angular/router";
+import { ActivatedRoute, NavigationStart, Router, RouterLink } from "@angular/router";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { Backend } from "./backend.service";
 import {
@@ -315,6 +315,11 @@ export class Workspace {
       document.body.classList.toggle("explorer-can-drop", !!this.dropTarget() || this.deleteDrop());
     });
     const clock = setInterval(() => this.now.set(Date.now()), 60_000);
+    this.router.events
+      .pipe(takeUntilDestroyed(this.destroy))
+      .subscribe((event) => {
+        if (event instanceof NavigationStart) this.rememberSelection(event);
+      });
     void this.start();
     this.destroy.onDestroy(() => {
       clearInterval(clock);
@@ -489,6 +494,20 @@ export class Workspace {
     }
     url.search = params.join("&");
     return url.toString();
+  }
+  /**
+   * Name the selected artifact in the history entry a link inside the Workspace leaves.
+   *
+   * Opening a folder from the Info panel, or following any other link inside the Workspace,
+   * adds a history entry, and Back loaded the listing again with nothing selected. The entry
+   * left behind now names the selection, as an editor's way back does, so Back selects it
+   * again. A navigation that replaces the entry changes nothing. Neither does one that Back
+   * or Forward starts, because the browser has already moved to another entry.
+   */
+  private rememberSelection(event: NavigationStart) {
+    if (event.navigationTrigger !== "imperative" || this.router.currentNavigation()?.extras.replaceUrl) return;
+    const here = this.returnHere();
+    if (here !== location.href) history.replaceState(history.state, "", here);
   }
   private async loadFolder() {
     const operation = this.state.begin("folder");
@@ -756,8 +775,12 @@ export class Workspace {
       if (operation.current()) this.fail(e);
     }
   }
+  // The folders above a resource, outermost first. A path may end with the resource itself.
+  location(r: Resource): Resource[] {
+    return r.pathInfo?.filter((p) => p["@id"] !== r["@id"]) ?? [];
+  }
   parentId(r: Resource): string | undefined {
-    return r.pathInfo?.filter((p) => p["@id"] !== r["@id"]).at(-1)?.["@id"];
+    return this.location(r).at(-1)?.["@id"];
   }
   copyId(value: string) {
     return this.copy(value, "Common.IdCopied");
@@ -963,6 +986,14 @@ export class Workspace {
     const versions = r.versions ?? [];
     const here = versions.findIndex((v) => v["@id"] === r["@id"]);
     return here > 0 ? versions[here - 1] : undefined;
+  }
+  /** Whether the Info panel offers a preview of an artifact it names: one the user may read. */
+  previewable(r: Resource): boolean {
+    return (
+      r.activeUserCanRead !== false &&
+      r.resourceType !== "folder" &&
+      Object.hasOwn(collections, r.resourceType)
+    );
   }
   link(r: Resource, populate = false) {
     return resourceLink(

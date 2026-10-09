@@ -431,6 +431,67 @@ describe("Angular Workspace", () => {
       }
     });
   });
+  // Beside each copy control, the panel previews an artifact it names, opens a folder
+  // it names, and opens the OpenView address it shows.
+  describe("the information panel's row actions", () => {
+    const actionLabels = (el: HTMLElement) =>
+      [...el.querySelectorAll(".detail-action")].map((a) => a.getAttribute("aria-label"));
+    const folderQuery = (a: Element | null) =>
+      new URL(a!.getAttribute("href")!, "https://workspace.example").searchParams.get("folderId");
+    it("previews each artifact the user may read, and none they may not", async () => {
+      const f = await render();
+      const source: Resource = { ...template, "@id": "source", "schema:name": "Source" };
+      const latest: Resource = { ...template, "@id": "latest", "schema:name": "Latest", "pav:version": "0.0.2" };
+      const older: Resource = { ...template, "@id": "older", "pav:version": "0.0.0", activeUserCanRead: false };
+      const selected: Resource = {
+        ...template,
+        "pav:version": "0.0.1",
+        pathInfo: [folder, template],
+        derivedFrom: source,
+        versions: [latest, { ...template, "pav:version": "0.0.1" }, older],
+      };
+      f.componentInstance.selected.set(selected);
+      f.detectChanges();
+      const el = f.nativeElement as HTMLElement;
+      expect(actionLabels(el)).toEqual(["Open location", "Preview Source", "Preview A template"]);
+      el.querySelector<HTMLButtonElement>('[aria-label="Preview Source"]')!.click();
+      expect(f.componentInstance.preview()).toBe(source);
+      f.componentInstance.preview.set(null);
+      f.componentInstance.tab = "version";
+      f.detectChanges();
+      // The latest version is previewable; the older one is withheld from the user.
+      expect(actionLabels(el)).toEqual(["Preview Latest", "Preview Latest"]);
+      expect(el.querySelector(".previous-versions .detail-action")).toBeNull();
+    });
+    it("opens a folder from its Location and its Identifier rather than previewing it", async () => {
+      const f = await render();
+      const child: Resource = { ...folder, "@id": "child", "schema:name": "Child" };
+      f.componentInstance.selected.set({ ...child, pathInfo: [folder, child] });
+      f.detectChanges();
+      const el = f.nativeElement as HTMLElement;
+      expect(actionLabels(el)).toEqual(["Open location", "Open folder"]);
+      expect(folderQuery(el.querySelector('[aria-label="Open location"]'))).toBe("home");
+      expect(folderQuery(el.querySelector('[aria-label="Open folder"]'))).toBe("child");
+      // Moving within Workspace is not opening a new tab, so it is not drawn as one.
+      expect(
+        [...el.querySelectorAll(".detail-action svg")].map((svg) => svg.getAttribute("data-cedar-icon")),
+      ).toEqual(["go-to", "go-to"]);
+    });
+    it("opens the OpenView address in a new tab", async () => {
+      const f = await render();
+      const selected: Resource = { ...template, isOpen: true, pathInfo: [folder, template] };
+      f.componentInstance.selected.set(selected);
+      f.detectChanges();
+      const link = (f.nativeElement as HTMLElement).querySelector<HTMLAnchorElement>(
+        ".open-view .detail-action",
+      )!;
+      expect(link.getAttribute("aria-label")).toBe("Open in OpenView");
+      expect(link.querySelector("svg")?.getAttribute("data-cedar-icon")).toBe("external");
+      expect(link.getAttribute("href")).toBe(f.componentInstance.openView(selected));
+      expect(link.target).toBe("_blank");
+      expect(link.rel).toBe("noopener");
+    });
+  });
   it("exposes the artifact action set and gates it using the server capabilities", () => {
     const list = actions(template, TestBed.inject(I18n));
     expect(list.find((a) => a.id === "permissions")).toEqual({

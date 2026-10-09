@@ -11,7 +11,7 @@ metadata creation/editing opens the standalone Angular CEE host at
 `/instances/create/:templateId` and `/instances/edit/:id`.
 
 The four account routes are also Angular: Profile provides account details and masked
-API-key management; Settings saves the date format used by Workspace; Groups manages
+API-key management; Settings shows the CEDAR and CEE versions; Groups manages
 details and membership with separate revision tokens. Its Delete group tab reviews
 saved details and confirms deletion; Manage and Create keep group deletion out of
 their editing controls. Privacy retains the existing

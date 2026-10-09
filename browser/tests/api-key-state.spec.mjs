@@ -15,7 +15,7 @@ for (const action of ["create", "regenerate", "delete"]) {
       if (action === "create") await page.getByRole("button", { name: "New key", exact: true }).click();
       else {
         await article.getByRole("button", { name: action === "delete" ? "Delete" : "Regenerate", exact: true }).click();
-        await page.locator("dialog.confirmation-dialog").getByRole("button", { name: "OK", exact: true }).click();
+        await page.locator("dialog.confirmation-dialog").getByRole("button", { name: "Yes", exact: true }).click();
       }
       await expect(page.getByRole("alert")).toBeVisible();
       await expect(article).toBeVisible();

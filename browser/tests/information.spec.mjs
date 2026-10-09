@@ -16,12 +16,15 @@ for (const readonly of [false, true]) {
     const selected = {
       ...resource,
       pathInfo: [{ "@id": "home", "schema:name": "Home" }, resource],
+      // An identifier that is not an IRI, such as a CDE's, which the panel does not show.
+      "schema:identifier": "m1cGPHlsxqZ",
       isBasedOn: {
         ...resource,
         "@id": "source-template",
         "schema:name": "Source template",
       },
       currentUserPermissions: {
+        ...(readonly ? { role: "viewer" } : {}),
         capabilities: readonly ? ["readResource"] : capabilities,
       },
     };
@@ -102,6 +105,11 @@ for (const readonly of [false, true]) {
       });
     });
     expect(Math.abs(locationCenters[0] - locationCenters[1])).toBeLessThan(2);
+    // The location names the folders above the resource, with no separator after the last.
+    await expect(info.locator(".location-label + dd > span")).toHaveText("Home");
+    await expect(info.getByText("m1cGPHlsxqZ")).toHaveCount(0);
+    // The row states the current user's own access, by the role's name.
+    await expect(info.locator('dt:text-is("Your access") + dd')).toHaveText(readonly ? "Viewer" : "—");
     await info.locator("h1").hover();
     if (process.env.WORKSPACE_VISUAL && !readonly && browserName === "chromium")
       await expect(info).toHaveScreenshot("information-details.png");
@@ -297,15 +305,22 @@ test("derived-from and previous versions link to their artifacts beside copy con
   await expect(source).toHaveAttribute('href', /\/templates\/edit\/source\?/);
   await info.getByRole('button', {name: 'Copy identifier for Source template', exact: true}).click();
   await expect.poll(() => page.evaluate(() => window.copiedId)).toBe('source');
+  // Each artifact the panel names can be previewed beside its copy control.
+  await expect(info.getByRole('button', {name: 'Preview Source template', exact: true})).toBeVisible();
+  await expect(info.locator('.identifiers').getByRole('button', {name: 'Preview Study metadata', exact: true})).toBeVisible();
 
   // The artifact is in OpenView, so its public link follows the Identifier and can be copied.
   const openView = info.locator('.open-view');
   await expect(info.locator('.identifiers + .open-view')).toHaveCount(1);
   await expect(openView.locator('.description-heading')).toHaveText('OpenView');
-  const publicLink = openView.getByRole('link');
+  const publicLink = openView.getByRole('link', {name: /\/templates\/template$/});
   await expect(publicLink).toHaveAttribute('href', /\/templates\/template$/);
   await expect(publicLink).toHaveAttribute('target', '_blank');
   await expect(publicLink).toHaveText(await publicLink.getAttribute('href'));
+  // An icon beside it opens the same address.
+  const openInOpenView = openView.getByRole('link', {name: 'Open in OpenView', exact: true});
+  await expect(openInOpenView).toHaveAttribute('href', await publicLink.getAttribute('href'));
+  await expect(openInOpenView).toHaveAttribute('target', '_blank');
   await openView.getByRole('button', {name: 'Copy OpenView link', exact: true}).click();
   await expect.poll(() => page.evaluate(() => window.copiedId)).toMatch(/\/templates\/template$/);
   await expect(page.getByText('Link copied.', {exact: true})).toBeVisible();
@@ -344,6 +359,11 @@ test("derived-from and previous versions link to their artifacts beside copy con
   await expect(previous.getByRole('link')).toHaveAttribute('href', /\/templates\/edit\/older\?/);
   await previous.getByRole('button', {name: 'Copy identifier for Study metadata, first edition', exact: true}).click();
   await expect.poll(() => page.evaluate(() => window.copiedId)).toBe('older');
+  // Only the versions the user may open can be previewed.
+  await expect(latest.getByRole('button', {name: 'Preview Study metadata', exact: true})).toBeVisible();
+  const previews = previous.getByRole('button', {name: /^Preview /});
+  await expect(previews).toHaveCount(1);
+  await expect(previews).toHaveAccessibleName('Preview Study metadata, first edition');
 });
 
 test("a version two behind the latest names its next version between the latest and the previous ones", async ({page, api}) => {
@@ -393,6 +413,33 @@ test("an instance names its template with the template's version and status, all
   await expect(info.locator('.latest-version, .open-view')).toHaveCount(0);
 });
 
+// The server reduces a template or source the user may not read to its identifier. The panel says
+// so, rather than calling it Untitled and Unversioned behind a link that cannot open.
+test("an instance whose template and source the user cannot read says so, without links", async ({page, api}) => {
+  const instance = {...resource, '@id': 'instance', resourceType: 'instance', 'schema:name': 'Study record'};
+  await page.route(/\/folders\/[^/]+\/contents/, route => route.fulfill({json: {resources: [resource, instance], totalCount: 2, pathInfo: []}}));
+  await page.route(/\/template-instances\/instance\/report/, route => route.fulfill({json: {
+    ...instance,
+    isBasedOn: {'@id': 'template', resourceType: 'template', activeUserCanRead: false},
+    derivedFrom: {'@id': 'source', resourceType: 'instance', activeUserCanRead: false},
+  }}));
+  await page.addInitScript(() => Object.defineProperty(navigator, 'clipboard', {value: {writeText: async value => { window.copiedId = value; }}}));
+  await dashboard(page);
+  await page.locator('tbody tr', {hasText: 'Study record'}).press('Enter');
+  const info = page.getByRole('complementary', {name: 'Resource information'});
+  const template = info.locator('.info-section').filter({hasText: 'Template'}).locator('.detail-with-copy');
+  await expect(template).toHaveText('A template you cannot open');
+  await expect(template.getByRole('link')).toHaveCount(0);
+  await template.getByRole('button', {name: 'Copy template identifier', exact: true}).click();
+  await expect.poll(() => page.evaluate(() => window.copiedId)).toBe('template');
+  const source = info.locator('.info-section').filter({hasText: 'Derived from'});
+  await expect(source.locator('.detail-with-copy')).toHaveText('An item you cannot open');
+  await expect(source.getByRole('link')).toHaveCount(0);
+  await expect(source.locator('small')).toHaveCount(0);
+  await expect(info).not.toContainText('Untitled');
+  await expect(info).not.toContainText('Unversioned');
+});
+
 test("first instance copy help escapes the scrolling list and dismisses on scroll", async ({ page, api }) => {
   const instances = Array.from({ length: 12 }, (_, i) => ({
     ...resource,
@@ -409,7 +456,7 @@ test("first instance copy help escapes the scrolling list and dismisses on scrol
   await dashboard(page);
   await page.locator('tbody tr').first().press('Enter');
   const list = page.locator('.instance-list');
-  const first = list.getByRole('button').first();
+  const first = list.locator('.copy-icon').first();
   await first.hover();
   const help = page.getByRole('tooltip');
   await expect(help).toHaveText('Copy instance identifier');
@@ -427,7 +474,7 @@ test("first instance copy help escapes the scrolling list and dismisses on scrol
   // sits, and about 200 ms later WebKit hit-tests the resting pointer again. A pointer on the
   // button's centre then lands on the scrollbar and leaves the button, which closes its help. The
   // pointer therefore rests on the button's left edge.
-  const last = list.getByRole('button').last();
+  const last = list.locator('.copy-icon').last();
   await last.hover({ position: { x: 2, y: (await last.boundingBox()).height / 2 } });
   await expect(help).toHaveText('Copy instance identifier');
   await page.keyboard.press('Escape');

@@ -19,6 +19,14 @@ body {
   color: var(--cedar-text-primary);
   background: var(--cedar-surface-raised);
 }
+// CEDAR has no monospace face: code and preformatted text are set in the body font, not the
+// browser's monospace.
+code,
+pre,
+kbd,
+samp {
+  font-family: inherit;
+}
 
 button,
 input,
@@ -186,11 +194,11 @@ textarea {
 }
 .workspace {
   display: grid;
-  grid-template-columns: 250px minmax(0, 1fr) 340px;
+  grid-template-columns: 250px minmax(0, 1fr) 400px;
   min-height: calc(100vh - 80px);
 }
 .workspace.left-collapsed {
-  grid-template-columns: 0 minmax(0, 1fr) 340px;
+  grid-template-columns: 0 minmax(0, 1fr) 400px;
 }
 .workspace.right-collapsed {
   grid-template-columns: 250px minmax(0, 1fr) 0;
@@ -513,19 +521,25 @@ cedar-description-editor .no-description {
   display: block;
   color: var(--cedar-text-muted);
 }
+// The icons sit only their own padding apart, as the listing's row actions do.
 .detail-with-copy {
   display: flex;
   align-items: center;
-  gap: var(--cedar-space-2);
 }
 .detail-with-copy > :first-child {
   flex: 1;
   min-width: 0;
+  margin-right: var(--cedar-space-2);
 }
-.detail-with-copy .copy-icon {
+.detail-with-copy .copy-icon,
+.detail-with-copy .detail-action {
   min-height: var(--cedar-icon-size-default);
   flex: none;
   padding: 0 var(--cedar-space-1);
+}
+.detail-with-copy a.detail-action {
+  display: inline-flex;
+  align-items: center;
 }
 .information .location-label {
   display: flex;
@@ -616,10 +630,10 @@ label {
 }
 @media (max-width: 1100px) {
   .workspace {
-    grid-template-columns: 200px minmax(0, 1fr) 280px;
+    grid-template-columns: 200px minmax(0, 1fr) 330px;
   }
   .workspace.left-collapsed {
-    grid-template-columns: 0 minmax(0, 1fr) 280px;
+    grid-template-columns: 0 minmax(0, 1fr) 330px;
   }
   .workspace.right-collapsed {
     grid-template-columns: 200px minmax(0, 1fr) 0;
