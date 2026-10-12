@@ -33,7 +33,7 @@ export async function metadataRig(mode = "edit") {
       method = "GET",
       _body?: unknown,
       _etag?: string | null,
-    ) => ({
+    ): Promise<{ data: CeeJsonObject; etag: string | null }> => ({
       data:
         method !== "GET"
           ? { "@id": "instance" }
@@ -84,10 +84,18 @@ export async function metadataRig(mode = "edit") {
   vi.spyOn(loader, "load").mockResolvedValue();
   const mount = loader.mountEditor.bind(loader);
   const editors: CedarEmbeddableEditorElement[] = [];
+  const setValues = new WeakMap<
+    CedarEmbeddableEditorElement,
+    (value: string | null) => void
+  >();
   vi.spyOn(loader, "mountEditor").mockImplementation((container) => {
     const cee = mount(container);
     let accepted = false;
     let current: CeeJsonObject = {};
+    setValues.set(cee, (value) => {
+      current.Value = { "@value": value };
+      cee.dispatchEvent(new Event("change"));
+    });
     Object.defineProperties(cee, {
       currentMetadata: { get: () => structuredClone(current) },
       dataQualityReport: { get: () => structuredClone(quality) },
@@ -125,6 +133,8 @@ export async function metadataRig(mode = "edit") {
     request,
     loader,
     confirm,
+    setValue: (editor: CedarEmbeddableEditorElement, value: string | null) =>
+      setValues.get(editor)!(value),
     access: (value: boolean) => {
       writable = value;
     },
