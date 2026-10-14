@@ -751,8 +751,8 @@ th:nth-child(2) {
   position: absolute;
   inset-inline: 0;
   bottom: -1px;
-  height: 2px;
-  background: var(--cedar-border-rule);
+  height: 0;
+  border-bottom: 2px solid var(--cedar-border-rule);
   pointer-events: none;
 }
 .table-scroll:not(.explorer-grid) > table th:nth-child(2) {

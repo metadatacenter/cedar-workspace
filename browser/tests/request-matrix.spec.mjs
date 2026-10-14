@@ -179,8 +179,12 @@ const SITES = {
       await page.getByLabel(t("Metadata.Name"), { exact: true }).fill("Study record, edited");
       await page.getByRole("button", { name: t("Common.Save"), exact: true }).click();
     },
-    // The editor keeps the edits on screen, and says so.
-    text: { "a conflict": (t) => t("Metadata.ItemChanged") },
+    // A missing or failed response cannot tell us whether the write committed.
+    text: {
+      "a conflict": (t) => t("Metadata.ItemChanged"),
+      "an unexplained 500": (t) => t("Metadata.SaveUnconfirmed"),
+      "no answer": (t) => t("Metadata.SaveUnconfirmed"),
+    },
   },
 };
 
@@ -205,5 +209,9 @@ for (const language of ["en", "hu"])
         const expected = (spec.text?.[name] ?? answer.text)(t);
         await expect(page.getByRole("alert").filter({ hasText: expected }).first()).toBeVisible();
         await expect(page.getByText("Failed to fetch")).toHaveCount(0);
+        if (site === "saving metadata" && ["an unexplained 500", "no answer"].includes(name)) {
+          await expect(page.getByLabel(t("Metadata.Name"), { exact: true })).toHaveValue("Study record, edited");
+          await expect(page.getByRole("button", { name: t("Common.Save"), exact: true })).toBeDisabled();
+        }
       });
     }
