@@ -132,7 +132,7 @@ export class Backend {
   private renew(seconds: number) {
     return (this.refresh ||= new Promise<void>((resolve, reject) =>
       this.auth.refreshToken(seconds, resolve, () =>
-        reject(new Error(this.i18n.t("Errors.SessionExpired"))),
+        reject(new HttpError(401, this.i18n.t("Errors.SessionExpired"))),
       ),
     ).finally(() => {
       this.refresh = undefined;

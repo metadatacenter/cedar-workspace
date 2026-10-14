@@ -2,6 +2,7 @@ import { TestBed } from "@angular/core/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Backend } from "./backend.service";
 import { Config } from "./resource";
+import { uncertainWrite } from "./write-failure";
 const config = {
   resourceRestAPI: "https://resource.example",
   userRestAPI: "https://user.example",
@@ -66,6 +67,18 @@ describe("Authorized backend", () => {
     );
     expect(fetcher.mock.calls[1][1].headers["If-Match"]).toBe('"etag"');
   });
+  for (const afterRefusal of [false, true])
+    it(`an expired session is a confirmed refusal, after server refusal=${afterRefusal}`, async () => {
+      renew.mockImplementation((seconds: number, ok: () => void, fail: () => void) => {
+        if (afterRefusal && seconds !== -1) ok();
+        else fail();
+      });
+      fetcher.mockResolvedValue(new Response("", { status: 401 }));
+      const error = await api.request("/template-instances", "POST", {}).catch(e => e);
+      expect(error).toMatchObject({status: 401});
+      expect(uncertainWrite(error)).toBe(false);
+      expect(fetcher).toHaveBeenCalledTimes(afterRefusal ? 1 : 0);
+    });
   it("rejects artifact-provided external destinations before sending credentials", async () => {
     await expect(api.request("https://untrusted.example/data")).rejects.toThrow(
       "Untrusted",

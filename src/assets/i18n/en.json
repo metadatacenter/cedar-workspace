@@ -431,7 +431,7 @@
     "LoadFailed": "Unable to load",
     "ReloadRequired": "Reload required",
     "Reload": "Reload metadata",
-    "SaveUnconfirmed": "The server accepted the save but returned an incomplete confirmation. Check the saved artifact in Workspace before saving again.",
+    "SaveUnconfirmed": "We could not confirm whether your changes were saved. Your changes remain in the editor. Check Workspace before saving again.",
     "ItemDeleted": "This item was deleted. Your edits have been kept. Return to Workspace to choose another item.",
     "ItemChanged": "This item changed since you opened it. Your edits have been kept. Cancel and reopen to review the latest version."
   },

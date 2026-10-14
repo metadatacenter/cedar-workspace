@@ -181,11 +181,42 @@ for (const outcome of ['lost connection', 'malformed success', 'server error']) 
     await save.click();
     await expect(save).toBeDisabled();
     await expect(page.locator('.metadata-save-status')).toHaveText('Reload required');
-    await expect(page.getByRole('alert')).toContainText('Workspace');
+    await expect(page.getByRole('alert')).toContainText('We could not confirm whether your changes were saved.');
     await expect(page.getByRole('button', {name: 'Reload metadata', exact: true})).toHaveCount(0);
     await name.fill('Still my draft');
     await expect(save).toBeDisabled();
     expect(writes).toBe(1);
+  });
+}
+
+for (const mode of ['create', 'edit']) {
+  test(`an expired session during metadata ${mode} keeps the draft without claiming an uncertain create`, async ({page, api}) => {
+    await page.goto(`/instances/${mode}/${mode === 'create' ? 'template' : 'instance'}`);
+    const name = page.getByLabel('Instance name', {exact: true});
+    await name.fill('Draft to retain');
+    await page.evaluate(() => {
+      window.KeycloakUserHandler.prototype.refreshToken = (_seconds, _ok, fail) => fail();
+    });
+    const before = api.requests.length;
+    await page.getByRole('button', {name: 'Save', exact: true}).click();
+    await expect(page.getByRole('alert')).toContainText('session');
+    await expect(page.getByRole('alert')).not.toContainText('could not confirm');
+    await expect(name).toHaveValue('Draft to retain');
+    await expect(page.getByRole('button', {name: 'Reload metadata', exact: true})).toBeVisible();
+    expect(api.requests.length).toBe(before);
+  });
+
+  test(`a lost metadata ${mode} response accurately reports an unknown outcome`, async ({page, api}) => {
+    await page.route('**/api/resource/template-instances**', route =>
+      route.request().method() === 'GET' ? route.fallback() : route.abort('failed'));
+    await page.goto(`/instances/${mode}/${mode === 'create' ? 'template' : 'instance'}`);
+    const name = page.getByLabel('Instance name', {exact: true});
+    await name.fill('Draft to retain');
+    const save = page.getByRole('button', {name: 'Save', exact: true});
+    await save.click();
+    await expect(page.getByRole('alert')).toContainText('We could not confirm whether your changes were saved.');
+    await expect(save).toBeDisabled();
+    await expect(name).toHaveValue('Draft to retain');
   });
 }
 

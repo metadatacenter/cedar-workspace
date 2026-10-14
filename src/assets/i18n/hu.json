@@ -431,7 +431,7 @@
     "LoadFailed": "Nem tölthető be",
     "ReloadRequired": "Újratöltés szükséges",
     "Reload": "Metaadatok újratöltése",
-    "SaveUnconfirmed": "A kiszolgáló elfogadta a mentést, de hiányos visszaigazolást küldött. Újabb mentés előtt ellenőrizze a mentett elemet a Workspace-ben.",
+    "SaveUnconfirmed": "Nem sikerült megerősíteni, hogy a módosítások mentése megtörtént-e. A módosítások megmaradtak a szerkesztőben. Újabb mentés előtt ellenőrizze a Workspace-ben.",
     "ItemDeleted": "Ezt az elemet törölték. A módosításai megmaradtak. Térjen vissza a munkaterületre, és válasszon másik elemet.",
     "ItemChanged": "Ez az elem megváltozott, mióta megnyitotta. A módosításai megmaradtak. A legújabb verzió áttekintéséhez válassza a Mégse gombot, és nyissa meg újra."
   },

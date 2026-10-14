@@ -16,7 +16,7 @@ import {
   metadataRoute,
   workspaceReturn,
 } from "./metadata-editor";
-import { Backend } from "./backend.service";
+import { Backend, HttpError } from "./backend.service";
 import { CeeLoader } from "./cee-loader";
 import { provideWorkspaceTranslations } from "./i18n";
 import type { CedarEmbeddableEditorElement } from "cedar-embeddable-editor";
@@ -257,15 +257,17 @@ describe("Modern metadata host", () => {
     expect(cee.templateObject).toBe(input);
     expect(cee.templateAndInstanceObject).toBeUndefined();
   });
-  it.each(["Conflict (412)", "Deleted (404)"])(
+  it.each([412, 404])(
     "keeps unsaved edits and the read-time validator after %s",
-    async (error) => {
+    async (status) => {
       await edit();
       host.name = "Unsaved";
       host.changed();
-      api.request.mockRejectedValue(new Error(error));
+      api.request.mockRejectedValue(new HttpError(status, "Deleted (404)"));
       await host.save();
-      expect(host.error()).toBe(error);
+      expect(host.error()).toBe(status === 412
+        ? "This item changed since you opened it. Your edits have been kept. Cancel and reopen to review the latest version."
+        : "Deleted (404)");
       expect(host.name).toBe("Unsaved");
       expect(host.dirty()).toBe(true);
       await host.save();

@@ -588,7 +588,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       }
       // A conflict here leaves the edits on screen, which only this editor can say.
       this.error.set(
-        this.state.uncertainCreation()
+        attempted && uncertainWrite(e)
           ? this.i18n.t("Metadata.SaveUnconfirmed")
           : e instanceof HttpError && e.status === 412
             ? this.i18n.t(e.deleted ? "Metadata.ItemDeleted" : "Metadata.ItemChanged")
