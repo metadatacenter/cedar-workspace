@@ -661,11 +661,9 @@ export class Workspace {
     this.dragging.set([...this.selection()]);
   }
   dragMove(event: CdkDragMove) {
+    // CDK reports the pointer in viewport coordinates, which elementFromPoint takes as they are.
     const element = document
-      .elementFromPoint(
-        event.pointerPosition.x - window.scrollX,
-        event.pointerPosition.y - window.scrollY,
-      )
+      .elementFromPoint(event.pointerPosition.x, event.pointerPosition.y)
       ?.closest<HTMLElement>("[data-drop-id], .selection-delete");
     const deleteTarget = !!element?.matches(".selection-delete:not(:disabled)") && this.dragging().length > 0;
     this.deleteDrop.set(deleteTarget);
