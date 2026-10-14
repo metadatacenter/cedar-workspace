@@ -228,6 +228,7 @@ describe("Modern metadata host", () => {
   });
   it("creates once, then updates with each returned ETag without resetting CEE", async () => {
     await host.ngAfterViewInit();
+    cee.currentMetadata["schema:description"] = "";
     const input = cee.templateObject;
     api.request.mockResolvedValue({ data: { "@id": "new-id" }, etag: '"i2"' });
     await host.save();
@@ -237,6 +238,7 @@ describe("Modern metadata host", () => {
       expect.objectContaining({
         "schema:name": "Study metadata",
         "schema:isBasedOn": "template-id",
+        "schema:description": "Study description",
       }),
       null,
     );
@@ -249,14 +251,39 @@ describe("Modern metadata host", () => {
     expect(api.request).toHaveBeenLastCalledWith(
       "/template-instances/new-id",
       "PUT",
-      expect.objectContaining({ "@id": "new-id" }),
+      expect.objectContaining({ "@id": "new-id", "schema:description": "Study description" }),
       '"i2"',
     );
     await host.save();
     expect(api.request.mock.lastCall?.[3]).toBe('"i3"');
+    expect(api.request.mock.lastCall?.[2]["schema:description"]).toBe("Study description");
     expect(cee.templateObject).toBe(input);
     expect(cee.templateAndInstanceObject).toBeUndefined();
   });
+  it.each(["", "Imported instance description"])(
+    "preserves the loaded description %j across field edits and sparse acknowledgements",
+    async (description) => {
+      const original = api.request.getMockImplementation()! as (
+        path: string, method?: string,
+      ) => Promise<{data: Record<string, unknown>; etag: string}>;
+      api.request.mockImplementation(async (path, method = "GET") => {
+        const reply = await original(path, method);
+        if (method === "GET" && path === "/template-instances/instance-id")
+          return {...reply, data: {...reply.data, "schema:description": description}};
+        return reply;
+      });
+      await edit();
+      cee.currentMetadata["schema:description"] = "";
+      for (const value of ["First edit", "Second edit"]) {
+        cee.currentMetadata["Notes"] = {"@value": value};
+        host.changed();
+        await host.save();
+        expect(api.request.mock.lastCall?.[2]).toMatchObject({
+          "schema:description": description, Notes: {"@value": value},
+        });
+      }
+    },
+  );
   it.each([412, 404])(
     "keeps unsaved edits and the read-time validator after %s",
     async (status) => {

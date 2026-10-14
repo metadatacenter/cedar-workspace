@@ -514,6 +514,10 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         "/template-instances?folder_id=" + encodeURIComponent(resourceSelector(this.folder));
       if (this.saved) {
         metadata["@id"] = this.saved["@id"];
+        // The host owns the instance description; CEE has no control for editing it.
+        // After a create, its unchanged form can still expose an empty description.
+        if (Object.hasOwn(this.saved, "schema:description"))
+          metadata["schema:description"] = this.saved["schema:description"];
         path =
           "/template-instances/" +
           encodeURIComponent(resourcePathId(String(this.saved["@id"])));
@@ -540,7 +544,9 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         this.state.uncertainCreation.set(!this.saved);
         throw new Error(this.i18n.t("Metadata.SaveUnconfirmed"));
       }
-      this.saved = reply.data;
+      // Write acknowledgements may be resource summaries. Retain submitted metadata
+      // that the server does not repeat, while accepting its authoritative fields.
+      this.saved = { ...metadata, ...reply.data };
       this.savedHere = true;
       this.etag = reply.etag;
       this.state.reloadRequired.set(!reply.etag);
