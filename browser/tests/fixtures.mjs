@@ -84,6 +84,7 @@ export const test = base.extend({
         body: `
       window.cedarEmbeddableEditorVersion = 'fixture';
       customElements.define('cedar-embeddable-editor', class extends HTMLElement {
+        captureSave() { return {metadata: structuredClone(this.currentMetadata), needsElementIds: false}; }
         currentMetadata = {}; dataQualityReport = {isValid:true};
         connectedCallback() { queueMicrotask(() => this.eventHandler?.ready?.()); }
         accepted = false;

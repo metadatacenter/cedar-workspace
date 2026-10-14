@@ -113,6 +113,10 @@ their existing URLs. The root entry loads Angular for every route. Unknown and r
 The metadata host loads the staged CEE bundle on demand, configures permissions
 before rendering, and keeps the same editor mounted across create/update saves.
 Content ETags protect updates; conflicts and deleted resources retain local edits.
+When the repository assigns element IDs, the host reads back the acknowledged revision and
+adopts those IDs through CEE's save snapshot. Reordering or typing during the save retains
+the right occurrence identities and unsaved values. Unavailable or changed readback blocks
+another save while keeping the draft, so a repeated save cannot mint replacement element IDs.
 Validation remains advisory. Dirty tracking recognizes exact reverts, guards
 navigation and includes changes made while a save is pending. Return links are
 restricted to the same-origin workspace. The former AngularJS controllers, services, dialogs, filters and templates are removed.

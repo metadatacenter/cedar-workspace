@@ -241,6 +241,7 @@ describe("metadata save and recovery matrix", () => {
       dataQualityReport: structuredClone(good),
       reveal: vi.fn().mockResolvedValue(true),
     });
+    Object.assign(cee, { captureSave: () => ({metadata: structuredClone(cee.currentMetadata), needsElementIds: false, acknowledge: () => { throw new Error("Unexpected acknowledgement"); }}) });
     host = TestBed.runInInjectionContext(() => new MetadataEditor());
     host.editorHost = new ElementRef(document.createElement("div"));
     host.editor = new ElementRef(cee);

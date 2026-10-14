@@ -418,6 +418,7 @@
     "ProblemMinItems": "Has {{count}} of a minimum {{min}}.",
     "DiscardChanges": "Discard unsaved metadata changes?",
     "SavedWithChanges": "Saved. You have further unsaved changes.",
+    "SavedIdentityUnavailable": "Saved, but the stored element identifiers could not be confirmed. Your current edits remain in the editor. Reload metadata before saving again.",
     "ConfigurationUnavailable": "Unable to load metadata editor configuration.",
     "NoTemplate": "Metadata does not identify its template.",
     "UnreadableTemplate": "CEDAR cannot read this template, so metadata cannot be entered for it.",

@@ -503,8 +503,10 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         this.state.reloadRequired.set(true);
         throw new Error(this.i18n.t("Metadata.NoRevision"));
       }
-      const current = this.cee.currentMetadata;
-      const baseline = metadataKey(current);
+      const snapshot = this.cee.captureSave();
+      if (!snapshot) throw new Error(this.i18n.t("Metadata.UnreadableInstance"));
+      const current = snapshot.metadata;
+      let baseline = metadataKey(current);
       const name = this.chosenName();
       const typedName = this.name.trim();
       const metadata: CeeJsonObject = structuredClone(current);
@@ -549,7 +551,24 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       this.saved = { ...metadata, ...reply.data };
       this.savedHere = true;
       this.etag = reply.etag;
-      this.state.reloadRequired.set(!reply.etag);
+      let identityRecovery = false;
+      if (snapshot.needsElementIds) {
+        try {
+          if (!reply.etag) throw new Error(this.i18n.t("Metadata.SavedIdentityUnavailable"));
+          const stored = await this.api.request<CeeJsonObject>(
+            "/template-instances/" + encodeURIComponent(resourcePathId(String(this.saved["@id"]))),
+          );
+          if (!operation.current()) return;
+          if (stored.etag !== reply.etag || stored.data["@id"] !== this.saved["@id"])
+            throw new Error(this.i18n.t("Metadata.SavedIdentityUnavailable"));
+          baseline = metadataKey(snapshot.acknowledge(stored.data));
+          this.saved = stored.data;
+        } catch {
+          if (!operation.current()) return;
+          identityRecovery = true;
+        }
+      }
+      this.state.reloadRequired.set(!reply.etag || identityRecovery);
       this.state.clearServer();
       this.baseline = baseline;
       this.baselineName = typedName;
@@ -576,6 +595,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       operation.finish();
       this.changed();
       if (!reply.etag) this.error.set(this.i18n.t("Metadata.NoRevision"));
+      if (identityRecovery) this.error.set(this.i18n.t("Metadata.SavedIdentityUnavailable"));
       this.notice.set(
         this.i18n.t(
           this.dirty() ? "Metadata.SavedWithChanges" : "Common.Saved",

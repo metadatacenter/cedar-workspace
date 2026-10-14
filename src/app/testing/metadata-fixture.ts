@@ -97,6 +97,7 @@ export async function metadataRig(mode = "edit") {
       cee.dispatchEvent(new Event("change"));
     });
     Object.defineProperties(cee, {
+      captureSave: { value: () => ({metadata: structuredClone(current), needsElementIds: false, acknowledge: () => { throw new Error("Unexpected acknowledgement"); }}) },
       currentMetadata: { get: () => structuredClone(current) },
       dataQualityReport: { get: () => structuredClone(quality) },
       templateAndInstanceObject: {

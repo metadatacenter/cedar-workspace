@@ -102,6 +102,7 @@ describe("metadata editor status matrix", () => {
     });
     cee = document.createElement("cedar-embeddable-editor") as CedarEmbeddableEditorElement;
     Object.assign(cee, { currentMetadata: { Value: { "@value": "first" } }, dataQualityReport: structuredClone(good) });
+    Object.assign(cee, { captureSave: () => ({metadata: structuredClone(cee.currentMetadata), needsElementIds: false, acknowledge: () => { throw new Error("Unexpected acknowledgement"); }}) });
     host = TestBed.runInInjectionContext(() => new MetadataEditor());
     host.editorHost = new ElementRef(document.createElement("div"));
     host.editor = new ElementRef(cee);
