@@ -41,6 +41,16 @@ import { CeeLoader } from "./cee-loader";
 import { can, Resource } from "./resource";
 import { I18n, fallbackLanguage } from "./i18n";
 
+// Jetty can append gzip markers on each proxy hop. CEDAR's conditional-write
+// parser treats those representations as the same stored numeric revision.
+function sameStoredRevision(expected: string, actual: string | null): boolean {
+  if (expected === actual) return true;
+  const revision = (tag: string | null) =>
+    tag?.match(/^"([0-9]+)(?:-resource-record)?(?:--gzip)*"$/)?.[1];
+  const saved = revision(expected);
+  return saved !== undefined && saved === revision(actual);
+}
+
 export const metadataRoute: UrlMatcher = (segments) => {
   if (
     segments[0]?.path !== "instances" ||
@@ -559,7 +569,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
             "/template-instances/" + encodeURIComponent(resourcePathId(String(this.saved["@id"]))),
           );
           if (!operation.current()) return;
-          if (stored.etag !== reply.etag || stored.data["@id"] !== this.saved["@id"])
+          if (!sameStoredRevision(reply.etag, stored.etag) || stored.data["@id"] !== this.saved["@id"])
             throw new Error(this.i18n.t("Metadata.SavedIdentityUnavailable"));
           baseline = metadataKey(snapshot.acknowledge(stored.data));
           this.saved = stored.data;

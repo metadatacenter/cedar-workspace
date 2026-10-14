@@ -261,7 +261,11 @@ describe("Modern metadata host", () => {
     expect(cee.templateObject).toBe(input);
     expect(cee.templateAndInstanceObject).toBeUndefined();
   });
-  it("adopts element IDs from the saved revision and keeps newer edits dirty", async () => {
+  it.each([
+    ['"saved"', '"saved"'],
+    ['"1--gzip--gzip"', '"1--gzip"'],
+    ['"1-resource-record--gzip"', '"1"'],
+  ])("adopts element IDs from the saved revision (%s / %s) and keeps newer edits dirty", async (writeTag, readTag) => {
     await host.ngAfterViewInit();
     cee.currentMetadata["Element"] = {"@id": null};
     const submitted = structuredClone(cee.currentMetadata);
@@ -273,9 +277,9 @@ describe("Modern metadata host", () => {
     api.request.mockImplementation(async (_path, method = "GET") => {
       if (method === "POST") {
         cee.currentMetadata["Notes"] = {"@value": "newer edit"};
-        return {data: {"@id": "new-id"}, etag: '"saved"'};
+        return {data: {"@id": "new-id"}, etag: writeTag};
       }
-      return {data: {"@id": "new-id", Element: {"@id": "urn:element"}}, etag: '"saved"'};
+      return {data: {"@id": "new-id", Element: {"@id": "urn:element"}}, etag: readTag};
     });
     await host.save();
     expect(acknowledge).toHaveBeenCalledOnce();
@@ -285,7 +289,7 @@ describe("Modern metadata host", () => {
     expect(host.state.reloadRequired()).toBe(false);
     expect(host.error()).toBe("");
   });
-  it.each(["unavailable", "different revision", "invalid identities"])(
+  it.each(["unavailable", "different revision", "different compressed revision", "weak revision", "invalid identities"])(
     "keeps the draft and blocks another write when identity readback is %s", async (failure) => {
       await host.ngAfterViewInit();
       cee.currentMetadata["Element"] = {"@id": null};
@@ -295,10 +299,13 @@ describe("Modern metadata host", () => {
       api.request.mockImplementation(async (_path, method = "GET") => {
         if (method === "POST") {
           cee.currentMetadata["Notes"] = {"@value": "newer edit"};
-          return {data: {"@id": "new-id"}, etag: '"saved"'};
+          return {data: {"@id": "new-id"}, etag: '"1--gzip--gzip"'};
         }
         if (failure === "unavailable") throw new Error("Network error");
-        return {data: {"@id": "new-id"}, etag: failure === "different revision" ? '"newer"' : '"saved"'};
+        const tag = failure === "different revision" ? '"2"'
+          : failure === "different compressed revision" ? '"2--gzip"'
+          : failure === "weak revision" ? 'W/"1"' : '"1--gzip"';
+        return {data: {"@id": "new-id"}, etag: tag};
       });
       await host.save();
       expect(host.error()).toContain("Saved, but");
