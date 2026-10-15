@@ -38,7 +38,6 @@ import {
   effect,
 } from "@angular/core";
 import { FriendlyDatePipe } from "./friendly-date";
-import { TitleCasePipe } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { TranslatePipe } from "@ngx-translate/core";
 import { ActivatedRoute, NavigationStart, Router, RouterLink } from "@angular/router";
@@ -54,6 +53,7 @@ import {
   listingPath,
   resourceLink,
   collections,
+  statusText,
 } from "./resource";
 import { Icon } from "./icon";
 import { FolderDeletionDialog } from "./folder-deletion-dialog";
@@ -221,12 +221,7 @@ export class Workspace {
   }
   /** A version's publication status, translated when Workspace knows it. */
   status(v: Resource) {
-    const status = v["bibo:status"]?.replace("bibo:", "");
-    if (!status) return "—";
-    return this.i18n.known(
-      "Status." + status,
-      new TitleCasePipe().transform(status),
-    );
+    return statusText(v, this.i18n);
   }
   readonly now = signal(Date.now());
   readonly ready = signal(false);

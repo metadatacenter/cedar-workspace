@@ -1,3 +1,4 @@
+import { TitleCasePipe } from "@angular/common";
 import { resourceSelector, resourcePathId } from "./resource-address";
 import { applyListingFilters } from "./listing-filters";
 import type { I18n } from "./i18n";
@@ -102,6 +103,12 @@ export const title = (r: Resource, untitled = "Untitled") =>
 // Templates, elements and fields have versions; instances and folders do not.
 export const versioned = (r: Resource) =>
   r.resourceType === "template" || r.resourceType === "element" || r.resourceType === "field";
+// A version's publication status, translated when Workspace knows it.
+export function statusText(r: Resource, i18n: Pick<I18n, "known">): string {
+  const status = r["bibo:status"]?.replace("bibo:", "");
+  if (!status) return "—";
+  return i18n.known("Status." + status, new TitleCasePipe().transform(status));
+}
 // OpenView serves a resource made open and anything inside an open folder. Its path,
 // once read, settles the folders; until then the listing's flag stands in.
 export const inOpenView = (r: Resource) => !!r.isOpen || openThroughAFolder(r);

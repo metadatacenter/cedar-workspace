@@ -15,26 +15,34 @@
   display: flex;
   flex-direction: column;
 }
+// As on a tile, the artifact's facts open the heading and its name follows beneath them.
+// The actions stay level with the name, as in every other dialog.
 header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  row-gap: 0;
   flex-shrink: 0;
   border-bottom: 1px solid var(--cedar-border-rule);
 }
+.preview-facts {
+  @include patterns.resource-card-heading;
+  grid-column: 1 / -1;
+  margin: 0;
+  min-width: 0;
+}
+.preview-kind {
+  @include patterns.resource-card-icon;
+}
+.preview-release {
+  min-width: 0;
+  font-size: var(--cedar-font-size-small);
+  color: var(--cedar-text-primary);
+}
 header h2 {
   @include patterns.artifact-title;
-  display: flex;
-  align-items: flex-start;
-  gap: var(--cedar-space-2);
-  margin: 0 auto 0 0;
+  margin: 0;
   min-width: 0;
   overflow-wrap: anywhere;
-}
-// A long title wraps, so the icon is centred on its first line rather than on the whole heading.
-.preview-kind {
-  display: flex;
-  flex: none;
-  align-items: center;
-  height: 1lh;
-  color: var(--cedar-color-primary);
 }
 section {
   flex: 0 1 auto;
@@ -48,9 +56,6 @@ section {
   }
 }
 
-.try-out {
-  flex-shrink: 0;
-}
 .try-out-notice {
   text-align: center;
   color: var(--cedar-text-muted);
