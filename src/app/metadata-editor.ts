@@ -553,6 +553,20 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       this.draftStorageError.set(true);
     }
   }
+  signInAgain() {
+    if (this.saving() || this.checkingSave()) return;
+    if (this.recoveryDraft()) {
+      try {
+        this.draftStore?.write(this.recoveryDraft()!);
+        this.draftStorageError.set(false);
+      } catch {
+        this.draftStorageError.set(true);
+      }
+    } else this.keepRecovery(true);
+    // Redirect only after retention succeeded; a download remains available if storage failed.
+    if (!this.draftStore || this.draftStorageError()) return;
+    this.api.signIn();
+  }
   downloadDraft() {
     if (this.saving()) return;
     const value = this.recoveryDraft() ?? this.recoveryValue();

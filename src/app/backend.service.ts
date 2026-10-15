@@ -49,7 +49,9 @@ export function failureText(
   keepsEdits = false,
 ): string {
   if (keepsEdits && error instanceof HttpError && error.status === 412)
-    return i18n.t(error.deleted ? "Errors.DeletedEditsKept" : "Errors.ChangedEditsKept");
+    return i18n.t(
+      error.deleted ? "Errors.DeletedEditsKept" : "Errors.ChangedEditsKept",
+    );
   return error instanceof Error ? error.message : String(error);
 }
 export interface Reply<T> {
@@ -63,6 +65,9 @@ export class Backend {
   private readonly i18n = inject(I18n);
   get userId() {
     return this.auth.getParsedToken().sub;
+  }
+  signIn() {
+    this.auth.doLogin();
   }
   get email() {
     return this.auth.getParsedToken().email || "";
@@ -194,7 +199,8 @@ export class Backend {
           message = data.message || data.error || "";
           if (typeof data.code === "string") code = data.code;
           else if (typeof data.errorKey === "string") code = data.errorKey;
-          validationReport = data.objects?.validationReport ?? data.validationReport;
+          validationReport =
+            data.objects?.validationReport ?? data.validationReport;
         } catch {}
         if (response.status === 412) {
           const deleted = /no longer exists/i.test(message);
@@ -232,13 +238,19 @@ export class Backend {
     } catch {
       // A proxy's HTML page under a 200, or a body cut short, would otherwise surface as the
       // parser's own English complaint about an unexpected token.
-      throw new HttpError(response.status, this.i18n.t("Errors.UnreadableResponse"));
+      throw new HttpError(
+        response.status,
+        this.i18n.t("Errors.UnreadableResponse"),
+      );
     }
     return { data, etag: response.headers.get("ETag") };
   }
   path(r: Resource) {
     return (
-      "/" + collections[r.resourceType] + "/" + encodeURIComponent(resourcePathId(r["@id"]))
+      "/" +
+      collections[r.resourceType] +
+      "/" +
+      encodeURIComponent(resourcePathId(r["@id"]))
     );
   }
   report(r: Resource) {

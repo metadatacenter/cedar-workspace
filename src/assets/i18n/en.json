@@ -481,7 +481,8 @@
     "ReviewServer": "Latest saved value",
     "ReviewKeepMine": "Keep my value",
     "ReviewKeepLatest": "Keep latest value",
-    "ReviewApply": "Apply reviewed changes"
+    "ReviewApply": "Apply reviewed changes",
+    "SignInAgain": "Sign in again"
   },
   "Account": {
     "Profile": {

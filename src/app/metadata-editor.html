@@ -138,6 +138,13 @@
     >
       {{'Metadata.RecheckAccess' | translate}}
     </button>
+    <button
+      type="button"
+      (click)="signInAgain()"
+      [disabled]="checkingSave() || saving()"
+    >
+      {{'Metadata.SignInAgain' | translate}}
+    </button>
     } @if((state.loadFailed() && !unreadable()) || (state.reloadRequired() &&
     !state.uncertainCreation())) {
     <button

@@ -207,3 +207,29 @@ it("can recheck a restored draft after permission is granted again", async () =>
   expect(next.name).toBe("Unsaved");
   next.ngOnDestroy();
 });
+
+it("retains work before sign-in and refuses the redirect when browser storage fails", async () => {
+  const m = await metadataRig("edit", true);
+  m.edit();
+  m.host.signInAgain();
+  expect(m.signIn).toHaveBeenCalledOnce();
+  const scope = metadataDraftScope(
+    "https://resource.example",
+    "owner",
+    "edit",
+    "instance",
+    "home",
+  );
+  expect(new MetadataDraftStore(scope, sessionStorage).read()?.name).toBe(
+    "Unsaved",
+  );
+  m.signIn.mockClear();
+  vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    throw new Error("Full");
+  });
+  m.host.signInAgain();
+  expect(m.signIn).not.toHaveBeenCalled();
+  expect(m.host.draftStorageError()).toBe(true);
+  expect(m.host.name).toBe("Unsaved");
+  m.host.ngOnDestroy();
+});

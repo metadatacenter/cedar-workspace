@@ -27,6 +27,7 @@ export async function metadataRig(mode = "edit", recovery = false) {
   };
   let writable = true;
   let revision = '"revision"';
+  const signIn = vi.fn();
   const confirm = vi.fn().mockResolvedValue(true);
   const request = vi.fn(
     async (
@@ -58,6 +59,7 @@ export async function metadataRig(mode = "edit", recovery = false) {
         provide: Backend,
         useValue: {
           init: async () => true,
+          signIn,
           profile: { homeFolderId: "home" },
           ...(recovery
             ? {
@@ -173,6 +175,7 @@ export async function metadataRig(mode = "edit", recovery = false) {
   await host.ngAfterViewInit();
   return {
     host,
+    signIn,
     editors,
     request,
     loader,

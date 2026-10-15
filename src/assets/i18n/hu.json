@@ -481,7 +481,8 @@
     "ReviewServer": "Legutóbbi mentett érték",
     "ReviewKeepMine": "Saját érték megtartása",
     "ReviewKeepLatest": "Legutóbbi érték megtartása",
-    "ReviewApply": "Áttekintett módosítások alkalmazása"
+    "ReviewApply": "Áttekintett módosítások alkalmazása",
+    "SignInAgain": "Újbóli bejelentkezés"
   },
   "Account": {
     "Profile": {
