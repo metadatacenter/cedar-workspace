@@ -169,6 +169,10 @@ export const test = base.extend({
             { user: collaborator, administrator: false, member: true },
           ],
         };
+      else if (path.endsWith("/groups/team/membership/me")) {
+        const self = state.members.find(member => member.user["@id"] === owner["@id"]);
+        body = {member: self?.member ?? false, administrator: self?.administrator ?? false};
+      }
       else if (path.endsWith("/groups/team/users")) {
         if (request.method() === "PUT")
           state.members = request.postDataJSON().users.map((member) => ({
