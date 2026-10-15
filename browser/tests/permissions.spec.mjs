@@ -67,7 +67,7 @@ for (const kind of ["user", "group"]) {
     for (const operation of ["add", "remove"]) {
       finishWrite = undefined;
       finishReport = undefined;
-      await dialog.getByRole("button", { name: operation === "add" ? "Add" : "Remove access for " + name, exact: true }).click();
+      await dialog.getByRole("button", { name: operation === "add" ? "Add" : "Remove direct role for " + name, exact: true }).click();
       await expect.poll(() => !!finishWrite).toBe(true);
       await expect(input).toBeDisabled();
       expect((await table.boundingBox()).y).toBe(initialTop);
@@ -133,4 +133,61 @@ test("an unchanged ACL acknowledgement blocks repeat writes until reload", async
   await expect(role).toBeEnabled();
   await expect(role).toHaveValue("viewer");
   expect(writes).toBe(1);
+});
+
+for (const width of [1440, 375]) {
+  for (const reader of [false, true]) {
+    test(`caller access and role explanations stay readable at ${width} for ${reader ? "reader" : "owner"}`, async ({ page, api }, testInfo) => {
+      await page.setViewportSize({ width, height: 950 });
+      api.readonly = reader;
+      await page.route("**/templates/template/report", route => route.fulfill({
+        json: { ...resource, currentUserPermissions: reader
+          ? { role: "viewer", owner: false, capabilities: ["readResource"] }
+          : resource.currentUserPermissions },
+      }));
+      await dashboard(page);
+      await action(page, "Permissions…");
+      const dialog = page.getByRole("dialog", { name: "Permissions", exact: true });
+      const summary = dialog.locator(".caller-access");
+      await expect(summary).toContainText(reader ? "Your role: Viewer." : "You own this resource.");
+      await expect(summary).toContainText(reader ? "You cannot change roles on this resource." : "You can change roles on this resource.");
+      await expect(dialog.locator(".role-help")).toContainText("can view, edit and delete.");
+      await expect(dialog).toContainText("Removing a direct role may leave access from these sources.");
+      if (!reader) await expect(dialog).toContainText("You do not need to belong to the group.");
+      const bounds = await dialog.boundingBox();
+      expect(bounds.x).toBeGreaterThanOrEqual(0);
+      expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
+      expect(await dialog.locator(".access-list").evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+      await expect(dialog.getByRole("button", { name: "Done", exact: true })).toBeInViewport();
+      expect((await new AxeBuilder({ page }).include("cedar-permissions-dialog").analyze()).violations).toEqual([]);
+      await page.screenshot({ path: testInfo.outputPath("permissions.png") });
+    });
+  }
+}
+
+test("caller summary follows a saved self-demotion and clears after a failed access refresh", async ({ page, api }) => {
+  let access = { role: "manager", owner: false, capabilities: ["readResource", "manageGrants"] };
+  let failed = false;
+  await page.route("**/templates/template/report", route => route.fulfill(failed
+    ? { status: 503, json: { errorMessage: "Access report unavailable" } }
+    : { json: { ...resource, currentUserPermissions: access } }));
+  await page.route("**/templates/template/permissions", route => {
+    if (route.request().method() === "PUT") {
+      access = { role: "viewer", owner: false, capabilities: ["readResource"] };
+      return route.fulfill({ json: { ...route.request().postDataJSON(), owner: user }, headers: { ETag: '"changed"' } });
+    }
+    return route.fulfill({ json: { owner: user, userPermissions: [{ user: owner, role: "manager" }], groupPermissions: [] }, headers: { ETag: '"initial"' } });
+  });
+  await dashboard(page);
+  await action(page, "Permissions…");
+  const dialog = page.getByRole("dialog", { name: "Permissions", exact: true });
+  await expect(dialog.locator(".caller-access")).toContainText("Your role: Manager.");
+  await dialog.getByRole("combobox", { name: "Role for Alex Researcher" }).selectOption("viewer");
+  await expect(dialog.locator(".caller-access")).toContainText("Your role: Viewer. You cannot change roles on this resource.");
+  await expect(dialog.getByRole("combobox", { name: "User or group" })).toHaveCount(0);
+  await dialog.getByRole("button", { name: "Done", exact: true }).click();
+  failed = true;
+  await action(page, "Permissions…");
+  await expect(dialog.getByRole("alert")).toBeVisible();
+  await expect(dialog.locator(".caller-access")).toHaveCount(0);
 });

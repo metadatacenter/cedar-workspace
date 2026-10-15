@@ -128,6 +128,19 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
   get canTransfer() {
     return can(this.current() || undefined, "transferOwnership");
   }
+  get callerAccessMessage() {
+    const access = this.current()?.currentUserPermissions;
+    if (access?.owner === true) return this.i18n.t("Permissions.YouOwn");
+    if (access?.role && ["viewer", "editor", "manager"].includes(access.role))
+      return this.i18n.t("Permissions.YourRole", { role: this.roleName(access.role) });
+    // A missing role can accompany administrative capabilities. It is not a denial.
+    return this.i18n.t("Permissions.RoleUnavailable");
+  }
+  get managementMessage() {
+    if (!Array.isArray(this.current()?.currentUserPermissions?.capabilities))
+      return "Permissions.ManagementUnavailable";
+    return this.canManage ? "Permissions.CanManage" : "Permissions.CannotManage";
+  }
   get grants(): Grant[] {
     const p = this.permissions();
     return p

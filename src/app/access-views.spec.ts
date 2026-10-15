@@ -5,6 +5,7 @@ import { TestBed } from "@angular/core/testing";
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { Groups } from "./groups";
 import { PermissionsDialog } from "./permissions-dialog";
+import { Resource } from "./resource";
 import { Backend } from "./backend.service";
 
 const owner = {
@@ -199,12 +200,13 @@ describe("Permissions legacy view contracts", () => {
   async function render(
     capabilities = ["readResource", "manageGrants", "transferOwnership"],
     kind = "template",
+    access: Resource["currentUserPermissions"] = {},
   ) {
     const resource = {
       "@id": "artifact",
       resourceType: kind,
       "schema:name": "Study",
-      currentUserPermissions: { capabilities },
+      currentUserPermissions: { capabilities, ...access },
     };
     const request = vi.fn(async (path: string) => {
       if (path === "/users") return { data: { users: [owner, user] } };
@@ -259,7 +261,7 @@ describe("Permissions legacy view contracts", () => {
     expect(el.querySelector(".resource-name")?.textContent).toBe("Study");
     expect(el.querySelectorAll("cedar-group-picker")).toHaveLength(1);
     expect(el.textContent).toContain("Add users or groups");
-    expect(el.textContent).toContain("Access on this resource");
+    expect(el.textContent).toContain("Owner and direct role assignments");
     expect(
       el.querySelector('[role="columnheader"].type-cell')?.textContent,
     ).toBe("Type");
@@ -320,7 +322,7 @@ describe("Permissions legacy view contracts", () => {
     expect(el.querySelector('option[value="owner"]')).toBeNull();
     expect(
       el.querySelector(
-        '[aria-label="Remove access for Researchers"] cedar-icon[name="trash"]',
+        '[aria-label="Remove direct role for Researchers"] cedar-icon[name="trash"]',
       ),
     ).not.toBeNull();
     expect(
@@ -341,7 +343,7 @@ describe("Permissions legacy view contracts", () => {
   it("allows viewers to inspect roles but not edit grants or ownership", async () => {
     const { el } = await render(["readResource"]);
     expect(el.textContent).toContain(
-      "Only a Manager or the owner can change roles.",
+      "You cannot change roles on this resource.",
     );
     expect(el.querySelector("cedar-group-picker")).toBeNull();
     expect(
@@ -359,8 +361,34 @@ describe("Permissions legacy view contracts", () => {
       ).disabled,
     ).toBe(true);
     expect(
-      el.querySelector('[aria-label="Remove access for Grace Hopper"]'),
+      el.querySelector('[aria-label="Remove direct role for Grace Hopper"]'),
     ).toBeNull();
+  });
+  it.each([
+    ["viewer", false], ["editor", false], ["manager", true],
+  ] as const)("explains the caller's %s role independently of the direct assignments", async (role, manages) => {
+    const { el } = await render(manages ? ["readResource", "manageGrants"] : ["readResource"], "template", { role, owner: false });
+    const summary = el.querySelector(".caller-access")!.textContent;
+    expect(summary).toContain(`Your role: ${role[0].toUpperCase() + role.slice(1)}.`);
+    expect(summary).toContain(manages ? "You can change roles" : "You cannot change roles");
+    expect(el.querySelector(".role-help")?.textContent).toContain("can view, edit and delete.");
+    expect(el.textContent).toContain("Removing a direct role may leave access");
+  });
+  it("describes ownership without promising grant management on a protected folder", async () => {
+    const { el } = await render(["readResource"], "folder", { owner: true, role: "manager" });
+    expect(el.querySelector(".caller-access")?.textContent).toContain("You own this resource. You cannot change roles on this resource.");
+    expect(el.querySelector(".caller-access")?.textContent).not.toContain("Your role:");
+  });
+  it("does not infer a role from administrative capabilities or infer denial from missing data", async () => {
+    const { host, el, fixture } = await render();
+    expect(el.querySelector(".caller-access")?.textContent).toContain("Your role is not available. You can change roles");
+    host.current.set({ ...host.resource, currentUserPermissions: {} });
+    await fixture.whenStable();
+    expect(el.querySelector(".caller-access")?.textContent).toContain("Your ability to change roles could not be determined.");
+    expect(el.querySelector(".caller-access")?.textContent).not.toContain("You cannot");
+    host.current.set(null);
+    await fixture.whenStable();
+    expect(el.querySelector(".caller-access")).toBeNull();
   });
   it("keeps the mounted native dialog open on Escape during a pending save", async () => {
     const { host, el } = await render();
