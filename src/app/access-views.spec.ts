@@ -166,7 +166,9 @@ describe("Groups legacy view contracts", () => {
     host.members.set(null);
     host.restricted.set(true);
     await fixture.whenStable();
-    expect(el.textContent).toContain("Only a Group Administrator can see");
+    expect(el.textContent).toContain(
+      "Only administrators of this group can view its member list.",
+    );
     expect(el.textContent).not.toContain("This group has no members.");
     host.restricted.set(false);
     host.error.set("Roster unavailable");

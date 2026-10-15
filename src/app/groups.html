@@ -245,8 +245,11 @@
     @if(g.specialGroup || !canAdmin) {
     <div class="groups-selected-message">
       <p>
-        {{(g.specialGroup ? 'Groups.BuiltIn' : 'Groups.ViewOnly') | translate}}
+        {{(g.specialGroup ? 'Groups.BuiltIn' : membershipMessage) | translate}}
       </p>
+      @if(deleting && !g.specialGroup && !canAdmin) {
+      <p>{{'Groups.DeleteRestricted' | translate}}</p>
+      }
     </div>
     }
     <form class="groups-details-form" (ngSubmit)="!deleting && save()">
