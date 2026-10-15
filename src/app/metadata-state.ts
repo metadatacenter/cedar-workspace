@@ -77,7 +77,7 @@ export function metadataLocation(
 }
 
 /** One owner for loading, writes and the component/server reports about the current draft. */
-export class MetadataState extends OperationCoordinator<"load" | "save"> {
+export class MetadataState extends OperationCoordinator<"load" | "save" | "recovery"> {
   readonly quality = signal<MetadataReport | null>(null);
   readonly reloadRequired = signal(false);
   readonly loadFailed = signal(false);

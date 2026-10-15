@@ -445,7 +445,14 @@
     "Reload": "Reload metadata",
     "SaveUnconfirmed": "We could not confirm whether your changes were saved. Your changes remain in the editor. Check Workspace before saving again.",
     "ItemDeleted": "This item was deleted. Your edits have been kept. Return to Workspace to choose another item.",
-    "ItemChanged": "This item changed since you opened it. Your edits have been kept. Cancel and reopen to review the latest version."
+    "ItemChanged": "This item changed since you opened it. Your edits have been kept. Cancel and reopen to review the latest version.",
+    "CheckSave": "Check save status",
+    "CheckingSave": "Checking save status…",
+    "SaveConfirmed": "The stored version matches your submitted changes. Your current edits have been kept.",
+    "SaveUnchanged": "The stored version is unchanged. You can retry Save.",
+    "RecoveryReadOnly": "You do not currently have permission to update this artifact. Your edits have been kept; saving remains blocked.",
+    "RecoveryUnresolved": "The stored version could not be reconciled with your save. Your edits have been kept; saving remains blocked.",
+    "RecoveryUnavailable": "Save status could not be checked. Your edits have been kept. Check your connection and access, then try again."
   },
   "Account": {
     "Profile": {

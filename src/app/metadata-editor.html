@@ -29,9 +29,13 @@
 <main class="metadata-content">
   @if(error()){
   <p role="alert" class="alert">
-    {{error()}} @if((state.loadFailed() && !unreadable()) || (state.reloadRequired() &&
+    {{error()}} @if(canCheckSave()) {
+    <button type="button" (click)="checkSaveStatus()" [disabled]="checkingSave() || saving()">
+      {{'Metadata.CheckSave' | translate}}
+    </button>
+    } @if((state.loadFailed() && !unreadable()) || (state.reloadRequired() &&
     !state.uncertainCreation())) {
-    <button type="button" (click)="reload()" [disabled]="saving()">
+    <button type="button" (click)="reload()" [disabled]="saving() || checkingSave()">
       {{(state.loadFailed() ? 'Common.Retry' : 'Metadata.Reload') | translate}}
     </button>
     }

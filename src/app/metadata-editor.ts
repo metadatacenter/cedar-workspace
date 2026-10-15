@@ -27,6 +27,7 @@ import {
 import type {
   CedarEmbeddableEditorElement,
   CeeConfig,
+  CeeSaveSnapshot,
   CeeJsonObject,
   CeeValidationProblem,
 } from "cedar-embeddable-editor";
@@ -41,15 +42,7 @@ import { CeeLoader } from "./cee-loader";
 import { can, Resource } from "./resource";
 import { I18n, fallbackLanguage } from "./i18n";
 
-// Jetty can append gzip markers on each proxy hop. CEDAR's conditional-write
-// parser treats those representations as the same stored numeric revision.
-function sameStoredRevision(expected: string, actual: string | null): boolean {
-  if (expected === actual) return true;
-  const revision = (tag: string | null) =>
-    tag?.match(/^"([0-9]+)(?:-resource-record)?(?:--gzip)*"$/)?.[1];
-  const saved = revision(expected);
-  return saved !== undefined && saved === revision(actual);
-}
+import {sameStoredRevision, metadataUpdateOutcome} from "./metadata-save-recovery";
 
 export const metadataRoute: UrlMatcher = (segments) => {
   if (
@@ -188,6 +181,13 @@ export interface MetadataIssue {
   message: string;
   problem?: CeeValidationProblem;
 }
+interface PendingMetadataUpdate {
+  opened: CeeJsonObject;
+  submitted: CeeJsonObject;
+  etag: string;
+  snapshot: CeeSaveSnapshot;
+  typedName: string;
+}
 export const leaveMetadata: CanDeactivateFn<MetadataEditor> = (editor) =>
   editor.mayLeave();
 
@@ -209,6 +209,9 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   editor!: ElementRef<CedarEmbeddableEditorElement>;
   readonly loading = signal(true);
   readonly saving = signal(false);
+  readonly checkingSave = signal(false);
+  readonly canCheckSave = signal(false);
+  private pendingUpdate?: PendingMetadataUpdate;
   readonly dirty = signal(false);
   readonly writable = signal(false);
   readonly error = signal("");
@@ -248,8 +251,11 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     await this.load();
   }
   private async load() {
-    const operation = this.state.begin("load", ["save"]);
+    const operation = this.state.begin("load", ["save", "recovery"]);
     this.loading.set(true);
+    this.checkingSave.set(false);
+    this.canCheckSave.set(false);
+    this.pendingUpdate = undefined;
     this.state.loadFailed.set(false);
     this.unreadable.set(false);
     this.error.set("");
@@ -377,7 +383,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     }
   }
   async reload() {
-    if (!this.alive || this.saving() || this.state.uncertainCreation()) return;
+    if (!this.alive || this.saving() || this.checkingSave() || this.state.uncertainCreation()) return;
     const decision = this.state.checkpoint();
     const draft = this.editor ? this.draftKey() : null;
     if (
@@ -496,6 +502,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       !this.alive ||
       this.loading() ||
       this.saving() ||
+      this.checkingSave() ||
       !this.writable() ||
       this.state.reloadRequired()
     )
@@ -508,6 +515,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     this.error.set("");
     this.notice.set("");
     let attempted = false;
+    let pendingUpdate: PendingMetadataUpdate | undefined;
     try {
       if (this.saved && !this.etag) {
         this.state.reloadRequired.set(true);
@@ -538,6 +546,10 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
           this.template["schema:description"] || "",
         );
       }
+      if (this.saved && this.etag) pendingUpdate = {
+        opened: structuredClone(this.saved), submitted: structuredClone(metadata),
+        etag: this.etag, snapshot, typedName,
+      };
       attempted = true;
       const reply = await this.api.request<CeeJsonObject>(
         path,
@@ -556,6 +568,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         this.state.uncertainCreation.set(!this.saved);
         throw new Error(this.i18n.t("Metadata.SaveUnconfirmed"));
       }
+      pendingUpdate = undefined;
       // Write acknowledgements may be resource summaries. Retain submitted metadata
       // that the server does not repeat, while accepting its authoritative fields.
       this.saved = { ...metadata, ...reply.data };
@@ -615,6 +628,10 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       if (!operation.current()) return;
       operation.fail(e);
       this.refreshQuality();
+      if (pendingUpdate && uncertainWrite(e)) {
+        this.pendingUpdate = pendingUpdate;
+        this.canCheckSave.set(true);
+      }
       if (attempted && writeRequiresRecovery(e)) {
         this.state.reloadRequired.set(true);
         if (!this.saved && uncertainWrite(e)) this.state.uncertainCreation.set(true);
@@ -634,6 +651,54 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       );
     } finally {
       if (operation.current()) this.saving.set(false);
+    }
+  }
+  async checkSaveStatus() {
+    const pending = this.pendingUpdate;
+    if (!this.alive || !pending || this.loading() || this.saving() || this.checkingSave()) return;
+    const operation = this.state.begin("recovery");
+    this.checkingSave.set(true);
+    this.error.set(this.i18n.t("Metadata.CheckingSave"));
+    try {
+      const path = "/template-instances/" + encodeURIComponent(resourcePathId(String(pending.opened["@id"])));
+      const [latest, report] = await Promise.all([
+        this.api.request<CeeJsonObject>(path), this.api.request<Resource>(path + "/report"),
+      ]);
+      if (!operation.current()) return;
+      if (!can(report.data, "updateResource")) {
+        this.error.set(this.i18n.t("Metadata.RecoveryReadOnly"));
+        return;
+      }
+      const result = metadataUpdateOutcome(pending, latest, this.template);
+      if (result === "unresolved") {
+        this.error.set(this.i18n.t("Metadata.RecoveryUnresolved"));
+        return;
+      }
+      if (result === "saved") {
+        // Acknowledge only after the values match. CEE binds minted IDs to the
+        // original submitted objects, retaining later edits, moves and deletions.
+        this.baseline = metadataKey(pending.snapshot.needsElementIds
+          ? pending.snapshot.acknowledge(latest.data) : pending.snapshot.metadata);
+        this.baselineName = pending.typedName;
+        this.saved = latest.data;
+        this.etag = latest.etag;
+        this.savedHere = true;
+      }
+      this.writable.set(true);
+      this.state.reloadRequired.set(false);
+      this.state.clearServer();
+      this.pendingUpdate = undefined;
+      this.canCheckSave.set(false);
+      this.changed();
+      this.error.set("");
+      this.notice.set(this.i18n.t(result === "saved" ? "Metadata.SaveConfirmed" : "Metadata.SaveUnchanged"));
+      operation.finish();
+    } catch (error) {
+      if (!operation.current()) return;
+      operation.fail(error);
+      this.error.set(this.i18n.t("Metadata.RecoveryUnavailable"));
+    } finally {
+      if (operation.current()) this.checkingSave.set(false);
     }
   }
   async mayLeave() {

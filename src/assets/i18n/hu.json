@@ -445,7 +445,14 @@
     "Reload": "Metaadatok újratöltése",
     "SaveUnconfirmed": "Nem sikerült megerősíteni, hogy a módosítások mentése megtörtént-e. A módosítások megmaradtak a szerkesztőben. Újabb mentés előtt ellenőrizze a Workspace-ben.",
     "ItemDeleted": "Ezt az elemet törölték. A módosításai megmaradtak. Térjen vissza a munkaterületre, és válasszon másik elemet.",
-    "ItemChanged": "Ez az elem megváltozott, mióta megnyitotta. A módosításai megmaradtak. A legújabb verzió áttekintéséhez válassza a Mégse gombot, és nyissa meg újra."
+    "ItemChanged": "Ez az elem megváltozott, mióta megnyitotta. A módosításai megmaradtak. A legújabb verzió áttekintéséhez válassza a Mégse gombot, és nyissa meg újra.",
+    "CheckSave": "Mentés állapotának ellenőrzése",
+    "CheckingSave": "Mentés állapotának ellenőrzése…",
+    "SaveConfirmed": "A tárolt változat megegyezik az elküldött módosításokkal. A jelenlegi szerkesztések megmaradtak.",
+    "SaveUnchanged": "A tárolt változat nem változott. Újra megpróbálhatja a mentést.",
+    "RecoveryReadOnly": "Jelenleg nincs jogosultsága az elem módosításához. A szerkesztések megmaradtak; a mentés továbbra is le van tiltva.",
+    "RecoveryUnresolved": "A tárolt változatot nem sikerült egyeztetni a mentéssel. A szerkesztések megmaradtak; a mentés továbbra is le van tiltva.",
+    "RecoveryUnavailable": "Nem sikerült ellenőrizni a mentés állapotát. A szerkesztések megmaradtak. Ellenőrizze a kapcsolatot és a hozzáférést, majd próbálja újra."
   },
   "Account": {
     "Profile": {

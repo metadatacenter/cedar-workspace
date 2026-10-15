@@ -124,6 +124,95 @@ describe("Modern metadata host", () => {
     });
     await host.ngAfterViewInit();
   }
+  it.each(["saved", "unchanged", "conflict", "read failed", "permission lost", "missing revision", "wrong identity"])(
+    "checks an unconfirmed update (%s) without replacing the current form", async outcome => {
+      await edit();
+      const original = api.request.getMockImplementation()! as (path: string, method?: string) => Promise<{data: Record<string, unknown>; etag: string}>;
+      let submitted: Record<string, unknown> = {};
+      let recovery = false;
+      api.request.mockImplementation(async (path, method = "GET", body) => {
+        if (method === "PUT") { submitted = structuredClone(body); throw new Error("Lost reply"); }
+        if (!recovery || path.endsWith("/report")) {
+          if (recovery && outcome === "permission lost") return {data: {currentUserPermissions: {capabilities: []}}};
+          return original(path, method);
+        }
+        if (outcome === "read failed") throw new Error("Offline");
+        if (outcome === "unchanged") return original(path, method);
+        return {data: {...submitted,
+          ...(outcome === "conflict" ? {Notes: {"@value": "Other author"}} : {}),
+          ...(outcome === "wrong identity" ? {"@id": "wrong"} : {}),
+          "pav:lastUpdatedOn": "new"}, etag: outcome === "missing revision" ? null : '\"confirmed\"'};
+      });
+      cee.currentMetadata["Notes"] = {"@value": "Submitted"};
+      host.changed(); await host.save();
+      expect(host.canCheckSave()).toBe(true);
+      expect(host.state.reloadRequired()).toBe(true);
+      cee.currentMetadata["Notes"] = {"@value": "Newer"}; host.name = "Newer name"; host.changed();
+      const form = cee.templateAndInstanceObject;
+      recovery = true;
+      await host.checkSaveStatus();
+      expect(cee.currentMetadata["Notes"]).toEqual({"@value": "Newer"});
+      expect(cee.templateAndInstanceObject).toBe(form);
+      expect(host.dirty()).toBe(true);
+      expect(host.state.reloadRequired()).toBe(!["saved", "unchanged"].includes(outcome));
+      expect(host.canCheckSave()).toBe(!["saved", "unchanged"].includes(outcome));
+      if (["saved", "unchanged"].includes(outcome)) {
+        api.request.mockResolvedValue({data: {"@id": "instance-id"}, etag: '\"next\"'});
+        await host.save();
+        expect(api.request.mock.lastCall?.[3]).toBe(outcome === "saved" ? '\"confirmed\"' : '\"i1\"');
+      } else {
+        const calls = api.request.mock.calls.length;
+        await host.save(); expect(api.request.mock.calls.length).toBe(calls);
+      }
+    },
+  );
+  it("keeps edits made during a recovery read and rejects results after disposal", async () => {
+    await edit();
+    const original = api.request.getMockImplementation()! as (path: string, method?: string) => Promise<{data: Record<string, unknown>; etag: string}>;
+    let submitted: Record<string, unknown> = {};
+    api.request.mockImplementation(async (path, method = "GET", body) => {
+      if (method === "PUT") {submitted = structuredClone(body); throw new Error("Lost reply");}
+      return original(path, method);
+    });
+    await host.save();
+    let release!: (value: unknown) => void;
+    api.request.mockImplementation((path) => path.endsWith("/report") ? original(path) : new Promise(resolve => {release = resolve;}));
+    const checking = host.checkSaveStatus();
+    expect(host.checkingSave()).toBe(true);
+    await host.checkSaveStatus();
+    cee.currentMetadata["Notes"] = {"@value": "During recovery"}; host.changed();
+    host.ngOnDestroy();
+    release({data: submitted, etag: '\"confirmed\"'});
+    await checking;
+    expect(cee.currentMetadata["Notes"]).toEqual({"@value": "During recovery"});
+    expect(host.state.reloadRequired()).toBe(true);
+  });
+  it("acknowledges newly minted element IDs only after the recovered values match", async () => {
+    const original = api.request.getMockImplementation()! as (path: string, method?: string) => Promise<{data: Record<string, unknown>; etag: string}>;
+    api.request.mockImplementation(async (path, method = "GET") => path === "/templates/template-id"
+      ? {data: {...template, properties: {Element: {"@type": "https://schema.metadatacenter.org/core/TemplateElement", properties: {}}}}}
+      : original(path, method));
+    await edit();
+    cee.currentMetadata["Element"] = {"@id": null, Answer: {"@value": "Submitted"}};
+    const snapshot = structuredClone(cee.currentMetadata);
+    const acknowledge = vi.fn((stored) => {
+      (cee.currentMetadata["Element"] as Record<string, unknown>)["@id"] = stored.Element["@id"];
+      return {...snapshot, Element: stored.Element};
+    });
+    Object.assign(cee, {captureSave: () => ({metadata: snapshot, needsElementIds: true, acknowledge})});
+    let submitted: Record<string, unknown> = {};
+    api.request.mockImplementation(async (path, method = "GET", body) => {
+      if (method === "PUT") {submitted = structuredClone(body); throw new Error("Lost reply");}
+      if (path.endsWith("/report")) return original(path, method);
+      return {data: {...submitted, Element: {"@id": "urn:minted", Answer: {"@value": "Submitted"}}}, etag: '\"confirmed\"'};
+    });
+    host.changed(); await host.save();
+    cee.currentMetadata["Element"] = {"@id": null, Answer: {"@value": "Newer"}};
+    await host.checkSaveStatus();
+    expect(acknowledge).toHaveBeenCalledOnce();
+    expect(cee.currentMetadata["Element"]).toEqual({"@id": "urn:minted", Answer: {"@value": "Newer"}});
+    expect(host.dirty()).toBe(true); expect(host.state.reloadRequired()).toBe(false);
+  });
   it("configures CEE once after permissions and starts clean", async () => {
     await host.ngAfterViewInit();
     expect(cee.config.readOnlyMode).toBe(false);
