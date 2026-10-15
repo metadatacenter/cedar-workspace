@@ -430,6 +430,7 @@
     "DiscardChanges": "Elveti a metaadatok nem mentett módosításait?",
     "SavedWithChanges": "Mentve. További, nem mentett módosításai vannak.",
     "SavedIdentityUnavailable": "Mentve, de a tárolt elemazonosítók nem ellenőrizhetők. A jelenlegi módosításai a szerkesztőben maradtak. Újabb mentés előtt töltse újra a metaadatokat.",
+    "SavedVerificationUnavailable": "Mentve, de az ellenőrzés nem fejeződött be. A jelenlegi módosításai a szerkesztőben maradtak. Újabb mentés előtt ellenőrizze a mentés állapotát.",
     "ConfigurationUnavailable": "A metaadat-szerkesztő beállításai nem tölthetők be.",
     "NoTemplate": "A metaadatok nem hivatkoznak a sablonjukra.",
     "UnreadableTemplate": "A CEDAR nem tudja beolvasni ezt a sablont, ezért nem adhatók meg hozzá metaadatok.",

@@ -45,3 +45,27 @@ test('restored metadata access saves the refused draft without reload',async({pa
   await expect(check).toHaveCount(0);await expect(save).toBeEnabled();await expect(name).toHaveValue('Newer name');
   expect(writes).toBe(1);await save.click();await expect(page.locator('.metadata-save-status')).toHaveText('Saved');expect(writes).toBe(2);
 });
+
+test('confirmed metadata update without a revision recovers in place and keeps newer edits',async({page,api})=>{
+  let stored={'@id':'instance','schema:name':'Study record','schema:isBasedOn':'template'};
+  let writes=0,lastTag;
+  await page.route('**/api/resource/template-instances/instance',route=>{
+    if(route.request().method()==='PUT'){
+      writes++;lastTag=route.request().headers()['if-match'];stored=route.request().postDataJSON();
+      return route.fulfill({json:{'@id':'instance'},headers:writes===1?{}:{ETag:'"next"'}});
+    }
+    return route.fulfill({json:stored,headers:{ETag:writes?'"confirmed"':'"opened"'}});
+  });
+  await page.goto('/instances/edit/instance');
+  const name=page.getByLabel('Instance name',{exact:true}),save=page.getByRole('button',{name:'Save',exact:true});
+  await name.fill('Submitted');await save.click();
+  const check=page.getByRole('button',{name:'Check save status',exact:true});
+  await expect(check).toBeVisible();await expect(save).toBeDisabled();
+  await expect(page.getByRole('alert')).toContainText('Use Check save status before saving again');
+  const component=await page.locator('cedar-embeddable-editor').elementHandle();
+  await name.fill('Newer input');await check.click();
+  await expect(check).toHaveCount(0);await expect(save).toBeEnabled();await expect(name).toHaveValue('Newer input');
+  expect(writes).toBe(1);expect(await component.evaluate(el=>el.isConnected)).toBe(true);
+  await save.click();await expect(page.locator('.metadata-save-status')).toHaveText('Saved');
+  expect(writes).toBe(2);expect(lastTag).toBe('"confirmed"');
+});

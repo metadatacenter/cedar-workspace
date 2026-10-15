@@ -182,7 +182,7 @@ export interface MetadataIssue {
   problem?: CeeValidationProblem;
 }
 interface PendingMetadataUpdate {
-  purpose: "save" | "access";
+  purpose: "save" | "access" | "acknowledgement";
   opened: CeeJsonObject;
   submitted: CeeJsonObject;
   etag: string;
@@ -572,6 +572,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         this.state.uncertainCreation.set(!this.saved);
         throw new Error(this.i18n.t("Metadata.SaveUnconfirmed"));
       }
+      const confirmedUpdate = pendingUpdate;
       pendingUpdate = undefined;
       // Write acknowledgements may be resource summaries. Retain submitted metadata
       // that the server does not repeat, while accepting its authoritative fields.
@@ -596,6 +597,10 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         }
       }
       this.state.reloadRequired.set(!reply.etag || identityRecovery);
+      if (this.state.reloadRequired() && confirmedUpdate) {
+        this.pendingUpdate = {...confirmedUpdate, purpose: "acknowledgement"};
+        this.canCheckSave.set(true);
+      }
       this.state.clearServer();
       this.baseline = baseline;
       this.baselineName = typedName;
@@ -621,8 +626,9 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       if (!operation.current()) return;
       operation.finish();
       this.changed();
-      if (!reply.etag) this.error.set(this.i18n.t("Metadata.NoRevision"));
-      if (identityRecovery) this.error.set(this.i18n.t("Metadata.SavedIdentityUnavailable"));
+      if (this.canCheckSave()) this.error.set(this.i18n.t("Metadata.SavedVerificationUnavailable"));
+      else if (identityRecovery) this.error.set(this.i18n.t("Metadata.SavedIdentityUnavailable"));
+      else if (!reply.etag) this.error.set(this.i18n.t("Metadata.NoRevision"));
       this.notice.set(
         this.i18n.t(
           this.dirty() ? "Metadata.SavedWithChanges" : "Common.Saved",
@@ -677,7 +683,8 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         return;
       }
       const result = metadataUpdateOutcome(pending, latest, this.template);
-      if (result === "unresolved" || (access && result !== "unchanged")) {
+      if (result === "unresolved" || (access && result !== "unchanged") ||
+          (pending.purpose === "acknowledgement" && result !== "saved")) {
         this.error.set(this.i18n.t("Metadata.RecoveryUnresolved"));
         return;
       }

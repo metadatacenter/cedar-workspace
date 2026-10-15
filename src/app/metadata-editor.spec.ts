@@ -439,6 +439,74 @@ describe("Modern metadata host", () => {
       expect(api.request.mock.calls.length).toBe(calls);
     },
   );
+  it.each(["saved", "old revision", "different content", "permission lost", "read failed"])(
+    "rechecks an acknowledged update after failed identity readback: %s", async outcome => {
+      await edit();
+      Object.assign(host, {template: {...template, properties: {Element: {
+        "@type": "https://schema.metadatacenter.org/core/TemplateElement", properties: {},
+      }}}});
+      const original = api.request.getMockImplementation()! as (path: string) => Promise<unknown>;
+      cee.currentMetadata["Element"] = {"@id": null};
+      const snapshot = structuredClone(cee.currentMetadata);
+      const acknowledge = vi.fn(stored => {
+        cee.currentMetadata["Element"] = stored.Element;
+        return {...snapshot, Element: stored.Element};
+      });
+      Object.assign(cee, {captureSave: () => ({metadata: snapshot, needsElementIds: true, acknowledge})});
+      let checking = false;
+      let stored: Record<string, unknown> = {};
+      let writes = 0;
+      api.request.mockImplementation(async (path, method = "GET", body) => {
+        if (method === "PUT") {
+          writes++;
+          stored = {...structuredClone(body), Element: {"@id": "urn:minted"}};
+          return {data: {"@id": "instance-id"}, etag: '"saved"'};
+        }
+        if (path.endsWith("/report")) return outcome === "permission lost"
+          ? {data: {currentUserPermissions: {capabilities: []}}} : original(path);
+        if (!checking || outcome === "read failed") throw new Error("Read unavailable");
+        if (outcome === "old revision") return original(path);
+        return {data: {...stored, ...(outcome === "different content" ? {Notes: {"@value": "Other author"}} : {})}, etag: '"saved"'};
+      });
+      host.changed(); await host.save();
+      expect(host.error()).toContain("Saved, but");
+      expect(host.canCheckSave()).toBe(true);
+      expect(host.state.reloadRequired()).toBe(true);
+      expect(acknowledge).not.toHaveBeenCalled();
+      const form = cee.templateAndInstanceObject;
+      cee.currentMetadata["Notes"] = {"@value": "Newer input"}; host.changed();
+      checking = true; await host.checkSaveStatus();
+      expect(writes).toBe(1);
+      expect(cee.currentMetadata["Notes"]).toEqual({"@value": "Newer input"});
+      expect(cee.templateAndInstanceObject).toBe(form);
+      expect(host.dirty()).toBe(true);
+      expect(host.state.reloadRequired()).toBe(outcome !== "saved");
+      expect(host.canCheckSave()).toBe(outcome !== "saved");
+      expect(acknowledge).toHaveBeenCalledTimes(outcome === "saved" ? 1 : 0);
+      expect(cee.currentMetadata["Element"]).toEqual({"@id": outcome === "saved" ? "urn:minted" : null});
+    },
+  );
+  it("recovers a confirmed update whose successful reply omitted its revision", async () => {
+    await edit();
+    let stored: Record<string, unknown> = {};
+    api.request.mockImplementation(async (path, method = "GET", body) => {
+      if (method === "PUT") {
+        stored = structuredClone(body);
+        return {data: {"@id": "instance-id"}, etag: null};
+      }
+      return path.endsWith("/report")
+        ? {data: {currentUserPermissions: {capabilities: ["updateResource"]}}}
+        : {data: stored, etag: '"confirmed"'};
+    });
+    host.name = "Saved name"; host.changed(); await host.save();
+    expect(host.state.reloadRequired()).toBe(true);
+    expect(host.canCheckSave()).toBe(true);
+    host.name = "Newer name"; host.changed(); await host.checkSaveStatus();
+    expect(host.state.reloadRequired()).toBe(false);
+    expect(host.canCheckSave()).toBe(false);
+    expect(host.name).toBe("Newer name");
+    expect(host.dirty()).toBe(true);
+  });
   it.each(["", "Imported instance description"])(
     "preserves the loaded description %j across field edits and sparse acknowledgements",
     async (description) => {
