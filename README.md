@@ -333,3 +333,11 @@ accepted/cancelled dismissal decisions across reads, writes, edits and destructi
 The browser state-coordination suite checks these host contracts in Chromium and
 WebKit using a CEE fixture that enforces set-once inputs; CEE's own rendering and
 controller suites remain in its repository.
+
+For an existing metadata instance, **Review latest saved version** performs a fresh
+artifact, permission and template read. It combines independent edits and asks for
+an explicit choice wherever both authors changed the same value. Repeated entries
+are compared as a whole, preserving occurrence identity. Applying the review only
+updates the form; Save uses the reviewed ETag and can still be refused if another
+author writes again. A changed template or unfinished raw input keeps the original
+draft and requires correction or a recovery-file download before proceeding.

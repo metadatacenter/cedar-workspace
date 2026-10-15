@@ -468,7 +468,20 @@
     "DraftInvalid": "Ez a helyreállítási piszkozat itt nem állítható helyre. Nyissa meg az eredeti fiókkal, környezetben és rekordnál; a jelenlegi munkája megmaradt.",
     "DraftNeedsReview": "A piszkozat helyreállt. A mentés a hozzáférés, az aktuális verzió és a befejezetlen mentések ellenőrzéséig tiltva marad.",
     "DraftRestored": "A helyreállítási piszkozat a befejezetlen bevitellel együtt helyreállt.",
-    "CreateOutcomeUnknown": "A létrehozás eredménye még ismeretlen. Őrizze meg vagy töltse le a piszkozatot, és új létrehozás előtt ellenőrizze a rekordot a munkaterületen."
+    "CreateOutcomeUnknown": "A létrehozás eredménye még ismeretlen. Őrizze meg vagy töltse le a piszkozatot, és új létrehozás előtt ellenőrizze a rekordot a munkaterületen.",
+    "ReviewLatest": "Legutóbbi mentett változat áttekintése",
+    "ReviewFinishInput": "Az összehasonlítás előtt fejezze be vagy javítsa a befejezetlen bevitelt. A piszkozat megmarad.",
+    "ReviewTemplateChanged": "A sablon megváltozott. Az új sablon megnyitása előtt töltse le a piszkozatot; automatikus egyeztetés nem érhető el.",
+    "ReviewRemoved": "Eltávolítva",
+    "ReviewStale": "A piszkozat az áttekintés közben megváltozott. Tekintse át újra a legutóbbi változatot.",
+    "ReviewApplied": "Az áttekintett módosítások az űrlapon vannak. Tárolásukhoz mentse őket.",
+    "ReviewExplanation": "A független módosítások egyesülnek. Válassza ki a megtartandó értéket, ha mindkét változat ugyanazt a mezőt módosította. Az ismétlődő bejegyzéseket együtt tekintjük át. Az alkalmazás az űrlapot módosítja; a mentés továbbra is ellenőrzi a szerver verzióját.",
+    "ReviewField": "Mező",
+    "ReviewMine": "Az Ön piszkozata",
+    "ReviewServer": "Legutóbbi mentett érték",
+    "ReviewKeepMine": "Saját érték megtartása",
+    "ReviewKeepLatest": "Legutóbbi érték megtartása",
+    "ReviewApply": "Áttekintett módosítások alkalmazása"
   },
   "Account": {
     "Profile": {

@@ -468,7 +468,20 @@
     "DraftInvalid": "This recovery draft could not be restored here. Open it using the same account, deployment and record where it was created; your current work has been kept.",
     "DraftNeedsReview": "Your draft has been restored. Saving remains blocked until access, the current revision and any unfinished save are resolved.",
     "DraftRestored": "Recovery draft restored, including unfinished input.",
-    "CreateOutcomeUnknown": "The create outcome is still unknown. Keep or download this draft and check Workspace for the created record before starting another create."
+    "CreateOutcomeUnknown": "The create outcome is still unknown. Keep or download this draft and check Workspace for the created record before starting another create.",
+    "ReviewLatest": "Review latest saved version",
+    "ReviewFinishInput": "Finish or correct unfinished input before comparing versions. Your draft is retained.",
+    "ReviewTemplateChanged": "The template has changed. Download your draft before reopening the new template; automatic reconciliation is unavailable.",
+    "ReviewRemoved": "Removed",
+    "ReviewStale": "Your draft changed during review. Review the latest version again.",
+    "ReviewApplied": "The reviewed changes are in your form. Save to store them.",
+    "ReviewExplanation": "Independent changes are combined. Choose which value to keep where both versions changed the same field. Repeated entries are reviewed together. Applying this review changes your form; Save still checks the server revision.",
+    "ReviewField": "Field",
+    "ReviewMine": "Your draft",
+    "ReviewServer": "Latest saved value",
+    "ReviewKeepMine": "Keep my value",
+    "ReviewKeepLatest": "Keep latest value",
+    "ReviewApply": "Apply reviewed changes"
   },
   "Account": {
     "Profile": {

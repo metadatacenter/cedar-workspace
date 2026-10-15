@@ -63,6 +63,63 @@
         [disabled]="saving() || checkingSave()"
     /></label>
   </p>
+  } @if(canReviewLatest) {
+  <button type="button" (click)="reviewLatest()">
+    {{'Metadata.ReviewLatest' | translate}}
+  </button>
+  } @if(review(); as comparison) {
+  <section class="alert" aria-live="polite">
+    <p>{{'Metadata.ReviewExplanation' | translate}}</p>
+    <table>
+      <thead>
+        <tr>
+          <th>{{'Metadata.ReviewField' | translate}}</th>
+          <th>{{'Metadata.ReviewMine' | translate}}</th>
+          <th>{{'Metadata.ReviewServer' | translate}}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for(change of comparison.changes; track $index) {
+        <tr>
+          <th>{{reviewLabel(change.path)}}</th>
+          <td>{{reviewValue(change.mine)}}</td>
+          <td>{{reviewValue(change.latest)}}</td>
+        </tr>
+        @if(change.conflict) {
+        <tr>
+          <td colspan="3">
+            <label
+              ><input
+                type="radio"
+                [name]="'recovery-choice-' + $index"
+                [checked]="change.choice === 'mine'"
+                (change)="reviewChoice(change.path, 'mine')"
+              />{{'Metadata.ReviewKeepMine' | translate}}</label
+            >
+            <label
+              ><input
+                type="radio"
+                [name]="'recovery-choice-' + $index"
+                [checked]="change.choice === 'latest'"
+                (change)="reviewChoice(change.path, 'latest')"
+              />{{'Metadata.ReviewKeepLatest' | translate}}</label
+            >
+          </td>
+        </tr>
+        } }
+      </tbody>
+    </table>
+    <button
+      type="button"
+      (click)="applyReview()"
+      [disabled]="!comparison.complete || !canReviewLatest"
+    >
+      {{'Metadata.ReviewApply' | translate}}
+    </button>
+    <button type="button" (click)="review.set(null)">
+      {{'Common.Cancel' | translate}}
+    </button>
+  </section>
   } @if(error()){
   <p role="alert" class="alert">
     {{error()}} @if(canCheckSave()) {
