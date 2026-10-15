@@ -1272,6 +1272,13 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         this.savedHere = true;
       }
       this.writable.set(true);
+      if (this.editorConfig)
+        this.cee.config = {
+          ...this.editorConfig,
+          readOnlyMode: false,
+          defaultLanguage: this.i18n.language,
+          fallbackLanguage,
+        };
       this.state.reloadRequired.set(false);
       this.state.clearServer();
       this.pendingUpdate = undefined;

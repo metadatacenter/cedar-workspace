@@ -201,9 +201,11 @@ it("can recheck a restored draft after permission is granted again", async () =>
   const next = await m.recreate();
   await next.restoreRecovery();
   expect(next.canRecheckAccess()).toBe(true);
+  expect(next.editor.nativeElement.config.readOnlyMode).toBe(true);
   m.access(true);
   await next.checkSaveStatus();
   expect(next.state.reloadRequired()).toBe(false);
+  expect(next.editor.nativeElement.config.readOnlyMode).toBe(false);
   expect(next.name).toBe("Unsaved");
   next.ngOnDestroy();
 });
