@@ -841,6 +841,16 @@ td:first-child a {
 .metadata-quality {
   @include patterns.validation-summary;
 }
+// The summaries stay in view beneath the toolbar while the form scrolls, at the offset `PinBelow`
+// sets. While both lists are open, each takes at most a fifth of the window rather than the
+// pattern's quarter, so the pair never covers more than two fifths of it.
+.metadata-issues {
+  position: sticky;
+  z-index: var(--cedar-layer-sticky);
+  &:has(> [open] ~ [open]) > .metadata-quality {
+    max-height: 20vh;
+  }
+}
 
 @media (max-width: 600px) {
   .metadata-toolbar {

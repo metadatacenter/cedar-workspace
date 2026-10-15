@@ -1,4 +1,4 @@
-<header class="metadata-toolbar">
+<header #toolbar class="metadata-toolbar">
   <cedar-workspace-return
     [guarded]="true"
     [disabled]="saving()"
@@ -60,6 +60,7 @@
   <p role="status">{{'Metadata.ReadOnlyAccess' | translate}}</p>
   } }
   <!-- Both summaries are about saving, which someone with read-only access cannot do. -->
+  <div class="metadata-issues" [cedarPinBelow]="toolbar">
   @if(writable() && validationErrors.length){
   <details
     class="metadata-quality"
@@ -117,5 +118,6 @@
     </ul>
   </details>
   }
+  </div>
   <div #editorHost [hidden]="loading()"></div>
 </main>

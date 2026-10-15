@@ -4,6 +4,7 @@ import { WorkspaceReturn } from "./workspace-return";
 import { Confirmation } from "./confirmation";
 import { Icon } from "./icon";
 import { Tooltip } from "./tooltip";
+import { PinBelow } from "./pin-below";
 import {
   AfterViewInit,
   Component,
@@ -194,7 +195,15 @@ export const leaveMetadata: CanDeactivateFn<MetadataEditor> = (editor) =>
 
 @Component({
   selector: "cedar-metadata-page",
-  imports: [Toast, WorkspaceReturn, Icon, Tooltip, FormsModule, TranslatePipe],
+  imports: [
+    Toast,
+    WorkspaceReturn,
+    Icon,
+    Tooltip,
+    PinBelow,
+    FormsModule,
+    TranslatePipe,
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: "./metadata-editor.html",
 })

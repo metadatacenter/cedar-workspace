@@ -601,6 +601,43 @@ test("metadata errors and nonblocking warnings share centered, expandable summar
   await expect(page.getByRole("tooltip")).toHaveCount(0);
 });
 
+// At 390px the toolbar wraps onto a second line, and the summaries follow it down.
+for (const width of [1440, 390])
+  test(`metadata summaries stay beneath the toolbar while a long form scrolls, ${width}px`, async ({ page, api }) => {
+    await page.setViewportSize({ width, height: 700 });
+    await page.goto("/instances/edit/instance");
+    await expect(page.getByLabel("Instance name")).toHaveValue("Study record");
+    await page.evaluate(() => {
+      const cee = document.querySelector("cedar-embeddable-editor");
+      cee.style.display = "block";
+      cee.innerHTML = Array.from({ length: 60 }, (_, i) => `<p id="field-${i}" style="height:40px;margin:0">Field ${i}</p>`).join("");
+      cee.dataQualityReport = {
+        isValid: false,
+        problems: [
+          { path: ["Title"], code: "required", message: "A value is required." },
+          { path: ["Email"], code: "email", message: "Enter a valid email." },
+        ],
+      };
+      cee.dispatchEvent(new CustomEvent("change"));
+    });
+    await page.mouse.move(width / 2, 650);
+    await page.mouse.wheel(0, 1500);
+    await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(1000);
+    const toolbar = await page.locator(".metadata-toolbar").boundingBox();
+    const issues = await page.locator(".metadata-issues").boundingBox();
+    expect(toolbar.y).toBe(0);
+    expect(issues.y).toBeCloseTo(toolbar.height, 0);
+    await expect(page.getByLabel("Metadata errors").locator("summary")).toBeInViewport();
+    await expect(page.getByLabel("Metadata warnings").locator("summary")).toBeInViewport();
+    // A field scrolled into view, by Tab or by a listed problem, comes to rest below the summaries.
+    const fieldTop = await page.evaluate(() => {
+      const field = document.getElementById("field-50");
+      field.scrollIntoView({ block: "start" });
+      return field.getBoundingClientRect().top;
+    });
+    expect(fieldTop).toBeGreaterThanOrEqual(Math.floor(issues.y + issues.height));
+  });
+
 test("returning from the metadata editor selects the instance it opened", async ({ page, api }) => {
   const instance = { ...resource, "@id": "instance", resourceType: "instance", "schema:name": "Study record" };
   await page.route(/\/folders\/[^/]+\/contents/, (route) =>
