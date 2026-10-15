@@ -5,6 +5,7 @@ import { ActivatedRoute, Router, convertToParamMap } from "@angular/router";
 import type {
   CedarEmbeddableEditorElement,
   CeeJsonObject,
+  CeeRecoveryDraft,
   CeeTemplateAndInstance,
 } from "cedar-embeddable-editor";
 import { Backend } from "../backend.service";
@@ -17,7 +18,7 @@ const quality = {
   nonNullRequiredFieldValueCount: 0,
   problems: [],
 };
-export async function metadataRig(mode = "edit") {
+export async function metadataRig(mode = "edit", recovery = false) {
   let server: CeeJsonObject = {
     "@id": "instance",
     "schema:isBasedOn": "template",
@@ -58,6 +59,12 @@ export async function metadataRig(mode = "edit") {
         useValue: {
           init: async () => true,
           profile: { homeFolderId: "home" },
+          ...(recovery
+            ? {
+                config: { resourceRestAPI: "https://resource.example" },
+                userId: "owner",
+              }
+            : {}),
           request,
         },
       },
@@ -92,18 +99,53 @@ export async function metadataRig(mode = "edit") {
     const cee = mount(container);
     let accepted = false;
     let current: CeeJsonObject = {};
+    let template: CeeJsonObject = {};
+    let drafts: CeeRecoveryDraft["drafts"] = [];
     setValues.set(cee, (value) => {
       current.Value = { "@value": value };
       cee.dispatchEvent(new Event("change"));
     });
     Object.defineProperties(cee, {
-      captureSave: { value: () => ({metadata: structuredClone(current), needsElementIds: false, acknowledge: () => { throw new Error("Unexpected acknowledgement"); }}) },
+      captureDraft: {
+        value: () => ({
+          format: "cedar-cee-draft",
+          version: 1,
+          template: structuredClone(template),
+          metadata: structuredClone(current),
+          drafts: structuredClone(drafts),
+        }),
+      },
+      restoreDraft: {
+        value: (value: CeeRecoveryDraft) => {
+          if (
+            accepted ||
+            value.format !== "cedar-cee-draft" ||
+            !Array.isArray(value.drafts)
+          )
+            return false;
+          accepted = true;
+          current = structuredClone(value.metadata);
+          template = structuredClone(value.template);
+          drafts = structuredClone(value.drafts);
+          return true;
+        },
+      },
+      captureSave: {
+        value: () => ({
+          metadata: structuredClone(current),
+          needsElementIds: false,
+          acknowledge: () => {
+            throw new Error("Unexpected acknowledgement");
+          },
+        }),
+      },
       currentMetadata: { get: () => structuredClone(current) },
       dataQualityReport: { get: () => structuredClone(quality) },
       templateAndInstanceObject: {
         set: (value: CeeTemplateAndInstance) => {
           if (accepted) throw new Error("CEE artifact inputs are set once");
           accepted = true;
+          template = structuredClone(value.templateObject);
           current = structuredClone(value.instanceObject);
         },
       },
@@ -111,6 +153,7 @@ export async function metadataRig(mode = "edit") {
         set: (value: CeeJsonObject) => {
           if (accepted) throw new Error("CEE artifact inputs are set once");
           accepted = true;
+          template = structuredClone(value);
           current = {
             "schema:isBasedOn": value["@id"],
             Value: { "@value": null },

@@ -18,13 +18,7 @@ import {
 } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { TranslatePipe } from "@ngx-translate/core";
-import {
-  ActivatedRoute,
-  CanDeactivateFn,
-  Router,
-  UrlMatcher,
-  UrlSegment,
-} from "@angular/router";
+import { ActivatedRoute, Router } from "@angular/router";
 import type {
   CedarEmbeddableEditorElement,
   CeeConfig,
@@ -43,31 +37,22 @@ import { CeeLoader } from "./cee-loader";
 import { can, Resource } from "./resource";
 import { I18n, fallbackLanguage } from "./i18n";
 
-import {sameStoredRevision, metadataUpdateOutcome} from "./metadata-save-recovery";
+import {
+  sameStoredRevision,
+  metadataUpdateOutcome,
+} from "./metadata-save-recovery";
+import {
+  MetadataDraft,
+  MetadataDraftStore,
+  metadataDraftScope,
+  readMetadataDraft,
+} from "./metadata-draft";
 
-export const metadataRoute: UrlMatcher = (segments) => {
-  if (
-    segments[0]?.path !== "instances" ||
-    !["create", "edit"].includes(segments[1]?.path) ||
-    segments.length < 3
-  )
-    return null;
-  return {
-    consumed: segments,
-    posParams: {
-      mode: segments[1],
-      id: new UrlSegment(
-        segments
-          .slice(2)
-          .map((s) => s.path)
-          .join("/"),
-        {},
-      ),
-    },
-  };
-};
+export { metadataRoute, leaveMetadata } from "./metadata-route";
+
 export function workspaceReturn(value: string | null, folder: string): string {
-  const fallback = "/dashboard?" + new URLSearchParams({ folderId: resourceSelector(folder) });
+  const fallback =
+    "/dashboard?" + new URLSearchParams({ folderId: resourceSelector(folder) });
   if (!value) return fallback;
   try {
     const url = new URL(value, location.origin);
@@ -190,8 +175,6 @@ interface PendingMetadataUpdate {
   snapshot: CeeSaveSnapshot;
   typedName: string;
 }
-export const leaveMetadata: CanDeactivateFn<MetadataEditor> = (editor) =>
-  editor.mayLeave();
 
 @Component({
   selector: "cedar-metadata-page",
@@ -223,6 +206,18 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   readonly canCheckSave = signal(false);
   readonly canRecheckAccess = signal(false);
   private pendingUpdate?: PendingMetadataUpdate;
+  readonly recoveryDraft = signal<MetadataDraft | null>(null);
+  readonly draftStorageError = signal(false);
+  private draftStore?: MetadataDraftStore;
+  private draftScope?: string;
+  private editorConfig?: CeeConfig;
+  private recoveryTemplateChanged = false;
+  private latestRead?: {
+    saved?: CeeJsonObject;
+    etag: string | null;
+    template: CeeJsonObject;
+    writable: boolean;
+  };
   readonly dirty = signal(false);
   readonly writable = signal(false);
   readonly error = signal("");
@@ -283,6 +278,30 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       );
       const id = this.route.snapshot.paramMap.get("id")!;
       const mode = this.route.snapshot.paramMap.get("mode");
+      this.latestRead = undefined;
+      this.recoveryTemplateChanged = false;
+      if (
+        !this.draftStore &&
+        this.api.config?.resourceRestAPI &&
+        this.api.userId
+      ) {
+        this.draftScope = metadataDraftScope(
+          this.api.config.resourceRestAPI,
+          this.api.userId,
+          mode!,
+          resourcePathId(id),
+          resourceSelector(this.folder),
+        );
+        try {
+          this.draftStore = new MetadataDraftStore(
+            this.draftScope,
+            sessionStorage,
+          );
+          this.recoveryDraft.set(this.draftStore.read());
+        } catch {
+          this.draftStorageError.set(true);
+        }
+      }
       const configResponse = await fetch(
         "/config/embeddable-editor-config.json",
         { cache: "no-store" },
@@ -290,13 +309,15 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       if (!configResponse.ok)
         throw new Error(this.i18n.t("Metadata.ConfigurationUnavailable"));
       const config: CeeConfig = await configResponse.json();
+      this.editorConfig = config;
       if (!operation.current()) return;
       let saved: CeeJsonObject | undefined,
         etag: string | null = null,
         template: CeeJsonObject,
         writable: boolean;
       if (mode === "edit") {
-        const path = "/template-instances/" + encodeURIComponent(resourcePathId(id));
+        const path =
+          "/template-instances/" + encodeURIComponent(resourcePathId(id));
         const [instance, report] = await Promise.all([
           this.api.request<CeeJsonObject>(path),
           this.api.request<Resource>(path + "/report"),
@@ -344,8 +365,11 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         throw new Error(this.i18n.t("Metadata.NoTemplate"));
       await this.loader.load();
       if (!operation.current()) return;
-      this.editor = new ElementRef(this.loader.mountEditor(this.editorHost.nativeElement));
+      this.editor = new ElementRef(
+        this.loader.mountEditor(this.editorHost.nativeElement),
+      );
       this.saved = saved;
+      this.latestRead = { saved, etag, template, writable };
       this.etag = etag;
       this.template = template;
       this.writable.set(writable);
@@ -374,7 +398,13 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       // assignment, which its public API names as the sign of a refusal.
       if (Object.keys(this.cee.currentMetadata ?? {}).length === 0) {
         this.unreadable.set(true);
-        throw new Error(this.i18n.t(saved ? "Metadata.UnreadableInstance" : "Metadata.UnreadableTemplate"));
+        throw new Error(
+          this.i18n.t(
+            saved
+              ? "Metadata.UnreadableInstance"
+              : "Metadata.UnreadableTemplate",
+          ),
+        );
       }
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
       if (!operation.current()) return;
@@ -395,7 +425,13 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     }
   }
   async reload() {
-    if (!this.alive || this.saving() || this.checkingSave() || this.state.uncertainCreation()) return;
+    if (
+      !this.alive ||
+      this.saving() ||
+      this.checkingSave() ||
+      this.state.uncertainCreation()
+    )
+      return;
     const decision = this.state.checkpoint();
     const draft = this.editor ? this.draftKey() : null;
     if (
@@ -404,12 +440,21 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     )
       return;
     if (
-      decision() && !this.saving() && !this.state.uncertainCreation() &&
+      decision() &&
+      !this.saving() &&
+      !this.state.uncertainCreation() &&
       draft === (this.editor ? this.draftKey() : null)
-    ) await this.load();
+    ) {
+      this.clearRecovery();
+      await this.load();
+    }
   }
   private draftKey() {
-    return metadataKey([this.cee.currentMetadata, this.name]);
+    return metadataKey([
+      this.cee.currentMetadata,
+      this.name,
+      this.cee.captureDraft?.()?.drafts ?? [],
+    ]);
   }
   private refreshQuality() {
     try {
@@ -423,10 +468,261 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     this.refreshQuality();
     this.dirty.set(
       metadataKey(this.cee.currentMetadata) !== this.baseline ||
-        this.name.trim() !== this.baselineName,
+        this.name.trim() !== this.baselineName ||
+        !!this.cee.captureDraft?.()?.drafts.length,
     );
     this.notice.set("");
+    this.keepRecovery();
   };
+
+  private recoveryValue(pending = this.pendingUpdate): MetadataDraft | null {
+    const draft = this.editor?.nativeElement.captureDraft?.();
+    if (!draft || !this.draftScope) return null;
+    return {
+      format: "cedar-workspace-draft",
+      version: 1,
+      scope: this.draftScope,
+      draft,
+      name: this.name,
+      baseline: this.baseline,
+      baselineName: this.baselineName,
+      saved: this.saved,
+      etag: this.etag,
+      reloadRequired: this.state.reloadRequired(),
+      uncertainCreation: this.state.uncertainCreation(),
+      ...(pending
+        ? {
+            pending: {
+              purpose: pending.purpose,
+              opened: pending.opened,
+              submitted: pending.submitted,
+              etag: pending.etag,
+              typedName: pending.typedName,
+              metadata: pending.snapshot.metadata,
+              needsElementIds: pending.snapshot.needsElementIds,
+            },
+          }
+        : {}),
+    };
+  }
+  private keepRecovery(force = false) {
+    if (
+      this.loading() ||
+      this.saving() ||
+      !this.draftStore ||
+      this.recoveryDraft()
+    )
+      return;
+    try {
+      if (
+        force ||
+        this.dirty() ||
+        this.state.reloadRequired() ||
+        this.saving()
+      ) {
+        const value = this.recoveryValue();
+        if (!value) throw new Error();
+        this.draftStore.write(value);
+      } else this.draftStore.clear();
+      this.draftStorageError.set(false);
+    } catch {
+      this.draftStorageError.set(true);
+    }
+  }
+  private clearRecovery() {
+    try {
+      this.draftStore?.clear();
+      this.recoveryDraft.set(null);
+    } catch {
+      this.draftStorageError.set(true);
+    }
+  }
+  downloadDraft() {
+    if (this.saving()) return;
+    const value = this.recoveryDraft() ?? this.recoveryValue();
+    if (!value) return;
+    const url = URL.createObjectURL(
+      new Blob([JSON.stringify(value, null, 2)], { type: "application/json" }),
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "cedar-metadata-recovery.json";
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+  async importDraft(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file || !this.draftScope || this.saving() || this.checkingSave())
+      return;
+    if (
+      this.state.uncertainCreation() ||
+      this.recoveryDraft()?.uncertainCreation
+    ) {
+      this.error.set(this.i18n.t("Metadata.CreateOutcomeUnknown"));
+      return;
+    }
+    try {
+      const value = readMetadataDraft(await file.text(), this.draftScope);
+      // Import only offers recovery; it never replaces working input on file selection.
+      this.recoveryDraft.set(value);
+    } catch {
+      this.error.set(this.i18n.t("Metadata.DraftInvalid"));
+    }
+  }
+  async discardRecovery() {
+    if (this.saving() || this.checkingSave()) return;
+    const candidate = this.recoveryDraft();
+    if (candidate?.uncertainCreation) {
+      this.error.set(this.i18n.t("Metadata.CreateOutcomeUnknown"));
+      return;
+    }
+    if (
+      (await this.confirmation.confirm(
+        this.i18n.t("Metadata.DiscardRecovery"),
+      )) &&
+      candidate === this.recoveryDraft()
+    )
+      this.clearRecovery();
+  }
+  async restoreRecovery() {
+    const value = this.recoveryDraft();
+    if (!value || this.saving() || this.checkingSave() || !this.editorConfig)
+      return;
+    const before = this.editor ? this.draftKey() : null;
+    if (
+      this.dirty() &&
+      !(await this.confirmation.confirm(this.i18n.t("Metadata.DiscardChanges")))
+    )
+      return;
+    if (
+      value !== this.recoveryDraft() ||
+      (this.editor && before !== this.draftKey())
+    )
+      return;
+    try {
+      await this.loader.load();
+      if (
+        !this.alive ||
+        this.saving() ||
+        value !== this.recoveryDraft() ||
+        (this.editor && before !== this.draftKey())
+      )
+        return;
+      const latest = this.latestRead;
+      this.recoveryTemplateChanged =
+        !!latest &&
+        metadataKey(latest.template) !== metadataKey(value.draft.template);
+      const unchanged =
+        latest &&
+        metadataKey(latest.template) === metadataKey(value.draft.template) &&
+        (value.saved
+          ? !!latest.saved &&
+            sameStoredRevision(value.etag ?? "", latest.etag) &&
+            metadataKey(value.saved) === metadataKey(latest.saved)
+          : !latest.saved);
+      const holder = document.createElement("div");
+      // Connect the candidate so Angular initializes its public methods, but retain the old form until restoration succeeds.
+      holder.hidden = true;
+      this.editorHost.nativeElement.append(holder);
+      let candidate: CedarEmbeddableEditorElement;
+      try {
+        candidate = this.loader.mountEditor(holder);
+        candidate.config = {
+          ...this.editorConfig,
+          readOnlyMode: !latest?.writable,
+          defaultLanguage: this.i18n.language,
+          fallbackLanguage,
+        };
+        if (!candidate.restoreDraft?.(value.draft)) throw new Error();
+        this.editor?.nativeElement.removeEventListener("change", this.changed);
+        this.editorHost.nativeElement.replaceChildren(candidate);
+      } finally {
+        holder.remove();
+      }
+      this.editor = new ElementRef(candidate!);
+      this.template = structuredClone(value.draft.template);
+      this.templateName = String(
+        this.template["schema:name"] || this.i18n.t("Common.Untitled"),
+      );
+      this.saved = structuredClone(value.saved);
+      this.etag = value.etag;
+      this.name = value.name;
+      this.baseline = value.baseline;
+      this.baselineName = value.baselineName;
+      this.writable.set(!!latest?.writable);
+      this.state.reloadRequired.set(
+        value.reloadRequired ||
+          !unchanged ||
+          !latest?.writable ||
+          !!value.pending ||
+          value.uncertainCreation,
+      );
+      this.state.uncertainCreation.set(value.uncertainCreation);
+      this.state.loadFailed.set(false);
+      this.unreadable.set(false);
+      this.state.clearServer();
+      this.pendingUpdate = undefined;
+      if (value.pending) {
+        const pending = value.pending;
+        const snapshot = this.cee.captureSave();
+        this.pendingUpdate = {
+          ...pending,
+          snapshot: {
+            metadata: pending.metadata,
+            needsElementIds: pending.needsElementIds,
+            acknowledge: (stored) => {
+              if (
+                !snapshot ||
+                metadataKey(snapshot.metadata) !== metadataKey(pending.metadata)
+              )
+                throw new Error();
+              return snapshot.acknowledge(stored);
+            },
+          },
+        };
+      }
+      if (
+        !this.pendingUpdate &&
+        this.state.reloadRequired() &&
+        !value.uncertainCreation &&
+        value.saved &&
+        value.etag
+      ) {
+        const snapshot = this.cee.captureSave();
+        if (snapshot)
+          this.pendingUpdate = {
+            purpose: "access",
+            opened: value.saved,
+            submitted: value.saved,
+            etag: value.etag,
+            typedName: value.name,
+            snapshot,
+          };
+      }
+      this.canCheckSave.set(
+        !!this.pendingUpdate &&
+          this.pendingUpdate.purpose !== "access" &&
+          !value.uncertainCreation,
+      );
+      this.canRecheckAccess.set(
+        this.pendingUpdate?.purpose === "access" && !value.uncertainCreation,
+      );
+      this.loading.set(false);
+      this.recoveryDraft.set(null);
+      this.cee.addEventListener("change", this.changed);
+      this.changed();
+      this.error.set(
+        this.state.reloadRequired()
+          ? this.i18n.t("Metadata.DraftNeedsReview")
+          : "",
+      );
+      this.notice.set(this.i18n.t("Metadata.DraftRestored"));
+    } catch {
+      this.error.set(this.i18n.t("Metadata.DraftInvalid"));
+    }
+  }
   /** The translation key for the toolbar's save status. */
   get saveStatus() {
     if (this.state.loadFailed()) return "Metadata.LoadFailed";
@@ -471,7 +767,10 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     if (this.missingRequired && !problems.some((p) => p.code === "required"))
       items.push({
         label: this.i18n.t("Metadata.Label"),
-        message: this.i18n.counted("Metadata.RequiredMissing", this.missingRequired),
+        message: this.i18n.counted(
+          "Metadata.RequiredMissing",
+          this.missingRequired,
+        ),
       });
     return items;
   }
@@ -515,6 +814,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       this.loading() ||
       this.saving() ||
       this.checkingSave() ||
+      this.recoveryDraft() ||
       !this.writable() ||
       this.state.reloadRequired()
     )
@@ -534,7 +834,8 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         throw new Error(this.i18n.t("Metadata.NoRevision"));
       }
       const snapshot = this.cee.captureSave();
-      if (!snapshot) throw new Error(this.i18n.t("Metadata.UnreadableInstance"));
+      if (!snapshot)
+        throw new Error(this.i18n.t("Metadata.UnreadableInstance"));
       const current = snapshot.metadata;
       let baseline = metadataKey(current);
       const name = this.chosenName();
@@ -543,7 +844,8 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       metadata["schema:name"] = name;
       metadata["schema:isBasedOn"] = this.template["@id"];
       let path =
-        "/template-instances?folder_id=" + encodeURIComponent(resourceSelector(this.folder));
+        "/template-instances?folder_id=" +
+        encodeURIComponent(resourceSelector(this.folder));
       if (this.saved) {
         metadata["@id"] = this.saved["@id"];
         // The host owns the instance description; CEE has no control for editing it.
@@ -558,11 +860,28 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
           this.template["schema:description"] || "",
         );
       }
-      if (this.saved && this.etag) pendingUpdate = {
-        purpose: "save",
-        opened: structuredClone(this.saved), submitted: structuredClone(metadata),
-        etag: this.etag, snapshot, typedName,
-      };
+      if (this.saved && this.etag)
+        pendingUpdate = {
+          purpose: "save",
+          opened: structuredClone(this.saved),
+          submitted: structuredClone(metadata),
+          etag: this.etag,
+          snapshot,
+          typedName,
+        };
+      // Journal before the request: closing the page while it is in flight must not turn
+      // an uncertain create into a new POST, or an update into an unguarded retry.
+      try {
+        const value = this.recoveryValue(pendingUpdate);
+        if (value)
+          this.draftStore?.write({
+            ...value,
+            reloadRequired: true,
+            uncertainCreation: !this.saved,
+          });
+      } catch {
+        this.draftStorageError.set(true);
+      }
       attempted = true;
       const reply = await this.api.request<CeeJsonObject>(
         path,
@@ -591,12 +910,17 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       let identityRecovery = false;
       if (snapshot.needsElementIds) {
         try {
-          if (!reply.etag) throw new Error(this.i18n.t("Metadata.SavedIdentityUnavailable"));
+          if (!reply.etag)
+            throw new Error(this.i18n.t("Metadata.SavedIdentityUnavailable"));
           const stored = await this.api.request<CeeJsonObject>(
-            "/template-instances/" + encodeURIComponent(resourcePathId(String(this.saved["@id"]))),
+            "/template-instances/" +
+              encodeURIComponent(resourcePathId(String(this.saved["@id"]))),
           );
           if (!operation.current()) return;
-          if (!sameStoredRevision(reply.etag, stored.etag) || stored.data["@id"] !== this.saved["@id"])
+          if (
+            !sameStoredRevision(reply.etag, stored.etag) ||
+            stored.data["@id"] !== this.saved["@id"]
+          )
             throw new Error(this.i18n.t("Metadata.SavedIdentityUnavailable"));
           baseline = metadataKey(snapshot.acknowledge(stored.data));
           this.saved = stored.data;
@@ -607,7 +931,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       }
       this.state.reloadRequired.set(!reply.etag || identityRecovery);
       if (this.state.reloadRequired() && confirmedUpdate) {
-        this.pendingUpdate = {...confirmedUpdate, purpose: "acknowledgement"};
+        this.pendingUpdate = { ...confirmedUpdate, purpose: "acknowledgement" };
         this.canCheckSave.set(true);
       }
       this.state.clearServer();
@@ -633,10 +957,35 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         this.updatingAddress = false;
       }
       if (!operation.current()) return;
+      if (this.draftStore && this.draftScope && !confirmedUpdate) {
+        // A confirmed create now belongs to its edit URL. Store there before removing
+        // the create-address copy, so later edits and missing acknowledgements survive reload.
+        const previous = this.draftStore;
+        this.draftScope = metadataDraftScope(
+          this.api.config.resourceRestAPI,
+          this.api.userId,
+          "edit",
+          resourcePathId(String(this.saved["@id"])),
+          resourceSelector(this.folder),
+        );
+        this.draftStore = new MetadataDraftStore(
+          this.draftScope,
+          sessionStorage,
+        );
+        try {
+          const value = this.recoveryValue();
+          if (value) this.draftStore.write(value);
+          previous.clear();
+        } catch {
+          this.draftStorageError.set(true);
+        }
+      }
       operation.finish();
       this.changed();
-      if (this.canCheckSave()) this.error.set(this.i18n.t("Metadata.SavedVerificationUnavailable"));
-      else if (identityRecovery) this.error.set(this.i18n.t("Metadata.SavedIdentityUnavailable"));
+      if (this.canCheckSave())
+        this.error.set(this.i18n.t("Metadata.SavedVerificationUnavailable"));
+      else if (identityRecovery)
+        this.error.set(this.i18n.t("Metadata.SavedIdentityUnavailable"));
       else if (!reply.etag) this.error.set(this.i18n.t("Metadata.NoRevision"));
       this.notice.set(
         this.i18n.t(
@@ -647,15 +996,20 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       if (!operation.current()) return;
       operation.fail(e);
       this.refreshQuality();
-      const accessRefused = e instanceof HttpError && [401, 403].includes(e.status);
+      const accessRefused =
+        e instanceof HttpError && [401, 403].includes(e.status);
       if (pendingUpdate && (uncertainWrite(e) || accessRefused)) {
-        this.pendingUpdate = {...pendingUpdate, purpose: accessRefused ? "access" : "save"};
+        this.pendingUpdate = {
+          ...pendingUpdate,
+          purpose: accessRefused ? "access" : "save",
+        };
         this.canCheckSave.set(!accessRefused);
         this.canRecheckAccess.set(accessRefused);
       }
       if (attempted && writeRequiresRecovery(e)) {
         this.state.reloadRequired.set(true);
-        if (!this.saved && uncertainWrite(e)) this.state.uncertainCreation.set(true);
+        if (!this.saved && uncertainWrite(e))
+          this.state.uncertainCreation.set(true);
       }
       if (e instanceof HttpError) {
         this.state.reject(e.validationReport, submittedKey, this.template);
@@ -665,26 +1019,47 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         attempted && uncertainWrite(e)
           ? this.i18n.t("Metadata.SaveUnconfirmed")
           : e instanceof HttpError && e.status === 412
-            ? this.i18n.t(e.deleted ? "Metadata.ItemDeleted" : "Metadata.ItemChanged")
+            ? this.i18n.t(
+                e.deleted ? "Metadata.ItemDeleted" : "Metadata.ItemChanged",
+              )
             : e instanceof Error
               ? e.message
               : String(e),
       );
     } finally {
-      if (operation.current()) this.saving.set(false);
+      if (operation.current()) {
+        this.saving.set(false);
+        this.keepRecovery();
+      }
     }
   }
   async checkSaveStatus() {
     const pending = this.pendingUpdate;
-    if (!this.alive || !pending || this.loading() || this.saving() || this.checkingSave()) return;
+    if (
+      !this.alive ||
+      !pending ||
+      this.loading() ||
+      this.saving() ||
+      this.checkingSave()
+    )
+      return;
+    if (this.recoveryTemplateChanged) {
+      this.error.set(this.i18n.t("Metadata.DraftNeedsReview"));
+      return;
+    }
     const operation = this.state.begin("recovery");
     this.checkingSave.set(true);
     const access = pending.purpose === "access";
-    this.error.set(this.i18n.t(access ? "Metadata.CheckingAccess" : "Metadata.CheckingSave"));
+    this.error.set(
+      this.i18n.t(access ? "Metadata.CheckingAccess" : "Metadata.CheckingSave"),
+    );
     try {
-      const path = "/template-instances/" + encodeURIComponent(resourcePathId(String(pending.opened["@id"])));
+      const path =
+        "/template-instances/" +
+        encodeURIComponent(resourcePathId(String(pending.opened["@id"])));
       const [latest, report] = await Promise.all([
-        this.api.request<CeeJsonObject>(path), this.api.request<Resource>(path + "/report"),
+        this.api.request<CeeJsonObject>(path),
+        this.api.request<Resource>(path + "/report"),
       ]);
       if (!operation.current()) return;
       if (!can(report.data, "updateResource")) {
@@ -692,16 +1067,22 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         return;
       }
       const result = metadataUpdateOutcome(pending, latest, this.template);
-      if (result === "unresolved" || (access && result !== "unchanged") ||
-          (pending.purpose === "acknowledgement" && result !== "saved")) {
+      if (
+        result === "unresolved" ||
+        (access && result !== "unchanged") ||
+        (pending.purpose === "acknowledgement" && result !== "saved")
+      ) {
         this.error.set(this.i18n.t("Metadata.RecoveryUnresolved"));
         return;
       }
       if (result === "saved") {
         // Acknowledge only after the values match. CEE binds minted IDs to the
         // original submitted objects, retaining later edits, moves and deletions.
-        this.baseline = metadataKey(pending.snapshot.needsElementIds
-          ? pending.snapshot.acknowledge(latest.data) : pending.snapshot.metadata);
+        this.baseline = metadataKey(
+          pending.snapshot.needsElementIds
+            ? pending.snapshot.acknowledge(latest.data)
+            : pending.snapshot.metadata,
+        );
         this.baselineName = pending.typedName;
         this.saved = latest.data;
         this.etag = latest.etag;
@@ -715,14 +1096,31 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       this.canRecheckAccess.set(false);
       this.changed();
       this.error.set("");
-      this.notice.set(this.i18n.t(access ? "Metadata.AccessRestored" : result === "saved" ? "Metadata.SaveConfirmed" : "Metadata.SaveUnchanged"));
+      this.notice.set(
+        this.i18n.t(
+          access
+            ? "Metadata.AccessRestored"
+            : result === "saved"
+              ? "Metadata.SaveConfirmed"
+              : "Metadata.SaveUnchanged",
+        ),
+      );
       operation.finish();
     } catch (error) {
       if (!operation.current()) return;
       operation.fail(error);
-      this.error.set(this.i18n.t(access ? "Metadata.AccessUnavailable" : "Metadata.RecoveryUnavailable"));
+      this.error.set(
+        this.i18n.t(
+          access
+            ? "Metadata.AccessUnavailable"
+            : "Metadata.RecoveryUnavailable",
+        ),
+      );
     } finally {
-      if (operation.current()) this.checkingSave.set(false);
+      if (operation.current()) {
+        this.checkingSave.set(false);
+        this.keepRecovery();
+      }
     }
   }
   async mayLeave() {
@@ -731,10 +1129,17 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     if (!this.dirty()) return true;
     const decision = this.state.checkpoint();
     const draft = this.draftKey();
-    return (
-      await this.confirmation.confirm(this.i18n.t("Metadata.DiscardChanges")) &&
-      decision() && !this.saving() && draft === this.draftKey()
-    );
+    const leave =
+      (await this.confirmation.confirm(
+        this.i18n.t("Metadata.DiscardChanges"),
+      )) &&
+      decision() &&
+      !this.saving() &&
+      draft === this.draftKey();
+    // An unknown write outcome outlives discarded input; it must still block a repeated create.
+    if (leave && !this.state.reloadRequired() && !this.recoveryDraft())
+      this.clearRecovery();
+    return leave;
   }
   back() {
     if (!this.saving()) void this.router.navigateByUrl(this.returnTo);
@@ -742,6 +1147,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   @HostListener("window:beforeunload", ["$event"]) beforeUnload(
     event: BeforeUnloadEvent,
   ) {
+    this.keepRecovery();
     if (this.dirty() || this.saving()) {
       event.preventDefault();
       event.returnValue = "";

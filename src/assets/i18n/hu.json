@@ -457,7 +457,18 @@
     "RecheckAccess": "Hozzáférés újraellenőrzése",
     "CheckingAccess": "Hozzáférés ellenőrzése…",
     "AccessRestored": "A hozzáférés helyreállt, és a tárolt változat nem változott. A szerkesztések megmaradtak; újra menthet.",
-    "AccessUnavailable": "Nem sikerült ellenőrizni a hozzáférést. A szerkesztések megmaradtak. Jelentkezzen be, vagy ellenőrizze a kapcsolatot, majd próbálja újra."
+    "AccessUnavailable": "Nem sikerült ellenőrizni a hozzáférést. A szerkesztések megmaradtak. Jelentkezzen be, vagy ellenőrizze a kapcsolatot, majd próbálja újra.",
+    "DraftStorageFailed": "A böngésző nem tudta megőrizni a helyreállítási másolatot. Az oldal elhagyása előtt töltse le a piszkozatot.",
+    "DraftAvailable": "Ehhez a rekordhoz helyreállítási piszkozat érhető el. Mentés előtt állítsa helyre vagy vesse el.",
+    "RestoreDraft": "Piszkozat helyreállítása",
+    "DiscardDraft": "Helyreállítási piszkozat elvetése",
+    "DiscardRecovery": "Elveti a tárolt helyreállítási piszkozatot? Ez nem vonható vissza.",
+    "DownloadDraft": "Helyreállítási piszkozat letöltése",
+    "ImportDraft": "Helyreállítási piszkozat importálása",
+    "DraftInvalid": "Ez a helyreállítási piszkozat itt nem állítható helyre. Nyissa meg az eredeti fiókkal, környezetben és rekordnál; a jelenlegi munkája megmaradt.",
+    "DraftNeedsReview": "A piszkozat helyreállt. A mentés a hozzáférés, az aktuális verzió és a befejezetlen mentések ellenőrzéséig tiltva marad.",
+    "DraftRestored": "A helyreállítási piszkozat a befejezetlen bevitellel együtt helyreállt.",
+    "CreateOutcomeUnknown": "A létrehozás eredménye még ismeretlen. Őrizze meg vagy töltse le a piszkozatot, és új létrehozás előtt ellenőrizze a rekordot a munkaterületen."
   },
   "Account": {
     "Profile": {

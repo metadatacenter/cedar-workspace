@@ -309,6 +309,22 @@ outcomes: another conditional write requires recovery. An uncertain metadata cre
 cannot be resubmitted from that editor; inspect Workspace for the resulting record.
 Discard confirmations expire after changes to their draft, operation or component.
 
+Metadata pages keep a recovery draft in this tab's `sessionStorage`, scoped to the resource
+API, signed-in subject, artifact and create destination. It survives reload and a round trip
+through sign-in; closing the tab clears it. It includes unfinished CEE input, the original
+baseline/revision and unresolved update evidence. A write is journaled before dispatch so an
+interrupted create stays blocked after reload. Storage failures are visible and do not erase
+the working form. Download a recovery file before closing the tab if the work must outlive it.
+
+On returning, **Restore draft** is explicit: ordinary loading first reads current access and
+content, and saving stays blocked if the restored baseline is stale or its write outcome is
+unknown. **Import recovery draft** offers a downloaded copy only in its original account,
+deployment and record/destination; it does not apply it until Restore is chosen. Recovery files
+contain user data and are not artifacts for submission to the repository. Successful saves clear
+clean drafts; confirmed navigation discards ordinary unsaved drafts, while uncertain outcomes
+remain recoverable. Restoring submitted element identities after newer structural edits still
+requires reconciliation and stays guarded. Browser coverage is `metadata-draft-recovery.spec.mjs`.
+
 `workspace-lifecycle-matrix.spec.ts` crosses report scopes, arrival order, component
 recreation, permission changes and version changes. `metadata-lifecycle-matrix.spec.ts`
 crosses reload/leave confirmations with write uncertainty, permissions, ETags, later

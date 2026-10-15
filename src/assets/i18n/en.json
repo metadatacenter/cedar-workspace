@@ -457,7 +457,18 @@
     "RecheckAccess": "Recheck access",
     "CheckingAccess": "Checking access…",
     "AccessRestored": "Access is restored and the stored version is unchanged. Your edits have been kept; you can save again.",
-    "AccessUnavailable": "Access could not be checked. Your edits have been kept. Sign in or check your connection, then try again."
+    "AccessUnavailable": "Access could not be checked. Your edits have been kept. Sign in or check your connection, then try again.",
+    "DraftStorageFailed": "The browser could not keep a recovery copy. Download your draft before leaving this page.",
+    "DraftAvailable": "A recovery draft is available for this record. Restore it or explicitly discard it before saving.",
+    "RestoreDraft": "Restore draft",
+    "DiscardDraft": "Discard recovery draft",
+    "DiscardRecovery": "Discard the stored recovery draft? This cannot be undone.",
+    "DownloadDraft": "Download recovery draft",
+    "ImportDraft": "Import recovery draft",
+    "DraftInvalid": "This recovery draft could not be restored here. Open it using the same account, deployment and record where it was created; your current work has been kept.",
+    "DraftNeedsReview": "Your draft has been restored. Saving remains blocked until access, the current revision and any unfinished save are resolved.",
+    "DraftRestored": "Recovery draft restored, including unfinished input.",
+    "CreateOutcomeUnknown": "The create outcome is still unknown. Keep or download this draft and check Workspace for the created record before starting another create."
   },
   "Account": {
     "Profile": {

@@ -14,11 +14,7 @@ import {
   provideWorkspaceTranslations,
   translations,
 } from "./app/i18n";
-import {
-  MetadataEditor,
-  metadataRoute,
-  leaveMetadata,
-} from "./app/metadata-editor";
+import { metadataRoute, leaveMetadata } from "./app/metadata-route";
 @Component({
   selector: "cedar-workspace",
   imports: [RouterOutlet, ConfirmationOutlet],
@@ -41,7 +37,10 @@ bootstrapApplication(App, {
       { path: "logout", component: Logout },
       {
         matcher: metadataRoute,
-        component: MetadataEditor,
+        loadComponent: () =>
+          import("./app/metadata-editor").then(
+            (module) => module.MetadataEditor,
+          ),
         canDeactivate: [leaveMetadata],
       },
       { path: "**", redirectTo: "dashboard" },

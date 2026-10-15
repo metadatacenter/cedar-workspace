@@ -20,26 +20,74 @@
       id="button-save-metadata"
       class="primary"
       (click)="save()"
-      [disabled]="loading() || saving() || validationErrors.length > 0 || state.reloadRequired()"
+      [disabled]="loading() || saving() || recoveryDraft() || validationErrors.length > 0 || state.reloadRequired()"
     >
       {{'Common.Save' | translate}}
     </button></span
   >}
 </header>
 <main class="metadata-content">
-  @if(error()){
+  @if(draftStorageError()) {
+  <p role="alert" class="alert">
+    {{'Metadata.DraftStorageFailed' | translate}}
+  </p>
+  } @if(recoveryDraft()) {
+  <p role="status" class="alert">
+    {{'Metadata.DraftAvailable' | translate}}
+    <button
+      type="button"
+      (click)="restoreRecovery()"
+      [disabled]="saving() || checkingSave()"
+    >
+      {{'Metadata.RestoreDraft' | translate}}
+    </button>
+    <button
+      type="button"
+      (click)="discardRecovery()"
+      [disabled]="saving() || checkingSave()"
+    >
+      {{'Metadata.DiscardDraft' | translate}}
+    </button>
+  </p>
+  } @if(!loading() || recoveryDraft()) {
+  <p>
+    <button type="button" (click)="downloadDraft()" [disabled]="saving()">
+      {{'Metadata.DownloadDraft' | translate}}
+    </button>
+    <label
+      >{{'Metadata.ImportDraft' | translate}}
+      <input
+        type="file"
+        accept="application/json,.json"
+        (change)="importDraft($event)"
+        [disabled]="saving() || checkingSave()"
+    /></label>
+  </p>
+  } @if(error()){
   <p role="alert" class="alert">
     {{error()}} @if(canCheckSave()) {
-    <button type="button" (click)="checkSaveStatus()" [disabled]="checkingSave() || saving()">
+    <button
+      type="button"
+      (click)="checkSaveStatus()"
+      [disabled]="checkingSave() || saving()"
+    >
       {{'Metadata.CheckSave' | translate}}
     </button>
     } @if(canRecheckAccess()) {
-    <button type="button" (click)="checkSaveStatus()" [disabled]="checkingSave() || saving()">
+    <button
+      type="button"
+      (click)="checkSaveStatus()"
+      [disabled]="checkingSave() || saving()"
+    >
       {{'Metadata.RecheckAccess' | translate}}
     </button>
     } @if((state.loadFailed() && !unreadable()) || (state.reloadRequired() &&
     !state.uncertainCreation())) {
-    <button type="button" (click)="reload()" [disabled]="saving() || checkingSave()">
+    <button
+      type="button"
+      (click)="reload()"
+      [disabled]="saving() || checkingSave()"
+    >
       {{(state.loadFailed() ? 'Common.Retry' : 'Metadata.Reload') | translate}}
     </button>
     }
@@ -61,63 +109,62 @@
   } }
   <!-- Both summaries are about saving, which someone with read-only access cannot do. -->
   <div class="metadata-issues" [cedarPinBelow]="toolbar">
-  @if(writable() && validationErrors.length){
-  <details
-    class="metadata-quality"
-    [attr.aria-label]="'Metadata.ErrorsRegion' | translate"
-  >
-    <summary>
-      <cedar-icon
-        size="small"
-        name="chevron-down"
-        class="validation-disclosure"
-      /><cedar-icon size="small" name="warning" />
-      <span
-        >{{i18n.counted('Metadata.Errors', validationErrors.length)
-        }}</span
-      >
-    </summary>
-    <ul>
-      @for(issue of validationErrors; track $index){
-      <li>
-        @if(issue.problem){
-        <button type="button" (click)="reveal(issue)">
-          {{issue.label}}: {{issue.message}}
-        </button>
-        } @else { {{issue.label}}: {{issue.message}} }
-      </li>
-      }
-    </ul>
-  </details>
-  } @if(writable() && validationWarnings.length){
-  <details
-    class="metadata-quality validation-summary--warning"
-    [attr.aria-label]="'Metadata.WarningsRegion' | translate"
-  >
-    <summary>
-      <cedar-icon
-        size="small"
-        name="chevron-down"
-        class="validation-disclosure"
-      /><cedar-icon size="small" name="warning" />
-      <span
-        >{{i18n.counted('Metadata.Warnings', validationWarnings.length)
-        }}</span
-      >
-    </summary>
-    <ul>
-      @for(issue of validationWarnings; track $index){
-      <li>
-        @if(issue.problem){
-        <button type="button" (click)="reveal(issue)">
-          {{issue.label}}: {{issue.message}}
-        </button>
-        } @else { {{issue.label}}: {{issue.message}} }
-      </li>
-      }
-    </ul>
-  </details>
-  }
+    @if(writable() && validationErrors.length){
+    <details
+      class="metadata-quality"
+      [attr.aria-label]="'Metadata.ErrorsRegion' | translate"
+    >
+      <summary>
+        <cedar-icon
+          size="small"
+          name="chevron-down"
+          class="validation-disclosure"
+        /><cedar-icon size="small" name="warning" />
+        <span
+          >{{i18n.counted('Metadata.Errors', validationErrors.length) }}</span
+        >
+      </summary>
+      <ul>
+        @for(issue of validationErrors; track $index){
+        <li>
+          @if(issue.problem){
+          <button type="button" (click)="reveal(issue)">
+            {{issue.label}}: {{issue.message}}
+          </button>
+          } @else { {{issue.label}}: {{issue.message}} }
+        </li>
+        }
+      </ul>
+    </details>
+    } @if(writable() && validationWarnings.length){
+    <details
+      class="metadata-quality validation-summary--warning"
+      [attr.aria-label]="'Metadata.WarningsRegion' | translate"
+    >
+      <summary>
+        <cedar-icon
+          size="small"
+          name="chevron-down"
+          class="validation-disclosure"
+        /><cedar-icon size="small" name="warning" />
+        <span
+          >{{i18n.counted('Metadata.Warnings', validationWarnings.length)
+          }}</span
+        >
+      </summary>
+      <ul>
+        @for(issue of validationWarnings; track $index){
+        <li>
+          @if(issue.problem){
+          <button type="button" (click)="reveal(issue)">
+            {{issue.label}}: {{issue.message}}
+          </button>
+          } @else { {{issue.label}}: {{issue.message}} }
+        </li>
+        }
+      </ul>
+    </details>
+    }
   </div>
   <div #editorHost [hidden]="loading()"></div>
 </main>
