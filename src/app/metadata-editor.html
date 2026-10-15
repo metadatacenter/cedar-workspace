@@ -33,6 +33,10 @@
     <button type="button" (click)="checkSaveStatus()" [disabled]="checkingSave() || saving()">
       {{'Metadata.CheckSave' | translate}}
     </button>
+    } @if(canRecheckAccess()) {
+    <button type="button" (click)="checkSaveStatus()" [disabled]="checkingSave() || saving()">
+      {{'Metadata.RecheckAccess' | translate}}
+    </button>
     } @if((state.loadFailed() && !unreadable()) || (state.reloadRequired() &&
     !state.uncertainCreation())) {
     <button type="button" (click)="reload()" [disabled]="saving() || checkingSave()">

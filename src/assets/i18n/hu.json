@@ -452,7 +452,11 @@
     "SaveUnchanged": "A tárolt változat nem változott. Újra megpróbálhatja a mentést.",
     "RecoveryReadOnly": "Jelenleg nincs jogosultsága az elem módosításához. A szerkesztések megmaradtak; a mentés továbbra is le van tiltva.",
     "RecoveryUnresolved": "A tárolt változatot nem sikerült egyeztetni a mentéssel. A szerkesztések megmaradtak; a mentés továbbra is le van tiltva.",
-    "RecoveryUnavailable": "Nem sikerült ellenőrizni a mentés állapotát. A szerkesztések megmaradtak. Ellenőrizze a kapcsolatot és a hozzáférést, majd próbálja újra."
+    "RecoveryUnavailable": "Nem sikerült ellenőrizni a mentés állapotát. A szerkesztések megmaradtak. Ellenőrizze a kapcsolatot és a hozzáférést, majd próbálja újra.",
+    "RecheckAccess": "Hozzáférés újraellenőrzése",
+    "CheckingAccess": "Hozzáférés ellenőrzése…",
+    "AccessRestored": "A hozzáférés helyreállt, és a tárolt változat nem változott. A szerkesztések megmaradtak; újra menthet.",
+    "AccessUnavailable": "Nem sikerült ellenőrizni a hozzáférést. A szerkesztések megmaradtak. Jelentkezzen be, vagy ellenőrizze a kapcsolatot, majd próbálja újra."
   },
   "Account": {
     "Profile": {

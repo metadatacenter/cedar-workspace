@@ -452,7 +452,11 @@
     "SaveUnchanged": "The stored version is unchanged. You can retry Save.",
     "RecoveryReadOnly": "You do not currently have permission to update this artifact. Your edits have been kept; saving remains blocked.",
     "RecoveryUnresolved": "The stored version could not be reconciled with your save. Your edits have been kept; saving remains blocked.",
-    "RecoveryUnavailable": "Save status could not be checked. Your edits have been kept. Check your connection and access, then try again."
+    "RecoveryUnavailable": "Save status could not be checked. Your edits have been kept. Check your connection and access, then try again.",
+    "RecheckAccess": "Recheck access",
+    "CheckingAccess": "Checking access…",
+    "AccessRestored": "Access is restored and the stored version is unchanged. Your edits have been kept; you can save again.",
+    "AccessUnavailable": "Access could not be checked. Your edits have been kept. Sign in or check your connection, then try again."
   },
   "Account": {
     "Profile": {

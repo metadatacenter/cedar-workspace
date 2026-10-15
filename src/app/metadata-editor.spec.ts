@@ -213,6 +213,36 @@ describe("Modern metadata host", () => {
     expect(cee.currentMetadata["Element"]).toEqual({"@id": "urn:minted", Answer: {"@value": "Newer"}});
     expect(host.dirty()).toBe(true); expect(host.state.reloadRequired()).toBe(false);
   });
+  it.each([401,403])("rechecks access after %s without replacing the refused metadata draft", async status => {
+    await edit();
+    const original = api.request.getMockImplementation()! as (path: string, method?: string) => Promise<{data: Record<string, unknown>; etag: string}>;
+    let allowed = false;
+    api.request.mockImplementation(async (path, method = "GET") => {
+      if (method === "PUT") throw new HttpError(status, "Access refused");
+      if (!allowed && path.endsWith("/report")) return {data: {currentUserPermissions: {capabilities: []}}};
+      return original(path, method);
+    });
+    host.name = "Refused name"; host.changed(); await host.save();
+    expect(host.canRecheckAccess()).toBe(true); expect(host.canCheckSave()).toBe(false);
+    await host.checkSaveStatus(); expect(host.state.reloadRequired()).toBe(true);
+    allowed = true; host.name = "Newer name"; host.changed();
+    await host.checkSaveStatus();
+    expect(host.name).toBe("Newer name"); expect(host.dirty()).toBe(true);
+    expect(host.canRecheckAccess()).toBe(false); expect(host.state.reloadRequired()).toBe(false);
+    api.request.mockResolvedValue({data: {"@id": "instance-id"}, etag: '\"next\"'});
+    await host.save(); expect(api.request.mock.lastCall?.[3]).toBe('\"i1\"');
+  });
+  it("restored access cannot attach a new revision to an unreconciled draft", async () => {
+    await edit();
+    api.request.mockRejectedValue(new HttpError(403, "Access refused"));
+    host.name = "My draft"; host.changed(); await host.save();
+    api.request.mockImplementation(async path => path.endsWith("/report")
+      ? {data: {currentUserPermissions: {capabilities: ["updateResource"]}}}
+      : {data: {"@id": "instance-id", "schema:name": "Other author", "schema:isBasedOn": "template-id"}, etag: '\"other\"'});
+    await host.checkSaveStatus();
+    expect(host.name).toBe("My draft"); expect(host.state.reloadRequired()).toBe(true);
+    expect(host.canRecheckAccess()).toBe(true);
+  });
   it("configures CEE once after permissions and starts clean", async () => {
     await host.ngAfterViewInit();
     expect(cee.config.readOnlyMode).toBe(false);

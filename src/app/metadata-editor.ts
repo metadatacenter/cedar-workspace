@@ -182,6 +182,7 @@ export interface MetadataIssue {
   problem?: CeeValidationProblem;
 }
 interface PendingMetadataUpdate {
+  purpose: "save" | "access";
   opened: CeeJsonObject;
   submitted: CeeJsonObject;
   etag: string;
@@ -211,6 +212,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   readonly saving = signal(false);
   readonly checkingSave = signal(false);
   readonly canCheckSave = signal(false);
+  readonly canRecheckAccess = signal(false);
   private pendingUpdate?: PendingMetadataUpdate;
   readonly dirty = signal(false);
   readonly writable = signal(false);
@@ -255,6 +257,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     this.loading.set(true);
     this.checkingSave.set(false);
     this.canCheckSave.set(false);
+    this.canRecheckAccess.set(false);
     this.pendingUpdate = undefined;
     this.state.loadFailed.set(false);
     this.unreadable.set(false);
@@ -547,6 +550,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         );
       }
       if (this.saved && this.etag) pendingUpdate = {
+        purpose: "save",
         opened: structuredClone(this.saved), submitted: structuredClone(metadata),
         etag: this.etag, snapshot, typedName,
       };
@@ -628,9 +632,11 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       if (!operation.current()) return;
       operation.fail(e);
       this.refreshQuality();
-      if (pendingUpdate && uncertainWrite(e)) {
-        this.pendingUpdate = pendingUpdate;
-        this.canCheckSave.set(true);
+      const accessRefused = e instanceof HttpError && [401, 403].includes(e.status);
+      if (pendingUpdate && (uncertainWrite(e) || accessRefused)) {
+        this.pendingUpdate = {...pendingUpdate, purpose: accessRefused ? "access" : "save"};
+        this.canCheckSave.set(!accessRefused);
+        this.canRecheckAccess.set(accessRefused);
       }
       if (attempted && writeRequiresRecovery(e)) {
         this.state.reloadRequired.set(true);
@@ -658,7 +664,8 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     if (!this.alive || !pending || this.loading() || this.saving() || this.checkingSave()) return;
     const operation = this.state.begin("recovery");
     this.checkingSave.set(true);
-    this.error.set(this.i18n.t("Metadata.CheckingSave"));
+    const access = pending.purpose === "access";
+    this.error.set(this.i18n.t(access ? "Metadata.CheckingAccess" : "Metadata.CheckingSave"));
     try {
       const path = "/template-instances/" + encodeURIComponent(resourcePathId(String(pending.opened["@id"])));
       const [latest, report] = await Promise.all([
@@ -670,7 +677,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         return;
       }
       const result = metadataUpdateOutcome(pending, latest, this.template);
-      if (result === "unresolved") {
+      if (result === "unresolved" || (access && result !== "unchanged")) {
         this.error.set(this.i18n.t("Metadata.RecoveryUnresolved"));
         return;
       }
@@ -689,14 +696,15 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       this.state.clearServer();
       this.pendingUpdate = undefined;
       this.canCheckSave.set(false);
+      this.canRecheckAccess.set(false);
       this.changed();
       this.error.set("");
-      this.notice.set(this.i18n.t(result === "saved" ? "Metadata.SaveConfirmed" : "Metadata.SaveUnchanged"));
+      this.notice.set(this.i18n.t(access ? "Metadata.AccessRestored" : result === "saved" ? "Metadata.SaveConfirmed" : "Metadata.SaveUnchanged"));
       operation.finish();
     } catch (error) {
       if (!operation.current()) return;
       operation.fail(error);
-      this.error.set(this.i18n.t("Metadata.RecoveryUnavailable"));
+      this.error.set(this.i18n.t(access ? "Metadata.AccessUnavailable" : "Metadata.RecoveryUnavailable"));
     } finally {
       if (operation.current()) this.checkingSave.set(false);
     }
