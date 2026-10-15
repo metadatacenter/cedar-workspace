@@ -550,6 +550,7 @@
     "List": "Listanézet",
     "Grid": "Rácsnézet",
     "MoveDenied": "Már nincs jogosultsága az elem áthelyezésére.",
+    "MoveLocationUnavailable": "Az aktuális mappa nem ellenőrizhető. Frissítse a munkaterületet, majd próbálja újra.",
     "MovedOne": "{{count}} elem áthelyezve.",
     "Moved": "{{count}} elem áthelyezve."
   },

@@ -38,7 +38,7 @@ async function setup(page, extra = []) {
     );
     // Anything else, the home folder included, is the shared fixture's to answer or refuse.
     if (!r) return route.fallback();
-    return route.fulfill({ json: r, headers: { ETag: '"' + r["@id"] + '"' } });
+    return route.fulfill({ json: {...r, pathInfo: r.pathInfo ?? [{"@id": moved.has(r["@id"])?"destination":"home", resourceType:"folder"}, r]}, headers: { ETag: '"' + r["@id"] + '"' } });
   });
   await page.goto("/dashboard");
   await expect(page.getByRole("button", { name: "Grid view", exact: true })).toHaveAttribute("aria-pressed", "true");

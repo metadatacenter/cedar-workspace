@@ -104,7 +104,7 @@ describe("move eligibility across dragging, the Move dialog and the move", () =>
     (api.request as ReturnType<typeof vi.fn>).mockImplementation(async (path: string) =>
       path.startsWith("/folders/") ? { data: target } : { data: {} },
     );
-    (api.report as ReturnType<typeof vi.fn>).mockImplementation(async (r: Resource) => ({ data: r }));
+    (api.report as ReturnType<typeof vi.fn>).mockImplementation(async (r: Resource) => ({ data: {...r, pathInfo: r.pathInfo ?? TRAIL.map(id => ({"@id":id,resourceType:"folder"}))} }));
     (api.snapshot as ReturnType<typeof vi.fn>).mockImplementation(async (r: Resource) => ({ data: r, etag: '"1"' }));
     const moves = TestBed.inject(ResourceMoves);
     const attempt = moves.move(sources, target["@id"]);

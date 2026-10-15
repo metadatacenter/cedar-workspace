@@ -240,6 +240,7 @@ export class Workspace {
   readonly grid = signal(true);
   readonly preview = signal<Resource | null>(null);
   readonly selectionIds = signal<string[]>([]);
+  private pendingMoveSelection: string[] = [];
   readonly selection = computed(() =>
     this.rows().filter((r) => this.selectionIds().includes(r["@id"])),
   );
@@ -381,6 +382,7 @@ export class Workspace {
   }
   async load(refresh = false) {
     if (!this.state.active) return;
+    if (!refresh) this.pendingMoveSelection = [];
     this.listingGeneration++;
     this.reports.dispose();
     this.reports = new OperationCoordinator<string>();
@@ -418,6 +420,10 @@ export class Workspace {
       // Listings omit lifecycle actions. Enrich template links without blocking the table.
       void this.loadTemplateActions(data.resources);
       this.restoreSelection();
+      if (refresh && this.pendingMoveSelection.length) {
+        this.selectionIds.set(this.pendingMoveSelection.filter(id => this.rows().some(r => r["@id"] === id)));
+        this.pendingMoveSelection = [];
+      }
       operation.finish();
     } catch (e) {
       operation.fail(e);
@@ -425,6 +431,9 @@ export class Workspace {
         if (!refresh) {
           this.rows.set([]);
           this.total.set(0);
+        }
+        else if (this.pendingMoveSelection.length) {
+          this.selectionIds.set(this.pendingMoveSelection.filter(id => this.rows().some(r => r["@id"] === id)));
         }
         this.fail(e);
       }
@@ -699,6 +708,7 @@ export class Workspace {
       this.cutItems.update((items) =>
         items.filter((r) => !result.moved.includes(r["@id"])),
       );
+      this.pendingMoveSelection = result.failed.map(f => f.resource["@id"]);
       const reload = this.load(true);
       generation = this.listingGeneration;
       await reload;
@@ -720,12 +730,8 @@ export class Workspace {
           count: result.moved.length,
         }),
       );
-      if (result.failed.length)
-        this.error.set(
-          result.failed
-            .map((f) => this.title(f.resource) + ": " + f.message)
-            .join("; "),
-        );
+      const errors = [this.error(), ...result.failed.map(f => this.title(f.resource) + ": " + f.message)].filter(Boolean);
+      if (errors.length) this.error.set(errors.join("; "));
       operation.finish();
     } catch (e) {
       operation.fail(e);

@@ -550,6 +550,7 @@
     "List": "List view",
     "Grid": "Grid view",
     "MoveDenied": "You no longer have permission to move this item.",
+    "MoveLocationUnavailable": "The current folder could not be confirmed. Refresh Workspace and try again.",
     "MovedOne": "Moved {{count}} item.",
     "Moved": "Moved {{count}} items."
   },
