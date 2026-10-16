@@ -38,7 +38,7 @@
     <button
       type="button"
       (click)="restoreRecovery()"
-      [disabled]="saving() || checkingSave()"
+      [disabled]="saving() || checkingSave() || (loading() && !state.loadFailed())"
     >
       {{'Metadata.RestoreDraft' | translate}}
     </button>
@@ -92,7 +92,8 @@
           <td colspan="3">
             <label
               ><input
-                type="radio" spellcheck="false"
+                type="radio"
+                spellcheck="false"
                 [name]="'recovery-choice-' + $index"
                 [checked]="change.choice === 'mine'"
                 (change)="reviewChoice(change.path, 'mine')"
@@ -100,7 +101,8 @@
             >
             <label
               ><input
-                type="radio" spellcheck="false"
+                type="radio"
+                spellcheck="false"
                 [name]="'recovery-choice-' + $index"
                 [checked]="change.choice === 'latest'"
                 (change)="reviewChoice(change.path, 'latest')"

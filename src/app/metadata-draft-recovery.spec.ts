@@ -312,3 +312,19 @@ for (const status of [401, 403])
     ).toHaveLength(1);
     next.ngOnDestroy();
   });
+
+it("does not restore while a fresh opening read is still in progress", async () => {
+  const m = await metadataRig("edit", true);
+  m.edit();
+  const next = await m.recreate();
+  const editor = next.editor.nativeElement;
+  next.loading.set(true);
+  await next.restoreRecovery();
+  expect(next.editor.nativeElement).toBe(editor);
+  expect(next.name).toBe("Original");
+  expect(next.recoveryDraft()?.name).toBe("Unsaved");
+  next.loading.set(false);
+  await next.restoreRecovery();
+  expect(next.name).toBe("Unsaved");
+  next.ngOnDestroy();
+});

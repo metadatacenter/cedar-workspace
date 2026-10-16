@@ -793,7 +793,13 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   }
   async restoreRecovery() {
     const value = this.recoveryDraft();
-    if (!value || this.saving() || this.checkingSave() || !this.editorConfig)
+    if (
+      !value ||
+      this.saving() ||
+      this.checkingSave() ||
+      !this.editorConfig ||
+      (this.loading() && !this.state.loadFailed())
+    )
       return;
     const before = this.editor ? this.draftKey() : null;
     if (
