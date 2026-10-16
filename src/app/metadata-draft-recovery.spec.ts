@@ -1,3 +1,5 @@
+import { TestBed } from "@angular/core/testing";
+import { Backend } from "./backend.service";
 import { afterEach, expect, it, vi } from "vitest";
 import { metadataRig } from "./testing/metadata-fixture";
 import { HttpError } from "./backend.service";
@@ -328,3 +330,59 @@ it("does not restore while a fresh opening read is still in progress", async () 
   expect(next.name).toBe("Unsaved");
   next.ngOnDestroy();
 });
+
+for (const failure of [
+  "profile",
+  "configuration",
+  "component",
+  "artifact",
+  "permission",
+  "template",
+])
+  it(`retains work while retrying a failed ${failure} opening`, async () => {
+    const m = await metadataRig("edit", true);
+    m.edit();
+    let failed = true;
+    const request = m.request.getMockImplementation()!;
+    if (failure === "profile")
+      vi.spyOn(TestBed.inject(Backend), "init").mockImplementation(async () => {
+        if (failed) throw new Error("Profile unavailable");
+        return true;
+      });
+    else if (failure === "configuration")
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => new Response("{}", { status: failed ? 503 : 200 })),
+      );
+    else if (failure === "component")
+      vi.mocked(m.loader.load).mockImplementation(async () => {
+        if (failed) throw new Error("Component unavailable");
+      });
+    else
+      m.request.mockImplementation(async (...args) => {
+        const path =
+          failure === "artifact"
+            ? "/template-instances/instance"
+            : failure === "permission"
+              ? "/template-instances/instance/report"
+              : "/templates/template";
+        if (failed && args[0] === path) throw new HttpError(503, "Unavailable");
+        return request(...args);
+      });
+    const next = await m.recreate();
+    expect(next.state.loadFailed()).toBe(true);
+    expect(next.recoveryDraft()?.name).toBe("Unsaved");
+    if (failure === "profile" || failure === "configuration")
+      expect(next.recoveryReady).toBe(false);
+    failed = false;
+    await next.reload();
+    expect(next.state.loadFailed()).toBe(false);
+    expect(next.recoveryDraft()?.name).toBe("Unsaved");
+    await next.restoreRecovery();
+    expect(next.name).toBe("Unsaved");
+    expect(next.dirty()).toBe(true);
+    expect(
+      m.request.mock.calls.every((call) => !call[1] || call[1] === "GET"),
+    ).toBe(true);
+    next.ngOnDestroy();
+  });

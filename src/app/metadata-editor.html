@@ -38,7 +38,7 @@
     <button
       type="button"
       (click)="restoreRecovery()"
-      [disabled]="saving() || checkingSave() || (loading() && !state.loadFailed())"
+      [disabled]="saving() || checkingSave() || !recoveryReady"
     >
       {{'Metadata.RestoreDraft' | translate}}
     </button>

@@ -275,6 +275,38 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   async ngAfterViewInit() {
     await this.load();
   }
+  private offerStoredRecovery() {
+    if (this.draftStore || !this.api.config?.resourceRestAPI) return;
+    const id = this.route.snapshot.paramMap.get("id");
+    const mode = this.route.snapshot.paramMap.get("mode");
+    const folder =
+      this.route.snapshot.queryParamMap.get("folderId") ||
+      this.api.profile?.homeFolderId;
+    if (!id || !mode || (mode === "create" && !folder)) return;
+    let account: string;
+    try {
+      account = this.api.userId;
+    } catch {
+      return;
+    }
+    if (!account) return;
+    this.draftScope = metadataDraftScope(
+      this.api.config.resourceRestAPI,
+      account,
+      mode,
+      resourcePathId(id),
+      resourceSelector(folder || ""),
+    );
+    try {
+      this.draftStore = new MetadataDraftStore(this.draftScope, sessionStorage);
+      this.recoveryDraft.set(this.draftStore.read());
+    } catch {
+      this.draftStorageError.set(true);
+    }
+  }
+  get recoveryReady() {
+    return !!this.editorConfig && (!this.loading() || this.state.loadFailed());
+  }
   private async load() {
     const operation = this.state.begin("load", ["save", "recovery"]);
     this.loading.set(true);
@@ -300,28 +332,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       const mode = this.route.snapshot.paramMap.get("mode");
       this.latestRead = undefined;
       this.recoveryTemplateChanged = false;
-      if (
-        !this.draftStore &&
-        this.api.config?.resourceRestAPI &&
-        this.api.userId
-      ) {
-        this.draftScope = metadataDraftScope(
-          this.api.config.resourceRestAPI,
-          this.api.userId,
-          mode!,
-          resourcePathId(id),
-          resourceSelector(this.folder),
-        );
-        try {
-          this.draftStore = new MetadataDraftStore(
-            this.draftScope,
-            sessionStorage,
-          );
-          this.recoveryDraft.set(this.draftStore.read());
-        } catch {
-          this.draftStorageError.set(true);
-        }
-      }
+      this.offerStoredRecovery();
       const configResponse = await fetch(
         "/config/embeddable-editor-config.json",
         { cache: "no-store" },
@@ -441,6 +452,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     } catch (e) {
       if (!operation.current()) return;
       operation.fail(e);
+      this.offerStoredRecovery();
       this.state.loadFailed.set(true);
       this.openingAccessRefused ||=
         e instanceof HttpError && [401, 403].includes(e.status);
@@ -484,7 +496,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       !this.state.uncertainCreation() &&
       draft === (this.editor ? this.draftKey() : null)
     ) {
-      this.clearRecovery();
+      if (!this.state.loadFailed()) this.clearRecovery();
       await this.load();
     }
   }
@@ -578,6 +590,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   }
   get canSignInAgain() {
     return (
+      (this.state.loadFailed() && this.openingAccessRefused) ||
       this.canRecheckOpeningAccess ||
       this.canRecheckAccess() ||
       (this.state.reloadRequired() &&
