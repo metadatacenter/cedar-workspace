@@ -420,11 +420,11 @@
     "Name": "Példány neve",
     "ReadOnlyAccess": "Ezekhez a metaadatokhoz csak olvasási hozzáférése van.",
     "ErrorsRegion": "Metaadathibák",
-    "ErrorsOne": "{{count}} hiba – mentés előtt ellenőrizze",
-    "Errors": "{{count}} hiba – mentés előtt ellenőrizze",
+    "ErrorsOne": "{{count}} hiba – mentés előtt javítsa ki",
+    "Errors": "{{count}} hiba – mentés előtt javítsa ki",
     "WarningsRegion": "Metaadat-figyelmeztetések",
-    "WarningsOne": "{{count}} figyelmeztetés – a metaadatok így is menthetők",
-    "Warnings": "{{count}} figyelmeztetés – a metaadatok így is menthetők",
+    "WarningsOne": "{{count}} figyelmeztetés – a figyelmeztetések nem akadályozzák a mentést",
+    "Warnings": "{{count}} figyelmeztetés – a figyelmeztetések nem akadályozzák a mentést",
     "ProblemRequired": "Egy kötelező érték hiányzik.",
     "ProblemMinItems": "{{count}} van belőle, legalább {{min}} szükséges.",
     "DiscardChanges": "Elveti a metaadatok nem mentett módosításait?",
@@ -482,7 +482,8 @@
     "ReviewKeepMine": "Saját érték megtartása",
     "ReviewKeepLatest": "Legutóbbi érték megtartása",
     "ReviewApply": "Áttekintett módosítások alkalmazása",
-    "SignInAgain": "Újbóli bejelentkezés"
+    "SignInAgain": "Újbóli bejelentkezés",
+    "TechnicalDetails": "Technikai részletek"
   },
   "Account": {
     "Profile": {

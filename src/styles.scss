@@ -841,6 +841,20 @@ td:first-child a {
 .metadata-quality {
   @include patterns.validation-summary;
 }
+.metadata-diagnostic {
+  margin-top: var(--cedar-space-1);
+  summary {
+    justify-content: flex-start;
+    text-align: left;
+  }
+  &:not([open]) .diagnostic-disclosure {
+    transform: rotate(-90deg);
+  }
+  p {
+    margin: var(--cedar-space-1) 0;
+    overflow-wrap: anywhere;
+  }
+}
 // The summaries stay in view beneath the toolbar while the form scrolls, at the offset `PinBelow`
 // sets. While both lists are open, each takes at most a fifth of the window rather than the
 // pattern's quarter, so the pair never covers more than two fifths of it.

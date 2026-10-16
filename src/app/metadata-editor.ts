@@ -145,13 +145,14 @@ function declaredMinItems(
   const min = property?.["minItems"];
   return typeof min === "number" ? min : undefined;
 }
-// CEE describes its problems in English for diagnostics, so the page states the ones
-// it presents as warnings in the reader's language. Any other problem keeps CEE's text.
+// Prefer CEE's localized explanation; retain the fallback for older bundles.
 export function metadataWarningMessage(
   template: CeeJsonObject,
   problem: MetadataProblem,
   t: (key: string, params?: Record<string, unknown>) => string,
 ): string {
+  if (typeof problem.displayMessage === "string" && problem.displayMessage)
+    return problem.displayMessage;
   switch (problem.code) {
     case "required":
       return t("Metadata.ProblemRequired");
@@ -171,6 +172,7 @@ export interface MetadataIssue {
   label: string;
   message: string;
   problem?: CeeValidationProblem;
+  diagnostic?: string;
 }
 interface PendingMetadataUpdate {
   purpose: "save" | "access" | "acknowledgement";
@@ -973,7 +975,11 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         message:
           p.code === "reportUnavailable"
             ? this.i18n.t("Metadata.ReviewInvalid")
-            : p.message || p.code,
+            : p.displayMessage || p.message || p.code,
+        diagnostic:
+          p.displayMessage && p.displayMessage !== p.message
+            ? p.message
+            : undefined,
         problem: p.path.length ? p : undefined,
       }));
     if (

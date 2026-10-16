@@ -10,6 +10,7 @@ import { OperationCoordinator } from "./operation-coordinator";
 export type MetadataProblem = Omit<CeeValidationProblem, "severity"> & {
   severity?: "error" | "warning";
   origin?: "server";
+  displayMessage?: string;
 };
 type ClassifiedProblem = MetadataProblem & { severity: "error" | "warning" };
 type MetadataReport = Omit<CeeDataQualityReport, "problems"> & {
@@ -98,6 +99,8 @@ export class MetadataState extends OperationCoordinator<"load" | "save" | "recov
             (p) =>
               object(p) &&
               typeof p["code"] === "string" &&
+              (p["displayMessage"] === undefined ||
+                typeof p["displayMessage"] === "string") &&
               Array.isArray(p["path"]) &&
               p["path"].every((part) => typeof part === "string") &&
               (p["occurrences"] === undefined ||

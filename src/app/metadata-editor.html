@@ -18,6 +18,7 @@
     [cedarTooltip]="saveRefused ? ('Metadata.SaveRefused' | translate) : null"
     ><button
       id="button-save-metadata"
+      [attr.aria-describedby]="validationErrors.length ? 'metadata-errors-summary' : null"
       class="primary"
       (click)="save()"
       [disabled]="loading() || saving() || recoveryDraft() || validationErrors.length > 0 || state.reloadRequired()"
@@ -178,7 +179,7 @@
       class="metadata-quality"
       [attr.aria-label]="'Metadata.ErrorsRegion' | translate"
     >
-      <summary>
+      <summary id="metadata-errors-summary">
         <cedar-icon
           size="small"
           name="chevron-down"
@@ -195,7 +196,19 @@
           <button type="button" (click)="reveal(issue)">
             {{issue.label}}: {{issue.message}}
           </button>
-          } @else { {{issue.label}}: {{issue.message}} }
+          } @else { {{issue.label}}: {{issue.message}} } @if(issue.diagnostic) {
+          <details class="metadata-diagnostic">
+            <summary>
+              <cedar-icon
+                size="small"
+                name="chevron-down"
+                class="diagnostic-disclosure"
+              />
+              {{'Metadata.TechnicalDetails' | translate}}
+            </summary>
+            <p>{{issue.diagnostic}}</p>
+          </details>
+          }
         </li>
         }
       </ul>

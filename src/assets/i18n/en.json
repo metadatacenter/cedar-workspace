@@ -420,11 +420,11 @@
     "Name": "Instance name",
     "ReadOnlyAccess": "You have read-only access to this metadata.",
     "ErrorsRegion": "Metadata errors",
-    "ErrorsOne": "{{count}} error — review before saving",
-    "Errors": "{{count}} errors — review before saving",
+    "ErrorsOne": "{{count}} error — fix before saving",
+    "Errors": "{{count}} errors — fix before saving",
     "WarningsRegion": "Metadata warnings",
-    "WarningsOne": "{{count}} warning — metadata can still be saved",
-    "Warnings": "{{count}} warnings — metadata can still be saved",
+    "WarningsOne": "{{count}} warning — warnings do not block saving",
+    "Warnings": "{{count}} warnings — warnings do not block saving",
     "ProblemRequired": "A required value is missing.",
     "ProblemMinItems": "Has {{count}} of a minimum {{min}}.",
     "DiscardChanges": "Discard unsaved metadata changes?",
@@ -482,7 +482,8 @@
     "ReviewKeepMine": "Keep my value",
     "ReviewKeepLatest": "Keep latest value",
     "ReviewApply": "Apply reviewed changes",
-    "SignInAgain": "Sign in again"
+    "SignInAgain": "Sign in again",
+    "TechnicalDetails": "Technical details"
   },
   "Account": {
     "Profile": {

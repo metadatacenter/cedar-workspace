@@ -625,13 +625,16 @@ describe("Modern metadata host", () => {
           path: ["Email"],
           field: "Email",
           code: "email",
-          message: "Enter a valid email.",
+          message: "Not a valid email address.",
+          displayMessage: "Enter a valid email.",
         },
       ],
     });
     host.changed();
     expect(host.validationWarnings).toHaveLength(1);
     expect(host.validationErrors).toHaveLength(1);
+    expect(host.validationErrors[0].message).toBe("Enter a valid email.");
+    expect(host.validationErrors[0].diagnostic).toBe("Not a valid email address.");
     // Each listed problem leads to its field.
     const reveal = vi.fn().mockResolvedValue(true);
     Object.defineProperty(cee, "reveal", { value: reveal });
