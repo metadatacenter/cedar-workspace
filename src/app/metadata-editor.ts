@@ -555,6 +555,14 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       this.draftStorageError.set(true);
     }
   }
+  get canSignInAgain() {
+    return (
+      this.canRecheckAccess() ||
+      (this.state.reloadRequired() &&
+        !this.saved &&
+        !this.state.uncertainCreation())
+    );
+  }
   signInAgain() {
     if (this.saving() || this.checkingSave()) return;
     if (this.recoveryDraft()) {
@@ -600,10 +608,15 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       const scope = this.draftScope;
       const value = readMetadataDraft(await file.text(), scope);
       if (
-        !this.alive || !current() || this.saving() || this.checkingSave() ||
-        scope !== this.draftScope || this.state.uncertainCreation() ||
+        !this.alive ||
+        !current() ||
+        this.saving() ||
+        this.checkingSave() ||
+        scope !== this.draftScope ||
+        this.state.uncertainCreation() ||
         this.recoveryDraft()?.uncertainCreation
-      ) return;
+      )
+        return;
       // Import only offers recovery; it never replaces working input on file selection.
       this.recoveryDraft.set(value);
     } catch {
@@ -845,7 +858,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       this.baselineName = value.baselineName;
       this.writable.set(!!latest?.writable);
       this.state.reloadRequired.set(
-        value.reloadRequired ||
+        (value.saved ? value.reloadRequired : false) ||
           !unchanged ||
           !latest?.writable ||
           !!value.pending ||

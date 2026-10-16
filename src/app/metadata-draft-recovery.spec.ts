@@ -293,3 +293,22 @@ it("rejects recovery evidence that names another artifact inside the correct sco
   expect(() => readMetadataDraft(JSON.stringify(altered), scope)).toThrow();
   m.host.ngOnDestroy();
 });
+
+for (const status of [401, 403])
+  it(`restores a definitively refused create after fresh folder access (${status})`, async () => {
+    const m = await metadataRig("create", true);
+    m.edit();
+    m.request.mockRejectedValueOnce(new HttpError(status, "Refused"));
+    await m.host.save();
+    expect(m.host.canSignInAgain).toBe(true);
+    const next = await m.recreate();
+    await next.restoreRecovery();
+    expect(next.name).toBe("Unsaved");
+    expect(next.state.reloadRequired()).toBe(false);
+    m.request.mockClear();
+    await next.save();
+    expect(
+      m.request.mock.calls.filter((call) => call[1] === "POST"),
+    ).toHaveLength(1);
+    next.ngOnDestroy();
+  });

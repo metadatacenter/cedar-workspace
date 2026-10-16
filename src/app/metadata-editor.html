@@ -139,6 +139,7 @@
     >
       {{'Metadata.RecheckAccess' | translate}}
     </button>
+    } @if(canSignInAgain) {
     <button
       type="button"
       (click)="signInAgain()"
