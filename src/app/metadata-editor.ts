@@ -594,7 +594,14 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       return;
     }
     try {
-      const value = readMetadataDraft(await file.text(), this.draftScope);
+      const current = this.state.checkpoint();
+      const scope = this.draftScope;
+      const value = readMetadataDraft(await file.text(), scope);
+      if (
+        !this.alive || !current() || this.saving() || this.checkingSave() ||
+        scope !== this.draftScope || this.state.uncertainCreation() ||
+        this.recoveryDraft()?.uncertainCreation
+      ) return;
       // Import only offers recovery; it never replaces working input on file selection.
       this.recoveryDraft.set(value);
     } catch {

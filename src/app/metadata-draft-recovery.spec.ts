@@ -235,3 +235,18 @@ it("retains work before sign-in and refuses the redirect when browser storage fa
   expect(m.host.name).toBe("Unsaved");
   m.host.ngOnDestroy();
 });
+
+
+it('does not let a delayed file import replace an uncertain create journal', async () => {
+  const m = await metadataRig('create', true); m.edit();
+  const scope = metadataDraftScope('https://resource.example','owner','create','template','home');
+  const raw = JSON.stringify(new MetadataDraftStore(scope,sessionStorage).read());
+  let finish!: (value:string)=>void;
+  const importing = m.host.importDraft({target:{value:'file', files:[{text:()=>new Promise<string>(resolve=>{finish=resolve})}]}} as unknown as Event);
+  m.request.mockRejectedValueOnce(new HttpError(503,'Unavailable')); await m.host.save();
+  expect(m.host.state.uncertainCreation()).toBe(true);
+  finish(raw); await importing;
+  expect(m.host.recoveryDraft()).toBeNull();
+  expect(new MetadataDraftStore(scope,sessionStorage).read()?.uncertainCreation).toBe(true);
+  m.host.ngOnDestroy();
+});
