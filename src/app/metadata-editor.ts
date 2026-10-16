@@ -442,6 +442,21 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       this.error.set(e instanceof Error ? e.message : String(e));
     }
   }
+  get canRecheckOpeningAccess() {
+    return (
+      this.alive &&
+      !this.loading() &&
+      !this.writable() &&
+      !this.state.reloadRequired() &&
+      !this.recoveryDraft() &&
+      !this.dirty()
+    );
+  }
+  async recheckOpeningAccess() {
+    if (!this.canRecheckOpeningAccess || this.saving() || this.checkingSave())
+      return;
+    await this.load();
+  }
   async reload() {
     if (
       !this.alive ||
@@ -565,6 +580,10 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   }
   signInAgain() {
     if (this.saving() || this.checkingSave()) return;
+    if (this.canRecheckOpeningAccess) {
+      this.api.signIn();
+      return;
+    }
     if (this.recoveryDraft()) {
       try {
         this.draftStore?.write(this.recoveryDraft()!);

@@ -175,7 +175,24 @@
   />
   @if(!writable()){
   <p role="status">{{'Metadata.ReadOnlyAccess' | translate}}</p>
-  } }
+  @if(canRecheckOpeningAccess) {
+  <p>
+    <button
+      type="button"
+      (click)="recheckOpeningAccess()"
+      [disabled]="saving() || checkingSave()"
+    >
+      {{'Metadata.RecheckAccess' | translate}}
+    </button>
+    <button
+      type="button"
+      (click)="signInAgain()"
+      [disabled]="saving() || checkingSave()"
+    >
+      {{'Metadata.SignInAgain' | translate}}
+    </button>
+  </p>
+  } } }
   <!-- Both summaries are about saving, which someone with read-only access cannot do. -->
   <div class="metadata-issues" [cedarPinBelow]="toolbar">
     @if(writable() && validationErrors.length){
