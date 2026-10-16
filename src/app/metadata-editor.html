@@ -59,6 +59,7 @@
       >{{'Metadata.ImportDraft' | translate}}
       <input
         type="file"
+        spellcheck="false"
         accept="application/json,.json"
         (change)="importDraft($event)"
         [disabled]="saving() || checkingSave()"
@@ -91,7 +92,7 @@
           <td colspan="3">
             <label
               ><input
-                type="radio"
+                type="radio" spellcheck="false"
                 [name]="'recovery-choice-' + $index"
                 [checked]="change.choice === 'mine'"
                 (change)="reviewChoice(change.path, 'mine')"
@@ -99,7 +100,7 @@
             >
             <label
               ><input
-                type="radio"
+                type="radio" spellcheck="false"
                 [name]="'recovery-choice-' + $index"
                 [checked]="change.choice === 'latest'"
                 (change)="reviewChoice(change.path, 'latest')"
