@@ -45,7 +45,6 @@ import {
   MetadataDraft,
   MetadataDraftStore,
   metadataDraftScope,
-  readMetadataDraft,
 } from "./metadata-draft";
 
 import {
@@ -613,55 +612,9 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         this.draftStorageError.set(true);
       }
     } else this.keepRecovery(true);
-    // Redirect only after retention succeeded; a download remains available if storage failed.
+    // Redirect only after retention succeeded; keep the author here if storage failed.
     if (!this.draftStore || this.draftStorageError()) return;
     this.api.signIn();
-  }
-  downloadDraft() {
-    if (this.saving()) return;
-    const value = this.recoveryDraft() ?? this.recoveryValue();
-    if (!value) return;
-    const url = URL.createObjectURL(
-      new Blob([JSON.stringify(value, null, 2)], { type: "application/json" }),
-    );
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "cedar-metadata-recovery.json";
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 0);
-  }
-  async importDraft(event: Event) {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    input.value = "";
-    if (!file || !this.draftScope || this.saving() || this.checkingSave())
-      return;
-    if (
-      this.state.uncertainCreation() ||
-      this.recoveryDraft()?.uncertainCreation
-    ) {
-      this.error.set(this.i18n.t("Metadata.CreateOutcomeUnknown"));
-      return;
-    }
-    try {
-      const current = this.state.checkpoint();
-      const scope = this.draftScope;
-      const value = readMetadataDraft(await file.text(), scope);
-      if (
-        !this.alive ||
-        !current() ||
-        this.saving() ||
-        this.checkingSave() ||
-        scope !== this.draftScope ||
-        this.state.uncertainCreation() ||
-        this.recoveryDraft()?.uncertainCreation
-      )
-        return;
-      // Import only offers recovery; it never replaces working input on file selection.
-      this.recoveryDraft.set(value);
-    } catch {
-      this.error.set(this.i18n.t("Metadata.DraftInvalid"));
-    }
   }
   get canReviewLatest() {
     return (

@@ -50,21 +50,6 @@
       {{'Metadata.DiscardDraft' | translate}}
     </button>
   </p>
-  } @if(!loading() || recoveryDraft()) {
-  <p>
-    <button type="button" (click)="downloadDraft()" [disabled]="saving()">
-      {{'Metadata.DownloadDraft' | translate}}
-    </button>
-    <label
-      >{{'Metadata.ImportDraft' | translate}}
-      <input
-        type="file"
-        spellcheck="false"
-        accept="application/json,.json"
-        (change)="importDraft($event)"
-        [disabled]="saving() || checkingSave()"
-    /></label>
-  </p>
   } @if(canReviewLatest) {
   <button type="button" (click)="reviewLatest()">
     {{'Metadata.ReviewLatest' | translate}}
