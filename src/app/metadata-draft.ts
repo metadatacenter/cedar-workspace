@@ -1,3 +1,4 @@
+import { resourcePathId } from "./resource-address";
 import type { CeeJsonObject, CeeRecoveryDraft } from "cedar-embeddable-editor";
 
 export interface MetadataDraft {
@@ -61,6 +62,18 @@ export function readMetadataDraft(text: string, scope: string): MetadataDraft {
         !value.pending.metadata ||
         !value.pending.opened ||
         !value.pending.submitted))
+  )
+    throw new Error();
+  const [, , mode, id] = JSON.parse(scope) as string[];
+  const matches = (artifact: CeeJsonObject | undefined) =>
+    typeof artifact?.["@id"] === "string" &&
+    resourcePathId(artifact["@id"]) === id;
+  if (
+    (mode === "edit" && !matches(value.saved)) ||
+    (mode === "create" &&
+      (value.saved !== undefined || !matches(value.draft.template))) ||
+    (value.pending &&
+      (!matches(value.pending.opened) || !matches(value.pending.submitted)))
   )
     throw new Error();
   return value;
