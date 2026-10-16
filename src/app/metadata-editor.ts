@@ -261,6 +261,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   // spaces around it change nothing that is stored and are not an edit.
   private baselineName = "";
   private alive = true;
+  private openingAccessRefused = false;
   private updatingAddress = false;
   private get cee() {
     return this.editor.nativeElement;
@@ -282,6 +283,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     this.canRecheckAccess.set(false);
     this.pendingUpdate = undefined;
     this.state.loadFailed.set(false);
+    this.openingAccessRefused = false;
     this.unreadable.set(false);
     this.error.set("");
     this.editor?.nativeElement.removeEventListener("change", this.changed);
@@ -357,6 +359,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
           // An instance can be shared with someone its template is not. The server's own refusal
           // speaks of "the artifact", which reads as the instance this page opened.
           if (refusedRead(e)) {
+            this.openingAccessRefused = true;
             this.unreadable.set(true);
             throw new Error(this.i18n.t("Errors.TemplateUnreadable"));
           }
@@ -439,14 +442,17 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       if (!operation.current()) return;
       operation.fail(e);
       this.state.loadFailed.set(true);
+      this.openingAccessRefused ||=
+        e instanceof HttpError && [401, 403].includes(e.status);
       this.error.set(e instanceof Error ? e.message : String(e));
     }
   }
   get canRecheckOpeningAccess() {
     return (
       this.alive &&
-      !this.loading() &&
-      !this.writable() &&
+      (this.state.loadFailed()
+        ? this.openingAccessRefused
+        : !this.loading() && !this.writable()) &&
       !this.state.reloadRequired() &&
       !this.recoveryDraft() &&
       !this.dirty()
@@ -572,6 +578,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   }
   get canSignInAgain() {
     return (
+      this.canRecheckOpeningAccess ||
       this.canRecheckAccess() ||
       (this.state.reloadRequired() &&
         !this.saved &&

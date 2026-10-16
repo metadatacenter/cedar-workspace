@@ -1,4 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
+import { HttpError } from "./backend.service";
 import { metadataRig } from "./testing/metadata-fixture";
 
 afterEach(() => {
@@ -61,3 +62,37 @@ it("opening recheck cannot replace a retained working draft", async () => {
   expect(next.recoveryDraft()?.name).toBe("Unsaved");
   next.ngOnDestroy();
 });
+
+for (const mode of ["edit", "create"])
+  for (const status of [401, 403]) {
+    it(`${mode}: retries an initial access refusal (${status}) without writing`, async () => {
+      const m = await metadataRig(mode, true);
+      const request = m.request.getMockImplementation()!;
+      let refused = true;
+      m.request.mockImplementation(async (...args) => {
+        if (
+          refused &&
+          args[0] ===
+            (mode === "edit" ? "/template-instances/instance" : "/folders/home")
+        )
+          throw new HttpError(status, "Refused");
+        return request(...args);
+      });
+      const next = await m.recreate();
+      expect(next.state.loadFailed()).toBe(true);
+      expect(next.canRecheckOpeningAccess).toBe(true);
+      next.signInAgain();
+      expect(m.signIn).toHaveBeenCalledOnce();
+      expect(sessionStorage.length).toBe(0);
+      await next.recheckOpeningAccess();
+      expect(next.state.loadFailed()).toBe(true);
+      refused = false;
+      await next.recheckOpeningAccess();
+      expect(next.state.loadFailed()).toBe(false);
+      expect(next.writable()).toBe(true);
+      expect(
+        m.request.mock.calls.every((call) => !call[1] || call[1] === "GET"),
+      ).toBe(true);
+      next.ngOnDestroy();
+    });
+  }

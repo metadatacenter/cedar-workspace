@@ -126,7 +126,15 @@
   </section>
   } @if(error()){
   <p role="alert" class="alert">
-    {{error()}} @if(canCheckSave()) {
+    {{error()}} @if(canRecheckOpeningAccess) {
+    <button
+      type="button"
+      (click)="recheckOpeningAccess()"
+      [disabled]="checkingSave() || saving()"
+    >
+      {{'Metadata.RecheckAccess' | translate}}
+    </button>
+    } @if(canCheckSave()) {
     <button
       type="button"
       (click)="checkSaveStatus()"
@@ -150,8 +158,8 @@
     >
       {{'Metadata.SignInAgain' | translate}}
     </button>
-    } @if((state.loadFailed() && !unreadable()) || (state.reloadRequired() &&
-    !state.uncertainCreation())) {
+    } @if((state.loadFailed() && !unreadable() && !canRecheckOpeningAccess) ||
+    (state.reloadRequired() && !state.uncertainCreation())) {
     <button
       type="button"
       (click)="reload()"
