@@ -386,3 +386,37 @@ for (const failure of [
     ).toBe(true);
     next.ngOnDestroy();
   });
+
+for (const severity of ["errors", "warnings"] as const)
+  it(`restores ${severity} against the rejected draft and clears them only on editing`, async () => {
+    const m = await metadataRig("edit", true);
+    m.edit();
+    const server = m.request.getMockImplementation()!;
+    m.request.mockImplementation(async (...args) => {
+      if (args[1] === "PUT")
+        throw new HttpError(400, "Rejected", undefined, {
+          [severity]: [
+            { location: "/schema:name", message: "Review the name" },
+          ],
+        });
+      return server(...args);
+    });
+    await m.host.save();
+    const next = await m.recreate();
+    await next.restoreRecovery();
+    expect(next.state.quality()?.problems).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          origin: "server",
+          message: "Review the name",
+        }),
+      ]),
+    );
+    expect(next.validationErrors.length).toBe(severity === "errors" ? 1 : 0);
+    next.name = "Corrected";
+    next.changed();
+    expect(
+      next.state.quality()?.problems.filter((p) => p.origin === "server"),
+    ).toEqual([]);
+    next.ngOnDestroy();
+  });

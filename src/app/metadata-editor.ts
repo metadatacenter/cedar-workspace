@@ -541,6 +541,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       etag: this.etag,
       reloadRequired: this.state.reloadRequired(),
       uncertainCreation: this.state.uncertainCreation(),
+      server: this.state.captureServer(),
       ...(pending
         ? {
             pending: {
@@ -963,6 +964,10 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       this.recoveryDraft.set(null);
       this.cee.addEventListener("change", this.changed);
       this.changed();
+      if (value.server) {
+        this.state.reject(value.server, value.server.key, this.template);
+        this.keepRecovery();
+      }
       this.error.set(
         this.state.reloadRequired()
           ? this.i18n.t("Metadata.DraftNeedsReview")

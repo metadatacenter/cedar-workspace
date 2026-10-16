@@ -13,6 +13,11 @@ export interface MetadataDraft {
   etag: string | null;
   reloadRequired: boolean;
   uncertainCreation: boolean;
+  server?: {
+    key: string;
+    errors: { location: string; message: string }[];
+    warnings: { location: string; message: string }[];
+  };
   pending?: {
     purpose: "save" | "access" | "acknowledgement";
     opened: CeeJsonObject;
@@ -54,6 +59,18 @@ export function readMetadataDraft(text: string, scope: string): MetadataDraft {
     (value.etag !== null && typeof value.etag !== "string") ||
     typeof value.reloadRequired !== "boolean" ||
     typeof value.uncertainCreation !== "boolean" ||
+    (value.server &&
+      (typeof value.server.key !== "string" ||
+        ![value.server.errors, value.server.warnings].every(
+          (rows) =>
+            Array.isArray(rows) &&
+            rows.every(
+              (row) =>
+                row &&
+                typeof row.message === "string" &&
+                typeof row.location === "string",
+            ),
+        ))) ||
     (value.pending &&
       (!["save", "access", "acknowledgement"].includes(value.pending.purpose) ||
         typeof value.pending.etag !== "string" ||

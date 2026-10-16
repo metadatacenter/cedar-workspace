@@ -78,7 +78,9 @@ export function metadataLocation(
 }
 
 /** One owner for loading, writes and the component/server reports about the current draft. */
-export class MetadataState extends OperationCoordinator<"load" | "save" | "recovery"> {
+export class MetadataState extends OperationCoordinator<
+  "load" | "save" | "recovery"
+> {
   readonly quality = signal<MetadataReport | null>(null);
   readonly reloadRequired = signal(false);
   readonly loadFailed = signal(false);
@@ -165,6 +167,21 @@ export class MetadataState extends OperationCoordinator<"load" | "save" | "recov
   clearServer() {
     this.server = undefined;
     this.publish();
+  }
+  captureServer() {
+    if (!this.server) return undefined;
+    const rows = (severity: "error" | "warning") =>
+      this.server!.problems.filter(
+        (problem) => problem.severity === severity,
+      ).map((problem) => ({
+        location: problem.field,
+        message: problem.message,
+      }));
+    return {
+      key: this.server.key,
+      errors: rows("error"),
+      warnings: rows("warning"),
+    };
   }
   private publish() {
     if (!this.local) {
