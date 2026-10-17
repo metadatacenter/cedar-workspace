@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+import { onTestFinished, vi } from "vitest";
 import { TestBed } from "@angular/core/testing";
 import { ElementRef } from "@angular/core";
 import { ActivatedRoute, Router, convertToParamMap } from "@angular/router";
@@ -8,10 +8,11 @@ import type {
   CeeRecoveryDraft,
   CeeTemplateAndInstance,
 } from "cedar-embeddable-editor";
-import { Backend } from "../backend.service";
+import { Backend, HttpError } from "../backend.service";
 import { MetadataEditor } from "../metadata-editor";
 import { CeeLoader } from "../cee-loader";
 import { Confirmation } from "../confirmation";
+import { useDeploymentDomain } from "../resource-address";
 const quality = {
   isValid: true,
   requiredFieldValueCount: 0,
@@ -19,6 +20,10 @@ const quality = {
   problems: [],
 };
 export async function metadataRig(mode = "edit", recovery = false) {
+  // Creates mint their identity on the deployment's base, as Workspace learns it from the resource API.
+  // The base is module state that outlives a test, so it is forgotten when the test finishes.
+  useDeploymentDomain("example");
+  onTestFinished(() => useDeploymentDomain(null));
   let server: CeeJsonObject = {
     "@id": "instance",
     "schema:isBasedOn": "template",
@@ -33,12 +38,13 @@ export async function metadataRig(mode = "edit", recovery = false) {
     async (
       path: string,
       method = "GET",
-      _body?: unknown,
+      body?: unknown,
       _etag?: string | null,
     ): Promise<{ data: CeeJsonObject; etag: string | null }> => ({
+      // A write answers with the identity it was sent under: a create's own, or the instance's.
       data:
         method !== "GET"
-          ? { "@id": "instance" }
+          ? { "@id": (body as CeeJsonObject | undefined)?.["@id"] ?? "instance" }
           : path === "/templates/template"
             ? { "@id": "template", "schema:name": "Study" }
             : path.endsWith("/report") || path.startsWith("/folders/")
@@ -156,8 +162,13 @@ export async function metadataRig(mode = "edit", recovery = false) {
           if (accepted) throw new Error("CEE artifact inputs are set once");
           accepted = true;
           template = structuredClone(value);
+          // CEE writes the provenance of an instance that was never saved as null.
           current = {
             "schema:isBasedOn": value["@id"],
+            "pav:createdOn": null,
+            "pav:createdBy": null,
+            "pav:lastUpdatedOn": null,
+            "oslc:modifiedBy": null,
             Value: { "@value": null },
           };
         },
@@ -205,4 +216,56 @@ export async function metadataRig(mode = "edit", recovery = false) {
       host.changed();
     },
   };
+}
+
+/**
+ * A metadata create is sent under an identity minted before the first attempt, and every later
+ * attempt and every check of its outcome uses that identity. The server here holds at most what
+ * was created under it. `lost` drops the reply of the next create after the server has decided.
+ */
+export async function metadataCreateRig() {
+  const m = await metadataRig("create", true);
+  const server = m.request.getMockImplementation()!;
+  const world = {
+    stored: null as Record<string, unknown> | null,
+    lookup: null as number | null,
+    lost: true,
+    commit: true,
+    refuse: null as number | null,
+  };
+  m.request.mockImplementation(async (path, method = "GET", body, etag) => {
+    if (method === "PUT" && String(path).includes("?folder_id=")) {
+      // The server refuses a second create under an identity it already holds.
+      if (world.stored) throw new HttpError(world.refuse ?? 412, "Taken");
+      // The server stamps the provenance of what it creates.
+      if (world.commit)
+        world.stored = {
+          ...structuredClone(body as Record<string, unknown>),
+          "pav:createdOn": "2026-10-16T12:00:00-07:00",
+          "pav:createdBy": "https://metadatacenter.org/users/owner",
+          "pav:lastUpdatedOn": "2026-10-16T12:00:00-07:00",
+          "oslc:modifiedBy": "https://metadatacenter.org/users/owner",
+        };
+      if (world.lost) throw new HttpError(0, "No reply");
+      return { data: { "@id": (body as { "@id": string })["@id"] }, etag: '"1"' };
+    }
+    if (method === "GET" && /^\/template-instances\/[0-9a-f-]{36}/.test(path)) {
+      if (world.lookup) throw new HttpError(world.lookup, "Refused");
+      if (!world.stored) throw new HttpError(404, "Not found");
+      return path.endsWith("/report")
+        ? {
+            data: { currentUserPermissions: { capabilities: ["updateResource"] } },
+            etag: '"1"',
+          }
+        : { data: structuredClone(world.stored) as never, etag: '"1"' };
+    }
+    return server(path, method, body, etag);
+  });
+  const creates = () =>
+    m.request.mock.calls.filter(
+      (call) => call[1] === "PUT" && String(call[0]).includes("?folder_id="),
+    );
+  const identities = () =>
+    new Set(creates().map((call) => (call[2] as { "@id": string })["@id"]));
+  return { ...m, world, creates, identities };
 }

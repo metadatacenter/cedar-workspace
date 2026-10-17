@@ -1,7 +1,8 @@
 import { TestBed } from "@angular/core/testing";
 import { Backend } from "./backend.service";
 import { afterEach, expect, it, vi } from "vitest";
-import { metadataRig } from "./testing/metadata-fixture";
+import { metadataCreateRig, metadataRig } from "./testing/metadata-fixture";
+import { Router } from "@angular/router";
 import { HttpError } from "./backend.service";
 import {
   metadataDraftScope,
@@ -82,7 +83,7 @@ it("journals a create before dispatch and blocks duplicate creation after reload
   const server = m.request.getMockImplementation()!;
   let resolve!: (value: { data: Record<string, string>; etag: string }) => void;
   m.request.mockImplementation((...args) =>
-    args[1] === "POST"
+    args[1] === "PUT"
       ? new Promise((done) => {
           resolve = done;
         })
@@ -96,13 +97,23 @@ it("journals a create before dispatch and blocks duplicate creation after reload
   } as unknown as BeforeUnloadEvent);
   const next = await m.recreate();
   expect(next.recoveryDraft()?.uncertainCreation).toBe(true);
+  // The journal written before dispatch already names the identity the create was sent under, so
+  // the restored page can look that identity up.
+  const sent = m.request.mock.calls.find((call) => call[1] === "PUT")!;
+  const id = (sent[2] as { "@id": string })["@id"];
+  expect(id).toMatch(
+    /^https:\/\/repo\.example\/template-instances\/[0-9a-f-]{36}$/,
+  );
+  expect(next.recoveryDraft()?.creation?.id).toBe(id);
   await next.restoreRecovery();
+  expect(next.canCheckSave()).toBe(true);
   await next.save();
   expect(next.name).toBe("Unsaved");
   expect(next.state.uncertainCreation()).toBe(true);
   expect(
-    m.request.mock.calls.filter((call) => call[1] === "POST"),
+    m.request.mock.calls.filter((call) => call[1] === "PUT"),
   ).toHaveLength(1);
+  expect(next.recoveryDraft()).toBeNull();
   resolve({ data: { "@id": "created" }, etag: '"new"' });
   await save;
   next.ngOnDestroy();
@@ -271,7 +282,7 @@ for (const status of [401, 403])
     m.request.mockClear();
     await next.save();
     expect(
-      m.request.mock.calls.filter((call) => call[1] === "POST"),
+      m.request.mock.calls.filter((call) => call[1] === "PUT"),
     ).toHaveLength(1);
     next.ngOnDestroy();
   });
@@ -381,3 +392,190 @@ for (const severity of ["errors", "warnings"] as const)
     ).toEqual([]);
     next.ngOnDestroy();
   });
+
+const createScope = metadataDraftScope(
+  "https://resource.example",
+  "owner",
+  "create",
+  "template",
+  "home",
+);
+const journal = () =>
+  new MetadataDraftStore(createScope, sessionStorage).read();
+
+it("journals a create's identity before dispatch and adopts the created instance after recreation", async () => {
+  const m = await metadataCreateRig();
+  m.edit();
+  await m.host.save();
+  const [id] = m.identities();
+  expect(journal()?.creation?.id).toBe(id);
+  expect(journal()?.uncertainCreation).toBe(true);
+  const next = await m.recreate();
+  // Discarding is refused until the outcome is known, and asks nothing.
+  await next.discardRecovery();
+  expect(m.confirm).not.toHaveBeenCalled();
+  expect(next.recoveryDraft()?.creation?.id).toBe(id);
+  expect(next.error()).toBe(
+    "It is not yet known whether this record was created, so its draft cannot be discarded. Restore the draft and use Check save status.",
+  );
+  await next.restoreRecovery();
+  expect(next.name).toBe("Unsaved");
+  expect(next.state.uncertainCreation()).toBe(true);
+  expect(next.canCheckSave()).toBe(true);
+  expect(next.error()).toBe(
+    "Your draft has been restored. Saving stays blocked until Check save status shows whether the record was created.",
+  );
+  const calls = m.request.mock.calls.length;
+  await next.save();
+  expect(m.request).toHaveBeenCalledTimes(calls);
+  await next.checkSaveStatus();
+  expect(next.state.uncertainCreation()).toBe(false);
+  expect(next.state.reloadRequired()).toBe(false);
+  expect(next.canCheckSave()).toBe(false);
+  expect(next.dirty()).toBe(false);
+  const uuid = id.split("/").at(-1)!;
+  expect(
+    vi.mocked(TestBed.inject(Router).navigateByUrl).mock.lastCall?.[0],
+  ).toMatch(new RegExp(`^/instances/edit/${uuid}\\?`));
+  // The journal has moved to the edit address, without the create's identity.
+  expect(journal()).toBeNull();
+  expect(m.creates()).toHaveLength(1);
+  next.ngOnDestroy();
+});
+
+it("keeps the identity across reloads after a check finds nothing, and Save sends it again", async () => {
+  const m = await metadataCreateRig();
+  m.edit();
+  m.world.commit = false;
+  await m.host.save();
+  await m.host.checkSaveStatus();
+  expect(m.host.state.uncertainCreation()).toBe(false);
+  // Nothing is left to save, but the identity stays: the first request may still commit.
+  m.host.name = "Study metadata";
+  m.host.changed();
+  expect(m.host.dirty()).toBe(false);
+  expect(journal()?.creation?.id).toBe([...m.identities()][0]);
+  const next = await m.recreate();
+  await next.restoreRecovery();
+  expect(next.state.reloadRequired()).toBe(false);
+  expect(next.canCheckSave()).toBe(false);
+  m.world.commit = true;
+  m.world.lost = false;
+  await next.save();
+  expect(m.creates()).toHaveLength(2);
+  expect(m.identities().size).toBe(1);
+  next.ngOnDestroy();
+});
+
+it("retains an unknown create through Sign in again after the check is refused for the session", async () => {
+  const m = await metadataCreateRig();
+  m.edit();
+  await m.host.save();
+  m.world.lookup = 401;
+  await m.host.checkSaveStatus();
+  expect(m.host.canSignInAgain).toBe(true);
+  m.host.signInAgain();
+  expect(m.signIn).toHaveBeenCalledOnce();
+  expect(journal()?.uncertainCreation).toBe(true);
+  m.world.lookup = null;
+  const next = await m.recreate();
+  await next.restoreRecovery();
+  expect(next.canCheckSave()).toBe(true);
+  expect(next.canSignInAgain).toBe(false);
+  await next.checkSaveStatus();
+  expect(next.state.uncertainCreation()).toBe(false);
+  expect(m.identities().size).toBe(1);
+  next.ngOnDestroy();
+});
+
+it("keeps today's guard for a journal written before creates carried an identity", async () => {
+  const m = await metadataRig("create", true);
+  m.edit();
+  const legacy = { ...journal()!, reloadRequired: true, uncertainCreation: true };
+  delete legacy.creation;
+  new MetadataDraftStore(createScope, sessionStorage).write(legacy);
+  const next = await m.recreate();
+  await next.discardRecovery();
+  expect(next.recoveryDraft()).not.toBeNull();
+  expect(next.error()).toBe(
+    "The create outcome is still unknown. Keep this page open and check Workspace for the created record before starting another create.",
+  );
+  await next.restoreRecovery();
+  expect(next.state.uncertainCreation()).toBe(true);
+  expect(next.state.reloadRequired()).toBe(true);
+  expect(next.canCheckSave()).toBe(false);
+  expect(next.canSignInAgain).toBe(false);
+  expect(next.error()).toBe(
+    "Your draft has been restored. Saving remains blocked until access, the current revision and any unfinished save are resolved.",
+  );
+  m.request.mockClear();
+  await next.save();
+  await next.checkSaveStatus();
+  await next.reload();
+  expect(m.request).not.toHaveBeenCalled();
+  next.ngOnDestroy();
+});
+
+it("refuses a journal whose create identity is malformed or belongs elsewhere", async () => {
+  const m = await metadataCreateRig();
+  m.edit();
+  await m.host.save();
+  const value = journal()!;
+  const id = value.creation!.id;
+  const editScope = metadataDraftScope(
+    "https://resource.example",
+    "owner",
+    "edit",
+    "template",
+    "",
+  );
+  for (const altered of [
+    { ...value, creation: { ...value.creation!, id: "instance" } },
+    {
+      ...value,
+      creation: {
+        ...value.creation!,
+        id: id.replace("template-instances", "templates"),
+      },
+    },
+    {
+      ...value,
+      creation: {
+        ...value.creation!,
+        attempt: {
+          ...value.creation!.attempt!,
+          submitted: { ...value.creation!.attempt!.submitted, "@id": "other" },
+        },
+      },
+    },
+    { ...value, creation: { id } },
+    {
+      ...value,
+      creation: {
+        ...value.creation!,
+        attempt: { ...value.creation!.attempt!, typedName: 12 },
+      },
+    },
+  ])
+    expect(() =>
+      readMetadataDraft(JSON.stringify(altered), createScope),
+    ).toThrow();
+  // Only a create page mints an identity.
+  expect(() =>
+    readMetadataDraft(
+      JSON.stringify({
+        ...value,
+        scope: editScope,
+        saved: { "@id": "template" },
+      }),
+      editScope,
+    ),
+  ).toThrow();
+  expect(readMetadataDraft(JSON.stringify(value), createScope)).toEqual(value);
+  const legacy = { ...value };
+  delete legacy.creation;
+  expect(
+    readMetadataDraft(JSON.stringify(legacy), createScope).creation,
+  ).toBeUndefined();
+  m.host.ngOnDestroy();
+});

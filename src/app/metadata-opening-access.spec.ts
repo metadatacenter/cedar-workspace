@@ -34,11 +34,10 @@ for (const mode of ["edit", "create"]) {
     next.name = "Now editable";
     next.changed();
     await next.save();
-    const write = m.request.mock.calls.find(
-      (call) => call[1] === (mode === "edit" ? "PUT" : "POST"),
-    );
+    // An update names the revision it read; a create is sent under its new identity without one.
+    const write = m.request.mock.calls.find((call) => call[1] === "PUT");
     expect(write).toBeDefined();
-    if (mode === "edit") expect(write?.[3]).toBe('"newer"');
+    expect(write?.[3]).toBe(mode === "edit" ? '"newer"' : null);
     next.ngOnDestroy();
   });
 }

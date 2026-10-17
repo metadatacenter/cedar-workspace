@@ -1,9 +1,13 @@
 import { TestBed } from "@angular/core/testing";
-import { expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { ResourceDialog } from "./resource-dialog";
 import { Backend, HttpError } from "./backend.service";
 import { Confirmation } from "./confirmation";
 import { deferred, resource } from "./testing/workspace-fixture";
+import { useDeploymentDomain } from "./resource-address";
+
+// A new folder is created under an identity minted on the deployment's base.
+afterEach(() => useDeploymentDomain(null));
 
 for (const action of ["rename", "new-folder"])
   for (const accept of [true, false])
@@ -16,6 +20,7 @@ for (const action of ["rename", "new-folder"])
       "destroy",
     ])
       it(`${action}: ${accept ? "accept" : "cancel"} discard after ${transition}`, async () => {
+        useDeploymentDomain("example");
         const r = resource("item");
         const answer = deferred<boolean>();
         const write = deferred<unknown>();

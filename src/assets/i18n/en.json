@@ -249,7 +249,8 @@
     "OpenInOpenView": "Open in OpenView"
   },
   "ResourceDialog": {
-    "InspectOutcome": "This operation may already have completed. Close this dialog and refresh Workspace to check the result before trying again.",
+    "InspectOutcome": "This operation may already have completed. Use Retry to check its result before trying again.",
+    "LegacyInspectOutcome": "This operation may already have completed. Close this dialog and refresh Workspace to check the result before trying again.",
     "RecoverRevision": "Reload the current revision before saving again. Your edits will be kept.",
     "RecoveryDenied": "The current resource permissions do not allow this operation.",
     "Headings": {
@@ -444,7 +445,8 @@
     "LoadFailed": "Unable to load",
     "ReloadRequired": "Reload required",
     "Reload": "Reload metadata",
-    "SaveUnconfirmed": "We could not confirm whether your changes were saved. Your changes remain in the editor. Check Workspace before saving again.",
+    "SaveUnconfirmed": "We could not confirm whether your changes were saved. Your changes remain in the editor. Use Check save status before saving again.",
+    "LegacySaveUnconfirmed": "We could not confirm whether your changes were saved. Your changes remain in the editor. Check Workspace before saving again.",
     "ItemDeleted": "This item was deleted. Your edits have been kept. Return to Workspace to choose another item.",
     "ItemChanged": "This item changed since you opened it. Your edits have been kept. Cancel and reopen to review the latest version.",
     "CheckSave": "Check save status",
@@ -465,8 +467,11 @@
     "DiscardRecovery": "Discard the stored recovery draft? This cannot be undone.",
     "DraftInvalid": "This recovery draft could not be restored here. Open it using the same account, deployment and record where it was created; your current work has been kept.",
     "DraftNeedsReview": "Your draft has been restored. Saving remains blocked until access, the current revision and any unfinished save are resolved.",
+    "RestoredCreateNeedsCheck": "Your draft has been restored. Saving stays blocked until Check save status shows whether the record was created.",
     "DraftRestored": "Recovery draft restored, including unfinished input.",
-    "CreateOutcomeUnknown": "The create outcome is still unknown. Keep this page open and check Workspace for the created record before starting another create.",
+    "CreateOutcomeUnknown": "It is not yet known whether this record was created, so its draft cannot be discarded. Restore the draft and use Check save status.",
+    "LegacyCreateOutcomeUnknown": "The create outcome is still unknown. Keep this page open and check Workspace for the created record before starting another create.",
+    "CreateNotSaved": "The record was not created. Your edits remain in the editor. Save to create it.",
     "ReviewLatest": "Review latest saved version",
     "ReviewFinishInput": "Finish or correct unfinished input before comparing versions. Your draft is retained.",
     "ReviewTemplateChanged": "The template has changed. Your edits have been kept; automatic reconciliation is unavailable.",

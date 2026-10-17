@@ -249,7 +249,8 @@
     "OpenInOpenView": "Megnyitás az OpenView-ban"
   },
   "ResourceDialog": {
-    "InspectOutcome": "A művelet már végrehajtódhatott. Zárja be ezt az ablakot, és frissítse a munkaterületet az eredmény ellenőrzéséhez, mielőtt újra próbálkozik.",
+    "InspectOutcome": "A művelet már végrehajtódhatott. Újabb próbálkozás előtt az Újra gombbal ellenőrizze az eredményét.",
+    "LegacyInspectOutcome": "A művelet már végrehajtódhatott. Zárja be ezt az ablakot, és frissítse a munkaterületet az eredmény ellenőrzéséhez, mielőtt újra próbálkozik.",
     "RecoverRevision": "Újabb mentés előtt töltse be az aktuális változatot. A módosításai megmaradnak.",
     "RecoveryDenied": "Az erőforrás jelenlegi jogosultságai nem engedélyezik ezt a műveletet.",
     "Headings": {
@@ -444,7 +445,8 @@
     "LoadFailed": "Nem tölthető be",
     "ReloadRequired": "Újratöltés szükséges",
     "Reload": "Metaadatok újratöltése",
-    "SaveUnconfirmed": "Nem sikerült megerősíteni, hogy a módosítások mentése megtörtént-e. A módosítások megmaradtak a szerkesztőben. Újabb mentés előtt ellenőrizze a Workspace-ben.",
+    "SaveUnconfirmed": "Nem sikerült megerősíteni, hogy a módosítások mentése megtörtént-e. A módosítások megmaradtak a szerkesztőben. Újabb mentés előtt válassza a Mentés állapotának ellenőrzése gombot.",
+    "LegacySaveUnconfirmed": "Nem sikerült megerősíteni, hogy a módosítások mentése megtörtént-e. A módosítások megmaradtak a szerkesztőben. Újabb mentés előtt ellenőrizze a Workspace-ben.",
     "ItemDeleted": "Ezt az elemet törölték. A módosításai megmaradtak. Térjen vissza a munkaterületre, és válasszon másik elemet.",
     "ItemChanged": "Ez az elem megváltozott, mióta megnyitotta. A módosításai megmaradtak. A legújabb verzió áttekintéséhez válassza a Mégse gombot, és nyissa meg újra.",
     "CheckSave": "Mentés állapotának ellenőrzése",
@@ -465,8 +467,11 @@
     "DiscardRecovery": "Elveti a tárolt helyreállítási piszkozatot? Ez nem vonható vissza.",
     "DraftInvalid": "Ez a helyreállítási piszkozat itt nem állítható helyre. Nyissa meg az eredeti fiókkal, környezetben és rekordnál; a jelenlegi munkája megmaradt.",
     "DraftNeedsReview": "A piszkozat helyreállt. A mentés a hozzáférés, az aktuális verzió és a befejezetlen mentések ellenőrzéséig tiltva marad.",
+    "RestoredCreateNeedsCheck": "A piszkozat helyreállt. A mentés tiltva marad, amíg a Mentés állapotának ellenőrzése gomb meg nem mutatja, hogy a rekord létrejött-e.",
     "DraftRestored": "A helyreállítási piszkozat a befejezetlen bevitellel együtt helyreállt.",
-    "CreateOutcomeUnknown": "A létrehozás eredménye még ismeretlen. Tartsa nyitva ezt az oldalt, és új létrehozás előtt ellenőrizze a rekordot a munkaterületen.",
+    "CreateOutcomeUnknown": "Még nem tudható, hogy a rekord létrejött-e, ezért a piszkozata nem vethető el. Állítsa helyre a piszkozatot, és válassza a Mentés állapotának ellenőrzése gombot.",
+    "LegacyCreateOutcomeUnknown": "A létrehozás eredménye még ismeretlen. Tartsa nyitva ezt az oldalt, és új létrehozás előtt ellenőrizze a rekordot a munkaterületen.",
+    "CreateNotSaved": "A rekord nem jött létre. A módosításai megmaradtak a szerkesztőben. Mentéssel hozza létre.",
     "ReviewLatest": "Legutóbbi mentett változat áttekintése",
     "ReviewFinishInput": "Az összehasonlítás előtt fejezze be vagy javítsa a befejezetlen bevitelt. A piszkozat megmarad.",
     "ReviewTemplateChanged": "A sablon megváltozott. A szerkesztések megmaradtak; automatikus egyeztetés nem érhető el.",

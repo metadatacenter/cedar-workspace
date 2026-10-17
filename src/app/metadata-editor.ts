@@ -1,4 +1,8 @@
-import { resourceSelector, resourcePathId } from "./resource-address";
+import {
+  mintResourceId,
+  resourceSelector,
+  resourcePathId,
+} from "./resource-address";
 import { Toast } from "./toast";
 import { WorkspaceReturn } from "./workspace-return";
 import { Confirmation } from "./confirmation";
@@ -39,9 +43,11 @@ import { I18n, fallbackLanguage } from "./i18n";
 
 import {
   sameStoredRevision,
+  metadataCreateOutcome,
   metadataUpdateOutcome,
 } from "./metadata-save-recovery";
 import {
+  MetadataCreateAttempt,
   MetadataDraft,
   MetadataDraftStore,
   metadataDraftScope,
@@ -181,6 +187,11 @@ interface PendingMetadataUpdate {
   snapshot: CeeSaveSnapshot;
   typedName: string;
 }
+/** A create page's identity and, once Save was pressed, what its last attempt sent. */
+interface PendingMetadataCreation {
+  id: string;
+  attempt?: MetadataCreateAttempt & { snapshot: CeeSaveSnapshot };
+}
 
 @Component({
   selector: "cedar-metadata-page",
@@ -211,7 +222,10 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   readonly checkingSave = signal(false);
   readonly canCheckSave = signal(false);
   readonly canRecheckAccess = signal(false);
+  /** The last check of a create's outcome was refused because the session has ended. */
+  readonly creationCheckRefused = signal(false);
   private pendingUpdate?: PendingMetadataUpdate;
+  private creation?: PendingMetadataCreation;
   readonly review = signal<{
     base: CeeJsonObject;
     mine: CeeJsonObject;
@@ -540,6 +554,23 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       etag: this.etag,
       reloadRequired: this.state.reloadRequired(),
       uncertainCreation: this.state.uncertainCreation(),
+      ...(this.creation
+        ? {
+            creation: {
+              id: this.creation.id,
+              ...(this.creation.attempt
+                ? {
+                    attempt: {
+                      submitted: this.creation.attempt.submitted,
+                      metadata: this.creation.attempt.metadata,
+                      typedName: this.creation.attempt.typedName,
+                      needsElementIds: this.creation.attempt.needsElementIds,
+                    },
+                  }
+                : {}),
+            },
+          }
+        : {}),
       server: this.state.captureServer(),
       ...(pending
         ? {
@@ -565,11 +596,15 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     )
       return;
     try {
+      // An identity a create was sent under stays in the journal even with nothing left to save. A
+      // lookup that finds nothing cannot rule out that the request is still being carried out, so the
+      // next attempt, after a reload too, must use the same identity.
       if (
         force ||
         this.dirty() ||
         this.state.reloadRequired() ||
-        this.saving()
+        this.saving() ||
+        !!this.creation?.attempt
       ) {
         const value = this.recoveryValue();
         if (!value) throw new Error();
@@ -593,6 +628,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       (this.state.loadFailed() && this.openingAccessRefused) ||
       this.canRecheckOpeningAccess ||
       this.canRecheckAccess() ||
+      this.creationCheckRefused() ||
       (this.state.reloadRequired() &&
         !this.saved &&
         !this.state.uncertainCreation())
@@ -773,7 +809,14 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     if (this.saving() || this.checkingSave()) return;
     const candidate = this.recoveryDraft();
     if (candidate?.uncertainCreation) {
-      this.error.set(this.i18n.t("Metadata.CreateOutcomeUnknown"));
+      // A draft written before creates carried an identity offers no check of its outcome.
+      this.error.set(
+        this.i18n.t(
+          candidate.creation
+            ? "Metadata.CreateOutcomeUnknown"
+            : "Metadata.LegacyCreateOutcomeUnknown",
+        ),
+      );
       return;
     }
     if (
@@ -783,6 +826,26 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       candidate === this.recoveryDraft()
     )
       this.clearRecovery();
+  }
+  // A restored form is a new CEE element. It can acknowledge identities for a save made before the
+  // reload only while it still holds what that save submitted.
+  private restoredSnapshot(
+    metadata: CeeJsonObject,
+    needsElementIds: boolean,
+  ): CeeSaveSnapshot {
+    const snapshot = this.cee.captureSave();
+    return {
+      metadata,
+      needsElementIds,
+      acknowledge: (stored) => {
+        if (
+          !snapshot ||
+          metadataKey(snapshot.metadata) !== metadataKey(metadata)
+        )
+          throw new Error();
+        return snapshot.acknowledge(stored);
+      },
+    };
   }
   async restoreRecovery() {
     const value = this.recoveryDraft();
@@ -868,25 +931,33 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       this.unreadable.set(false);
       this.state.clearServer();
       this.pendingUpdate = undefined;
+      this.creationCheckRefused.set(false);
       if (value.pending) {
         const pending = value.pending;
-        const snapshot = this.cee.captureSave();
         this.pendingUpdate = {
           ...pending,
-          snapshot: {
-            metadata: pending.metadata,
-            needsElementIds: pending.needsElementIds,
-            acknowledge: (stored) => {
-              if (
-                !snapshot ||
-                metadataKey(snapshot.metadata) !== metadataKey(pending.metadata)
-              )
-                throw new Error();
-              return snapshot.acknowledge(stored);
-            },
-          },
+          snapshot: this.restoredSnapshot(
+            pending.metadata,
+            pending.needsElementIds,
+          ),
         };
       }
+      const creation = value.creation;
+      const attempt = creation?.attempt;
+      this.creation = creation && {
+        id: creation.id,
+        ...(attempt
+          ? {
+              attempt: {
+                ...attempt,
+                snapshot: this.restoredSnapshot(
+                  attempt.metadata,
+                  attempt.needsElementIds,
+                ),
+              },
+            }
+          : {}),
+      };
       if (
         !this.pendingUpdate &&
         this.state.reloadRequired() &&
@@ -906,9 +977,9 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
           };
       }
       this.canCheckSave.set(
-        !!this.pendingUpdate &&
-          this.pendingUpdate.purpose !== "access" &&
-          !value.uncertainCreation,
+        value.uncertainCreation
+          ? !!this.creation
+          : !!this.pendingUpdate && this.pendingUpdate.purpose !== "access",
       );
       this.canRecheckAccess.set(
         this.pendingUpdate?.purpose === "access" && !value.uncertainCreation,
@@ -923,7 +994,11 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       }
       this.error.set(
         this.state.reloadRequired()
-          ? this.i18n.t("Metadata.DraftNeedsReview")
+          ? this.i18n.t(
+              value.uncertainCreation && this.creation
+                ? "Metadata.RestoredCreateNeedsCheck"
+                : "Metadata.DraftNeedsReview",
+            )
           : "",
       );
       this.notice.set(this.i18n.t("Metadata.DraftRestored"));
@@ -1040,6 +1115,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     this.notice.set("");
     let attempted = false;
     let pendingUpdate: PendingMetadataUpdate | undefined;
+    let creation: PendingMetadataCreation | undefined;
     try {
       if (this.saved && !this.etag) {
         this.state.reloadRequired.set(true);
@@ -1055,9 +1131,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       const metadata: CeeJsonObject = structuredClone(current);
       metadata["schema:name"] = name;
       metadata["schema:isBasedOn"] = this.template["@id"];
-      let path =
-        "/template-instances?folder_id=" +
-        encodeURIComponent(resourceSelector(this.folder));
+      let path: string;
       if (this.saved) {
         metadata["@id"] = this.saved["@id"];
         // The host owns the instance description; CEE has no control for editing it.
@@ -1071,6 +1145,28 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         metadata["schema:description"] ||= String(
           this.template["schema:description"] || "",
         );
+        // Every attempt creates under the one identity, so a repeat can never make a second
+        // instance, and a lost reply is settled by reading that identity. Until the deployment's
+        // base is known no identity can be minted, and the server mints one as it always has.
+        const id =
+          this.creation?.id ?? mintResourceId("template-instances");
+        const folder = "?folder_id=" + encodeURIComponent(resourceSelector(this.folder));
+        path = "/template-instances" + folder;
+        if (id) {
+          metadata["@id"] = id;
+          creation = this.creation = {
+            id,
+            attempt: {
+              submitted: structuredClone(metadata),
+              metadata: snapshot.metadata,
+              typedName,
+              needsElementIds: snapshot.needsElementIds,
+              snapshot,
+            },
+          };
+          path =
+            "/template-instances/" + encodeURIComponent(resourcePathId(id)) + folder;
+        }
       }
       if (this.saved && this.etag)
         pendingUpdate = {
@@ -1082,7 +1178,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
           typedName,
         };
       // Journal before the request: closing the page while it is in flight must not turn
-      // an uncertain create into a new POST, or an update into an unguarded retry.
+      // an uncertain create into an unguarded new one, or an update into an unguarded retry.
       try {
         const value = this.recoveryValue(pendingUpdate);
         if (value)
@@ -1095,23 +1191,25 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         this.draftStorageError.set(true);
       }
       attempted = true;
+      // A create carries no revision. Its identity is new, and the server refuses a repeat.
       const reply = await this.api.request<CeeJsonObject>(
         path,
-        this.saved ? "PUT" : "POST",
+        this.saved || creation ? "PUT" : "POST",
         metadata,
-        this.etag,
+        this.saved ? this.etag : null,
       );
       if (!operation.current()) return;
       if (
         !reply.data ||
         typeof reply.data["@id"] !== "string" ||
         !reply.data["@id"].trim() ||
-        (this.saved && reply.data["@id"] !== this.saved["@id"])
+        ((this.saved || creation) && reply.data["@id"] !== metadata["@id"])
       ) {
         this.state.reloadRequired.set(true);
         this.state.uncertainCreation.set(!this.saved);
         throw new Error(this.i18n.t("Metadata.SaveUnconfirmed"));
       }
+      if (creation) this.creation = undefined;
       const confirmedUpdate = pendingUpdate;
       pendingUpdate = undefined;
       // Write acknowledgements may be resource summaries. Retain submitted metadata
@@ -1149,49 +1247,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       this.state.clearServer();
       this.baseline = baseline;
       this.baselineName = typedName;
-      // Keep the CEE element, focus and any edits made while the save was pending.
-      // Update the router as well as browser history: otherwise cancelling a
-      // later navigation restores the original create URL. The same route
-      // component is reused, so the CEE element and its working form survive.
-      this.updatingAddress = true;
-      try {
-        await this.router.navigateByUrl(
-          "/instances/edit/" +
-            encodeURIComponent(resourcePathId(String(this.saved["@id"]))) +
-            "?" +
-            new URLSearchParams({
-              folderId: resourceSelector(this.folder),
-              returnTo: this.returnTo,
-            }),
-          { replaceUrl: true },
-        );
-      } finally {
-        this.updatingAddress = false;
-      }
-      if (!operation.current()) return;
-      if (this.draftStore && this.draftScope && !confirmedUpdate) {
-        // A confirmed create now belongs to its edit URL. Store there before removing
-        // the create-address copy, so later edits and missing acknowledgements survive reload.
-        const previous = this.draftStore;
-        this.draftScope = metadataDraftScope(
-          this.api.config.resourceRestAPI,
-          this.api.userId,
-          "edit",
-          resourcePathId(String(this.saved["@id"])),
-          resourceSelector(this.folder),
-        );
-        this.draftStore = new MetadataDraftStore(
-          this.draftScope,
-          sessionStorage,
-        );
-        try {
-          const value = this.recoveryValue();
-          if (value) this.draftStore.write(value);
-          previous.clear();
-        } catch {
-          this.draftStorageError.set(true);
-        }
-      }
+      if (!(await this.moveToEditAddress(operation, !confirmedUpdate))) return;
       operation.finish();
       this.changed();
       if (this.canCheckSave())
@@ -1218,18 +1274,30 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         this.canCheckSave.set(!accessRefused);
         this.canRecheckAccess.set(accessRefused);
       }
+      // A create refused because its identity is already taken may have been committed by an
+      // earlier attempt, so it is no more a failure than a lost reply is.
+      const occupied =
+        !!creation && e instanceof HttpError && [412, 428].includes(e.status);
+      const unknown = attempted && (uncertainWrite(e) || occupied);
       if (attempted && writeRequiresRecovery(e)) {
         this.state.reloadRequired.set(true);
-        if (!this.saved && uncertainWrite(e))
+        if (!this.saved && unknown) {
           this.state.uncertainCreation.set(true);
+          // Only an identity can be looked up.
+          this.canCheckSave.set(!!creation);
+        }
       }
       if (e instanceof HttpError) {
         this.state.reject(e.validationReport, submittedKey, this.template);
       }
       // A conflict here leaves the edits on screen, which only this editor can say.
       this.error.set(
-        attempted && uncertainWrite(e)
-          ? this.i18n.t("Metadata.SaveUnconfirmed")
+        unknown
+          ? this.i18n.t(
+              this.saved || creation
+                ? "Metadata.SaveUnconfirmed"
+                : "Metadata.LegacySaveUnconfirmed",
+            )
           : e instanceof HttpError && e.status === 412
             ? this.i18n.t(
                 e.deleted ? "Metadata.ItemDeleted" : "Metadata.ItemChanged",
@@ -1245,7 +1313,169 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       }
     }
   }
+  /**
+   * Show the saved instance at its edit address. With `rescope`, a create's journal moves to that
+   * address as well: it is written there before the copy at the create address is removed, so later
+   * edits and missing acknowledgements survive a reload. Answers whether the operation is current.
+   */
+  private async moveToEditAddress(
+    operation: { current(): boolean },
+    rescope: boolean,
+  ) {
+    const id = resourcePathId(String(this.saved!["@id"]));
+    // Keep the CEE element, focus and any edits made while the save was pending.
+    // Update the router as well as browser history: otherwise cancelling a
+    // later navigation restores the original create URL. The same route
+    // component is reused, so the CEE element and its working form survive.
+    this.updatingAddress = true;
+    try {
+      await this.router.navigateByUrl(
+        "/instances/edit/" +
+          encodeURIComponent(id) +
+          "?" +
+          new URLSearchParams({
+            folderId: resourceSelector(this.folder),
+            returnTo: this.returnTo,
+          }),
+        { replaceUrl: true },
+      );
+    } finally {
+      this.updatingAddress = false;
+    }
+    if (!operation.current()) return false;
+    if (this.draftStore && this.draftScope && rescope) {
+      const previous = this.draftStore;
+      this.draftScope = metadataDraftScope(
+        this.api.config.resourceRestAPI,
+        this.api.userId,
+        "edit",
+        id,
+        resourceSelector(this.folder),
+      );
+      this.draftStore = new MetadataDraftStore(this.draftScope, sessionStorage);
+      try {
+        const value = this.recoveryValue();
+        if (value) this.draftStore.write(value);
+        previous.clear();
+      } catch {
+        this.draftStorageError.set(true);
+      }
+    }
+    return true;
+  }
+  /**
+   * Settle a create whose outcome is unknown by reading the identity it was sent under. Found: the
+   * instance exists and this page adopts it, keeping later edits as unsaved changes. Not found: it was
+   * not created, and Save sends the same identity again. Anything else leaves Save blocked. The check
+   * can be repeated, and a refusal of the session offers Sign in again.
+   */
+  private async checkCreation() {
+    const creation = this.creation;
+    if (
+      !this.alive ||
+      !creation ||
+      this.loading() ||
+      this.saving() ||
+      this.checkingSave()
+    )
+      return;
+    const operation = this.state.begin("recovery");
+    this.checkingSave.set(true);
+    this.creationCheckRefused.set(false);
+    this.error.set(this.i18n.t("Metadata.CheckingSave"));
+    // A changed template or lost permission still needs a reload whatever the outcome.
+    const blocked = () => this.recoveryTemplateChanged || !this.writable();
+    try {
+      const path =
+        "/template-instances/" + encodeURIComponent(resourcePathId(creation.id));
+      const [stored, report] = await Promise.allSettled([
+        this.api.request<CeeJsonObject>(path),
+        this.api.request<Resource>(path + "/report"),
+      ]);
+      if (!operation.current()) return;
+      if (stored.status === "rejected") {
+        if (!(stored.reason instanceof HttpError) || stored.reason.status !== 404)
+          throw stored.reason;
+        this.state.uncertainCreation.set(false);
+        this.state.reloadRequired.set(blocked());
+        this.canCheckSave.set(false);
+        this.error.set(
+          this.i18n.t(
+            blocked() ? "Metadata.DraftNeedsReview" : "Metadata.CreateNotSaved",
+          ),
+        );
+        operation.finish();
+        return;
+      }
+      if (report.status === "rejected") throw report.reason;
+      if (!can(report.value.data, "updateResource")) {
+        this.error.set(this.i18n.t("Metadata.RecoveryReadOnly"));
+        return;
+      }
+      const latest = stored.value;
+      const result = metadataCreateOutcome(creation, latest, this.template);
+      if (result === "unresolved") {
+        this.error.set(this.i18n.t("Metadata.RecoveryUnresolved"));
+        return;
+      }
+      // CEE binds the identities the server minted for new elements to the submitted occurrences,
+      // keeping later edits. A stored instance holding other values leaves the form modified.
+      const attempt = creation.attempt;
+      let identityRecovery = false;
+      let acknowledged: CeeJsonObject | undefined;
+      if (attempt?.needsElementIds)
+        try {
+          acknowledged = attempt.snapshot.acknowledge(latest.data);
+        } catch {
+          identityRecovery = true;
+        }
+      if (result === "saved" && attempt) {
+        this.baseline = metadataKey(acknowledged ?? attempt.metadata);
+        this.baselineName = attempt.typedName;
+      } else {
+        this.baseline = metadataKey(latest.data);
+        this.baselineName = String(latest.data["schema:name"] ?? "");
+      }
+      this.creation = undefined;
+      this.saved = latest.data;
+      this.etag = latest.etag;
+      this.savedHere = true;
+      this.state.uncertainCreation.set(false);
+      this.state.reloadRequired.set(identityRecovery || blocked());
+      this.state.clearServer();
+      this.canCheckSave.set(false);
+      if (!(await this.moveToEditAddress(operation, true))) return;
+      this.changed();
+      this.error.set(
+        identityRecovery
+          ? this.i18n.t("Metadata.SavedIdentityUnavailable")
+          : blocked()
+            ? this.i18n.t("Metadata.DraftNeedsReview")
+            : "",
+      );
+      this.notice.set(
+        this.i18n.t(
+          this.dirty() ? "Metadata.SavedWithChanges" : "Metadata.SaveConfirmed",
+        ),
+      );
+      operation.finish();
+    } catch (error) {
+      if (!operation.current()) return;
+      operation.fail(error);
+      this.creationCheckRefused.set(
+        error instanceof HttpError && error.status === 401,
+      );
+      this.error.set(this.i18n.t("Metadata.RecoveryUnavailable"));
+    } finally {
+      if (operation.current()) {
+        this.checkingSave.set(false);
+        this.keepRecovery();
+      }
+    }
+  }
   async checkSaveStatus() {
+    if (this.creation && this.state.uncertainCreation())
+      return this.checkCreation();
     const pending = this.pendingUpdate;
     if (
       !this.alive ||
@@ -1345,7 +1575,16 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   async mayLeave() {
     if (this.updatingAddress) return true;
     if (!this.alive || this.saving()) return false;
-    if (!this.dirty()) return true;
+    if (!this.dirty()) {
+      // A create whose outcome is known keeps its identity across a reload, not after leaving.
+      if (
+        this.creation?.attempt &&
+        !this.state.reloadRequired() &&
+        !this.recoveryDraft()
+      )
+        this.clearRecovery();
+      return true;
+    }
     const decision = this.state.checkpoint();
     const draft = this.draftKey();
     const leave =

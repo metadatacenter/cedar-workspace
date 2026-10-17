@@ -19,6 +19,7 @@ import {
 import { Backend, HttpError } from "./backend.service";
 import { CeeLoader } from "./cee-loader";
 import { provideWorkspaceTranslations } from "./i18n";
+import { useDeploymentDomain } from "./resource-address";
 import type { CedarEmbeddableEditorElement } from "cedar-embeddable-editor";
 
 describe("Modern metadata host", () => {
@@ -42,13 +43,20 @@ describe("Modern metadata host", () => {
     "schema:name": "Study",
     "schema:description": "Study description",
   };
+  // A create is sent under an identity minted on the deployment's base and answered with it.
+  const created = (body: unknown) => String((body as { "@id": string })["@id"]);
+  const createdPath = /^\/template-instances\/([0-9a-f-]{36})\?folder_id=folder$/;
   beforeEach(() => {
+    useDeploymentDomain("example");
     api = {
       init: vi.fn().mockResolvedValue(true),
       profile: { homeFolderId: "home" },
-      request: vi.fn(async (path: string, method = "GET") => {
+      request: vi.fn(async (path: string, method = "GET", body?: unknown) => {
         if (method !== "GET")
-          return { data: { "@id": "instance-id" }, etag: '"i2"' };
+          return {
+            data: { "@id": (body as { "@id"?: string })?.["@id"] ?? "instance-id" },
+            etag: '"i2"',
+          };
         if (path === "/templates/template-id")
           return { data: template, etag: '"t1"' };
         if (path === "/template-instances/instance-id")
@@ -113,6 +121,7 @@ describe("Modern metadata host", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}")));
   });
   afterEach(() => {
+    useDeploymentDomain(null);
     host.ngOnDestroy();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
@@ -346,32 +355,31 @@ describe("Modern metadata host", () => {
     host.changed();
     expect(host.dirty()).toBe(false);
   });
-  it("creates once, then updates with each returned ETag without resetting CEE", async () => {
+  it("creates once under a minted identity, then updates with each returned ETag without resetting CEE", async () => {
     await host.ngAfterViewInit();
     cee.currentMetadata["schema:description"] = "";
     const input = cee.templateObject;
-    api.request.mockResolvedValue({ data: { "@id": "new-id" }, etag: '"i2"' });
     await host.save();
-    expect(api.request).toHaveBeenLastCalledWith(
-      "/template-instances?folder_id=folder",
-      "POST",
-      expect.objectContaining({
-        "schema:name": "Study metadata",
-        "schema:isBasedOn": "template-id",
-        "schema:description": "Study description",
-      }),
-      null,
-    );
+    const [path, method, body, etag] = api.request.mock.lastCall!;
+    const uuid = createdPath.exec(path)?.[1];
+    expect(uuid).toBeDefined();
+    expect([method, etag]).toEqual(["PUT", null]);
+    expect(body).toMatchObject({
+      "@id": `https://repo.example/template-instances/${uuid}`,
+      "schema:name": "Study metadata",
+      "schema:isBasedOn": "template-id",
+      "schema:description": "Study description",
+    });
     expect(address).toHaveBeenCalledWith(
-      expect.stringMatching(/^\/instances\/edit\/new-id\?.*returnTo=/),
+      expect.stringMatching(new RegExp(`^/instances/edit/${uuid}\\?.*returnTo=`)),
       { replaceUrl: true },
     );
-    api.request.mockResolvedValue({ data: { "@id": "new-id" }, etag: '"i3"' });
+    api.request.mockImplementation(async (_path, _method, sent) => ({ data: { "@id": created(sent) }, etag: '"i3"' }));
     await host.save();
     expect(api.request).toHaveBeenLastCalledWith(
-      "/template-instances/new-id",
+      `/template-instances/${uuid}`,
       "PUT",
-      expect.objectContaining({ "@id": "new-id", "schema:description": "Study description" }),
+      expect.objectContaining({ "@id": created(body), "schema:description": "Study description" }),
       '"i2"',
     );
     await host.save();
@@ -393,12 +401,14 @@ describe("Modern metadata host", () => {
       return {...submitted, Element: stored.Element};
     });
     Object.assign(cee, {captureSave: () => ({metadata: submitted, needsElementIds: true, acknowledge})});
-    api.request.mockImplementation(async (_path, method = "GET") => {
-      if (method === "POST") {
+    let id = "";
+    api.request.mockImplementation(async (_path, method = "GET", body) => {
+      if (method === "PUT") {
         cee.currentMetadata["Notes"] = {"@value": "newer edit"};
-        return {data: {"@id": "new-id"}, etag: writeTag};
+        id = created(body);
+        return {data: {"@id": id}, etag: writeTag};
       }
-      return {data: {"@id": "new-id", Element: {"@id": "urn:element"}}, etag: readTag};
+      return {data: {"@id": id, Element: {"@id": "urn:element"}}, etag: readTag};
     });
     await host.save();
     expect(acknowledge).toHaveBeenCalledOnce();
@@ -408,6 +418,49 @@ describe("Modern metadata host", () => {
     expect(host.state.reloadRequired()).toBe(false);
     expect(host.error()).toBe("");
   });
+  it.each([true, false])(
+    "binds element IDs through the stored instance when a lost create is found (identities readable: %s)",
+    async (readable) => {
+      await host.ngAfterViewInit();
+      cee.currentMetadata["Element"] = {"@id": null};
+      const submitted = structuredClone(cee.currentMetadata);
+      const acknowledge = vi.fn((stored) => {
+        if (!readable) throw new Error("Invalid identities");
+        cee.currentMetadata["Element"] = stored.Element;
+        return {...submitted, Element: stored.Element};
+      });
+      Object.assign(cee, {captureSave: () => ({metadata: submitted, needsElementIds: true, acknowledge})});
+      let stored: Record<string, unknown> | undefined;
+      api.request.mockImplementation(async (path, method = "GET", body) => {
+        if (method === "PUT") {
+          stored = {...structuredClone(body), Element: {"@id": "urn:element"}};
+          throw new HttpError(503, "No reply");
+        }
+        if (path.endsWith("/report"))
+          return {data: {currentUserPermissions: {capabilities: ["updateResource"]}}, etag: '"g1"'};
+        if (path.startsWith("/template-instances/")) return {data: stored, etag: '"1"'};
+        return {data: template, etag: '"t1"'};
+      });
+      await host.save();
+      expect(host.canCheckSave()).toBe(true);
+      cee.currentMetadata["Notes"] = {"@value": "newer edit"};
+      host.changed();
+      await host.checkSaveStatus();
+      expect(acknowledge).toHaveBeenCalledWith(stored);
+      expect(host.state.uncertainCreation()).toBe(false);
+      expect(host.canCheckSave()).toBe(false);
+      expect(cee.currentMetadata["Notes"]).toEqual({"@value": "newer edit"});
+      expect(host.dirty()).toBe(true);
+      expect(address).toHaveBeenLastCalledWith(
+        expect.stringContaining("/instances/edit/" + String(stored!["@id"]).split("/").at(-1) + "?"),
+        {replaceUrl: true},
+      );
+      // Identities that cannot be bound leave a reload to do before the next save.
+      expect(host.state.reloadRequired()).toBe(!readable);
+      expect(host.error()).toBe(readable ? "" : "Saved, but the stored element identifiers could not be confirmed. Your current edits remain in the editor. Reload metadata before saving again.");
+      expect(cee.currentMetadata["Element"]).toEqual({"@id": readable ? "urn:element" : null});
+    },
+  );
   it.each(["unavailable", "different revision", "different compressed revision", "weak revision", "invalid identities"])(
     "keeps the draft and blocks another write when identity readback is %s", async (failure) => {
       await host.ngAfterViewInit();
@@ -415,24 +468,27 @@ describe("Modern metadata host", () => {
       host.changed();
       const acknowledge = vi.fn(() => { throw new Error("Invalid identities"); });
       Object.assign(cee, {captureSave: () => ({metadata: structuredClone(cee.currentMetadata), needsElementIds: true, acknowledge})});
-      api.request.mockImplementation(async (_path, method = "GET") => {
-        if (method === "POST") {
+      let id = "";
+      api.request.mockImplementation(async (_path, method = "GET", body) => {
+        if (method === "PUT") {
           cee.currentMetadata["Notes"] = {"@value": "newer edit"};
-          return {data: {"@id": "new-id"}, etag: '"1--gzip--gzip"'};
+          id = created(body);
+          return {data: {"@id": id}, etag: '"1--gzip--gzip"'};
         }
         if (failure === "unavailable") throw new Error("Network error");
         const tag = failure === "different revision" ? '"2"'
           : failure === "different compressed revision" ? '"2--gzip"'
           : failure === "weak revision" ? 'W/"1"' : '"1--gzip"';
-        return {data: {"@id": "new-id"}, etag: tag};
+        return {data: {"@id": id}, etag: tag};
       });
       await host.save();
       expect(host.error()).toContain("Saved, but");
       expect(host.state.reloadRequired()).toBe(true);
       expect(host.state.uncertainCreation()).toBe(false);
+      expect(host.canCheckSave()).toBe(false);
       expect(host.dirty()).toBe(true);
       expect(cee.currentMetadata["Element"]).toEqual({"@id": null});
-      expect(address).toHaveBeenCalledWith(expect.stringContaining("/instances/edit/new-id?"), {replaceUrl:true});
+      expect(address).toHaveBeenCalledWith(expect.stringContaining(`/instances/edit/${id.split("/").at(-1)}?`), {replaceUrl:true});
       if (failure !== "invalid identities") expect(acknowledge).not.toHaveBeenCalled();
       const calls = api.request.mock.calls.length;
       await host.save();

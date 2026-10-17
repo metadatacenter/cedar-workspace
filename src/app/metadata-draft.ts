@@ -1,5 +1,23 @@
-import { resourcePathId } from "./resource-address";
+import { mintedResourceId, resourcePathId } from "./resource-address";
 import type { CeeJsonObject, CeeRecoveryDraft } from "cedar-embeddable-editor";
+
+/** What one attempt to create the instance sent, kept to judge what the identity holds afterwards. */
+export interface MetadataCreateAttempt {
+  submitted: CeeJsonObject;
+  metadata: CeeJsonObject;
+  typedName: string;
+  needsElementIds: boolean;
+}
+
+/**
+ * The identity a create page sends every attempt under, from its first Save until an attempt is known
+ * to have created the instance. A draft written before identities were minted has none, and its
+ * outcome cannot be checked.
+ */
+export interface MetadataCreation {
+  id: string;
+  attempt?: MetadataCreateAttempt;
+}
 
 export interface MetadataDraft {
   format: "cedar-workspace-draft";
@@ -13,6 +31,7 @@ export interface MetadataDraft {
   etag: string | null;
   reloadRequired: boolean;
   uncertainCreation: boolean;
+  creation?: MetadataCreation;
   server?: {
     key: string;
     errors: { location: string; message: string }[];
@@ -90,10 +109,32 @@ export function readMetadataDraft(text: string, scope: string): MetadataDraft {
     (mode === "create" &&
       (value.saved !== undefined || !matches(value.draft.template))) ||
     (value.pending &&
-      (!matches(value.pending.opened) || !matches(value.pending.submitted)))
+      (!matches(value.pending.opened) || !matches(value.pending.submitted))) ||
+    (value.creation !== undefined && !validCreation(value, mode))
   )
     throw new Error();
   return value;
+}
+const object = (value: unknown): value is CeeJsonObject =>
+  !!value && typeof value === "object" && !Array.isArray(value);
+// Only a create page mints an identity, every attempt it records was sent under that identity, and an
+// outcome left unknown names the attempt whose result is to be looked up.
+function validCreation(value: MetadataDraft, mode: string): boolean {
+  const creation = value.creation;
+  const attempt = creation?.attempt;
+  return (
+    mode === "create" &&
+    object(creation) &&
+    mintedResourceId(creation.id, "template-instances") &&
+    (attempt === undefined
+      ? !value.uncertainCreation
+      : object(attempt) &&
+        object(attempt.submitted) &&
+        attempt.submitted["@id"] === creation.id &&
+        object(attempt.metadata) &&
+        typeof attempt.typedName === "string" &&
+        typeof attempt.needsElementIds === "boolean")
+  );
 }
 export class MetadataDraftStore {
   constructor(

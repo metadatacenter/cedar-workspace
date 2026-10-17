@@ -35,6 +35,31 @@ function bindNewElementIds(submitted: CeeJsonObject, stored: CeeJsonObject, sche
     });
   }
 }
+/**
+ * What an identity a create was sent under holds, read after the outcome of that create was lost.
+ * "saved" is the instance the last attempt submitted. "changed" is an instance this page created
+ * under the identity with other values, such as an earlier attempt that committed after a later one
+ * was sent. "unresolved" is anything that is not this page's instance of this template.
+ */
+export function metadataCreateOutcome(
+  creation: {id: string; attempt?: {submitted: CeeJsonObject}},
+  latest: {data: CeeJsonObject; etag: string | null}, template: CeeJsonObject,
+): "saved" | "changed" | "unresolved" {
+  if (!latest.etag || !object(latest.data) || latest.data["@id"] !== creation.id ||
+    latest.data["schema:isBasedOn"] !== template["@id"]) return "unresolved";
+  if (!creation.attempt) return "changed";
+  // The server stamps the creation provenance, which an instance never saved writes as null, and
+  // mints the identities of new elements. Anything else that differs makes the stored instance
+  // another one than this attempt sent.
+  const submitted = structuredClone(creation.attempt.submitted);
+  bindNewElementIds(submitted, latest.data, template);
+  const stored = structuredClone(latest.data);
+  for (const document of [submitted, stored]) {
+    delete document["pav:createdOn"];
+    delete document["pav:createdBy"];
+  }
+  return contentKey(submitted) === contentKey(stored) ? "saved" : "changed";
+}
 export function metadataUpdateOutcome(
   pending: {opened: CeeJsonObject; submitted: CeeJsonObject; etag: string},
   latest: {data: CeeJsonObject; etag: string | null}, template: CeeJsonObject,

@@ -15,6 +15,7 @@ import { MetadataEditor, metadataFieldLabel } from "./metadata-editor";
 import { Backend, HttpError } from "./backend.service";
 import { CeeLoader } from "./cee-loader";
 import { Confirmation } from "./confirmation";
+import { useDeploymentDomain } from "./resource-address";
 
 const good = {
   isValid: true,
@@ -188,6 +189,8 @@ describe("metadata save and recovery matrix", () => {
     };
   };
   beforeEach(() => {
+    // A create mints its identity on the deployment's base, and a write answers with that identity.
+    useDeploymentDomain("example");
     route = {
       snapshot: {
         paramMap: convertToParamMap({ mode: "edit", id: "instance" }),
@@ -196,10 +199,10 @@ describe("metadata save and recovery matrix", () => {
     };
     request
       .mockReset()
-      .mockImplementation(async (path: string, method = "GET") => ({
+      .mockImplementation(async (path: string, method = "GET", body?: { "@id"?: string }) => ({
         data:
           method !== "GET"
-            ? { "@id": "instance" }
+            ? { "@id": body?.["@id"] ?? "instance" }
             : path === "/templates/template"
               ? template
               : path.endsWith("/report") || path.startsWith("/folders/")
@@ -251,6 +254,7 @@ describe("metadata save and recovery matrix", () => {
     );
   });
   afterEach(() => {
+    useDeploymentDomain(null);
     host.ngOnDestroy();
     vi.unstubAllGlobals();
   });

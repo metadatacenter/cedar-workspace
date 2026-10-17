@@ -1,6 +1,16 @@
-import { resourceSelector, resourcePathId } from "./resource-address";
+import {
+  Collection,
+  mintResourceId,
+  resourceSelector,
+  resourcePathId,
+} from "./resource-address";
 import { OperationCoordinator } from "./operation-coordinator";
 import { writeRequiresRecovery } from "./write-failure";
+import {
+  ActionJournalStore,
+  actionJournalScope,
+  journaledActions,
+} from "./action-journal";
 import { validAccessReport } from "./access-validation";
 import { validListing } from "./resource";
 import { Tooltip } from "./tooltip";
@@ -35,10 +45,11 @@ import {
 } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { TranslatePipe } from "@ngx-translate/core";
-import { Backend, failureText } from "./backend.service";
+import { Backend, HttpError, failureText } from "./backend.service";
 import {
   Resource,
   Listing,
+  collections,
   title,
   can,
   openThroughAFolder,
@@ -115,6 +126,12 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
   private initialValues: string | null = null;
   private etag: string | null = null;
   private alive = true;
+  // New folder, Copy and Create Draft mint the identity they create at the first submit and send it
+  // with every attempt. A lookup of that identity, or of the version Publish last sent, settles a
+  // lost reply.
+  private identity: string | null = null;
+  private sentVersion: Version | null = null;
+  private journal?: ActionJournalStore;
   readonly state = new OperationCoordinator<"load" | "browse" | "write">();
   private originalFocus = document.activeElement as HTMLElement | null;
   get headingIcon() {
@@ -198,6 +215,9 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
       !decision() || this.values() !== values || this.resource !== resource ||
       this.action !== action || (this.busy() && !this.preparing())
     ) return;
+    // Closing abandons an action whose outcome is known. One whose outcome is unknown is kept, so
+    // reopening it cannot send a second copy, folder or draft.
+    if (!this.inspectionRequired()) this.forget();
     this.alive = false;
     this.state.dispose();
     this.closed.emit();
@@ -251,9 +271,11 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
         }
       }
       if (!operation.current()) return;
-      if (this.choosesFolder) await this.browse(destination);
+      if (this.choosesFolder)
+        await this.browse(destination, 0, this.folderSort, false);
       if (!operation.current()) return;
       if (!this.error()) this.reloadRequired.set(false);
+      if (!recovering) this.adoptRetained();
       operation.finish();
     } catch (e) {
       operation.fail(e);
@@ -286,7 +308,12 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
     // Only a rename holds what the person typed; the dialog's other actions have nothing to keep.
     this.error.set(failureText(e, this.i18n, this.action === "rename"));
   }
-  async browse(id: string, offset = 0, sort: FolderSort = this.folderSort) {
+  async browse(
+    id: string,
+    offset = 0,
+    sort: FolderSort = this.folderSort,
+    adopt = true,
+  ) {
     if (!this.alive || this.state.report.some(op => op.scope === "write" && op.status === "pending")) return;
     const operation = this.state.begin("browse");
     this.error.set("");
@@ -315,6 +342,8 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
       this.path.set(reply.data.pathInfo || []);
       this.targetResource = targetResource;
       this.error.set("");
+      // Choosing the destination of an unfinished action picks that action up again.
+      if (adopt) this.adoptRetained();
       operation.finish();
     } catch (e) {
       operation.fail(e);
@@ -376,11 +405,17 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
     if (!this.alive || this.busy() || this.reloadRequired() || !this.destinationAllowed) return;
     this.submitted = true;
     if (this.nameError || this.versionError) return;
+    // What is created gets its identity before the first attempt and keeps it for every later one,
+    // so a repeat can never create a second folder, copy or draft. Until the deployment's base is
+    // known no identity can be minted, and the server mints one as it always has.
+    const collection = this.createdCollection();
+    if (collection) this.identity ??= mintResourceId(collection);
     const operation = this.state.begin("write", ["load", "browse"]);
     this.busy.set(true);
     this.error.set("");
     const r = this.resource;
     const id = r?.["@id"];
+    const journaled = this.journaled;
     let attempted = false;
     try {
       if (
@@ -390,17 +425,27 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
         !this.etag
       )
         throw new Error(this.i18n.t("ResourceDialog.NoRevision"));
+      this.sentVersion = this.version;
+      if (journaled) this.retain(true);
       attempted = true;
       switch (this.action) {
-        case "new-folder":
-          await this.api.request("/folders", "POST", {
+        case "new-folder": {
+          const folder = {
             folderId: resourceSelector(this.folder),
             name: this.name.trim(),
             // The folder API requires a nonempty description even though it is
             // optional in the dialog. Use the folder name as the initial value.
             description: this.description.trim() || this.name.trim(),
-          });
+          };
+          await (this.identity
+            ? this.api.request(
+                "/folders/" + encodeURIComponent(resourcePathId(this.identity)),
+                "PUT",
+                { "@id": this.identity, ...folder },
+              )
+            : this.api.request("/folders", "POST", folder));
           break;
+        }
         case "rename":
           await this.api.request(
             "/command/rename-resource",
@@ -418,6 +463,7 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
             "@id": resourceSelector(id!),
             targetFolderId: resourceSelector(this.target),
             nameTemplate: this.name.trim(),
+            ...(this.identity ? { copyId: this.identity } : {}),
           });
           break;
         case "move":
@@ -442,6 +488,7 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
             // The draft is shared as the version it is drafted from is.
             propagateSharing: true,
             newFolderName: null,
+            ...(this.identity ? { draftId: this.identity } : {}),
           });
           break;
         case "delete":
@@ -466,6 +513,8 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
         default:
           throw new Error(this.i18n.t("ResourceDialog.UnknownAction"));
       }
+      // The outcome is known even when this dialog is no longer open to report it.
+      if (journaled) this.forget();
       if (operation.current()) {
         operation.finish();
         this.saved.emit();
@@ -475,13 +524,214 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
       if (operation.current()) {
         if (writeRequiresRecovery(e)) {
           this.reloadRequired.set(true);
-          // Creation/copy/publication lack a read-time validator: inspect the result in Workspace.
+          // Creation, copy and publication carry no revision, so only a lookup can settle them.
           this.inspectionRequired.set(attempted && !this.conditional);
         }
-        this.fail(e);
+        if (journaled && attempted) this.retain(this.inspectionRequired());
+        // An identity already taken may be this action's own earlier attempt. The status names
+        // Retry, and the transport's "changed since it was read" does not apply.
+        const occupied =
+          !!this.identity &&
+          e instanceof HttpError &&
+          [412, 428].includes(e.status);
+        if (occupied) this.error.set("");
+        else this.fail(e);
       }
     } finally {
       if (operation.current()) this.busy.set(false);
+    }
+  }
+  // An action is kept and looked up by what identifies its outcome: the identity it creates, or for
+  // Publish the version it sends.
+  private get journaled() {
+    return (
+      journaledActions.includes(this.action) &&
+      (this.action === "publish" || !!this.identity)
+    );
+  }
+  /** Retry offers a lookup only where one can settle the outcome. */
+  get settles() {
+    return (
+      this.inspectionRequired() &&
+      this.journaled &&
+      (this.action !== "publish" || !!this.sentVersion)
+    );
+  }
+  /**
+   * Learn whether the action whose reply was lost took effect, without sending it again. It did: the
+   * dialog completes as on success. It did not: submit is offered again with the same identity and
+   * values. Anything else leaves the dialog as it was, and Retry can be used again.
+   */
+  async settle() {
+    if (!this.alive || !this.settles || this.busy()) return;
+    const operation = this.state.begin("write", ["load", "browse"]);
+    this.busy.set(true);
+    this.error.set("");
+    try {
+      const outcome = await this.lookup();
+      if (!operation.current()) return;
+      if (outcome === "unresolved")
+        throw new Error(this.i18n.t("Errors.InvalidResourceReport"));
+      if (outcome === "committed") {
+        this.forget();
+        operation.finish();
+        this.saved.emit();
+        return;
+      }
+      this.reloadRequired.set(false);
+      this.inspectionRequired.set(false);
+      this.retain(false);
+      operation.finish();
+    } catch (e) {
+      operation.fail(e);
+      if (operation.current()) this.fail(e);
+    } finally {
+      if (operation.current()) this.busy.set(false);
+    }
+  }
+  private async lookup(): Promise<"committed" | "absent" | "unresolved"> {
+    const r = this.resource;
+    const same = (a: unknown, b: unknown) =>
+      typeof a === "string" &&
+      typeof b === "string" &&
+      resourceSelector(a) === resourceSelector(b);
+    // Not found answers the question. Any other refusal leaves it open.
+    const read = async (path: string) => {
+      try {
+        return (await this.api.request<Record<string, unknown>>(path)).data;
+      } catch (e) {
+        if (e instanceof HttpError && e.status === 404) return null;
+        throw e;
+      }
+    };
+    const address = (collection: string, id: string) =>
+      "/" + collection + "/" + encodeURIComponent(resourcePathId(id));
+    switch (this.action) {
+      case "new-folder": {
+        const folder = await read(address("folders", this.identity!));
+        if (!folder) return "absent";
+        const path = (folder as unknown as Resource).pathInfo;
+        // The parent is the second-to-last folder of the path.
+        return same(folder["@id"], this.identity) &&
+          Array.isArray(path) &&
+          same(path.at(-2)?.["@id"], this.folder)
+          ? "committed"
+          : "unresolved";
+      }
+      case "copy":
+      case "draft": {
+        const artifact = await read(
+          address(collections[r!.resourceType], this.identity!),
+        );
+        if (!artifact) return "absent";
+        const source =
+          this.action === "copy" ? "pav:derivedFrom" : "pav:previousVersion";
+        return same(artifact["@id"], this.identity) &&
+          same(artifact[source], r!["@id"])
+          ? "committed"
+          : "unresolved";
+      }
+      case "publish": {
+        const source = await read(
+          address(collections[r!.resourceType], r!["@id"]),
+        );
+        if (
+          source?.["bibo:status"] === "bibo:published" &&
+          source["pav:version"] === formatVersion(this.sentVersion!)
+        )
+          return "committed";
+        return source?.["bibo:status"] === "bibo:draft" &&
+          source["pav:version"] === r!["pav:version"]
+          ? "absent"
+          : "unresolved";
+      }
+    }
+    return "unresolved";
+  }
+  /** The collection the action creates in, or null for an action that creates nothing. */
+  private createdCollection(): Collection | null {
+    if (this.action === "new-folder") return "folders";
+    if ((this.action === "copy" || this.action === "draft") && this.resource)
+      return collections[this.resource.resourceType] as Collection;
+    return null;
+  }
+  // Each action on each item at each destination has its own journal entry. Without a deployment,
+  // an account or browser storage, nothing is kept and the dialog works as before.
+  private journalStore(): ActionJournalStore | null {
+    if (!journaledActions.includes(this.action)) return null;
+    try {
+      const deployment = this.api.config?.resourceRestAPI;
+      const account = this.api.userId;
+      if (!deployment || !account) return null;
+      const destination =
+        this.action === "new-folder"
+          ? this.folder
+          : this.action === "publish"
+            ? ""
+            : this.target;
+      return new ActionJournalStore(
+        actionJournalScope(
+          deployment,
+          account,
+          this.action,
+          resourceSelector(this.resource?.["@id"] ?? ""),
+          resourceSelector(destination),
+        ),
+        sessionStorage,
+      );
+    } catch {
+      return null;
+    }
+  }
+  private retain(uncertain: boolean) {
+    const store = this.journalStore();
+    // A destination chosen after an attempt that did not happen moves the entry there.
+    if (this.journal && this.journal.scope !== store?.scope) this.forget();
+    if (!store) return;
+    this.journal = store;
+    try {
+      store.write({
+        format: "cedar-workspace-action",
+        version: 1,
+        scope: store.scope,
+        id: this.identity,
+        values: {
+          name: this.name,
+          description: this.description,
+          version: this.sentVersion ?? this.version,
+        },
+        uncertain,
+      });
+    } catch {}
+  }
+  private forget() {
+    try {
+      this.journal?.clear();
+    } catch {}
+    this.journal = undefined;
+  }
+  // A dialog that has sent nothing takes up the entry for its action, item and destination: the
+  // identity, the values, and whether the outcome is still unknown.
+  private adoptRetained() {
+    if (this.identity || this.journal || this.sentVersion) return;
+    const store = this.journalStore();
+    if (!store) return;
+    let entry;
+    try {
+      entry = store.read(this.createdCollection());
+    } catch {
+      return;
+    }
+    if (!entry) return;
+    this.journal = store;
+    this.identity = entry.id;
+    this.sentVersion = entry.values.version;
+    this.name = entry.values.name;
+    this.description = entry.values.description;
+    this.version = entry.values.version;
+    if (entry.uncertain) {
+      this.reloadRequired.set(true);
+      this.inspectionRequired.set(true);
     }
   }
 }

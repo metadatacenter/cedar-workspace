@@ -18,12 +18,14 @@ type Reply = {
   etag: string | null;
 };
 const same = (a: Draft, b: Draft) => a.name === b.name && a.value === b.value;
-const body = (draft: Draft) => ({
-  "@id": "instance",
+const body = (draft: Draft, id = "instance") => ({
+  "@id": id,
   "schema:isBasedOn": "template",
   "schema:name": draft.name,
   Value: { "@value": draft.value },
 });
+const created =
+  /^\/template-instances\/([0-9a-f-]{36})\?folder_id=home$/;
 
 /** The reference records user intent and server acknowledgements, never host state-machine helpers.
  * Only CEE's public boundary and HTTP/confirmation transport are simulated. */
@@ -38,6 +40,9 @@ async function replay(mode: "create" | "edit", history: Command[]) {
   const rig = await started;
   let host = rig.host;
   let server: Draft = { name: "Original", value: "original" };
+  // The instance the server holds, and the identity each page's create series is sent under.
+  let serverId = "instance";
+  let series: string | undefined;
   let version = 1,
     serverWritable = true,
     epoch = 0,
@@ -55,6 +60,7 @@ async function replay(mode: "create" | "edit", history: Command[]) {
     epoch: number;
     draft: Draft;
     create: boolean;
+    id: string;
   }> = [];
   const decisions: Array<{
     reply: ReturnType<typeof deferred<boolean>>;
@@ -75,6 +81,8 @@ async function replay(mode: "create" | "edit", history: Command[]) {
     writable = serverWritable;
     recovery = uncertain = saving = false;
     rejected = undefined;
+    // A new page without a journal starts a new create series.
+    series = undefined;
   };
   resetReference();
   rig.revision('"v1"');
@@ -84,10 +92,23 @@ async function replay(mode: "create" | "edit", history: Command[]) {
   rig.request.mockImplementation((path, method = "GET", payload, etag) => {
     if (method === "GET") return originalRequest(path, method, payload, etag);
     const reply = deferred<Reply>();
-    expect(method, "write method follows acknowledged identity").toBe(
-      saved ? "PUT" : "POST",
-    );
+    expect(method, "creates and updates both write to an identity").toBe("PUT");
     expect(etag, "write uses last acknowledged/read revision").toBe(revision);
+    const id = String((payload as Record<string, unknown>)?.["@id"]);
+    if (saved)
+      expect(path, "an update writes to the acknowledged identity").toBe(
+        "/template-instances/" + serverId.split("/").at(-1),
+      );
+    else {
+      const uuid = created.exec(String(path))?.[1];
+      expect(id, "a create is sent under its identity").toBe(
+        `https://repo.example/template-instances/${uuid}`,
+      );
+      // At most one identity per create series: a repeat can never make a second instance.
+      expect(id, "every create in a series reuses its identity").toBe(
+        (series ??= id),
+      );
+    }
     expect(
       (payload as Record<string, unknown>)?.["schema:name"],
       "write snapshots the current name",
@@ -102,6 +123,7 @@ async function replay(mode: "create" | "edit", history: Command[]) {
       epoch,
       draft: { ...draft },
       create: !saved,
+      id,
     });
     return reply.promise;
   });
@@ -109,7 +131,10 @@ async function replay(mode: "create" | "edit", history: Command[]) {
     async () => {
       routeMode = "edit";
       Object.assign(TestBed.inject(ActivatedRoute).snapshot, {
-        paramMap: convertToParamMap({ mode: "edit", id: "instance" }),
+        paramMap: convertToParamMap({
+          mode: "edit",
+          id: serverId.split("/").at(-1)!,
+        }),
       });
       return true;
     },
@@ -127,7 +152,7 @@ async function replay(mode: "create" | "edit", history: Command[]) {
     return reply.promise;
   });
   const updateServer = () => {
-    rig.server(body(server));
+    rig.server(body(server, serverId));
     rig.revision(`"v${version}"`);
     rig.access(serverWritable);
   };
@@ -165,10 +190,11 @@ async function replay(mode: "create" | "edit", history: Command[]) {
     const success = outcome === 0 || outcome === 5;
     if (success) {
       server = { ...entry.draft, name: entry.draft.name.trim() };
+      serverId = entry.id;
       version++;
       updateServer();
       entry.reply.resolve({
-        data: body(server),
+        data: body(server, serverId),
         etag: outcome === 5 ? null : `"v${version}"`,
       });
       if (current) {
@@ -195,7 +221,8 @@ async function replay(mode: "create" | "edit", history: Command[]) {
       );
       if (current) {
         recovery = status !== 400;
-        uncertain = entry.create && (status === 500 || status === 0);
+        // A create refused because its identity is taken has an unknown outcome as well.
+        uncertain = entry.create && [0, 412, 500].includes(status);
         if (same(draft, entry.draft)) rejected = { ...draft };
       }
     }
