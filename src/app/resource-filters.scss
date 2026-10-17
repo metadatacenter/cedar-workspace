@@ -16,16 +16,10 @@
   align-items: center;
 }
 .popover {
-  @include patterns.menu-surface;
+  @include patterns.filter-popover(var(--filter-available-height, 70vh));
   position: absolute;
   top: calc(100% + var(--cedar-space-2));
   left: 0;
-  min-width: 280px;
-  max-width: 100%;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  max-height: min(70vh, var(--filter-available-height, 70vh));
 }
 .date {
   width: 640px;
@@ -97,10 +91,7 @@ input[type="checkbox"] {
   margin: 0;
 }
 footer {
-  flex: none;
-  display: flex;
-  align-items: center;
-  border-top: 1px solid var(--cedar-border-rule);
+  @include patterns.filter-popover-footer;
 }
 footer span {
   flex: 1;
