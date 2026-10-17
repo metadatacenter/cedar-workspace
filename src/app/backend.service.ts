@@ -1,3 +1,4 @@
+import { record } from "./access-validation";
 import { resourcePathId } from "./resource-address";
 import type { UserProfile } from "./account-types";
 import { Injectable, inject } from "@angular/core";
@@ -31,6 +32,8 @@ export class HttpError extends Error {
     readonly validationReport?: unknown,
     /** For a 412, whether the item is gone rather than changed. */
     readonly deleted = false,
+    /** The structured values the error body carries, such as the outcome of a refused deletion. */
+    readonly objects: Readonly<Record<string, unknown>> = {},
   ) {
     super(message);
   }
@@ -194,11 +197,12 @@ export class Backend {
         let message = "";
         let code: string | undefined;
         let validationReport: unknown;
+        let objects: Record<string, unknown> = {};
         try {
           const data = await response.json();
           message = data.message || data.error || "";
-          if (typeof data.code === "string") code = data.code;
-          else if (typeof data.errorKey === "string") code = data.errorKey;
+          if (typeof data.errorKey === "string") code = data.errorKey;
+          if (record(data.objects)) objects = data.objects;
           validationReport =
             data.objects?.validationReport ?? data.validationReport;
         } catch {}
@@ -210,6 +214,7 @@ export class Backend {
             code,
             undefined,
             deleted,
+            objects,
           );
         }
         throw new HttpError(
@@ -218,6 +223,8 @@ export class Backend {
             this.i18n.t("Errors.RequestFailed", { status: response.status }),
           code,
           validationReport,
+          false,
+          objects,
         );
       }
       return response;

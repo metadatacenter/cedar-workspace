@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures.mjs';
-import { deletionPlan, deletionOwnerRefusal, openFolderDeletion } from './folder-deletion-fixture.mjs';
+import { cedarError, deletionPlan, deletionOwnerRefusal, openFolderDeletion } from './folder-deletion-fixture.mjs';
 
 test('recursive delete inventories every type and sends only the confirmed token after explicit confirmation', async ({page, api}) => {
   let submitted = null;
@@ -54,7 +54,11 @@ test('stale confirmation requires a refreshed inventory and never retries automa
   let attempts = 0;
   const dialog = await openFolderDeletion(page, deletionPlan, route => {
     attempts++;
-    return route.fulfill({status: 409, json: {message: 'The folder changed. Review a new inventory before deleting.'}});
+    const message = 'The folder changed. Review a new inventory before deleting.';
+    return route.fulfill({status: 409, json: cedarError(409, 'CONFLICT', {message, objects: {outcome: {
+      status: 'changed', deleted: {folder: 0, template: 0, element: 0, field: 0, instance: 0}, remaining: 7, message,
+      code: 'FOLDER_DELETE_CHANGED',
+    }}})});
   });
   await dialog.getByRole('button', {name: 'Delete folder and contents', exact: true}).click();
   await expect(dialog.getByRole('alert')).toContainText('The folder changed');
