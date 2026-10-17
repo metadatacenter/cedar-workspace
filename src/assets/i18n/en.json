@@ -253,6 +253,8 @@
     "LegacyInspectOutcome": "This operation may already have completed. Close this dialog and refresh Workspace to check the result before trying again.",
     "RecoverRevision": "Reload the current revision before saving again. Your edits will be kept.",
     "RecoveryDenied": "The current resource permissions do not allow this operation.",
+    "PublishOnlyByOwner": "Only the owner of this artifact can publish it.",
+    "DraftOnlyByOwner": "Only the owner of this artifact can create a draft of it.",
     "Headings": {
       "NewFolder": "New folder",
       "Rename": "Rename",

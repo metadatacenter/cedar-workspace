@@ -333,6 +333,79 @@ describe("dialog actions settled by a lookup", () => {
       next.ngOnDestroy();
     });
 
+  // Only an artifact's owner may publish it or create a draft of it, and the server refuses anyone else
+  // with a 403 under its own key. Nothing happened, so no retained entry survives and no Retry is offered.
+  // Any other 403 still leaves the outcome to be checked, and a refusal for a reason in the artifact is a
+  // 400 that keeps the entry with its outcome known, as before.
+  const ownerOnlyText: Record<string, string> = {
+    publish: "Only the owner of this artifact can publish it.",
+    draft: "Only the owner of this artifact can create a draft of it.",
+  };
+  const retained = () =>
+    Object.keys(sessionStorage).map((key) => JSON.parse(sessionStorage.getItem(key)!));
+  for (const action of ["publish", "draft"]) {
+    it(`${action}: a refusal to anyone but the owner keeps nothing and offers no Retry`, async () => {
+      const m = actionRig(action);
+      const host = await m.open();
+      const saved = vi.fn();
+      host.saved.subscribe(saved);
+      m.request.mockRejectedValueOnce(
+        new HttpError(403, "Request failed (403).", "versioningOnlyByOwner"),
+      );
+      await host.submit();
+      expect(host.error()).toBe(ownerOnlyText[action]);
+      expect(host.reloadRequired()).toBe(false);
+      expect(host.inspectionRequired()).toBe(false);
+      expect(host.settles).toBe(false);
+      expect(host.busy()).toBe(false);
+      expect(retained()).toEqual([]);
+      // A dialog opened afterwards finds nothing to take up.
+      const next = await m.open();
+      expect(next.inspectionRequired()).toBe(false);
+      expect(next.reloadRequired()).toBe(false);
+      next.ngOnDestroy();
+      // OK is offered as before. Once the server accepts, the action is sent as a new attempt.
+      m.world.lost = false;
+      await host.submit();
+      expect(saved).toHaveBeenCalledOnce();
+      expect(m.sent()).toHaveLength(2);
+      if (action === "draft") {
+        expect(m.sent()[1]).toMatch(minted.draft);
+        expect(m.sent()[1]).not.toBe(m.sent()[0]);
+      }
+      expect(retained()).toEqual([]);
+      host.ngOnDestroy();
+    });
+
+    for (const code of [undefined, "noWriteAccessToFolder"])
+      it(`${action}: a 403 ${code ? `under ${code}` : "without a key"} still leaves the outcome to be checked`, async () => {
+        const m = actionRig(action);
+        const host = await m.open();
+        m.request.mockRejectedValueOnce(new HttpError(403, "Request failed (403).", code));
+        await host.submit();
+        expect(host.error()).toBe("Request failed (403).");
+        expect(host.reloadRequired()).toBe(true);
+        expect(host.inspectionRequired()).toBe(true);
+        expect(host.settles).toBe(true);
+        expect(retained()).toEqual([expect.objectContaining({ uncertain: true })]);
+        host.ngOnDestroy();
+      });
+
+    for (const code of ["publishOnlyDraft", "createDraftOnlyFromPublished", "versioningOnlyOnLatest", "nonVersionedArtifactType"])
+      it(`${action}: a 400 under ${code} is still a plain refusal`, async () => {
+        const m = actionRig(action);
+        const host = await m.open();
+        m.request.mockRejectedValueOnce(new HttpError(400, "Request failed (400).", code));
+        await host.submit();
+        expect(host.error()).toBe("Request failed (400).");
+        expect(host.reloadRequired()).toBe(false);
+        expect(host.inspectionRequired()).toBe(false);
+        expect(host.settles).toBe(false);
+        expect(retained()).toEqual([expect.objectContaining({ uncertain: false })]);
+        host.ngOnDestroy();
+      });
+  }
+
   it("publish: a source published at another version than the one sent stays unresolved", async () => {
     const m = actionRig("publish");
     const host = await m.open();

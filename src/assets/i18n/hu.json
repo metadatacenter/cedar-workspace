@@ -253,6 +253,8 @@
     "LegacyInspectOutcome": "A művelet már végrehajtódhatott. Zárja be ezt az ablakot, és frissítse a munkaterületet az eredmény ellenőrzéséhez, mielőtt újra próbálkozik.",
     "RecoverRevision": "Újabb mentés előtt töltse be az aktuális változatot. A módosításai megmaradnak.",
     "RecoveryDenied": "Az erőforrás jelenlegi jogosultságai nem engedélyezik ezt a műveletet.",
+    "PublishOnlyByOwner": "Ezt az erőforrást csak a tulajdonosa teheti közzé.",
+    "DraftOnlyByOwner": "Ebből az erőforrásból csak a tulajdonosa hozhat létre vázlatot.",
     "Headings": {
       "NewFolder": "Új mappa",
       "Rename": "Átnevezés",

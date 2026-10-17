@@ -5,7 +5,7 @@ import {
   resourcePathId,
 } from "./resource-address";
 import { OperationCoordinator } from "./operation-coordinator";
-import { writeRequiresRecovery } from "./write-failure";
+import { refusedToNonOwner, writeRequiresRecovery } from "./write-failure";
 import {
   ActionJournalStore,
   actionJournalScope,
@@ -521,7 +521,19 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
       }
     } catch (e) {
       operation.fail(e);
-      if (operation.current()) {
+      if (operation.current() && this.ownerOnly(e)) {
+        // Only the owner may publish an artifact or create a draft of it. Nothing happened, so nothing is
+        // kept for a later attempt to settle, and the identity this attempt was sent under is discarded.
+        this.forget();
+        this.identity = null;
+        this.error.set(
+          this.i18n.t(
+            this.action === "publish"
+              ? "ResourceDialog.PublishOnlyByOwner"
+              : "ResourceDialog.DraftOnlyByOwner",
+          ),
+        );
+      } else if (operation.current()) {
         if (writeRequiresRecovery(e)) {
           this.reloadRequired.set(true);
           // Creation, copy and publication carry no revision, so only a lookup can settle them.
@@ -548,6 +560,10 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
       journaledActions.includes(this.action) &&
       (this.action === "publish" || !!this.identity)
     );
+  }
+  /** Whether this Publish or Create Draft was refused because the person is not the artifact's owner. */
+  private ownerOnly(error: unknown) {
+    return ["publish", "draft"].includes(this.action) && refusedToNonOwner(error);
   }
   /** Retry offers a lookup only where one can settle the outcome. */
   get settles() {
