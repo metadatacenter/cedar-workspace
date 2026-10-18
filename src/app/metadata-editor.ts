@@ -325,8 +325,10 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     this.unreadable.set(false);
     this.error.set("");
     this.editor?.nativeElement.removeEventListener("change", this.changed);
-    this.editor?.nativeElement.removeEventListener("validationChange", this.validated);
-    this.editor?.nativeElement.removeEventListener("validationChange", this.validated);
+    this.editor?.nativeElement.removeEventListener(
+      "validationChange",
+      this.validated,
+    );
     try {
       if (!(await this.api.init()) || !operation.current()) return;
       this.folder =
@@ -454,7 +456,6 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       this.savedHere = false;
       this.notice.set("");
       this.cee.addEventListener("change", this.changed);
-      this.cee.addEventListener("validationChange", this.validated);
       this.cee.addEventListener("validationChange", this.validated);
       this.refreshQuality();
       this.loading.set(false);
@@ -906,9 +907,10 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         };
         if (!candidate.restoreDraft?.(value.draft)) throw new Error();
         this.editor?.nativeElement.removeEventListener("change", this.changed);
-    this.editor?.nativeElement.removeEventListener("validationChange", this.validated);
-        this.editor?.nativeElement.removeEventListener("validationChange", this.validated);
-    this.editor?.nativeElement.removeEventListener("validationChange", this.validated);
+        this.editor?.nativeElement.removeEventListener(
+          "validationChange",
+          this.validated,
+        );
         this.editorHost.nativeElement.replaceChildren(candidate);
       } finally {
         holder.remove();
@@ -993,7 +995,6 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       this.recoveryDraft.set(null);
       this.cee.addEventListener("change", this.changed);
       this.cee.addEventListener("validationChange", this.validated);
-      this.cee.addEventListener("validationChange", this.validated);
       this.changed();
       if (value.server) {
         this.state.reject(value.server, value.server.key, this.template);
@@ -1031,7 +1032,10 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     return (
       !this.loading() &&
       !this.saving() &&
-      (this.quality()?.pendingValidation === true || this.validationErrors.length > 0 || this.state.reloadRequired())
+      (this.quality()?.pendingValidation === true ||
+        this.quality()?.canSave === false ||
+        this.validationErrors.length > 0 ||
+        this.state.reloadRequired())
     );
   }
   get missingRequired() {
@@ -1115,7 +1119,12 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     )
       return;
     this.refreshQuality();
-    if (this.quality()?.pendingValidation || this.validationErrors.length) return;
+    if (
+      this.quality()?.pendingValidation ||
+      this.quality()?.canSave === false ||
+      this.validationErrors.length
+    )
+      return;
     const operation = this.state.begin("save");
     const submittedKey = this.draftKey();
     this.saving.set(true);
@@ -1156,9 +1165,9 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         // Every attempt creates under the one identity, so a repeat can never make a second
         // instance, and a lost reply is settled by reading that identity. Until the deployment's
         // base is known no identity can be minted, and the server mints one as it always has.
-        const id =
-          this.creation?.id ?? mintResourceId("template-instances");
-        const folder = "?folder_id=" + encodeURIComponent(resourceSelector(this.folder));
+        const id = this.creation?.id ?? mintResourceId("template-instances");
+        const folder =
+          "?folder_id=" + encodeURIComponent(resourceSelector(this.folder));
         path = "/template-instances" + folder;
         if (id) {
           metadata["@id"] = id;
@@ -1173,7 +1182,9 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
             },
           };
           path =
-            "/template-instances/" + encodeURIComponent(resourcePathId(id)) + folder;
+            "/template-instances/" +
+            encodeURIComponent(resourcePathId(id)) +
+            folder;
         }
       }
       if (this.saved && this.etag)
@@ -1395,14 +1406,18 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     const blocked = () => this.recoveryTemplateChanged || !this.writable();
     try {
       const path =
-        "/template-instances/" + encodeURIComponent(resourcePathId(creation.id));
+        "/template-instances/" +
+        encodeURIComponent(resourcePathId(creation.id));
       const [stored, report] = await Promise.allSettled([
         this.api.request<CeeJsonObject>(path),
         this.api.request<Resource>(path + "/report"),
       ]);
       if (!operation.current()) return;
       if (stored.status === "rejected") {
-        if (!(stored.reason instanceof HttpError) || stored.reason.status !== 404)
+        if (
+          !(stored.reason instanceof HttpError) ||
+          stored.reason.status !== 404
+        )
           throw stored.reason;
         this.state.uncertainCreation.set(false);
         this.state.reloadRequired.set(blocked());
@@ -1623,7 +1638,9 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     this.alive = false;
     this.state.dispose();
     this.editor?.nativeElement.removeEventListener("change", this.changed);
-    this.editor?.nativeElement.removeEventListener("validationChange", this.validated);
-    this.editor?.nativeElement.removeEventListener("validationChange", this.validated);
+    this.editor?.nativeElement.removeEventListener(
+      "validationChange",
+      this.validated,
+    );
   }
 }

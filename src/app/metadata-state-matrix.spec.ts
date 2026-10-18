@@ -51,6 +51,79 @@ function nested(depth: number, repeated: boolean, fieldType: string) {
 }
 
 describe("metadata validation ownership matrix", () => {
+  it("consumes categorized server facts once and separates quality from saveability", () => {
+    const { template, pointer } = nested(1, true, "repeated");
+    const state = new MetadataState();
+    state.observe(good, "current");
+    const quality = {
+      code: "maxValue",
+      category: "constraint",
+      path: pointer,
+      message: "Above the maximum",
+    };
+    state.reject(
+      {
+        findings: [quality],
+        warnings: [{ location: pointer, message: quality.message }],
+      },
+      "current",
+      template,
+    );
+    expect(state.quality()!.problems).toHaveLength(1);
+    expect(state.quality()).toMatchObject({
+      isValid: false,
+      canSave: true,
+      structurallyValid: true,
+    });
+    state.reject(
+      {
+        findings: [
+          quality,
+          {
+            code: "missingProperty",
+            category: "structural",
+            path: pointer,
+            message: "Missing @value",
+          },
+        ],
+      },
+      "current",
+      template,
+    );
+    expect(state.quality()!.problems).toHaveLength(2);
+    expect(state.quality()).toMatchObject({
+      isValid: false,
+      canSave: false,
+      structurallyValid: false,
+    });
+  });
+
+  it("honors a current common save verdict over legacy severity", () => {
+    expect(
+      problemSeverity({
+        code: "minValue",
+        blocksSave: false,
+        severity: "error",
+        path: [],
+        occurrences: [],
+        field: "",
+        inputType: null,
+        message: "",
+      }),
+    ).toBe("warning");
+    expect(
+      problemSeverity({
+        code: "missingProperty",
+        blocksSave: true,
+        severity: "warning",
+        path: [],
+        occurrences: [],
+        field: "",
+        inputType: null,
+        message: "",
+      }),
+    ).toBe("error");
+  });
   for (const depth of [0, 1, 3, 8])
     for (const repeated of [false, true])
       for (const fieldType of ["textfield", "repeated", "checkbox", "list"])
@@ -102,7 +175,15 @@ describe("metadata validation ownership matrix", () => {
             expect(state.quality()!.problems).toEqual([]);
           });
         }
-  for (const code of ["required", "minItems", "iri", "unknownFutureCode"])
+  for (const code of [
+    "required",
+    "minItems",
+    "minValue",
+    "regex",
+    "missingProperty",
+    "iri",
+    "unknownFutureCode",
+  ])
     for (const severity of [undefined, "warning", "error"] as const) {
       it(`honors explicit severity for ${code}/${severity}`, () => {
         const problem = {
@@ -116,14 +197,17 @@ describe("metadata validation ownership matrix", () => {
         };
         const expected =
           severity ??
-          (["required", "minItems"].includes(code) ? "warning" : "error");
+          (["required", "minItems", "minValue", "regex"].includes(code)
+            ? "warning"
+            : "error");
         expect(problemSeverity(problem)).toBe(expected);
         const state = new MetadataState();
         state.observe({ ...good, problems: [problem] }, "current");
         expect(state.quality()!.problems[0]).toMatchObject({
           severity: expected,
         });
-        expect(state.quality()!.isValid).toBe(expected === "warning");
+        expect(state.quality()!.isValid).toBe(false);
+        expect(state.quality()!.canSave).toBe(expected === "warning");
         expect(problem.severity).toBe(severity);
       });
     }
@@ -199,25 +283,27 @@ describe("metadata save and recovery matrix", () => {
     };
     request
       .mockReset()
-      .mockImplementation(async (path: string, method = "GET", body?: { "@id"?: string }) => ({
-        data:
-          method !== "GET"
-            ? { "@id": body?.["@id"] ?? "instance" }
-            : path === "/templates/template"
-              ? template
-              : path.endsWith("/report") || path.startsWith("/folders/")
-                ? {
-                    currentUserPermissions: {
-                      capabilities: ["updateResource", "createInFolder"],
+      .mockImplementation(
+        async (path: string, method = "GET", body?: { "@id"?: string }) => ({
+          data:
+            method !== "GET"
+              ? { "@id": body?.["@id"] ?? "instance" }
+              : path === "/templates/template"
+                ? template
+                : path.endsWith("/report") || path.startsWith("/folders/")
+                  ? {
+                      currentUserPermissions: {
+                        capabilities: ["updateResource", "createInFolder"],
+                      },
+                    }
+                  : {
+                      "@id": "instance",
+                      "schema:isBasedOn": "template",
+                      "schema:name": "Original",
                     },
-                  }
-                : {
-                    "@id": "instance",
-                    "schema:isBasedOn": "template",
-                    "schema:name": "Original",
-                  },
-        etag: '"one"',
-      }));
+          etag: '"one"',
+        }),
+      );
     navigate.mockReset().mockResolvedValue(true);
     confirm.mockReset().mockResolvedValue(false);
     TestBed.configureTestingModule({
@@ -232,7 +318,10 @@ describe("metadata save and recovery matrix", () => {
         },
         { provide: ActivatedRoute, useValue: route },
         { provide: Router, useValue: { navigateByUrl: navigate } },
-        { provide: CeeLoader, useValue: { load: async () => {}, mountEditor: () => cee } },
+        {
+          provide: CeeLoader,
+          useValue: { load: async () => {}, mountEditor: () => cee },
+        },
         { provide: Confirmation, useValue: { confirm } },
       ],
     });
@@ -244,7 +333,15 @@ describe("metadata save and recovery matrix", () => {
       dataQualityReport: structuredClone(good),
       reveal: vi.fn().mockResolvedValue(true),
     });
-    Object.assign(cee, { captureSave: () => ({metadata: structuredClone(cee.currentMetadata), needsElementIds: false, acknowledge: () => { throw new Error("Unexpected acknowledgement"); }}) });
+    Object.assign(cee, {
+      captureSave: () => ({
+        metadata: structuredClone(cee.currentMetadata),
+        needsElementIds: false,
+        acknowledge: () => {
+          throw new Error("Unexpected acknowledgement");
+        },
+      }),
+    });
     host = TestBed.runInInjectionContext(() => new MetadataEditor());
     host.editorHost = new ElementRef(document.createElement("div"));
     host.editor = new ElementRef(cee);

@@ -5,26 +5,38 @@ import type {
   CeeValidationProblem,
 } from "cedar-embeddable-editor";
 import { OperationCoordinator } from "./operation-coordinator";
+import {
+  ValidationPolicy,
+  type ValidationCategory,
+  type VerificationStatus,
+} from "cedar-model-typescript-library/policy";
 
 /** Accept older component reports at the boundary, then classify every emitted problem. */
 export type MetadataProblem = Omit<CeeValidationProblem, "severity"> & {
   severity?: "error" | "warning";
   origin?: "server";
   displayMessage?: string;
+  blocksSave?: boolean;
+  category?: ValidationCategory;
+  verificationStatus?: VerificationStatus;
 };
 type ClassifiedProblem = MetadataProblem & { severity: "error" | "warning" };
 type MetadataReport = Omit<CeeDataQualityReport, "problems"> & {
   pendingValidation?: boolean;
+  canSave?: boolean;
+  structurallyValid?: boolean;
   problems: ClassifiedProblem[];
 };
 export const problemSeverity = (problem: MetadataProblem) =>
-  problem.severity === undefined
-    ? ["required", "minItems"].includes(problem.code)
-      ? "warning"
-      : "error"
-    : problem.severity === "warning"
-      ? "warning"
-      : "error";
+  typeof problem.blocksSave === "boolean"
+    ? problem.blocksSave
+      ? "error"
+      : "warning"
+    : problem.severity === undefined
+      ? ValidationPolicy.severity(problem.code)
+      : problem.severity === "warning"
+        ? "warning"
+        : "error";
 const object = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === "object" && !Array.isArray(value);
 
@@ -147,22 +159,55 @@ export class MetadataState extends OperationCoordinator<
   reject(value: unknown, key: string, template: CeeJsonObject) {
     if (key !== this.currentKey || !object(value)) return;
     const problems: ClassifiedProblem[] = [];
-    for (const severity of ["error", "warning"] as const) {
-      const entries = value[severity === "error" ? "errors" : "warnings"];
-      if (!Array.isArray(entries)) continue;
-      for (const entry of entries) {
-        if (!object(entry) || typeof entry["message"] !== "string") continue;
-        const location = metadataLocation(template, entry["location"]);
+    const findings = value["findings"];
+    if (Array.isArray(findings)) {
+      for (const fact of findings) {
+        if (
+          !object(fact) ||
+          typeof fact["code"] !== "string" ||
+          typeof fact["message"] !== "string" ||
+          typeof fact["path"] !== "string" ||
+          fact["verificationStatus"] === "passed"
+        )
+          continue;
+        const category = ValidationPolicy.category(fact["code"]);
+        const blocksSave = ValidationPolicy.blocksSave(fact["code"]);
+        const location = metadataLocation(template, fact["path"]);
         problems.push({
-          code: "serverValidation",
-          severity,
+          code: fact["code"],
+          category,
+          blocksSave,
+          severity: blocksSave ? "error" : "warning",
           origin: "server",
           path: location?.path ?? [],
           occurrences: location?.occurrences ?? [],
-          field: typeof entry["location"] === "string" ? entry["location"] : "",
+          field: fact["path"],
           inputType: null,
-          message: entry["message"],
+          message: fact["message"],
         });
+      }
+    }
+    // Older servers expose only errors/warnings. New reports include the same legacy rows,
+    // so prefer categorized facts instead of presenting each finding twice.
+    if (!Array.isArray(findings) || problems.length === 0) {
+      for (const severity of ["error", "warning"] as const) {
+        const entries = value[severity === "error" ? "errors" : "warnings"];
+        if (!Array.isArray(entries)) continue;
+        for (const entry of entries) {
+          if (!object(entry) || typeof entry["message"] !== "string") continue;
+          const location = metadataLocation(template, entry["location"]);
+          problems.push({
+            code: "serverValidation",
+            severity,
+            origin: "server",
+            path: location?.path ?? [],
+            occurrences: location?.occurrences ?? [],
+            field:
+              typeof entry["location"] === "string" ? entry["location"] : "",
+            inputType: null,
+            message: entry["message"],
+          });
+        }
       }
     }
     this.server = { key, problems };
@@ -196,9 +241,13 @@ export class MetadataState extends OperationCoordinator<
     this.quality.set({
       ...this.local,
       problems,
-      isValid:
-        this.local.isValid &&
+      canSave:
+        this.local.canSave !== false &&
         !problems.some((p) => problemSeverity(p) === "error"),
+      structurallyValid:
+        this.local.structurallyValid !== false &&
+        !problems.some((p) => problemSeverity(p) === "error"),
+      isValid: this.local.isValid && problems.length === 0,
     });
   }
 }

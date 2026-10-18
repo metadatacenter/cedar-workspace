@@ -687,7 +687,7 @@ describe("Modern metadata host", () => {
     expect(host.dirty()).toBe(false);
     expect(host.validationErrors).toEqual([]);
   });
-  it("blocks invalid values but permits warnings once errors are corrected", async () => {
+  it("blocks structural defects but permits warnings once they are corrected", async () => {
     await edit();
     Object.assign(cee.dataQualityReport, {
       isValid: false,
@@ -701,17 +701,17 @@ describe("Modern metadata host", () => {
         {
           path: ["Email"],
           field: "Email",
-          code: "email",
-          message: "Not a valid email address.",
-          displayMessage: "Enter a valid email.",
+          code: "valueType",
+          message: "The answer must be a string.",
+          displayMessage: "Enter a text value.",
         },
       ],
     });
     host.changed();
     expect(host.validationWarnings).toHaveLength(1);
     expect(host.validationErrors).toHaveLength(1);
-    expect(host.validationErrors[0].message).toBe("Enter a valid email.");
-    expect(host.validationErrors[0].diagnostic).toBe("Not a valid email address.");
+    expect(host.validationErrors[0].message).toBe("Enter a text value.");
+    expect(host.validationErrors[0].diagnostic).toBe("The answer must be a string.");
     // Each listed problem leads to its field.
     const reveal = vi.fn().mockResolvedValue(true);
     Object.defineProperty(cee, "reveal", { value: reveal });
