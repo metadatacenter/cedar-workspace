@@ -422,8 +422,9 @@ export class FolderDeletionDialog implements AfterViewInit, OnDestroy {
   /**
    * What a refusal says. A refused confirmation carries its outcome, whose code says why. Otherwise its
    * status and error key identify it. A home or system folder is refused with 400 and a caller who is
-   * not the owner with 403, both under the key folderCanNotBeDeleted. The inventory's only conflict is
-   * one it could not complete.
+   * not the owner with 403, both under the key folderCanNotBeDeleted. A conflict without an outcome
+   * means that the inventory could not be completed. A confirmation repeats the inventory before it
+   * deletes anything, so it can be refused this way too, having deleted nothing.
    */
   private refusalKey(error: HttpError, deleting: boolean): string | undefined {
     const outcome = error.objects["outcome"];
@@ -431,6 +432,7 @@ export class FolderDeletionDialog implements AfterViewInit, OnDestroy {
       const reason = this.reasonKeys.get(outcome.code);
       if (reason) return reason;
     }
+    if (error.status === 409 && !record(outcome)) return "InventoryUnavailable";
     if (error.code === "folderCanNotBeDeleted" && error.status === 400)
       return "ProtectedRoot";
     if (error.code === "folderCanNotBeDeleted" && error.status === 403)

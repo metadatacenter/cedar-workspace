@@ -68,6 +68,22 @@ test('stale confirmation requires a refreshed inventory and never retries automa
   await expect(dialog.getByRole('button', {name: 'Delete folder and contents', exact: true})).toBeEnabled();
   expect(attempts).toBe(1);
 });
+test('a confirmation whose inventory could not be repeated in full asks for a refreshed inventory', async ({page, api}) => {
+  let attempts = 0;
+  const dialog = await openFolderDeletion(page, deletionPlan, route => {
+    attempts++;
+    return route.fulfill({status: 409, json: cedarError(409, 'CONFLICT', {
+      message: 'The complete inventory could not be checked. Refresh and try again.',
+    })});
+  });
+  await dialog.getByRole('button', {name: 'Delete folder and contents', exact: true}).click();
+  await expect(dialog.getByRole('alert')).toHaveText('The complete inventory could not be checked. Refresh the inventory and try again.');
+  await expect(dialog.getByRole('button', {name: 'Delete folder and contents', exact: true})).toBeDisabled();
+  expect(attempts).toBe(1);
+  await dialog.getByRole('button', {name: 'Refresh inventory'}).click();
+  await expect(dialog.getByRole('button', {name: 'Delete folder and contents', exact: true})).toBeEnabled();
+  expect(attempts).toBe(1);
+});
 test('partial completion reports confirmed deletions and requires a new inventory', async ({page, api}) => {
   const dialog = await openFolderDeletion(page, deletionPlan, route => route.fulfill({json: {
     status: 'stopped', code: 'FOLDER_DELETE_ARTIFACT_REFUSED', deleted: {...deletionPlan.counts, folder: 0, template: 0, element: 0, field: 0}, remaining: 5, message: 'A template acquired an outside instance.',

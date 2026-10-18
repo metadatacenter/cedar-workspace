@@ -217,10 +217,28 @@ const confirmationRefusals: [string, number, unknown, Message][] = [
   ["a folder that changed", 409, refusedOutcome("changed"), "Changed"],
   ["a blocked folder", 409, refusedOutcome("blocked"), "Refused"],
   [
-    "a conflict that reports no outcome",
+    "an outcome whose code is unknown",
     409,
-    cedarError(409, "CONFLICT"),
+    cedarError(409, "CONFLICT", {
+      objects: {
+        outcome: {
+          status: "changed",
+          deleted: { ...counts },
+          remaining: 5,
+          code: "FOLDER_DELETE_FUTURE",
+        },
+      },
+    }),
     "Changed",
+  ],
+  [
+    "an inventory that could not be repeated in full",
+    409,
+    cedarError(409, "CONFLICT", {
+      message:
+        "The complete inventory could not be checked. Refresh and try again.",
+    }),
+    "InventoryUnavailable",
   ],
   [
     "a body that is not JSON",
