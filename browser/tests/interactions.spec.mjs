@@ -542,7 +542,8 @@ test("metadata errors and nonblocking warnings share centered, expandable summar
       isValid: false,
       problems: [
         { path: ["Title"], code: "required", message: "A value is required." },
-        { path: ["Email"], code: "email", message: "Enter a valid email." },
+        // This layout needs a malformed value wrapper, not a string with an invalid email format.
+        { path: ["Email"], code: "valueShape", message: "Enter a valid email." },
       ],
     };
     cee.dispatchEvent(new CustomEvent("change"));
@@ -579,7 +580,7 @@ test("metadata errors and nonblocking warnings share centered, expandable summar
   await link.click();
   await warnings.getByRole("button", { name: "Title: A required value is missing." }).click();
   expect(await page.evaluate(() => window.__ceeReveals)).toEqual([
-    { path: ["Email"], code: "email", message: "Enter a valid email.", severity: "error" },
+    { path: ["Email"], code: "valueShape", message: "Enter a valid email.", severity: "error" },
     { path: ["Title"], code: "required", message: "A value is required.", severity: "warning" },
   ]);
   await page
@@ -615,7 +616,7 @@ for (const width of [1440, 390])
         isValid: false,
         problems: [
           { path: ["Title"], code: "required", message: "A value is required." },
-          { path: ["Email"], code: "email", message: "Enter a valid email." },
+          { path: ["Email"], code: "valueShape", message: "Enter a valid email." },
         ],
       };
       cee.dispatchEvent(new CustomEvent("change"));

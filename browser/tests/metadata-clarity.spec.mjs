@@ -20,7 +20,7 @@ test("mixed findings explain Save, use localized copy and keep diagnostics separ
         },
         {
           path: ["Email"],
-          code: "email",
+          code: "valueShape",
           severity: "error",
           message: "Not a valid email address.",
           displayMessage: "Enter a valid email address.",
@@ -72,3 +72,50 @@ test("mixed findings explain Save, use localized copy and keep diagnostics separ
     [],
   );
 });
+
+for (const reportStyle of ["legacy", "current"])
+  test(`email format and incomplete answers remain saveable warnings with ${reportStyle} reports`, async ({
+    page,
+    api,
+  }) => {
+    await page.goto("/instances/edit/instance");
+    await expect(page.getByLabel("Instance name")).toHaveValue("Study record");
+    await page.evaluate((style) => {
+      const editor = document.querySelector("cedar-embeddable-editor");
+      const current = style === "current";
+      editor.dataQualityReport = {
+        isValid: false,
+        ...(current ? { canSave: true, structurallyValid: true } : {}),
+        problems: [
+          {
+            path: ["Title"],
+            code: "required",
+            message: "A value is required.",
+            ...(current ? { category: "completeness", severity: "warning", blocksSave: false } : {}),
+          },
+          {
+            path: ["Email"],
+            code: "email",
+            message: "Enter a valid email address.",
+            ...(current ? { category: "constraint", severity: "warning", blocksSave: false } : {}),
+          },
+        ],
+      };
+      editor.dispatchEvent(new CustomEvent("change"));
+    }, reportStyle);
+    const errors = page.getByLabel("Metadata errors", { exact: true });
+    const warnings = page.getByLabel("Metadata warnings", { exact: true });
+    const save = page.getByRole("button", { name: "Save", exact: true });
+    await expect(errors).toHaveCount(0);
+    await expect(warnings.locator(":scope > summary")).toHaveText(
+      "2 warnings — warnings do not block saving",
+    );
+    await expect(save).toBeEnabled();
+    await expect(save).not.toHaveAttribute("aria-describedby");
+    await warnings.locator(":scope > summary").click();
+    await warnings.getByRole("button", { name: "Email: Enter a valid email address." }).click();
+    await expect
+      .poll(() => page.evaluate(() => window.__ceeReveals?.at(-1)))
+      .toMatchObject({ path: ["Email"], code: "email", severity: "warning" });
+    expect(api.requests.filter((request) => request.method !== "GET")).toEqual([]);
+  });

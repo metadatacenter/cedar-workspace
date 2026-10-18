@@ -160,7 +160,8 @@ for (const kind of ["errors", "warnings"])
         isValid: false,
         problems: [
           { path: ["Title"], code: "required", message: "Required" },
-          { path: ["Email"], code: "email", message: "Invalid email" },
+          // Keep one structural error for the error-panel contracts; email format is a warning.
+          { path: ["Email"], code: "valueShape", message: "Invalid email" },
         ],
       };
       editor.dispatchEvent(new CustomEvent("change"));
