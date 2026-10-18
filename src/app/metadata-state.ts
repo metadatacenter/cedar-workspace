@@ -14,6 +14,7 @@ export type MetadataProblem = Omit<CeeValidationProblem, "severity"> & {
 };
 type ClassifiedProblem = MetadataProblem & { severity: "error" | "warning" };
 type MetadataReport = Omit<CeeDataQualityReport, "problems"> & {
+  pendingValidation?: boolean;
   problems: ClassifiedProblem[];
 };
 export const problemSeverity = (problem: MetadataProblem) =>
@@ -117,6 +118,9 @@ export class MetadataState extends OperationCoordinator<
     this.local = incoming
       ? {
           ...incoming,
+          ...(object(value) && value["pendingValidation"] === true
+            ? { pendingValidation: true }
+            : {}),
           problems: (incoming.problems ?? []).map((problem) => ({
             ...problem,
             severity: problemSeverity(problem),

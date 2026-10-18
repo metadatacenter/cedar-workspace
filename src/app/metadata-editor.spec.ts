@@ -666,6 +666,27 @@ describe("Modern metadata host", () => {
     await host.save();
     expect(host.notice()).toBe("Saved.");
   });
+  it("blocks pending validation without dirtying a loaded instance or showing a provisional error", async () => {
+    await edit();
+    Object.assign(cee.dataQualityReport, {
+      isValid: false,
+      pendingValidation: true,
+      problems: [],
+    });
+    host.validated();
+    expect(host.dirty()).toBe(false);
+    expect(host.validationErrors).toEqual([]);
+    api.request.mockClear();
+    await host.save();
+    expect(api.request).not.toHaveBeenCalled();
+    Object.assign(cee.dataQualityReport, {
+      isValid: true,
+      pendingValidation: false,
+    });
+    host.validated();
+    expect(host.dirty()).toBe(false);
+    expect(host.validationErrors).toEqual([]);
+  });
   it("blocks invalid values but permits warnings once errors are corrected", async () => {
     await edit();
     Object.assign(cee.dataQualityReport, {

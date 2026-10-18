@@ -332,6 +332,8 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     this.unreadable.set(false);
     this.error.set("");
     this.editor?.nativeElement.removeEventListener("change", this.changed);
+    this.editor?.nativeElement.removeEventListener("validationChange", this.validated);
+    this.editor?.nativeElement.removeEventListener("validationChange", this.validated);
     try {
       if (!(await this.api.init()) || !operation.current()) return;
       this.folder =
@@ -459,6 +461,8 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       this.savedHere = false;
       this.notice.set("");
       this.cee.addEventListener("change", this.changed);
+      this.cee.addEventListener("validationChange", this.validated);
+      this.cee.addEventListener("validationChange", this.validated);
       this.refreshQuality();
       this.loading.set(false);
       operation.finish();
@@ -527,6 +531,9 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       this.state.observe(null, "unavailable");
     }
   }
+  readonly validated = () => {
+    if (!this.loading() && this.alive) this.refreshQuality();
+  };
   readonly changed = () => {
     if (this.loading() || !this.alive) return;
     this.refreshQuality();
@@ -775,6 +782,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       )
         throw new Error();
       this.cee.removeEventListener("change", this.changed);
+      this.cee.removeEventListener("validationChange", this.validated);
       this.editorHost.nativeElement.replaceChildren(candidate);
       this.editor = new ElementRef(candidate);
       this.saved = structuredClone(review.latest);
@@ -797,6 +805,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       this.canRecheckAccess.set(false);
       this.review.set(null);
       candidate.addEventListener("change", this.changed);
+      candidate.addEventListener("validationChange", this.validated);
       this.changed();
       this.notice.set(this.i18n.t("Metadata.ReviewApplied"));
     } catch {
@@ -904,6 +913,9 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         };
         if (!candidate.restoreDraft?.(value.draft)) throw new Error();
         this.editor?.nativeElement.removeEventListener("change", this.changed);
+    this.editor?.nativeElement.removeEventListener("validationChange", this.validated);
+        this.editor?.nativeElement.removeEventListener("validationChange", this.validated);
+    this.editor?.nativeElement.removeEventListener("validationChange", this.validated);
         this.editorHost.nativeElement.replaceChildren(candidate);
       } finally {
         holder.remove();
@@ -987,6 +999,8 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       this.loading.set(false);
       this.recoveryDraft.set(null);
       this.cee.addEventListener("change", this.changed);
+      this.cee.addEventListener("validationChange", this.validated);
+      this.cee.addEventListener("validationChange", this.validated);
       this.changed();
       if (value.server) {
         this.state.reject(value.server, value.server.key, this.template);
@@ -1024,7 +1038,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     return (
       !this.loading() &&
       !this.saving() &&
-      (this.validationErrors.length > 0 || this.state.reloadRequired())
+      (this.quality()?.pendingValidation === true || this.validationErrors.length > 0 || this.state.reloadRequired())
     );
   }
   get missingRequired() {
@@ -1075,6 +1089,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       }));
     if (
       q?.isValid === false &&
+      !q.pendingValidation &&
       !items.length &&
       !this.validationWarnings.length
     )
@@ -1107,7 +1122,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     )
       return;
     this.refreshQuality();
-    if (this.validationErrors.length) return;
+    if (this.quality()?.pendingValidation || this.validationErrors.length) return;
     const operation = this.state.begin("save");
     const submittedKey = this.draftKey();
     this.saving.set(true);
@@ -1615,5 +1630,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     this.alive = false;
     this.state.dispose();
     this.editor?.nativeElement.removeEventListener("change", this.changed);
+    this.editor?.nativeElement.removeEventListener("validationChange", this.validated);
+    this.editor?.nativeElement.removeEventListener("validationChange", this.validated);
   }
 }
