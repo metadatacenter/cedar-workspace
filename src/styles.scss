@@ -61,9 +61,7 @@ button {
 button {
   @include controls.action-states;
 }
-:focus-visible {
-  @include controls.focus-ring;
-}
+@include controls.focus-states;
 input,
 select,
 textarea {
