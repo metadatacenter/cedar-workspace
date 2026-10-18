@@ -69,6 +69,26 @@ describe("Angular Workspace", () => {
     f.detectChanges();
     return f;
   }
+  for (const sharing of ["", "shared-with-me", "shared-with-everybody"])
+    for (const search of ['  publisher:"City of New York"  ', "   "])
+      for (const list of [false, true])
+        it(`retains sharing when submitting or clearing a search: sharing=${sharing}, search=${search}, list=${list}`, async () => {
+          const fixture = await render();
+          const workspace = fixture.componentInstance;
+          workspace.params = new URLSearchParams({ sort: "name", offset: "50", ...(sharing ? { sharing } : {}) });
+          workspace.grid.set(!list);
+          workspace.search = search;
+          const navigate = vi.spyOn(TestBed.inject(Router), "navigate").mockResolvedValue(true);
+          workspace.submitSearch();
+          expect(navigate).toHaveBeenCalledWith(["/dashboard"], {
+            queryParams: {
+              sort: "name",
+              ...(list ? { view: "list" } : {}),
+              ...(sharing ? { sharing } : {}),
+              ...(search.trim() ? { search: search.trim() } : sharing ? {} : { folderId: "home" }),
+            },
+          });
+        });
   it("identifies the current creator and modifier by ID, not display name", async () => {
     api.profile["@id"] = "https://metadatacenter.org/users/me";
     const f = await render();

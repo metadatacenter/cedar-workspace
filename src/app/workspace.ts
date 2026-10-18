@@ -865,10 +865,13 @@ export class Workspace {
     });
   }
   submitSearch() {
+    const search = this.search.trim();
+    const sharing = this.params.get("sharing");
     void this.router.navigate(["/dashboard"], {
-      queryParams: this.navigationQuery(this.search.trim()
-        ? { search: this.search.trim() }
-        : { folderId: resourceSelector(this.folder) }),
+      queryParams: this.navigationQuery({
+        ...(sharing ? { sharing } : {}),
+        ...(search ? { search } : sharing ? {} : { folderId: resourceSelector(this.folder) }),
+      }),
     });
   }
   get filters(): ListingFilters {
