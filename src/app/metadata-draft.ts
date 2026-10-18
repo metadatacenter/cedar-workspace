@@ -1,3 +1,4 @@
+import { JsonSourcePolicy, parseJson } from "./json-policy";
 import { mintedResourceId, resourcePathId } from "./resource-address";
 import type { CeeJsonObject, CeeRecoveryDraft } from "cedar-embeddable-editor";
 
@@ -65,7 +66,7 @@ export function metadataDraftScope(
   ]);
 }
 export function readMetadataDraft(text: string, scope: string): MetadataDraft {
-  const value = JSON.parse(text) as MetadataDraft;
+  const value = parseJson<MetadataDraft>(text);
   if (
     value?.format !== "cedar-workspace-draft" ||
     value.version !== 1 ||
@@ -149,7 +150,7 @@ export class MetadataDraftStore {
     return text === null ? null : readMetadataDraft(text, this.scope);
   }
   write(value: MetadataDraft): void {
-    this.storage.setItem(this.key, JSON.stringify(value));
+    this.storage.setItem(this.key, JsonSourcePolicy.stringify(value));
   }
   clear(): void {
     this.storage.removeItem(this.key);

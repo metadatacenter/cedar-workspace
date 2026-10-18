@@ -23,6 +23,15 @@ describe("Authorized backend", () => {
     vi.stubGlobal("fetch", fetcher);
   });
   afterEach(() => vi.unstubAllGlobals());
+  it("preserves source numbers from the HTTP response through the next write", async () => {
+    const source = '{"N":9007199254740993,"D":0.10000000000000001}';
+    fetcher.mockImplementation(() => Promise.resolve(new Response(source)));
+    const loaded = await api.request("/template-instances/id");
+    await api.request("/template-instances/id", "PUT", loaded.data, '"1"');
+    expect(fetcher.mock.calls[1][1].body).toBe(source);
+    fetcher.mockResolvedValue(new Response('{"a":1,"\\u0061":2}'));
+    await expect(api.request("/template-instances/id")).rejects.toThrow();
+  });
   it("sends the original ETag and returns the next revision", async () => {
     fetcher.mockResolvedValue(
       new Response("{}", { headers: { ETag: '"next"' } }),

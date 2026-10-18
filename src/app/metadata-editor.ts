@@ -1,3 +1,4 @@
+import { JsonSourcePolicy, parseJson, canonicalJson } from "./json-policy";
 import {
   mintResourceId,
   resourceSelector,
@@ -76,15 +77,7 @@ export function workspaceReturn(value: string | null, folder: string): string {
 }
 // Compare values rather than serialization property order, including exact reverts.
 export function metadataKey(value: unknown): string {
-  return JSON.stringify(value, (_key, v) =>
-    v && typeof v === "object" && !Array.isArray(v)
-      ? Object.fromEntries(
-          Object.keys(v)
-            .sort()
-            .map((key) => [key, v[key]]),
-        )
-      : v,
-  );
+  return canonicalJson(value);
 }
 // CEE shows one entry at a time of a repeated element or field, but a checkbox group or a
 // multiple-choice list shows all of its selections in one control.
@@ -705,7 +698,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       if (metadataKey(template.data) !== metadataKey(this.template))
         throw new Error(this.i18n.t("Metadata.ReviewTemplateChanged"));
       const base = {
-        ...JSON.parse(this.baseline),
+        ...parseJson<CeeJsonObject>(this.baseline),
         "schema:name": this.saved!["schema:name"],
       };
       const mine = { ...draft.metadata, "schema:name": this.chosenName() };
@@ -745,7 +738,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   reviewValue(value: unknown) {
     return value === undefined
       ? this.i18n.t("Metadata.ReviewRemoved")
-      : JSON.stringify(value);
+      : JsonSourcePolicy.stringify(value);
   }
   reviewLabel(path: string[]) {
     return (
@@ -785,7 +778,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       this.cee.removeEventListener("validationChange", this.validated);
       this.editorHost.nativeElement.replaceChildren(candidate);
       this.editor = new ElementRef(candidate);
-      this.saved = structuredClone(review.latest);
+      this.saved = JsonSourcePolicy.clone(review.latest);
       this.etag = review.etag;
       this.baseline = metadataKey(review.latest);
       this.baselineName = String(review.latest["schema:name"] ?? "");
@@ -921,11 +914,11 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         holder.remove();
       }
       this.editor = new ElementRef(candidate!);
-      this.template = structuredClone(value.draft.template);
+      this.template = JsonSourcePolicy.clone(value.draft.template);
       this.templateName = String(
         this.template["schema:name"] || this.i18n.t("Common.Untitled"),
       );
-      this.saved = structuredClone(value.saved);
+      this.saved = JsonSourcePolicy.clone(value.saved);
       this.etag = value.etag;
       this.name = value.name;
       this.baseline = value.baseline;
@@ -1143,7 +1136,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       let baseline = metadataKey(current);
       const name = this.chosenName();
       const typedName = this.name.trim();
-      const metadata: CeeJsonObject = structuredClone(current);
+      const metadata: CeeJsonObject = JsonSourcePolicy.clone(current);
       metadata["schema:name"] = name;
       metadata["schema:isBasedOn"] = this.template["@id"];
       let path: string;
@@ -1172,7 +1165,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
           creation = this.creation = {
             id,
             attempt: {
-              submitted: structuredClone(metadata),
+              submitted: JsonSourcePolicy.clone(metadata),
               metadata: snapshot.metadata,
               typedName,
               needsElementIds: snapshot.needsElementIds,
@@ -1186,8 +1179,8 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       if (this.saved && this.etag)
         pendingUpdate = {
           purpose: "save",
-          opened: structuredClone(this.saved),
-          submitted: structuredClone(metadata),
+          opened: JsonSourcePolicy.clone(this.saved),
+          submitted: JsonSourcePolicy.clone(metadata),
           etag: this.etag,
           snapshot,
           typedName,

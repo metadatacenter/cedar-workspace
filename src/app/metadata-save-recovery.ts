@@ -1,3 +1,4 @@
+import { ExactDecimal, JsonSourcePolicy, canonicalJson } from "./json-policy";
 import type {CeeJsonObject} from "cedar-embeddable-editor";
 
 // Conditional writes treat the server's compressed representations as the same revision.
@@ -7,13 +8,12 @@ export function sameStoredRevision(expected: string, actual: string | null): boo
   const saved = revision(expected);
   return saved !== undefined && saved === revision(actual);
 }
-const object = (value: unknown): value is CeeJsonObject => !!value && typeof value === "object" && !Array.isArray(value);
+const object = (value: unknown): value is CeeJsonObject => !!value && typeof value === "object" && !Array.isArray(value) && !ExactDecimal.isExact(value);
 function contentKey(document: CeeJsonObject) {
-  const content = structuredClone(document);
+  const content = JsonSourcePolicy.clone(document);
   delete content["pav:lastUpdatedOn"];
   delete content["oslc:modifiedBy"];
-  return JSON.stringify(content, (_key, value) => object(value)
-    ? Object.fromEntries(Object.keys(value).sort().map(key => [key,value[key]])) : value);
+  return canonicalJson(content);
 }
 // Only an element definition authorizes an assigned instance identity. Term IRIs,
 // existing element IDs, annotations, order and unknown content compare exactly.
@@ -51,9 +51,9 @@ export function metadataCreateOutcome(
   // The server stamps the creation provenance, which an instance never saved writes as null, and
   // mints the identities of new elements. Anything else that differs makes the stored instance
   // another one than this attempt sent.
-  const submitted = structuredClone(creation.attempt.submitted);
+  const submitted = JsonSourcePolicy.clone(creation.attempt.submitted);
   bindNewElementIds(submitted, latest.data, template);
-  const stored = structuredClone(latest.data);
+  const stored = JsonSourcePolicy.clone(latest.data);
   for (const document of [submitted, stored]) {
     delete document["pav:createdOn"];
     delete document["pav:createdBy"];
@@ -66,7 +66,7 @@ export function metadataUpdateOutcome(
 ): "unchanged" | "saved" | "unresolved" {
   if (!latest.etag || !object(latest.data) || !pending.opened["@id"] || latest.data["@id"] !== pending.opened["@id"]) return "unresolved";
   if (sameStoredRevision(pending.etag, latest.etag)) return contentKey(pending.opened) === contentKey(latest.data) ? "unchanged" : "unresolved";
-  const submitted = structuredClone(pending.submitted);
+  const submitted = JsonSourcePolicy.clone(pending.submitted);
   bindNewElementIds(submitted, latest.data, template);
   return contentKey(submitted) === contentKey(latest.data) ? "saved" : "unresolved";
 }

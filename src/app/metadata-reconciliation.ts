@@ -1,3 +1,4 @@
+import { ExactDecimal, JsonSourcePolicy, canonicalJson } from "./json-policy";
 import type { CeeJsonObject, CeeJsonValue } from "cedar-embeddable-editor";
 
 type Value = CeeJsonValue | undefined;
@@ -9,19 +10,10 @@ export interface ReconciliationChange {
   choice?: "mine" | "latest";
 }
 const object = (value: Value): value is CeeJsonObject =>
-  !!value && typeof value === "object" && !Array.isArray(value);
+  !!value && typeof value === "object" && !Array.isArray(value) && !ExactDecimal.isExact(value);
 const own = (value: CeeJsonObject, key: string): Value =>
   Object.hasOwn(value, key) ? value[key] : undefined;
-const key = (value: Value): string | undefined =>
-  JSON.stringify(value, (_key, node) =>
-    object(node)
-      ? Object.fromEntries(
-          Object.keys(node)
-            .sort()
-            .map((k) => [k, node[k]]),
-        )
-      : node,
-  );
+const key = canonicalJson;
 // Identity, linkage and repository provenance are never rewritten from an old form.
 const repository = new Set([
   "@id",
@@ -51,8 +43,8 @@ export function reconcileMetadata(
     path: string[],
   ): Value => {
     if (path.length === 1 && repository.has(path[0]))
-      return structuredClone(remote);
-    if (key(local) === key(remote)) return structuredClone(remote);
+      return JsonSourcePolicy.clone(remote);
+    if (key(local) === key(remote)) return JsonSourcePolicy.clone(remote);
     if (object(before) && object(local) && object(remote)) {
       return Object.fromEntries(
         [
@@ -86,12 +78,12 @@ export function reconcileMetadata(
         : "mine";
     changes.push({
       path,
-      mine: structuredClone(local),
-      latest: structuredClone(remote),
+      mine: JsonSourcePolicy.clone(local),
+      latest: JsonSourcePolicy.clone(remote),
       conflict,
       choice,
     });
-    return structuredClone(choice === "mine" ? local : remote);
+    return JsonSourcePolicy.clone(choice === "mine" ? local : remote);
   };
   const metadata = merge(base, mine, latest, []) as CeeJsonObject;
   return {

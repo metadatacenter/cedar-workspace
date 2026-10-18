@@ -1,3 +1,4 @@
+import { JsonSourcePolicy, parseJson } from "./json-policy";
 import { record } from "./access-validation";
 import { resourcePathId } from "./resource-address";
 import type { UserProfile } from "./account-types";
@@ -178,7 +179,7 @@ export class Backend {
         response = await fetch(url, {
           method,
           headers,
-          body: body === undefined ? undefined : JSON.stringify(body),
+          body: body === undefined ? undefined : JsonSourcePolicy.stringify(body),
         });
       } catch {
         // No answer arrived. The browser's own wording, "Failed to fetch", is English whatever
@@ -241,7 +242,7 @@ export class Backend {
     const text = await response.text();
     let data: T;
     try {
-      data = text ? (JSON.parse(text) as T) : (undefined as T);
+      data = text ? parseJson<T>(text) : (undefined as T);
     } catch {
       // A proxy's HTML page under a 200, or a body cut short, would otherwise surface as the
       // parser's own English complaint about an unexpected token.
