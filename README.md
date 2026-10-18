@@ -341,3 +341,7 @@ are compared as a whole, preserving occurrence identity. Applying the review onl
 updates the form; Save uses the reviewed ETag and can still be refused if another
 author writes again. A changed template or unfinished raw input keeps the original
 draft and requires correction or a recovery-file download before proceeding.
+
+The production initial-bundle budget is 1.03 MB. Exact JSON transport and draft preservation
+add the shared scalar policy bundle; the measured total is 1.022 MB (301 KB estimated transfer).
+The budget keeps about 8 KB of headroom and does not include the lazy metadata editor.
