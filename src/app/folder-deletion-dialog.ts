@@ -1,4 +1,5 @@
 import { RevisionCoordinator } from "./revision-coordinator";
+import { record } from "./access-validation";
 import { validDeletionPlan, validDeletionOutcome } from "./deletion-validation";
 import {
   SelectionInventoryError,
@@ -395,9 +396,6 @@ export class FolderDeletionDialog implements AfterViewInit, OnDestroy {
   private readonly reasonKeys = new Map(
     Object.entries({
       FOLDER_DELETE_NOT_OWNER: "NotOwner",
-      FOLDER_DELETE_PROTECTED_ROOT: "ProtectedRoot",
-      FOLDER_DELETE_INVALID_TOKEN: "Changed",
-      FOLDER_DELETE_INVENTORY_UNAVAILABLE: "InventoryUnavailable",
       FOLDER_DELETE_CHANGED: "Changed",
       FOLDER_DELETE_BLOCKED: "Refused",
       FOLDER_DELETE_STOPPED: "Stopped",
@@ -415,24 +413,40 @@ export class FolderDeletionDialog implements AfterViewInit, OnDestroy {
     );
   }
   private errorMessage(error: unknown, deleting: boolean) {
-    let key = deleting ? "Uncertain" : "InventoryUnavailable";
-    if (error instanceof HttpError) {
-      key =
-        this.reasonKeys.get(error.code ?? "") ??
-        (
-          {
-            400: "Changed",
-            401: "SessionExpired",
-            403: "AccessDenied",
-            404: "Missing",
-            409: "Changed",
-            412: "Changed",
-          } as Record<number, string>
-        )[error.status] ??
-        key;
-    }
-    // Protocol codes are translated here; raw server/browser errors never become dialog text.
+    const key =
+      (error instanceof HttpError && this.refusalKey(error, deleting)) ||
+      (deleting ? "Uncertain" : "InventoryUnavailable");
+    // Refusals are translated here; raw server/browser errors never become dialog text.
     return this.i18n.t("FolderDeletion." + key);
+  }
+  /**
+   * What a refusal says. A refused confirmation carries its outcome, whose code says why. Otherwise its
+   * status and error key identify it. A home or system folder is refused with 400 and a caller who is
+   * not the owner with 403, both under the key folderCanNotBeDeleted. A conflict without an outcome
+   * means that the inventory could not be completed. A confirmation repeats the inventory before it
+   * deletes anything, so it can be refused this way too, having deleted nothing.
+   */
+  private refusalKey(error: HttpError, deleting: boolean): string | undefined {
+    const outcome = error.objects["outcome"];
+    if (record(outcome) && typeof outcome.code === "string") {
+      const reason = this.reasonKeys.get(outcome.code);
+      if (reason) return reason;
+    }
+    if (error.status === 409 && !record(outcome)) return "InventoryUnavailable";
+    if (error.code === "folderCanNotBeDeleted" && error.status === 400)
+      return "ProtectedRoot";
+    if (error.code === "folderCanNotBeDeleted" && error.status === 403)
+      return "NotOwner";
+    return (
+      {
+        400: "Changed",
+        401: "SessionExpired",
+        403: "AccessDenied",
+        404: "Missing",
+        409: deleting ? "Changed" : "InventoryUnavailable",
+        412: "Changed",
+      } as Record<number, string>
+    )[error.status];
   }
   check(item: DeletionItem) {
     const key = !item.deletable

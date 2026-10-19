@@ -22,7 +22,12 @@ describe("group resource moves", () => {
   beforeEach(() => {
     api = {
       request: vi.fn().mockResolvedValue({ data: target }),
-      report: vi.fn(async (r) => ({ data: r })),
+      report: vi.fn(async (r) => ({
+        data: {
+          ...r,
+          pathInfo: r.pathInfo ?? [{ "@id": "home", resourceType: "folder" }],
+        },
+      })),
       snapshot: vi.fn(async (r) => ({ data: r, etag: '"' + r["@id"] + '"' })),
     };
     TestBed.configureTestingModule({
@@ -82,23 +87,90 @@ describe("group resource moves", () => {
     ).rejects.toThrow();
     expect(api.snapshot).not.toHaveBeenCalled();
   });
+  it("checks current placement after a lost reply and does not repeat a committed move", async () => {
+    let committed = false;
+    api.report.mockImplementation(async (r) => ({
+      data: {
+        ...r,
+        pathInfo: [
+          { "@id": committed ? "target" : "home", resourceType: "folder" },
+          r,
+        ],
+      },
+    }));
+    api.request.mockImplementation(async (_path, method) => {
+      if (method === "POST") {
+        committed = true;
+        throw new Error("Lost reply");
+      }
+      return { data: target };
+    });
+    const moves = TestBed.inject(ResourceMoves);
+    expect((await moves.move([item("a")], "target")).failed).toHaveLength(1);
+    expect((await moves.move([item("a")], "target")).moved).toEqual(["a"]);
+    expect(api.request.mock.calls.filter((c) => c[1] === "POST")).toHaveLength(
+      1,
+    );
+  });
+  it.each([undefined, [], [{ "@id": "a" }], [{ "@id": "" }], [null]])(
+    "does not write when the current parent is missing or malformed: %j",
+    async (pathInfo) => {
+      api.report.mockResolvedValue({ data: { ...item("a"), pathInfo } });
+      await expect(
+        TestBed.inject(ResourceMoves).move([item("a")], "target"),
+      ).rejects.toThrow("current folder could not be confirmed");
+      expect(
+        api.request.mock.calls.filter((c) => c[1] === "POST"),
+      ).toHaveLength(0);
+    },
+  );
+  it("only the direct parent proves arrival, not a destination higher in the path", async () => {
+    api.report.mockImplementation(async (r) => ({
+      data: {
+        ...r,
+        pathInfo: [target, { "@id": "nested", resourceType: "folder" }, r],
+      },
+    }));
+    expect(
+      (await TestBed.inject(ResourceMoves).move([item("a")], "target")).moved,
+    ).toEqual(["a"]);
+    expect(api.request.mock.calls.filter((c) => c[1] === "POST")).toHaveLength(
+      1,
+    );
+  });
 });
 
-it("preserves hierarchy when an ancestor and descendant are both selected", async () => {
-  const parent: Resource = { ...item("parent"), resourceType: "folder" };
-  const child: Resource = { ...item("child"), pathInfo: [parent] };
-  const api = {
-    request: vi.fn().mockResolvedValue({ data: target }),
-    report: vi.fn(async (r) => ({ data: r })),
-    snapshot: vi.fn(async (r) => ({ data: r, etag: '"revision"' })),
-  };
-  TestBed.configureTestingModule({
-    providers: [{ provide: Backend, useValue: api }],
-  });
-  const result = await TestBed.inject(ResourceMoves).move(
-    [child, parent],
-    "target",
-  );
-  expect(api.request.mock.calls.filter((c) => c[1] === "POST")).toHaveLength(1);
-  expect(result.moved).toEqual(["parent", "child"]);
-});
+it.each([false, true])(
+  "preserves selected ancestor/descendant hierarchy when arrival is already confirmed: %s",
+  async (alreadyThere) => {
+    const parent: Resource = {
+      ...item("parent"),
+      resourceType: "folder",
+      pathInfo: [
+        alreadyThere ? target : { "@id": "home", resourceType: "folder" },
+      ],
+    };
+    const child: Resource = { ...item("child"), pathInfo: [parent] };
+    const api = {
+      request: vi.fn().mockResolvedValue({ data: target }),
+      report: vi.fn(async (r) => ({
+        data: {
+          ...r,
+          pathInfo: r.pathInfo ?? [{ "@id": "home", resourceType: "folder" }],
+        },
+      })),
+      snapshot: vi.fn(async (r) => ({ data: r, etag: '"revision"' })),
+    };
+    TestBed.configureTestingModule({
+      providers: [{ provide: Backend, useValue: api }],
+    });
+    const result = await TestBed.inject(ResourceMoves).move(
+      [child, parent],
+      "target",
+    );
+    expect(api.request.mock.calls.filter((c) => c[1] === "POST")).toHaveLength(
+      alreadyThere ? 0 : 1,
+    );
+    expect(result.moved).toEqual(["parent", "child"]);
+  },
+);

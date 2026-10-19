@@ -100,14 +100,29 @@ test('read-only metadata shows no error or warning summary', async ({page, api})
   await expect(page.locator('.metadata-quality')).toHaveCount(0);
 });
 
-// Metadata can be shared with someone its template is not. The server's refusal speaks of "the
-// artifact", which reads as the metadata, and loading again cannot help.
-test('metadata whose template the user cannot read says so and offers no retry', async ({page, api}) => {
-  await page.route('**/api/resource/templates/template', route =>
+// Metadata can be shared independently from its template. Explain which access is missing,
+// then let an explicit access check open the form after the template grant changes.
+test('metadata with a refused template offers access recovery without writing', async ({page, api}) => {
+  const matcher='**/api/resource/templates/template';
+  await page.route(matcher, route =>
     route.fulfill({status: 403, json: {message: 'You do not have the required capability on the artifact'}}));
   await page.goto('/instances/edit/instance');
-  await expect(page.getByRole('alert')).toHaveText("You do not have access to this instance's template, so it cannot be shown.");
+  const alert=page.getByRole('alert');
+  await expect(alert).toContainText("You do not have access to this instance's template, so it cannot be shown.");
   await expect(page.getByRole('button', {name: 'Retry', exact: true})).toHaveCount(0);
+  await expect(page.getByRole('button', {name: 'Sign in again', exact: true})).toBeVisible();
+  const recheck=page.getByRole('button', {name: 'Recheck access', exact: true});
+  await Promise.all([
+    page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/templates/template') && response.status() === 403),
+    recheck.click(),
+  ]);
+  await expect(recheck).toBeVisible();
+  await expect(alert).toContainText("You do not have access to this instance's template");
+  await page.unroute(matcher);
+  await recheck.click();
+  await expect(page.getByLabel('Instance name', {exact:true})).toHaveValue('Study record');
+  await expect(alert).toHaveCount(0);
+  expect(api.requests.filter(request => request.method !== 'GET')).toEqual([]);
 });
 
 test('a failed metadata load can retry and a conflict requires an explicit reload', async ({page, api}) => {
@@ -181,11 +196,42 @@ for (const outcome of ['lost connection', 'malformed success', 'server error']) 
     await save.click();
     await expect(save).toBeDisabled();
     await expect(page.locator('.metadata-save-status')).toHaveText('Reload required');
-    await expect(page.getByRole('alert')).toContainText('Workspace');
+    await expect(page.getByRole('alert')).toContainText('We could not confirm whether your changes were saved.');
     await expect(page.getByRole('button', {name: 'Reload metadata', exact: true})).toHaveCount(0);
     await name.fill('Still my draft');
     await expect(save).toBeDisabled();
     expect(writes).toBe(1);
+  });
+}
+
+for (const mode of ['create', 'edit']) {
+  test(`an expired session during metadata ${mode} keeps the draft without claiming an uncertain create`, async ({page, api}) => {
+    await page.goto(`/instances/${mode}/${mode === 'create' ? 'template' : 'instance'}`);
+    const name = page.getByLabel('Instance name', {exact: true});
+    await name.fill('Draft to retain');
+    await page.evaluate(() => {
+      window.KeycloakUserHandler.prototype.refreshToken = (_seconds, _ok, fail) => fail();
+    });
+    const before = api.requests.length;
+    await page.getByRole('button', {name: 'Save', exact: true}).click();
+    await expect(page.getByRole('alert')).toContainText('session');
+    await expect(page.getByRole('alert')).not.toContainText('could not confirm');
+    await expect(name).toHaveValue('Draft to retain');
+    await expect(page.getByRole('button', {name: 'Reload metadata', exact: true})).toBeVisible();
+    expect(api.requests.length).toBe(before);
+  });
+
+  test(`a lost metadata ${mode} response accurately reports an unknown outcome`, async ({page, api}) => {
+    await page.route('**/api/resource/template-instances**', route =>
+      route.request().method() === 'GET' ? route.fallback() : route.abort('failed'));
+    await page.goto(`/instances/${mode}/${mode === 'create' ? 'template' : 'instance'}`);
+    const name = page.getByLabel('Instance name', {exact: true});
+    await name.fill('Draft to retain');
+    const save = page.getByRole('button', {name: 'Save', exact: true});
+    await save.click();
+    await expect(page.getByRole('alert')).toContainText('We could not confirm whether your changes were saved.');
+    await expect(save).toBeDisabled();
+    await expect(name).toHaveValue('Draft to retain');
   });
 }
 

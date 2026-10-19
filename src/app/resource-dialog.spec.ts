@@ -1,9 +1,15 @@
 import { TestBed } from "@angular/core/testing";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ResourceDialog } from "./resource-dialog";
-import { Backend } from "./backend.service";
+import { Backend, HttpError } from "./backend.service";
 import { Confirmation } from "./confirmation";
 import { Resource } from "./resource";
+import { useDeploymentDomain } from "./resource-address";
+import { provideWorkspaceTranslations } from "./i18n";
+const minted = (collection: string) =>
+  expect.stringMatching(
+    new RegExp(`^https://repo\\.example/${collection}/[0-9a-f-]{36}$`),
+  );
 const resource: Resource = {
   "@id": "id",
   resourceType: "template",
@@ -16,7 +22,9 @@ describe("Conditional action dialogs", () => {
     request: ReturnType<typeof vi.fn>;
     path: ReturnType<typeof vi.fn>;
   };
+  afterEach(() => useDeploymentDomain(null));
   beforeEach(() => {
+    useDeploymentDomain("example");
     api = {
       snapshot: vi
         .fn()
@@ -41,11 +49,18 @@ describe("Conditional action dialogs", () => {
     d.name = " New folder ";
     d.description = "   ";
     await d.submit();
-    expect(api.request).toHaveBeenCalledWith("/folders", "POST", {
+    // The folder is created under an identity minted for it, so a lost reply can be looked up.
+    const [path, method, body] = api.request.mock.lastCall!;
+    expect(body).toEqual({
+      "@id": minted("folders"),
       folderId: "parent",
       name: "New folder",
       description: "New folder",
     });
+    expect([path, method]).toEqual([
+      "/folders/" + body["@id"].split("/").at(-1),
+      "PUT",
+    ]);
   });
   it("keeps edits and read-time revision after a conflict", async () => {
     const d = dialog();
@@ -200,6 +215,7 @@ describe("Conditional action dialogs", () => {
         folderId: "home",
         propagateSharing: true,
         newFolderName: null,
+        draftId: minted("templates"),
       },
     );
   });
@@ -291,4 +307,340 @@ describe("Conditional action dialogs", () => {
     expect(d.error()).toBe("Folder is unavailable");
     expect(d.busy()).toBe(false);
   });
+});
+
+describe("the Retry control of an action whose outcome is unknown", () => {
+  const original = Object.getOwnPropertyDescriptor(
+    HTMLDialogElement.prototype,
+    "showModal",
+  );
+  beforeEach(() => {
+    useDeploymentDomain("example");
+    Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
+      configurable: true,
+      value: function (this: HTMLDialogElement) {
+        this.open = true;
+      },
+    });
+  });
+  afterEach(() => {
+    useDeploymentDomain(null);
+    sessionStorage.clear();
+    if (original)
+      Object.defineProperty(HTMLDialogElement.prototype, "showModal", original);
+    else Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal");
+  });
+  it("appears only while a new folder's outcome is unknown, and the status names it", async () => {
+    const request = vi.fn();
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: Backend,
+          useValue: {
+            request,
+            config: { resourceRestAPI: "https://resource.example" },
+            userId: "owner",
+          },
+        },
+      ],
+    });
+    const fixture = TestBed.createComponent(ResourceDialog);
+    fixture.componentRef.setInput("action", "new-folder");
+    fixture.componentRef.setInput("folder", "home");
+    fixture.detectChanges();
+    await vi.waitFor(() =>
+      expect(fixture.componentInstance.preparing()).toBe(false),
+    );
+    fixture.detectChanges();
+    const page = fixture.nativeElement as HTMLElement;
+    const retry = () =>
+      [...page.querySelectorAll("button")].filter(
+        (button) => button.textContent?.trim() === "Retry",
+      );
+    const submit = () =>
+      page.querySelector<HTMLButtonElement>("button[type=submit]")!;
+    expect(retry()).toHaveLength(0);
+    expect(page.textContent).not.toContain("Use Retry");
+    fixture.componentInstance.name = "Results";
+    request.mockRejectedValueOnce(new HttpError(0, "No reply"));
+    await fixture.componentInstance.submit();
+    fixture.detectChanges();
+    expect(retry()).toHaveLength(1);
+    expect(page.textContent).toContain(
+      "This operation may already have completed. Use Retry to check its result before trying again.",
+    );
+    expect(submit().disabled).toBe(true);
+    const [, , body] = request.mock.lastCall!;
+    request.mockRejectedValueOnce(new HttpError(404, "Not found"));
+    retry()[0].click();
+    await vi.waitFor(() => {
+      fixture.detectChanges();
+      expect(retry()).toHaveLength(0);
+    });
+    expect(request.mock.lastCall?.[0]).toBe(
+      "/folders/" + body["@id"].split("/").at(-1),
+    );
+    expect(page.textContent).not.toContain("Use Retry");
+    expect(submit().disabled).toBe(false);
+    fixture.destroy();
+  });
+  it("sends the copy's identity with Copy", async () => {
+    const request = vi.fn().mockResolvedValue({
+      data: { resources: [], totalCount: 0, pathInfo: [] },
+    });
+    TestBed.configureTestingModule({
+      providers: [{ provide: Backend, useValue: { request } }],
+    });
+    const d = TestBed.runInInjectionContext(() => new ResourceDialog());
+    d.action = "copy";
+    d.resource = resource;
+    d.folder = "home";
+    await d.load();
+    d.targetResource = {
+      "@id": "home",
+      resourceType: "folder",
+      currentUserPermissions: { capabilities: ["copyIntoFolder"] },
+    };
+    await d.submit();
+    expect(request).toHaveBeenLastCalledWith(
+      "/command/copy-artifact-to-folder",
+      "POST",
+      {
+        "@id": "id",
+        targetFolderId: "home",
+        nameTemplate: "Original (copy)",
+        copyId: minted("templates"),
+      },
+    );
+  });
+});
+
+// No identity can be minted until Workspace knows the deployment's base. The server then mints one as
+// before, and an unknown outcome keeps today's message with no lookup to offer.
+describe("a dialog action while the deployment's base is unknown", () => {
+  const original = Object.getOwnPropertyDescriptor(
+    HTMLDialogElement.prototype,
+    "showModal",
+  );
+  beforeEach(() => {
+    useDeploymentDomain(null);
+    Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
+      configurable: true,
+      value: function (this: HTMLDialogElement) {
+        this.open = true;
+      },
+    });
+  });
+  afterEach(() => {
+    sessionStorage.clear();
+    if (original)
+      Object.defineProperty(HTMLDialogElement.prototype, "showModal", original);
+    else Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal");
+  });
+  it("creates a folder by POST and offers no Retry for an unknown outcome", async () => {
+    const request = vi.fn().mockRejectedValue(new HttpError(0, "No reply"));
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: Backend,
+          useValue: {
+            request,
+            config: { resourceRestAPI: "https://resource.example" },
+            userId: "owner",
+          },
+        },
+      ],
+    });
+    const fixture = TestBed.createComponent(ResourceDialog);
+    fixture.componentRef.setInput("action", "new-folder");
+    fixture.componentRef.setInput("folder", "home");
+    fixture.detectChanges();
+    await vi.waitFor(() =>
+      expect(fixture.componentInstance.preparing()).toBe(false),
+    );
+    fixture.componentInstance.name = "Results";
+    await fixture.componentInstance.submit();
+    fixture.detectChanges();
+    expect(request).toHaveBeenCalledWith("/folders", "POST", {
+      folderId: "home",
+      name: "Results",
+      description: "Results",
+    });
+    const page = fixture.nativeElement as HTMLElement;
+    expect(fixture.componentInstance.inspectionRequired()).toBe(true);
+    expect(fixture.componentInstance.settles).toBe(false);
+    expect(
+      [...page.querySelectorAll("button")].filter(
+        (button) => button.textContent?.trim() === "Retry",
+      ),
+    ).toHaveLength(0);
+    expect(page.textContent).toContain(
+      "This operation may already have completed. Close this dialog and refresh Workspace to check the result before trying again.",
+    );
+    expect(sessionStorage.length).toBe(0);
+    fixture.destroy();
+  });
+  it.each(["copy", "draft"])("sends %s without an identity", async (action) => {
+    const request = vi.fn().mockResolvedValue({
+      data: { resources: [], totalCount: 0, pathInfo: [] },
+    });
+    TestBed.configureTestingModule({
+      providers: [{ provide: Backend, useValue: { request } }],
+    });
+    const d = TestBed.runInInjectionContext(() => new ResourceDialog());
+    d.action = action;
+    d.resource = { ...resource, "pav:version": "1.0.0" };
+    d.folder = "home";
+    await d.load();
+    d.targetResource = {
+      "@id": "home",
+      resourceType: "folder",
+      currentUserPermissions: { capabilities: ["copyIntoFolder"] },
+    };
+    await d.submit();
+    const body = request.mock.lastCall?.[2];
+    expect(body).not.toHaveProperty("copyId");
+    expect(body).not.toHaveProperty("draftId");
+    expect(body["@id"]).toBe("id");
+  });
+});
+
+// The Publish and Create Draft dialogs are offered only to an artifact's owner, but a listing read before
+// an ownership transfer can still offer them. The server refuses anyone else with a 403 under its own key.
+// Nothing happened, so the dialog says why, offers no Retry, does not speak of an outcome to check and keeps
+// OK available. Any other 403 still leaves the outcome to be checked, and a refusal for a reason in the
+// artifact is a 400, as before.
+describe("Publish and Create Draft refused by the server", () => {
+  const original = Object.getOwnPropertyDescriptor(
+    HTMLDialogElement.prototype,
+    "showModal",
+  );
+  beforeEach(() => {
+    useDeploymentDomain("example");
+    Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
+      configurable: true,
+      value: function (this: HTMLDialogElement) {
+        this.open = true;
+      },
+    });
+  });
+  afterEach(() => {
+    useDeploymentDomain(null);
+    sessionStorage.clear();
+    if (original)
+      Object.defineProperty(HTMLDialogElement.prototype, "showModal", original);
+    else Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal");
+  });
+  const home: Resource = {
+    "@id": "home",
+    resourceType: "folder",
+    "schema:name": "Home",
+    currentUserPermissions: { capabilities: ["copyIntoFolder"] },
+  };
+  async function open(action: string, language: "en" | "hu" = "en") {
+    const request = vi.fn(async (path: string) => {
+      if (path.includes("/contents"))
+        return { data: { resources: [], totalCount: 0, pathInfo: [home] } };
+      if (path === "/folders/home") return { data: home };
+      throw new Error("Unexpected request " + path);
+    });
+    TestBed.configureTestingModule({
+      providers: [
+        ...provideWorkspaceTranslations(language),
+        {
+          provide: Backend,
+          useValue: {
+            request,
+            config: { resourceRestAPI: "https://resource.example" },
+            userId: "owner",
+          },
+        },
+      ],
+    });
+    const fixture = TestBed.createComponent(ResourceDialog);
+    fixture.componentRef.setInput("action", action);
+    fixture.componentRef.setInput("resource", {
+      ...resource,
+      "pav:version": "1.0.0",
+      "bibo:status": action === "draft" ? "bibo:published" : "bibo:draft",
+    });
+    fixture.componentRef.setInput("folder", "home");
+    fixture.detectChanges();
+    await vi.waitFor(() =>
+      expect(fixture.componentInstance.preparing()).toBe(false),
+    );
+    fixture.detectChanges();
+    const page = fixture.nativeElement as HTMLElement;
+    return {
+      fixture,
+      request,
+      alert: () => page.querySelector(".alert")?.textContent?.trim() ?? "",
+      retry: () =>
+        [...page.querySelectorAll("button")].filter(
+          (button) => button.textContent?.trim() === "Retry",
+        ),
+      submit: () => page.querySelector<HTMLButtonElement>("button[type=submit]")!,
+      text: () => page.textContent ?? "",
+    };
+  }
+  const refused = (status: number, code?: string) =>
+    new HttpError(status, `Request failed (${status}).`, code);
+  for (const [action, message] of [
+    ["publish", "Only the owner of this artifact can publish it."],
+    ["draft", "Only the owner of this artifact can create a draft of it."],
+  ]) {
+    it(`${action}: refused to anyone but the owner says so, with no Retry and nothing kept`, async () => {
+      const d = await open(action);
+      expect(d.submit().disabled).toBe(false);
+      d.request.mockRejectedValueOnce(refused(403, "versioningOnlyByOwner"));
+      await d.fixture.componentInstance.submit();
+      d.fixture.detectChanges();
+      expect(d.alert()).toBe(message);
+      expect(d.retry()).toHaveLength(0);
+      expect(d.text()).not.toContain("This operation may already have completed");
+      expect(d.text()).not.toContain("Request failed");
+      expect(d.submit().disabled).toBe(false);
+      expect(sessionStorage.length).toBe(0);
+      d.fixture.destroy();
+    });
+    for (const code of [undefined, "noWriteAccessToFolder"])
+      it(`${action}: a 403 ${code ? `under ${code}` : "without a key"} still offers Retry to check the outcome`, async () => {
+        const d = await open(action);
+        d.request.mockRejectedValueOnce(refused(403, code));
+        await d.fixture.componentInstance.submit();
+        d.fixture.detectChanges();
+        expect(d.alert()).toBe("Request failed (403).");
+        expect(d.retry()).toHaveLength(1);
+        expect(d.text()).toContain(
+          "This operation may already have completed. Use Retry to check its result before trying again.",
+        );
+        expect(d.submit().disabled).toBe(true);
+        expect(sessionStorage.length).toBe(1);
+        d.fixture.destroy();
+      });
+    for (const code of ["publishOnlyDraft", "createDraftOnlyFromPublished", "versioningOnlyOnLatest", "nonVersionedArtifactType"])
+      it(`${action}: a 400 under ${code} is still a plain refusal`, async () => {
+        const d = await open(action);
+        d.request.mockRejectedValueOnce(refused(400, code));
+        await d.fixture.componentInstance.submit();
+        d.fixture.detectChanges();
+        expect(d.alert()).toBe("Request failed (400).");
+        expect(d.retry()).toHaveLength(0);
+        expect(d.text()).not.toContain("This operation may already have completed");
+        expect(d.submit().disabled).toBe(false);
+        d.fixture.destroy();
+      });
+  }
+  for (const [action, message] of [
+    ["publish", "Ezt az erőforrást csak a tulajdonosa teheti közzé."],
+    ["draft", "Ebből az erőforrásból csak a tulajdonosa hozhat létre vázlatot."],
+  ])
+    it(`${action}: refused to anyone but the owner says so in Hungarian`, async () => {
+      const d = await open(action, "hu");
+      d.request.mockRejectedValueOnce(refused(403, "versioningOnlyByOwner"));
+      await d.fixture.componentInstance.submit();
+      d.fixture.detectChanges();
+      expect(d.alert()).toBe(message);
+      d.fixture.destroy();
+    });
 });

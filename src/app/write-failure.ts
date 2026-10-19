@@ -11,6 +11,19 @@ export function uncertainWrite(error: unknown): boolean {
   );
 }
 
+/**
+ * Whether the server refused to publish an artifact, or to create a draft of it, because only its owner
+ * may, whatever role the caller holds. Nothing was written, so the outcome is known and nothing needs
+ * recovering.
+ */
+export function refusedToNonOwner(error: unknown): boolean {
+  return (
+    error instanceof HttpError &&
+    error.status === 403 &&
+    error.code === "versioningOnlyByOwner"
+  );
+}
+
 export function writeRequiresRecovery(error: unknown): boolean {
   return (
     uncertainWrite(error) ||

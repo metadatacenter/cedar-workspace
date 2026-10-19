@@ -2,6 +2,7 @@ import { TestBed } from "@angular/core/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Backend } from "./backend.service";
 import { Config } from "./resource";
+import { uncertainWrite } from "./write-failure";
 const config = {
   resourceRestAPI: "https://resource.example",
   userRestAPI: "https://user.example",
@@ -22,6 +23,15 @@ describe("Authorized backend", () => {
     vi.stubGlobal("fetch", fetcher);
   });
   afterEach(() => vi.unstubAllGlobals());
+  it("preserves source numbers from the HTTP response through the next write", async () => {
+    const source = '{"N":9007199254740993,"D":0.10000000000000001}';
+    fetcher.mockImplementation(() => Promise.resolve(new Response(source)));
+    const loaded = await api.request("/template-instances/id");
+    await api.request("/template-instances/id", "PUT", loaded.data, '"1"');
+    expect(fetcher.mock.calls[1][1].body).toBe(source);
+    fetcher.mockResolvedValue(new Response('{"a":1,"\\u0061":2}'));
+    await expect(api.request("/template-instances/id")).rejects.toThrow();
+  });
   it("sends the original ETag and returns the next revision", async () => {
     fetcher.mockResolvedValue(
       new Response("{}", { headers: { ETag: '"next"' } }),
@@ -66,26 +76,96 @@ describe("Authorized backend", () => {
     );
     expect(fetcher.mock.calls[1][1].headers["If-Match"]).toBe('"etag"');
   });
+  for (const afterRefusal of [false, true])
+    it(`an expired session is a confirmed refusal, after server refusal=${afterRefusal}`, async () => {
+      renew.mockImplementation((seconds: number, ok: () => void, fail: () => void) => {
+        if (afterRefusal && seconds !== -1) ok();
+        else fail();
+      });
+      fetcher.mockResolvedValue(new Response("", { status: 401 }));
+      const error = await api.request("/template-instances", "POST", {}).catch(e => e);
+      expect(error).toMatchObject({status: 401});
+      expect(uncertainWrite(error)).toBe(false);
+      expect(fetcher).toHaveBeenCalledTimes(afterRefusal ? 1 : 0);
+    });
   it("rejects artifact-provided external destinations before sending credentials", async () => {
     await expect(api.request("https://untrusted.example/data")).rejects.toThrow(
       "Untrusted",
     );
     expect(fetcher).not.toHaveBeenCalled();
   });
-  it("preserves a stable error code for feature-specific localisation", async () => {
+  it("preserves the error key for feature-specific localisation", async () => {
     fetcher.mockResolvedValue(
       new Response(
         JSON.stringify({
-          code: "FOLDER_DELETE_NOT_OWNER",
+          status: "FORBIDDEN",
+          statusCode: 403,
+          errorKey: "folderCanNotBeDeleted",
           message: "Only the owner",
+          objects: {},
         }),
         { status: 403 },
       ),
     );
     await expect(api.request("/folders/id/deletion")).rejects.toMatchObject({
       status: 403,
-      code: "FOLDER_DELETE_NOT_OWNER",
+      code: "folderCanNotBeDeleted",
+      objects: {},
     });
+  });
+  it("reads the error key of the shared error body, not a code beside it", async () => {
+    fetcher.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          code: "FOLDER_DELETE_NOT_OWNER",
+          errorKey: "folderCanNotBeDeleted",
+        }),
+        { status: 403 },
+      ),
+    );
+    await expect(api.request("/folders/id/deletion")).rejects.toMatchObject({
+      code: "folderCanNotBeDeleted",
+    });
+    fetcher.mockResolvedValue(
+      new Response(JSON.stringify({ code: "FOLDER_DELETE_NOT_OWNER" }), {
+        status: 403,
+      }),
+    );
+    const bare = await api.request("/folders/id/deletion").catch((e) => e);
+    expect(bare.code).toBeUndefined();
+  });
+  it("keeps the structured objects a refusal carries", async () => {
+    const outcome = {
+      status: "blocked",
+      deleted: { folder: 0, template: 0, element: 0, field: 0, instance: 0 },
+      remaining: 3,
+      message: "The folder cannot be deleted. Review the blockers.",
+      code: "FOLDER_DELETE_BLOCKED",
+    };
+    fetcher.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          status: "CONFLICT",
+          statusCode: 409,
+          errorKey: "folderCanNotBeDeleted",
+          message: outcome.message,
+          objects: { outcome },
+        }),
+        { status: 409 },
+      ),
+    );
+    await expect(
+      api.request("/folders/id/deletion", "POST", { token: "t" }),
+    ).rejects.toMatchObject({ status: 409, objects: { outcome } });
+    for (const objects of [undefined, null, [outcome], "outcome"]) {
+      fetcher.mockResolvedValue(
+        new Response(JSON.stringify({ errorKey: "x", objects }), {
+          status: 409,
+        }),
+      );
+      const error = await api.request("/folders/id/deletion").catch((e) => e);
+      expect(error.objects).toEqual({});
+    }
   });
   it("accepts empty successful deletion responses", async () => {
     fetcher.mockResolvedValue(new Response(null, { status: 204 }));

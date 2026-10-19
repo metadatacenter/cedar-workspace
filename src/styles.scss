@@ -61,9 +61,7 @@ button {
 button {
   @include controls.action-states;
 }
-:focus-visible {
-  @include controls.focus-ring;
-}
+@include controls.focus-states;
 input,
 select,
 textarea {
@@ -192,10 +190,20 @@ textarea {
 .new-menu nav cedar-icon {
   flex-shrink: 0;
 }
+// The dashboard fills the viewport. The top bar, the listing's toolbars and both panels stay in
+// place while the listing scrolls in its own region; a panel whose contents outgrow it scrolls
+// on its own.
+cedar-workspace-page {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+}
 .workspace {
+  flex: 1;
+  min-height: 0;
   display: grid;
   grid-template-columns: 250px minmax(0, 1fr) 400px;
-  min-height: calc(100vh - 80px);
+  grid-template-rows: minmax(0, 1fr);
 }
 .workspace.left-collapsed {
   grid-template-columns: 0 minmax(0, 1fr) 400px;
@@ -208,9 +216,15 @@ textarea {
 }
 .workspace > main {
   grid-column: 2;
+  display: flex;
+  flex-direction: column;
 }
 .workspace > .information {
   grid-column: 3;
+}
+.workspace > .navigation,
+.workspace > .information {
+  overflow-y: auto;
 }
 .navigation {
   position: relative;
@@ -653,9 +667,19 @@ label {
   .brand span {
     display: none;
   }
+  // Stacked panels leave no room for fixed regions, so a narrow page scrolls as a whole.
+  cedar-workspace-page {
+    display: block;
+    height: auto;
+  }
   .workspace {
     display: flex;
     flex-wrap: wrap;
+    min-height: calc(100vh - 80px);
+  }
+  .workspace > .navigation,
+  .workspace > .information {
+    overflow-y: visible;
   }
   .navigation {
     width: 100%;
@@ -710,6 +734,24 @@ th:nth-child(2) {
 }
 .table-scroll:not(.explorer-grid) > table th {
   white-space: nowrap;
+}
+/* The column headings, which also sort, stay in view while the rows scroll beneath them. A
+   collapsed border stays with the table rather than with a sticky heading, so each heading
+   paints its own copy of the rule over the border's position. */
+.table-scroll:not(.explorer-grid) > table thead th {
+  position: sticky;
+  top: 0;
+  z-index: var(--cedar-layer-sticky);
+  background: var(--cedar-surface-raised);
+}
+.table-scroll:not(.explorer-grid) > table thead th::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: -1px;
+  height: 0;
+  border-bottom: 2px solid var(--cedar-border-rule);
+  pointer-events: none;
 }
 .table-scroll:not(.explorer-grid) > table th:nth-child(2) {
   width: auto;
@@ -796,6 +838,30 @@ td:first-child a {
 }
 .metadata-quality {
   @include patterns.validation-summary;
+}
+.metadata-diagnostic {
+  margin-top: var(--cedar-space-1);
+  summary {
+    justify-content: flex-start;
+    text-align: left;
+  }
+  &:not([open]) .diagnostic-disclosure {
+    transform: rotate(-90deg);
+  }
+  p {
+    margin: var(--cedar-space-1) 0;
+    overflow-wrap: anywhere;
+  }
+}
+// The summaries stay in view beneath the toolbar while the form scrolls, at the offset `PinBelow`
+// sets. While both lists are open, each takes at most a fifth of the window rather than the
+// pattern's quarter, so the pair never covers more than two fifths of it.
+.metadata-issues {
+  position: sticky;
+  z-index: var(--cedar-layer-sticky);
+  &:has(> [open] ~ [open]) > .metadata-quality {
+    max-height: 20vh;
+  }
 }
 
 @media (max-width: 600px) {

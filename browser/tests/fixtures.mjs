@@ -84,11 +84,15 @@ export const test = base.extend({
         body: `
       window.cedarEmbeddableEditorVersion = 'fixture';
       customElements.define('cedar-embeddable-editor', class extends HTMLElement {
+        captureSave() { return {metadata: structuredClone(this.currentMetadata), needsElementIds: false}; }
+        captureDraft() { return {format:'cedar-cee-draft',version:1,template:structuredClone(this.template),metadata:structuredClone(this.currentMetadata),drafts:structuredClone(this.drafts)}; }
+        restoreDraft(value) { if(this.accepted || !Array.isArray(value.drafts)) return false; this.accepted=true;this.template=structuredClone(value.template);this.currentMetadata=structuredClone(value.metadata);this.drafts=structuredClone(value.drafts);return true; }
+        template={}; drafts=[];
         currentMetadata = {}; dataQualityReport = {isValid:true};
         connectedCallback() { queueMicrotask(() => this.eventHandler?.ready?.()); }
         accepted = false;
-        set templateAndInstanceObject(value) { if (this.accepted) throw Error('CEE inputs are set once'); this.accepted = true; this.currentMetadata = structuredClone(value.instanceObject); }
-        set templateObject(value) { if (this.accepted) throw Error('CEE inputs are set once'); this.accepted = true; this.currentMetadata = { 'schema:isBasedOn': value['@id'] }; }
+        set templateAndInstanceObject(value) { if (this.accepted) throw Error('CEE inputs are set once'); this.accepted = true; this.template=structuredClone(value.templateObject); this.currentMetadata = structuredClone(value.instanceObject); }
+        set templateObject(value) { if (this.accepted) throw Error('CEE inputs are set once'); this.accepted = true; this.template=structuredClone(value); this.currentMetadata = { 'schema:isBasedOn': value['@id'] }; }
         reveal(location) { (window.__ceeReveals ??= []).push(location); return Promise.resolve(true); }
       });
     `,
@@ -168,6 +172,10 @@ export const test = base.extend({
             { user: collaborator, administrator: false, member: true },
           ],
         };
+      else if (path.endsWith("/groups/team/membership/me")) {
+        const self = state.members.find(member => member.user["@id"] === owner["@id"]);
+        body = {member: self?.member ?? false, administrator: self?.administrator ?? false};
+      }
       else if (path.endsWith("/groups/team/users")) {
         if (request.method() === "PUT")
           state.members = request.postDataJSON().users.map((member) => ({

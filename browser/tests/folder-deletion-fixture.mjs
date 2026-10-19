@@ -1,5 +1,12 @@
 import { resource, expect } from './fixtures.mjs';
-export const deletionOwnerRefusal = {code: "FOLDER_DELETE_NOT_OWNER", message: "Only the owner of this folder can delete it and its contents."};
+/** The shared error body the resource server answers a refusal with. */
+export const cedarError = (statusCode, status, fields = {}) => ({
+  status, statusCode, errorKey: null, errorReasonKey: null, errorType: null, message: null,
+  parameters: {}, objects: {}, entities: {}, suggestedAction: 'none', operation: null, errorId: null, ...fields,
+});
+export const deletionOwnerRefusal = cedarError(403, 'FORBIDDEN', {
+  errorKey: 'folderCanNotBeDeleted', message: 'Only the owner of this folder can delete it and its contents.',
+});
 export const deletionPlan = {
   token: 'a'.repeat(64), allowed: true,
   counts: {folder: 2, template: 1, element: 1, field: 1, instance: 2},
@@ -24,13 +31,13 @@ export async function openFolderDeletion(page, plan = deletionPlan, onDelete) {
       if (onDelete) return onDelete(route);
       throw new Error('Unexpected destructive request');
     }
-    return route.fulfill({status: plan.code ? 403 : 200, json: plan});
+    return route.fulfill({status: plan.statusCode ?? 200, json: plan});
   });
   await page.goto('/dashboard');
   await page.getByRole('button', {name: 'Actions for Study folder', exact: true}).click();
   await page.locator('.resource-menu').getByRole('button', {name: 'Delete', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Delete', exact: true});
-  if (plan.code) await expect(dialog.getByRole('alert')).toHaveText(deletionOwnerRefusal.message);
+  if (plan.statusCode) await expect(dialog.getByRole('alert')).toHaveText(deletionOwnerRefusal.message);
   else await expect(dialog.getByRole('list', {name: 'Inventory by resource type'})).toBeVisible();
   return dialog;
 }

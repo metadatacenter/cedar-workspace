@@ -36,6 +36,10 @@ export interface Member {
   administrator: boolean;
   member: boolean;
 }
+export interface CallerMembership {
+  member: boolean;
+  administrator: boolean;
+}
 export const groupName = (g: Group, i18n: Pick<I18n, "t">) =>
   g.specialGroup ? i18n.t("Common.Everyone") : g["schema:name"];
 export const userName = (u: GroupUser, i18n: Pick<I18n, "t">) =>
@@ -74,6 +78,7 @@ export class Groups implements OnInit, OnDestroy {
   readonly users = signal<GroupUser[]>([]);
   readonly selected = signal<Group | null>(null);
   readonly members = signal<Member[] | null>(null);
+  readonly callerMembership = signal<CallerMembership | null>(null);
   readonly restricted = signal(false);
   readonly selecting = signal(false);
   groupEtag: string | null = null;
@@ -122,6 +127,7 @@ export class Groups implements OnInit, OnDestroy {
     ) {
       this.selected.set(null);
       this.members.set(null);
+      this.callerMembership.set(null);
       this.newMember = "";
     }
   }
@@ -162,6 +168,33 @@ export class Groups implements OnInit, OnDestroy {
       )
     );
   }
+  get membershipMessage() {
+    const membership = this.callerMembership();
+    if (!membership) return "Groups.ViewOnly";
+    if (membership.administrator) return "Groups.AdministratorStatus";
+    return membership.member ? "Groups.MemberViewOnly" : "Groups.NonMember";
+  }
+  private ownMembership(members: Member[]): CallerMembership {
+    const self = members.find((m) => m.user["@id"] === this.api.profile["@id"]);
+    return {
+      member: self?.member ?? false,
+      administrator: self?.administrator ?? false,
+    };
+  }
+  private async readCallerMembership(g: Group): Promise<CallerMembership | null> {
+    try {
+      const { data } = await this.api.request<CallerMembership>(
+        this.path(g) + "/membership/me",
+      );
+      return typeof data?.member === "boolean" &&
+        typeof data?.administrator === "boolean"
+        ? { member: data.member, administrator: data.administrator }
+        : null;
+    } catch {
+      // Older servers have no endpoint. Failed or denied reads establish no relationship.
+      return null;
+    }
+  }
   onlyAdmin(m: Member) {
     return (
       m.administrator &&
@@ -172,6 +205,7 @@ export class Groups implements OnInit, OnDestroy {
     const operation = this.coordinator.read();
     if (!operation) return;
     this.loading.set(true);
+    this.callerMembership.set(null);
     this.ready.set(false);
     this.error.set("");
     try {
@@ -227,6 +261,7 @@ export class Groups implements OnInit, OnDestroy {
   private async load(g: Group, returningToCreate = false, parent?: Operation) {
     const operation = parent ?? this.coordinator.read();
     if (!operation) return;
+    this.callerMembership.set(null);
     const previous = this.selected();
     const recovering =
       previous?.["@id"] === g["@id"] &&
@@ -283,6 +318,12 @@ export class Groups implements OnInit, OnDestroy {
           }
         }
       }
+      // An authorized roster already establishes our relationship. Otherwise ask only about self.
+      const membership = members
+        ? this.ownMembership(members)
+        : await this.readCallerMembership(g);
+      if (!operation.current()) return;
+      this.callerMembership.set(membership);
       this.selected.set(detail.data);
       this.members.set(members);
       this.memberEtag = memberEtag;
@@ -462,6 +503,7 @@ export class Groups implements OnInit, OnDestroy {
       this.groups.update((gs) => gs.filter((v) => v["@id"] !== g["@id"]));
       this.selected.set(null);
       this.members.set(null);
+      this.callerMembership.set(null);
       if (this.createdGroup?.["@id"] === g["@id"]) this.createdGroup = null;
     }, this.i18n.t("Groups.Deleted"));
   }
@@ -548,6 +590,7 @@ export class Groups implements OnInit, OnDestroy {
         throw new Error(this.i18n.t("Groups.InvalidResponse"));
       this.memberEtag = r.etag;
       this.members.set(r.data.users);
+      this.callerMembership.set(this.ownMembership(r.data.users));
       this.newMember = "";
       if (!this.canAdmin) {
         this.members.set(null);

@@ -154,10 +154,6 @@
     margin: 0;
     gap: var(--cedar-space-2);
   }
-  footer {
-    gap: var(--cedar-space-2);
-    padding: var(--cedar-space-3);
-  }
   @container (max-width: 520px) {
     .range {
       padding: var(--cedar-space-3);

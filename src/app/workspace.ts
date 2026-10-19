@@ -38,7 +38,6 @@ import {
   effect,
 } from "@angular/core";
 import { FriendlyDatePipe } from "./friendly-date";
-import { TitleCasePipe } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { TranslatePipe } from "@ngx-translate/core";
 import { ActivatedRoute, NavigationStart, Router, RouterLink } from "@angular/router";
@@ -54,6 +53,7 @@ import {
   listingPath,
   resourceLink,
   collections,
+  statusText,
 } from "./resource";
 import { Icon } from "./icon";
 import { FolderDeletionDialog } from "./folder-deletion-dialog";
@@ -221,12 +221,7 @@ export class Workspace {
   }
   /** A version's publication status, translated when Workspace knows it. */
   status(v: Resource) {
-    const status = v["bibo:status"]?.replace("bibo:", "");
-    if (!status) return "—";
-    return this.i18n.known(
-      "Status." + status,
-      new TitleCasePipe().transform(status),
-    );
+    return statusText(v, this.i18n);
   }
   readonly now = signal(Date.now());
   readonly ready = signal(false);
@@ -240,6 +235,7 @@ export class Workspace {
   readonly grid = signal(true);
   readonly preview = signal<Resource | null>(null);
   readonly selectionIds = signal<string[]>([]);
+  private pendingMoveSelection: string[] = [];
   readonly selection = computed(() =>
     this.rows().filter((r) => this.selectionIds().includes(r["@id"])),
   );
@@ -381,6 +377,7 @@ export class Workspace {
   }
   async load(refresh = false) {
     if (!this.state.active) return;
+    if (!refresh) this.pendingMoveSelection = [];
     this.listingGeneration++;
     this.reports.dispose();
     this.reports = new OperationCoordinator<string>();
@@ -418,6 +415,10 @@ export class Workspace {
       // Listings omit lifecycle actions. Enrich template links without blocking the table.
       void this.loadTemplateActions(data.resources);
       this.restoreSelection();
+      if (refresh && this.pendingMoveSelection.length) {
+        this.selectionIds.set(this.pendingMoveSelection.filter(id => this.rows().some(r => r["@id"] === id)));
+        this.pendingMoveSelection = [];
+      }
       operation.finish();
     } catch (e) {
       operation.fail(e);
@@ -425,6 +426,9 @@ export class Workspace {
         if (!refresh) {
           this.rows.set([]);
           this.total.set(0);
+        }
+        else if (this.pendingMoveSelection.length) {
+          this.selectionIds.set(this.pendingMoveSelection.filter(id => this.rows().some(r => r["@id"] === id)));
         }
         this.fail(e);
       }
@@ -661,11 +665,9 @@ export class Workspace {
     this.dragging.set([...this.selection()]);
   }
   dragMove(event: CdkDragMove) {
+    // CDK reports the pointer in viewport coordinates, which elementFromPoint takes as they are.
     const element = document
-      .elementFromPoint(
-        event.pointerPosition.x - window.scrollX,
-        event.pointerPosition.y - window.scrollY,
-      )
+      .elementFromPoint(event.pointerPosition.x, event.pointerPosition.y)
       ?.closest<HTMLElement>("[data-drop-id], .selection-delete");
     const deleteTarget = !!element?.matches(".selection-delete:not(:disabled)") && this.dragging().length > 0;
     this.deleteDrop.set(deleteTarget);
@@ -701,6 +703,7 @@ export class Workspace {
       this.cutItems.update((items) =>
         items.filter((r) => !result.moved.includes(r["@id"])),
       );
+      this.pendingMoveSelection = result.failed.map(f => f.resource["@id"]);
       const reload = this.load(true);
       generation = this.listingGeneration;
       await reload;
@@ -722,12 +725,8 @@ export class Workspace {
           count: result.moved.length,
         }),
       );
-      if (result.failed.length)
-        this.error.set(
-          result.failed
-            .map((f) => this.title(f.resource) + ": " + f.message)
-            .join("; "),
-        );
+      const errors = [this.error(), ...result.failed.map(f => this.title(f.resource) + ": " + f.message)].filter(Boolean);
+      if (errors.length) this.error.set(errors.join("; "));
       operation.finish();
     } catch (e) {
       operation.fail(e);
@@ -866,10 +865,13 @@ export class Workspace {
     });
   }
   submitSearch() {
+    const search = this.search.trim();
+    const sharing = this.params.get("sharing");
     void this.router.navigate(["/dashboard"], {
-      queryParams: this.navigationQuery(this.search.trim()
-        ? { search: this.search.trim() }
-        : { folderId: resourceSelector(this.folder) }),
+      queryParams: this.navigationQuery({
+        ...(sharing ? { sharing } : {}),
+        ...(search ? { search } : sharing ? {} : { folderId: resourceSelector(this.folder) }),
+      }),
     });
   }
   get filters(): ListingFilters {

@@ -7,6 +7,7 @@ import { MetadataEditor } from "./metadata-editor";
 import { Backend, HttpError } from "./backend.service";
 import { CeeLoader } from "./cee-loader";
 import { Confirmation } from "./confirmation";
+import { useDeploymentDomain } from "./resource-address";
 
 /**
  * The metadata editor's toolbar status, Save refusal and leave guard, across creating or editing,
@@ -61,12 +62,14 @@ describe("metadata editor status matrix", () => {
     confirm = vi.fn();
   let mode: Mode, writable: boolean, loadFails: boolean;
   beforeEach(() => {
-    request.mockReset().mockImplementation(async (path: string, method = "GET") => {
+    // A create mints its identity on the deployment's base, and a write answers with that identity.
+    useDeploymentDomain("example");
+    request.mockReset().mockImplementation(async (path: string, method = "GET", body?: { "@id"?: string }) => {
       if (loadFails && path.startsWith("/templates/")) throw new HttpError(500, "Unavailable");
       return {
         data:
           method !== "GET"
-            ? { "@id": "instance" }
+            ? { "@id": body?.["@id"] ?? "instance" }
             : path.startsWith("/templates/")
               ? template
               : path.endsWith("/report") || path.startsWith("/folders/")
@@ -79,6 +82,7 @@ describe("metadata editor status matrix", () => {
     confirm.mockReset().mockResolvedValue(false);
   });
   afterEach(() => {
+    useDeploymentDomain(null);
     host?.ngOnDestroy();
     vi.unstubAllGlobals();
   });
@@ -102,6 +106,7 @@ describe("metadata editor status matrix", () => {
     });
     cee = document.createElement("cedar-embeddable-editor") as CedarEmbeddableEditorElement;
     Object.assign(cee, { currentMetadata: { Value: { "@value": "first" } }, dataQualityReport: structuredClone(good) });
+    Object.assign(cee, { captureSave: () => ({metadata: structuredClone(cee.currentMetadata), needsElementIds: false, acknowledge: () => { throw new Error("Unexpected acknowledgement"); }}) });
     host = TestBed.runInInjectionContext(() => new MetadataEditor());
     host.editorHost = new ElementRef(document.createElement("div"));
     host.editor = new ElementRef(cee);

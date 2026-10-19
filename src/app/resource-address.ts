@@ -46,3 +46,29 @@ export function resourceIri(id: string, example: string): string {
   const base = deploymentBase ?? example.match(new RegExp(`^(https?://[^/]+/)(?:${COLLECTIONS})/`))?.[1];
   return base ? base + id : id;
 }
+
+/** A collection a client may create a resource in under an identity it chose. */
+export type Collection =
+  | "folders"
+  | "templates"
+  | "template-elements"
+  | "template-fields"
+  | "template-instances";
+
+/**
+ * A new identity in a collection on this deployment's base, such as
+ * https://repo.metadatacenter.org/folders/<uuid>, or null while the base is unknown. A create sent
+ * under an identity the client chose can be looked up by that identity when its reply is lost, so the
+ * client never has to send it again to learn whether it happened.
+ */
+export function mintResourceId(collection: Collection): string | null {
+  return deploymentBase ? `${deploymentBase}${collection}/${crypto.randomUUID()}` : null;
+}
+
+/** Whether a value has the shape of an identity minted in the collection, a UUID on a repo.<domain> base. */
+export function mintedResourceId(value: unknown, collection: Collection): value is string {
+  return (
+    typeof value === "string" &&
+    new RegExp(`^https://repo\\.[^/?#\\s]+/${collection}/${UUID}$`).test(value)
+  );
+}

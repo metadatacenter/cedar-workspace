@@ -1,3 +1,5 @@
+import { JsonSourcePolicy, parseJson } from "./json-policy";
+import { record } from "./access-validation";
 import { resourcePathId } from "./resource-address";
 import type { UserProfile } from "./account-types";
 import { Injectable, inject } from "@angular/core";
@@ -31,6 +33,8 @@ export class HttpError extends Error {
     readonly validationReport?: unknown,
     /** For a 412, whether the item is gone rather than changed. */
     readonly deleted = false,
+    /** The structured values the error body carries, such as the outcome of a refused deletion. */
+    readonly objects: Readonly<Record<string, unknown>> = {},
   ) {
     super(message);
   }
@@ -49,7 +53,9 @@ export function failureText(
   keepsEdits = false,
 ): string {
   if (keepsEdits && error instanceof HttpError && error.status === 412)
-    return i18n.t(error.deleted ? "Errors.DeletedEditsKept" : "Errors.ChangedEditsKept");
+    return i18n.t(
+      error.deleted ? "Errors.DeletedEditsKept" : "Errors.ChangedEditsKept",
+    );
   return error instanceof Error ? error.message : String(error);
 }
 export interface Reply<T> {
@@ -63,6 +69,9 @@ export class Backend {
   private readonly i18n = inject(I18n);
   get userId() {
     return this.auth.getParsedToken().sub;
+  }
+  signIn() {
+    this.auth.doLogin();
   }
   get email() {
     return this.auth.getParsedToken().email || "";
@@ -132,7 +141,7 @@ export class Backend {
   private renew(seconds: number) {
     return (this.refresh ||= new Promise<void>((resolve, reject) =>
       this.auth.refreshToken(seconds, resolve, () =>
-        reject(new Error(this.i18n.t("Errors.SessionExpired"))),
+        reject(new HttpError(401, this.i18n.t("Errors.SessionExpired"))),
       ),
     ).finally(() => {
       this.refresh = undefined;
@@ -170,7 +179,7 @@ export class Backend {
         response = await fetch(url, {
           method,
           headers,
-          body: body === undefined ? undefined : JSON.stringify(body),
+          body: body === undefined ? undefined : JsonSourcePolicy.stringify(body),
         });
       } catch {
         // No answer arrived. The browser's own wording, "Failed to fetch", is English whatever
@@ -189,12 +198,14 @@ export class Backend {
         let message = "";
         let code: string | undefined;
         let validationReport: unknown;
+        let objects: Record<string, unknown> = {};
         try {
           const data = await response.json();
           message = data.message || data.error || "";
-          if (typeof data.code === "string") code = data.code;
-          else if (typeof data.errorKey === "string") code = data.errorKey;
-          validationReport = data.objects?.validationReport ?? data.validationReport;
+          if (typeof data.errorKey === "string") code = data.errorKey;
+          if (record(data.objects)) objects = data.objects;
+          validationReport =
+            data.objects?.validationReport ?? data.validationReport;
         } catch {}
         if (response.status === 412) {
           const deleted = /no longer exists/i.test(message);
@@ -204,6 +215,7 @@ export class Backend {
             code,
             undefined,
             deleted,
+            objects,
           );
         }
         throw new HttpError(
@@ -212,6 +224,8 @@ export class Backend {
             this.i18n.t("Errors.RequestFailed", { status: response.status }),
           code,
           validationReport,
+          false,
+          objects,
         );
       }
       return response;
@@ -228,17 +242,23 @@ export class Backend {
     const text = await response.text();
     let data: T;
     try {
-      data = text ? (JSON.parse(text) as T) : (undefined as T);
+      data = text ? parseJson<T>(text) : (undefined as T);
     } catch {
       // A proxy's HTML page under a 200, or a body cut short, would otherwise surface as the
       // parser's own English complaint about an unexpected token.
-      throw new HttpError(response.status, this.i18n.t("Errors.UnreadableResponse"));
+      throw new HttpError(
+        response.status,
+        this.i18n.t("Errors.UnreadableResponse"),
+      );
     }
     return { data, etag: response.headers.get("ETag") };
   }
   path(r: Resource) {
     return (
-      "/" + collections[r.resourceType] + "/" + encodeURIComponent(resourcePathId(r["@id"]))
+      "/" +
+      collections[r.resourceType] +
+      "/" +
+      encodeURIComponent(resourcePathId(r["@id"]))
     );
   }
   report(r: Resource) {

@@ -25,8 +25,15 @@ import type {
 import { Backend, refusedRead } from "./backend.service";
 import { CeeLoader } from "./cee-loader";
 import { I18n, fallbackLanguage } from "./i18n";
+import { FriendlyDatePipe } from "./friendly-date";
 import { Icon } from "./icon";
-import { Resource, collections, title } from "./resource";
+import {
+  Resource,
+  collections,
+  statusText,
+  title,
+  versioned,
+} from "./resource";
 
 /** Render the element's contents as a transient template; the dialog owns its root heading. */
 export function previewElement(element: CeeJsonObject): CeeJsonObject {
@@ -39,7 +46,7 @@ export function previewElement(element: CeeJsonObject): CeeJsonObject {
 
 @Component({
   selector: "cedar-artifact-preview",
-  imports: [Tooltip, Icon, TranslatePipe],
+  imports: [Tooltip, Icon, TranslatePipe, FriendlyDatePipe],
   template: `
     <dialog
       #dialog
@@ -63,16 +70,40 @@ export function previewElement(element: CeeJsonObject): CeeJsonObject {
         </div>
       }
       <header class="dialog-heading" [inert]="loading()">
-        <h2>
+        <p class="preview-facts">
           <span
             class="preview-kind"
             aria-hidden="true"
             [cedarTooltip]="
               'ResourceTypes.' + resource.resourceType | translate
             "
-            ><cedar-icon [name]="resource.resourceType" /></span
-          >{{ name }}
-        </h2>
+            ><cedar-icon [name]="resource.resourceType"
+          /></span>
+          <span class="preview-release"
+            ><span>{{
+              "ResourceTypes." + resource.resourceType | translate
+            }}</span>
+            @if (versioned) {
+              <span aria-hidden="true"> · </span
+              ><span [cedarTooltip]="'Common.Version' | translate">{{
+                resource["pav:version"] || ("Dashboard.Unversioned" | translate)
+              }}</span>
+              @if (status !== "—") {
+                <span aria-hidden="true"> · </span
+                ><span [cedarTooltip]="'Dashboard.Status' | translate">{{
+                  status
+                }}</span>
+              }
+            }
+            @if (resource["pav:lastUpdatedOn"]; as updated) {
+              <span aria-hidden="true"> · </span
+              ><time [attr.datetime]="updated" [cedarTooltip]="updated">{{
+                updated | friendlyDate: now
+              }}</time>
+            }
+          </span>
+        </p>
+        <h2>{{ name }}</h2>
         @if (!loading() && !error()) {
           <button class="try-out" type="button" (click)="toggleTryOut()">
             {{ (trying() ? "Preview.Back" : "Preview.TryOut") | translate }}
@@ -133,6 +164,14 @@ export class ArtifactPreview implements AfterViewInit, OnDestroy {
   get name() {
     return title(this.resource, this.i18n.t("Common.Untitled"));
   }
+  get versioned() {
+    return versioned(this.resource);
+  }
+  get status() {
+    return statusText(this.resource, this.i18n);
+  }
+  /** When the preview opened; the heading gives its date relative to this, as the tile does. */
+  readonly now = Date.now();
   private fail = (message = "Preview.Unavailable") => {
     if (!this.alive) return;
     clearTimeout(this.timer);

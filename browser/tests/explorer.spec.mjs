@@ -38,7 +38,7 @@ async function setup(page, extra = []) {
     );
     // Anything else, the home folder included, is the shared fixture's to answer or refuse.
     if (!r) return route.fallback();
-    return route.fulfill({ json: r, headers: { ETag: '"' + r["@id"] + '"' } });
+    return route.fulfill({ json: {...r, pathInfo: r.pathInfo ?? [{"@id": moved.has(r["@id"])?"destination":"home", resourceType:"folder"}, r]}, headers: { ETag: '"' + r["@id"] + '"' } });
   });
   await page.goto("/dashboard");
   await expect(page.getByRole("button", { name: "Grid view", exact: true })).toHaveAttribute("aria-pressed", "true");
@@ -492,4 +492,58 @@ test('list view survives a reload, opening a folder and a return from an editor'
   await page.getByRole('button', {name: 'Grid view', exact: true}).click();
   await expect(view).toHaveClass(/explorer-grid/);
   await expect(page).not.toHaveURL(/view=/);
+});
+
+const many = Array.from({ length: 40 }, (_, i) => ({
+  ...resource,
+  "@id": `many-${i}`,
+  resourceType: "instance",
+  "schema:name": `Listed ${i}`,
+}));
+for (const grid of [true, false]) {
+  test(`the ${grid ? "grid" : "list"} scrolls while the top bar, toolbars and panels stay in place`, async ({ page, api }) => {
+    await setup(page, many);
+    if (!grid) await page.getByRole("button", { name: "List view", exact: true }).click();
+    const view = page.locator(".table-scroll");
+    await expect(page.locator(".explorer-item")).toHaveCount(44);
+    const fixed = [".topbar", ".table-toolbar", ".explorer-toolbar", ".navigation", ".information", ".paging"];
+    const tops = () =>
+      page.evaluate((selectors) => selectors.map((s) => document.querySelector(s).getBoundingClientRect().top), fixed);
+    expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(true);
+    expect(await view.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+    const before = await tops();
+    await page.locator('[data-resource-id="many-0"]').hover();
+    await page.mouse.wheel(0, 2000);
+    await expect.poll(() => view.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+    expect(await page.evaluate(() => scrollY)).toBe(0);
+    expect(await tops()).toEqual(before);
+    const paging = await page.locator(".paging").boundingBox();
+    expect(paging.y + paging.height).toBeLessThanOrEqual(page.viewportSize().height);
+    if (!grid) {
+      const heading = await page.locator("thead th").first().boundingBox();
+      expect(Math.round(heading.y)).toBe(Math.round((await view.boundingBox()).y));
+    }
+  });
+}
+
+test("a narrow page scrolls as a whole and a drag still finds the target under the pointer", async ({ page, api }) => {
+  await page.setViewportSize({ width: 375, height: 700 });
+  await setup(page, many);
+  // The Delete action appears once something is selected.
+  const item = page.locator('[data-resource-id="many-0"]');
+  await item.click();
+  const remove = page.locator(".selection-delete");
+  await remove.evaluate((el) => el.scrollIntoView({ block: "start" }));
+  expect(await page.evaluate(() => scrollY)).toBeGreaterThan(0);
+  const source = await item.boundingBox();
+  const target = await remove.boundingBox();
+  await page.mouse.move(source.x + 20, source.y + source.height - 10);
+  await page.mouse.down();
+  await page.mouse.move(source.x + 25, source.y + source.height - 15, { steps: 3 });
+  await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 12 });
+  await expect(remove).toHaveClass(/explorer-delete-target/);
+  await page.mouse.move(source.x + 20, source.y + source.height - 10, { steps: 12 });
+  await expect(remove).not.toHaveClass(/explorer-delete-target/);
+  await page.mouse.up();
+  await expect(page.locator("body")).not.toHaveClass(/explorer-dragging/);
 });

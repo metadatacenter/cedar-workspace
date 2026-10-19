@@ -16,9 +16,10 @@ import {
   metadataRoute,
   workspaceReturn,
 } from "./metadata-editor";
-import { Backend } from "./backend.service";
+import { Backend, HttpError } from "./backend.service";
 import { CeeLoader } from "./cee-loader";
 import { provideWorkspaceTranslations } from "./i18n";
+import { useDeploymentDomain } from "./resource-address";
 import type { CedarEmbeddableEditorElement } from "cedar-embeddable-editor";
 
 describe("Modern metadata host", () => {
@@ -42,13 +43,20 @@ describe("Modern metadata host", () => {
     "schema:name": "Study",
     "schema:description": "Study description",
   };
+  // A create is sent under an identity minted on the deployment's base and answered with it.
+  const created = (body: unknown) => String((body as { "@id": string })["@id"]);
+  const createdPath = /^\/template-instances\/([0-9a-f-]{36})\?folder_id=folder$/;
   beforeEach(() => {
+    useDeploymentDomain("example");
     api = {
       init: vi.fn().mockResolvedValue(true),
       profile: { homeFolderId: "home" },
-      request: vi.fn(async (path: string, method = "GET") => {
+      request: vi.fn(async (path: string, method = "GET", body?: unknown) => {
         if (method !== "GET")
-          return { data: { "@id": "instance-id" }, etag: '"i2"' };
+          return {
+            data: { "@id": (body as { "@id"?: string })?.["@id"] ?? "instance-id" },
+            etag: '"i2"',
+          };
         if (path === "/templates/template-id")
           return { data: template, etag: '"t1"' };
         if (path === "/template-instances/instance-id")
@@ -97,6 +105,7 @@ describe("Modern metadata host", () => {
       value: { Notes: { "@value": "initial" } },
       writable: true,
     });
+    Object.assign(cee, { captureSave: () => ({metadata: structuredClone(cee.currentMetadata), needsElementIds: false, acknowledge: () => { throw new Error("Unexpected acknowledgement"); }}) });
     Object.defineProperty(cee, "dataQualityReport", {
       value: {
         isValid: true,
@@ -112,6 +121,7 @@ describe("Modern metadata host", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}")));
   });
   afterEach(() => {
+    useDeploymentDomain(null);
     host.ngOnDestroy();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
@@ -123,6 +133,125 @@ describe("Modern metadata host", () => {
     });
     await host.ngAfterViewInit();
   }
+  it.each(["saved", "unchanged", "conflict", "read failed", "permission lost", "missing revision", "wrong identity"])(
+    "checks an unconfirmed update (%s) without replacing the current form", async outcome => {
+      await edit();
+      const original = api.request.getMockImplementation()! as (path: string, method?: string) => Promise<{data: Record<string, unknown>; etag: string}>;
+      let submitted: Record<string, unknown> = {};
+      let recovery = false;
+      api.request.mockImplementation(async (path, method = "GET", body) => {
+        if (method === "PUT") { submitted = structuredClone(body); throw new Error("Lost reply"); }
+        if (!recovery || path.endsWith("/report")) {
+          if (recovery && outcome === "permission lost") return {data: {currentUserPermissions: {capabilities: []}}};
+          return original(path, method);
+        }
+        if (outcome === "read failed") throw new Error("Offline");
+        if (outcome === "unchanged") return original(path, method);
+        return {data: {...submitted,
+          ...(outcome === "conflict" ? {Notes: {"@value": "Other author"}} : {}),
+          ...(outcome === "wrong identity" ? {"@id": "wrong"} : {}),
+          "pav:lastUpdatedOn": "new"}, etag: outcome === "missing revision" ? null : '\"confirmed\"'};
+      });
+      cee.currentMetadata["Notes"] = {"@value": "Submitted"};
+      host.changed(); await host.save();
+      expect(host.canCheckSave()).toBe(true);
+      expect(host.state.reloadRequired()).toBe(true);
+      cee.currentMetadata["Notes"] = {"@value": "Newer"}; host.name = "Newer name"; host.changed();
+      const form = cee.templateAndInstanceObject;
+      recovery = true;
+      await host.checkSaveStatus();
+      expect(cee.currentMetadata["Notes"]).toEqual({"@value": "Newer"});
+      expect(cee.templateAndInstanceObject).toBe(form);
+      expect(host.dirty()).toBe(true);
+      expect(host.state.reloadRequired()).toBe(!["saved", "unchanged"].includes(outcome));
+      expect(host.canCheckSave()).toBe(!["saved", "unchanged"].includes(outcome));
+      if (["saved", "unchanged"].includes(outcome)) {
+        api.request.mockResolvedValue({data: {"@id": "instance-id"}, etag: '\"next\"'});
+        await host.save();
+        expect(api.request.mock.lastCall?.[3]).toBe(outcome === "saved" ? '\"confirmed\"' : '\"i1\"');
+      } else {
+        const calls = api.request.mock.calls.length;
+        await host.save(); expect(api.request.mock.calls.length).toBe(calls);
+      }
+    },
+  );
+  it("keeps edits made during a recovery read and rejects results after disposal", async () => {
+    await edit();
+    const original = api.request.getMockImplementation()! as (path: string, method?: string) => Promise<{data: Record<string, unknown>; etag: string}>;
+    let submitted: Record<string, unknown> = {};
+    api.request.mockImplementation(async (path, method = "GET", body) => {
+      if (method === "PUT") {submitted = structuredClone(body); throw new Error("Lost reply");}
+      return original(path, method);
+    });
+    await host.save();
+    let release!: (value: unknown) => void;
+    api.request.mockImplementation((path) => path.endsWith("/report") ? original(path) : new Promise(resolve => {release = resolve;}));
+    const checking = host.checkSaveStatus();
+    expect(host.checkingSave()).toBe(true);
+    await host.checkSaveStatus();
+    cee.currentMetadata["Notes"] = {"@value": "During recovery"}; host.changed();
+    host.ngOnDestroy();
+    release({data: submitted, etag: '\"confirmed\"'});
+    await checking;
+    expect(cee.currentMetadata["Notes"]).toEqual({"@value": "During recovery"});
+    expect(host.state.reloadRequired()).toBe(true);
+  });
+  it("acknowledges newly minted element IDs only after the recovered values match", async () => {
+    const original = api.request.getMockImplementation()! as (path: string, method?: string) => Promise<{data: Record<string, unknown>; etag: string}>;
+    api.request.mockImplementation(async (path, method = "GET") => path === "/templates/template-id"
+      ? {data: {...template, properties: {Element: {"@type": "https://schema.metadatacenter.org/core/TemplateElement", properties: {}}}}}
+      : original(path, method));
+    await edit();
+    cee.currentMetadata["Element"] = {"@id": null, Answer: {"@value": "Submitted"}};
+    const snapshot = structuredClone(cee.currentMetadata);
+    const acknowledge = vi.fn((stored) => {
+      (cee.currentMetadata["Element"] as Record<string, unknown>)["@id"] = stored.Element["@id"];
+      return {...snapshot, Element: stored.Element};
+    });
+    Object.assign(cee, {captureSave: () => ({metadata: snapshot, needsElementIds: true, acknowledge})});
+    let submitted: Record<string, unknown> = {};
+    api.request.mockImplementation(async (path, method = "GET", body) => {
+      if (method === "PUT") {submitted = structuredClone(body); throw new Error("Lost reply");}
+      if (path.endsWith("/report")) return original(path, method);
+      return {data: {...submitted, Element: {"@id": "urn:minted", Answer: {"@value": "Submitted"}}}, etag: '\"confirmed\"'};
+    });
+    host.changed(); await host.save();
+    cee.currentMetadata["Element"] = {"@id": null, Answer: {"@value": "Newer"}};
+    await host.checkSaveStatus();
+    expect(acknowledge).toHaveBeenCalledOnce();
+    expect(cee.currentMetadata["Element"]).toEqual({"@id": "urn:minted", Answer: {"@value": "Newer"}});
+    expect(host.dirty()).toBe(true); expect(host.state.reloadRequired()).toBe(false);
+  });
+  it.each([401,403])("rechecks access after %s without replacing the refused metadata draft", async status => {
+    await edit();
+    const original = api.request.getMockImplementation()! as (path: string, method?: string) => Promise<{data: Record<string, unknown>; etag: string}>;
+    let allowed = false;
+    api.request.mockImplementation(async (path, method = "GET") => {
+      if (method === "PUT") throw new HttpError(status, "Access refused");
+      if (!allowed && path.endsWith("/report")) return {data: {currentUserPermissions: {capabilities: []}}};
+      return original(path, method);
+    });
+    host.name = "Refused name"; host.changed(); await host.save();
+    expect(host.canRecheckAccess()).toBe(true); expect(host.canCheckSave()).toBe(false);
+    await host.checkSaveStatus(); expect(host.state.reloadRequired()).toBe(true);
+    allowed = true; host.name = "Newer name"; host.changed();
+    await host.checkSaveStatus();
+    expect(host.name).toBe("Newer name"); expect(host.dirty()).toBe(true);
+    expect(host.canRecheckAccess()).toBe(false); expect(host.state.reloadRequired()).toBe(false);
+    api.request.mockResolvedValue({data: {"@id": "instance-id"}, etag: '\"next\"'});
+    await host.save(); expect(api.request.mock.lastCall?.[3]).toBe('\"i1\"');
+  });
+  it("restored access cannot attach a new revision to an unreconciled draft", async () => {
+    await edit();
+    api.request.mockRejectedValue(new HttpError(403, "Access refused"));
+    host.name = "My draft"; host.changed(); await host.save();
+    api.request.mockImplementation(async path => path.endsWith("/report")
+      ? {data: {currentUserPermissions: {capabilities: ["updateResource"]}}}
+      : {data: {"@id": "instance-id", "schema:name": "Other author", "schema:isBasedOn": "template-id"}, etag: '\"other\"'});
+    await host.checkSaveStatus();
+    expect(host.name).toBe("My draft"); expect(host.state.reloadRequired()).toBe(true);
+    expect(host.canRecheckAccess()).toBe(true);
+  });
   it("configures CEE once after permissions and starts clean", async () => {
     await host.ngAfterViewInit();
     expect(cee.config.readOnlyMode).toBe(false);
@@ -226,46 +355,249 @@ describe("Modern metadata host", () => {
     host.changed();
     expect(host.dirty()).toBe(false);
   });
-  it("creates once, then updates with each returned ETag without resetting CEE", async () => {
+  it("creates once under a minted identity, then updates with each returned ETag without resetting CEE", async () => {
     await host.ngAfterViewInit();
+    cee.currentMetadata["schema:description"] = "";
     const input = cee.templateObject;
-    api.request.mockResolvedValue({ data: { "@id": "new-id" }, etag: '"i2"' });
     await host.save();
-    expect(api.request).toHaveBeenLastCalledWith(
-      "/template-instances?folder_id=folder",
-      "POST",
-      expect.objectContaining({
-        "schema:name": "Study metadata",
-        "schema:isBasedOn": "template-id",
-      }),
-      null,
-    );
+    const [path, method, body, etag] = api.request.mock.lastCall!;
+    const uuid = createdPath.exec(path)?.[1];
+    expect(uuid).toBeDefined();
+    expect([method, etag]).toEqual(["PUT", null]);
+    expect(body).toMatchObject({
+      "@id": `https://repo.example/template-instances/${uuid}`,
+      "schema:name": "Study metadata",
+      "schema:isBasedOn": "template-id",
+      "schema:description": "Study description",
+    });
     expect(address).toHaveBeenCalledWith(
-      expect.stringMatching(/^\/instances\/edit\/new-id\?.*returnTo=/),
+      expect.stringMatching(new RegExp(`^/instances/edit/${uuid}\\?.*returnTo=`)),
       { replaceUrl: true },
     );
-    api.request.mockResolvedValue({ data: { "@id": "new-id" }, etag: '"i3"' });
+    api.request.mockImplementation(async (_path, _method, sent) => ({ data: { "@id": created(sent) }, etag: '"i3"' }));
     await host.save();
     expect(api.request).toHaveBeenLastCalledWith(
-      "/template-instances/new-id",
+      `/template-instances/${uuid}`,
       "PUT",
-      expect.objectContaining({ "@id": "new-id" }),
+      expect.objectContaining({ "@id": created(body), "schema:description": "Study description" }),
       '"i2"',
     );
     await host.save();
     expect(api.request.mock.lastCall?.[3]).toBe('"i3"');
+    expect(api.request.mock.lastCall?.[2]["schema:description"]).toBe("Study description");
     expect(cee.templateObject).toBe(input);
     expect(cee.templateAndInstanceObject).toBeUndefined();
   });
-  it.each(["Conflict (412)", "Deleted (404)"])(
+  it.each([
+    ['"saved"', '"saved"'],
+    ['"1--gzip--gzip"', '"1--gzip"'],
+    ['"1-resource-record--gzip"', '"1"'],
+  ])("adopts element IDs from the saved revision (%s / %s) and keeps newer edits dirty", async (writeTag, readTag) => {
+    await host.ngAfterViewInit();
+    cee.currentMetadata["Element"] = {"@id": null};
+    const submitted = structuredClone(cee.currentMetadata);
+    const acknowledge = vi.fn((stored) => {
+      cee.currentMetadata["Element"] = stored.Element;
+      return {...submitted, Element: stored.Element};
+    });
+    Object.assign(cee, {captureSave: () => ({metadata: submitted, needsElementIds: true, acknowledge})});
+    let id = "";
+    api.request.mockImplementation(async (_path, method = "GET", body) => {
+      if (method === "PUT") {
+        cee.currentMetadata["Notes"] = {"@value": "newer edit"};
+        id = created(body);
+        return {data: {"@id": id}, etag: writeTag};
+      }
+      return {data: {"@id": id, Element: {"@id": "urn:element"}}, etag: readTag};
+    });
+    await host.save();
+    expect(acknowledge).toHaveBeenCalledOnce();
+    expect(cee.currentMetadata["Notes"]).toEqual({"@value": "newer edit"});
+    expect(cee.currentMetadata["Element"]).toEqual({"@id": "urn:element"});
+    expect(host.dirty()).toBe(true);
+    expect(host.state.reloadRequired()).toBe(false);
+    expect(host.error()).toBe("");
+  });
+  it.each([true, false])(
+    "binds element IDs through the stored instance when a lost create is found (identities readable: %s)",
+    async (readable) => {
+      await host.ngAfterViewInit();
+      cee.currentMetadata["Element"] = {"@id": null};
+      const submitted = structuredClone(cee.currentMetadata);
+      const acknowledge = vi.fn((stored) => {
+        if (!readable) throw new Error("Invalid identities");
+        cee.currentMetadata["Element"] = stored.Element;
+        return {...submitted, Element: stored.Element};
+      });
+      Object.assign(cee, {captureSave: () => ({metadata: submitted, needsElementIds: true, acknowledge})});
+      let stored: Record<string, unknown> | undefined;
+      api.request.mockImplementation(async (path, method = "GET", body) => {
+        if (method === "PUT") {
+          stored = {...structuredClone(body), Element: {"@id": "urn:element"}};
+          throw new HttpError(503, "No reply");
+        }
+        if (path.endsWith("/report"))
+          return {data: {currentUserPermissions: {capabilities: ["updateResource"]}}, etag: '"g1"'};
+        if (path.startsWith("/template-instances/")) return {data: stored, etag: '"1"'};
+        return {data: template, etag: '"t1"'};
+      });
+      await host.save();
+      expect(host.canCheckSave()).toBe(true);
+      cee.currentMetadata["Notes"] = {"@value": "newer edit"};
+      host.changed();
+      await host.checkSaveStatus();
+      expect(acknowledge).toHaveBeenCalledWith(stored);
+      expect(host.state.uncertainCreation()).toBe(false);
+      expect(host.canCheckSave()).toBe(false);
+      expect(cee.currentMetadata["Notes"]).toEqual({"@value": "newer edit"});
+      expect(host.dirty()).toBe(true);
+      expect(address).toHaveBeenLastCalledWith(
+        expect.stringContaining("/instances/edit/" + String(stored!["@id"]).split("/").at(-1) + "?"),
+        {replaceUrl: true},
+      );
+      // Identities that cannot be bound leave a reload to do before the next save.
+      expect(host.state.reloadRequired()).toBe(!readable);
+      expect(host.error()).toBe(readable ? "" : "Saved, but the stored element identifiers could not be confirmed. Your current edits remain in the editor. Reload metadata before saving again.");
+      expect(cee.currentMetadata["Element"]).toEqual({"@id": readable ? "urn:element" : null});
+    },
+  );
+  it.each(["unavailable", "different revision", "different compressed revision", "weak revision", "invalid identities"])(
+    "keeps the draft and blocks another write when identity readback is %s", async (failure) => {
+      await host.ngAfterViewInit();
+      cee.currentMetadata["Element"] = {"@id": null};
+      host.changed();
+      const acknowledge = vi.fn(() => { throw new Error("Invalid identities"); });
+      Object.assign(cee, {captureSave: () => ({metadata: structuredClone(cee.currentMetadata), needsElementIds: true, acknowledge})});
+      let id = "";
+      api.request.mockImplementation(async (_path, method = "GET", body) => {
+        if (method === "PUT") {
+          cee.currentMetadata["Notes"] = {"@value": "newer edit"};
+          id = created(body);
+          return {data: {"@id": id}, etag: '"1--gzip--gzip"'};
+        }
+        if (failure === "unavailable") throw new Error("Network error");
+        const tag = failure === "different revision" ? '"2"'
+          : failure === "different compressed revision" ? '"2--gzip"'
+          : failure === "weak revision" ? 'W/"1"' : '"1--gzip"';
+        return {data: {"@id": id}, etag: tag};
+      });
+      await host.save();
+      expect(host.error()).toContain("Saved, but");
+      expect(host.state.reloadRequired()).toBe(true);
+      expect(host.state.uncertainCreation()).toBe(false);
+      expect(host.canCheckSave()).toBe(false);
+      expect(host.dirty()).toBe(true);
+      expect(cee.currentMetadata["Element"]).toEqual({"@id": null});
+      expect(address).toHaveBeenCalledWith(expect.stringContaining(`/instances/edit/${id.split("/").at(-1)}?`), {replaceUrl:true});
+      if (failure !== "invalid identities") expect(acknowledge).not.toHaveBeenCalled();
+      const calls = api.request.mock.calls.length;
+      await host.save();
+      expect(api.request.mock.calls.length).toBe(calls);
+    },
+  );
+  it.each(["saved", "old revision", "different content", "permission lost", "read failed"])(
+    "rechecks an acknowledged update after failed identity readback: %s", async outcome => {
+      await edit();
+      Object.assign(host, {template: {...template, properties: {Element: {
+        "@type": "https://schema.metadatacenter.org/core/TemplateElement", properties: {},
+      }}}});
+      const original = api.request.getMockImplementation()! as (path: string) => Promise<unknown>;
+      cee.currentMetadata["Element"] = {"@id": null};
+      const snapshot = structuredClone(cee.currentMetadata);
+      const acknowledge = vi.fn(stored => {
+        cee.currentMetadata["Element"] = stored.Element;
+        return {...snapshot, Element: stored.Element};
+      });
+      Object.assign(cee, {captureSave: () => ({metadata: snapshot, needsElementIds: true, acknowledge})});
+      let checking = false;
+      let stored: Record<string, unknown> = {};
+      let writes = 0;
+      api.request.mockImplementation(async (path, method = "GET", body) => {
+        if (method === "PUT") {
+          writes++;
+          stored = {...structuredClone(body), Element: {"@id": "urn:minted"}};
+          return {data: {"@id": "instance-id"}, etag: '"saved"'};
+        }
+        if (path.endsWith("/report")) return outcome === "permission lost"
+          ? {data: {currentUserPermissions: {capabilities: []}}} : original(path);
+        if (!checking || outcome === "read failed") throw new Error("Read unavailable");
+        if (outcome === "old revision") return original(path);
+        return {data: {...stored, ...(outcome === "different content" ? {Notes: {"@value": "Other author"}} : {})}, etag: '"saved"'};
+      });
+      host.changed(); await host.save();
+      expect(host.error()).toContain("Saved, but");
+      expect(host.canCheckSave()).toBe(true);
+      expect(host.state.reloadRequired()).toBe(true);
+      expect(acknowledge).not.toHaveBeenCalled();
+      const form = cee.templateAndInstanceObject;
+      cee.currentMetadata["Notes"] = {"@value": "Newer input"}; host.changed();
+      checking = true; await host.checkSaveStatus();
+      expect(writes).toBe(1);
+      expect(cee.currentMetadata["Notes"]).toEqual({"@value": "Newer input"});
+      expect(cee.templateAndInstanceObject).toBe(form);
+      expect(host.dirty()).toBe(true);
+      expect(host.state.reloadRequired()).toBe(outcome !== "saved");
+      expect(host.canCheckSave()).toBe(outcome !== "saved");
+      expect(acknowledge).toHaveBeenCalledTimes(outcome === "saved" ? 1 : 0);
+      expect(cee.currentMetadata["Element"]).toEqual({"@id": outcome === "saved" ? "urn:minted" : null});
+    },
+  );
+  it("recovers a confirmed update whose successful reply omitted its revision", async () => {
+    await edit();
+    let stored: Record<string, unknown> = {};
+    api.request.mockImplementation(async (path, method = "GET", body) => {
+      if (method === "PUT") {
+        stored = structuredClone(body);
+        return {data: {"@id": "instance-id"}, etag: null};
+      }
+      return path.endsWith("/report")
+        ? {data: {currentUserPermissions: {capabilities: ["updateResource"]}}}
+        : {data: stored, etag: '"confirmed"'};
+    });
+    host.name = "Saved name"; host.changed(); await host.save();
+    expect(host.state.reloadRequired()).toBe(true);
+    expect(host.canCheckSave()).toBe(true);
+    host.name = "Newer name"; host.changed(); await host.checkSaveStatus();
+    expect(host.state.reloadRequired()).toBe(false);
+    expect(host.canCheckSave()).toBe(false);
+    expect(host.name).toBe("Newer name");
+    expect(host.dirty()).toBe(true);
+  });
+  it.each(["", "Imported instance description"])(
+    "preserves the loaded description %j across field edits and sparse acknowledgements",
+    async (description) => {
+      const original = api.request.getMockImplementation()! as (
+        path: string, method?: string,
+      ) => Promise<{data: Record<string, unknown>; etag: string}>;
+      api.request.mockImplementation(async (path, method = "GET") => {
+        const reply = await original(path, method);
+        if (method === "GET" && path === "/template-instances/instance-id")
+          return {...reply, data: {...reply.data, "schema:description": description}};
+        return reply;
+      });
+      await edit();
+      cee.currentMetadata["schema:description"] = "";
+      for (const value of ["First edit", "Second edit"]) {
+        cee.currentMetadata["Notes"] = {"@value": value};
+        host.changed();
+        await host.save();
+        expect(api.request.mock.lastCall?.[2]).toMatchObject({
+          "schema:description": description, Notes: {"@value": value},
+        });
+      }
+    },
+  );
+  it.each([412, 404])(
     "keeps unsaved edits and the read-time validator after %s",
-    async (error) => {
+    async (status) => {
       await edit();
       host.name = "Unsaved";
       host.changed();
-      api.request.mockRejectedValue(new Error(error));
+      api.request.mockRejectedValue(new HttpError(status, "Deleted (404)"));
       await host.save();
-      expect(host.error()).toBe(error);
+      expect(host.error()).toBe(status === 412
+        ? "This item changed since you opened it. Your edits have been kept. Cancel and reopen to review the latest version."
+        : "Deleted (404)");
       expect(host.name).toBe("Unsaved");
       expect(host.dirty()).toBe(true);
       await host.save();
@@ -334,7 +666,28 @@ describe("Modern metadata host", () => {
     await host.save();
     expect(host.notice()).toBe("Saved.");
   });
-  it("blocks invalid values but permits warnings once errors are corrected", async () => {
+  it("blocks pending validation without dirtying a loaded instance or showing a provisional error", async () => {
+    await edit();
+    Object.assign(cee.dataQualityReport, {
+      isValid: false,
+      pendingValidation: true,
+      problems: [],
+    });
+    host.validated();
+    expect(host.dirty()).toBe(false);
+    expect(host.validationErrors).toEqual([]);
+    api.request.mockClear();
+    await host.save();
+    expect(api.request).not.toHaveBeenCalled();
+    Object.assign(cee.dataQualityReport, {
+      isValid: true,
+      pendingValidation: false,
+    });
+    host.validated();
+    expect(host.dirty()).toBe(false);
+    expect(host.validationErrors).toEqual([]);
+  });
+  it("blocks structural defects but permits warnings once they are corrected", async () => {
     await edit();
     Object.assign(cee.dataQualityReport, {
       isValid: false,
@@ -348,14 +701,17 @@ describe("Modern metadata host", () => {
         {
           path: ["Email"],
           field: "Email",
-          code: "email",
-          message: "Enter a valid email.",
+          code: "valueType",
+          message: "The answer must be a string.",
+          displayMessage: "Enter a text value.",
         },
       ],
     });
     host.changed();
     expect(host.validationWarnings).toHaveLength(1);
     expect(host.validationErrors).toHaveLength(1);
+    expect(host.validationErrors[0].message).toBe("Enter a text value.");
+    expect(host.validationErrors[0].diagnostic).toBe("The answer must be a string.");
     // Each listed problem leads to its field.
     const reveal = vi.fn().mockResolvedValue(true);
     Object.defineProperty(cee, "reveal", { value: reveal });

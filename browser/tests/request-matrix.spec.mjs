@@ -2,10 +2,13 @@ import { readFileSync } from "node:fs";
 import { test, expect } from "./fixtures.mjs";
 
 // Every place Workspace sends a request, against the answers that take different paths through
-// it, in both languages. Each failure is shown where the person is, in the language Workspace
-// speaks. The only exception is a refusal the server explains, which is shown as the server wrote
-// it. Nothing is left blank or still loading, and the browser's own "Failed to fetch" never
-// reaches the page.
+// it. Each failure is shown where the person is, in the language Workspace speaks. The only
+// exception is a refusal the server explains, which is shown as the server wrote it. Nothing is
+// left blank or still loading, and the browser's own "Failed to fetch" never reaches the page.
+//
+// The language selects only the catalogue a message comes from and never a branch in the code
+// under test, so every case runs in English. A case runs in Hungarian as well when it is the first
+// to show its message, so that each message a request can end in appears once in Hungarian.
 
 const catalogue = (language) =>
   JSON.parse(readFileSync(new URL(`../../src/assets/i18n/${language}.json`, import.meta.url), "utf8"));
@@ -179,15 +182,23 @@ const SITES = {
       await page.getByLabel(t("Metadata.Name"), { exact: true }).fill("Study record, edited");
       await page.getByRole("button", { name: t("Common.Save"), exact: true }).click();
     },
-    // The editor keeps the edits on screen, and says so.
-    text: { "a conflict": (t) => t("Metadata.ItemChanged") },
+    // A missing or failed response cannot tell us whether the write committed.
+    text: {
+      "a conflict": (t) => t("Metadata.ItemChanged"),
+      "an unexplained 500": (t) => t("Metadata.SaveUnconfirmed"),
+      "no answer": (t) => t("Metadata.SaveUnconfirmed"),
+    },
   },
 };
 
-for (const language of ["en", "hu"])
-  for (const [site, spec] of Object.entries(SITES))
-    for (const [name, answer] of Object.entries(ANSWERS)) {
-      if (answer.conditional && !spec.conditional) continue;
+const shownInHungarian = new Set();
+for (const [site, spec] of Object.entries(SITES))
+  for (const [name, answer] of Object.entries(ANSWERS)) {
+    if (answer.conditional && !spec.conditional) continue;
+    const hungarian = (spec.text?.[name] ?? answer.text)(translator("hu"));
+    const languages = shownInHungarian.has(hungarian) ? ["en"] : ["en", "hu"];
+    shownInHungarian.add(hungarian);
+    for (const language of languages)
       test(`${site} meets ${name}, in ${language}`, async ({ page, api }) => {
         const t = translator(language);
         if (language === "hu")
@@ -205,5 +216,9 @@ for (const language of ["en", "hu"])
         const expected = (spec.text?.[name] ?? answer.text)(t);
         await expect(page.getByRole("alert").filter({ hasText: expected }).first()).toBeVisible();
         await expect(page.getByText("Failed to fetch")).toHaveCount(0);
+        if (site === "saving metadata" && ["an unexplained 500", "no answer"].includes(name)) {
+          await expect(page.getByLabel(t("Metadata.Name"), { exact: true })).toHaveValue("Study record, edited");
+          await expect(page.getByRole("button", { name: t("Common.Save"), exact: true })).toBeDisabled();
+        }
       });
-    }
+  }

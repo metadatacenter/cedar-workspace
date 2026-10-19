@@ -157,6 +157,91 @@ describe("selection deletion preparation", () => {
   });
 });
 describe("selection confirmation", () => {
+  it.each(["uncommitted", "missing", "inaccessible"])(
+    "preserves confirmed progress through inventory outages after an uncertain %s delete",
+    async (outcome) => {
+      const { host, service, request, report, snapshot } = setup({
+        "/folder/deletion": plan([folder, nested, a]),
+      });
+      host.resources = [folder, b, resource("c")];
+      host.dialog = { nativeElement: { close: vi.fn() } } as never;
+      await host.load();
+      request.mockClear();
+      request
+        .mockResolvedValueOnce({
+          data: {
+            status: "completed",
+            deleted: plan([folder, nested, a]).counts,
+            remaining: 0,
+          },
+        } as never)
+        .mockRejectedValueOnce(new Error("Lost reply"));
+      await host.confirm();
+      const confirmed = { ...emptyCounts(), folder: 2, instance: 1 };
+      expect(host.confirmedCounts()).toEqual(confirmed);
+      expect(request).toHaveBeenCalledTimes(2);
+      for (const failure of ["503", "Disconnected", "503"]) {
+        report.mockRejectedValueOnce(new Error(failure));
+        await host.load();
+        expect(host.plan()).toBeNull();
+        expect(host.error()).toContain(
+          "complete selection could not be checked",
+        );
+        expect(host.outcome()?.deleted).toEqual(confirmed);
+        await host.confirm();
+        expect(request).toHaveBeenCalledTimes(2);
+      }
+      if (outcome !== "uncommitted") {
+        report.mockRejectedValueOnce(
+          new Error(outcome === "missing" ? "404" : "403"),
+        );
+        await host.load();
+        await host.confirm();
+        expect(host.plan()).toBeNull();
+        expect(host.confirmedCounts()).toEqual(confirmed);
+        expect(request).toHaveBeenCalledTimes(2);
+        // A fresh selection is needed; neither absence nor lack of access proves deletion.
+        const prepared = await service.prepare([resource("c")]);
+        expect(prepared.roots.map((r) => r.resource["@id"])).toEqual(["c"]);
+        expect(prepared.roots[0].etag).toBe('"content-7"');
+        await service.execute(prepared.roots[0]);
+        expect(request).toHaveBeenLastCalledWith(
+          "/c",
+          "DELETE",
+          undefined,
+          '"content-7"',
+        );
+        expect(request).toHaveBeenCalledTimes(3);
+        return;
+      }
+      report.mockImplementation(async (r) => ({
+        data:
+          r["@id"] === "c"
+            ? { ...r, currentUserPermissions: { capabilities: [] } }
+            : r,
+      }));
+      await host.load();
+      expect(host.plan()?.allowed).toBe(false);
+      await host.confirm();
+      expect(request).toHaveBeenCalledTimes(2);
+      report.mockImplementation(async (r) => ({ data: r }));
+      snapshot.mockImplementation(async (r) => ({
+        data: r,
+        etag: '"fresh-' + r["@id"] + '"',
+      }));
+      await host.load();
+      expect(host.plan()?.counts.instance).toBe(2);
+      expect(host.confirmedCounts()).toEqual(confirmed);
+      expect(request).toHaveBeenCalledTimes(2); // Preparation never resumes deletion itself.
+      await host.confirm();
+      expect(request.mock.calls.slice(2)).toEqual([
+        ["/b", "DELETE", undefined, '"fresh-b"'],
+        ["/c", "DELETE", undefined, '"fresh-c"'],
+      ]);
+      expect(host.confirmedCounts()).toEqual({ ...confirmed, instance: 3 });
+      expect(host.dialog.nativeElement.close).toHaveBeenCalledOnce();
+    },
+  );
   it("stops at the first uncertain write, retains confirmed progress, and never automatically retries", async () => {
     const { host, request } = setup();
     host.resources = [a, b, resource("c")];

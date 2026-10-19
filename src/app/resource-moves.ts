@@ -39,10 +39,30 @@ export class ResourceMoves {
           throw new Error(
             title(resource) + ": " + this.i18n.t("Explorer.MoveDenied"),
           );
+        const path = report.pathInfo;
+        const parent =
+          Array.isArray(path) &&
+          path.every(
+            (p) => p && typeof p["@id"] === "string" && p["@id"].trim(),
+          )
+            ? path.filter((p) => p["@id"] !== resource["@id"]).at(-1)?.["@id"]
+            : undefined;
+        if (!parent)
+          throw new Error(
+            title(resource) +
+              ": " +
+              this.i18n.t("Explorer.MoveLocationUnavailable"),
+          );
         const snapshot = await this.api.snapshot(resource);
         if (!snapshot.etag)
           throw new Error(this.i18n.t("ResourceDialog.NoRevision"));
-        return { resource, report, etag: snapshot.etag };
+        return {
+          resource,
+          report,
+          etag: snapshot.etag,
+          alreadyThere:
+            resourceSelector(parent) === resourceSelector(target["@id"]),
+        };
       }),
     );
     const ids = new Set(resources.map((r) => r["@id"]));
@@ -52,14 +72,20 @@ export class ResourceMoves {
           (p) => p["@id"] !== resource["@id"] && ids.has(p["@id"]),
         ),
     );
-    for (const { resource, etag } of roots) {
+    for (const { resource, etag, alreadyThere } of roots) {
       try {
-        await this.api.request(
-          "/command/move-resource-to-folder",
-          "POST",
-          { "@id": resourceSelector(resource["@id"]), targetFolderId: resourceSelector(targetId) },
-          etag,
-        );
+        // A previous move may have committed while its response and the listing
+        // refresh were lost. Confirm placement without submitting that move again.
+        if (!alreadyThere)
+          await this.api.request(
+            "/command/move-resource-to-folder",
+            "POST",
+            {
+              "@id": resourceSelector(resource["@id"]),
+              targetFolderId: resourceSelector(targetId),
+            },
+            etag,
+          );
         moved.push(
           resource["@id"],
           ...prepared

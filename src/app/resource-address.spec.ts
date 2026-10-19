@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { resourceIri, resourcePathId, resourceSelector, useDeploymentApi, useDeploymentDomain } from "./resource-address";
+import { mintResourceId, mintedResourceId, resourceIri, resourcePathId, resourceSelector, useDeploymentApi, useDeploymentDomain } from "./resource-address";
 
 /**
  * The compact address of a folder or artifact, across the deployment's base, the form an identifier
@@ -105,5 +105,40 @@ describe("compact resource addresses", () => {
     expect(resourceSelector(`https://repo.metadatacenter.org/templates/${UUID}`)).toBe(
       `https://repo.metadatacenter.org/templates/${UUID}`,
     );
+  });
+});
+
+// A create sent under an identity the client chose can be looked up by that identity.
+describe("minted identities", () => {
+  afterEach(() => useDeploymentDomain(null));
+
+  it("mints nothing while the deployment's base is unknown", () => {
+    for (const collection of COLLECTIONS)
+      expect(mintResourceId(collection as Parameters<typeof mintResourceId>[0])).toBeNull();
+  });
+
+  it.each(COLLECTIONS)("mints a new %s identity on the deployment's base that shortens like any other", (collection) => {
+    useDeploymentApi("https://resource.metadatacenter.orgx");
+    const kind = collection as Parameters<typeof mintResourceId>[0];
+    const first = mintResourceId(kind)!;
+    const second = mintResourceId(kind)!;
+    expect(first).toMatch(new RegExp(`^https://repo\\.metadatacenter\\.orgx/${collection}/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`));
+    expect(second).not.toBe(first);
+    expect(resourceSelector(first)).toBe(`${collection}/${first.split("/").at(-1)}`);
+    expect(resourcePathId(first)).toBe(first.split("/").at(-1));
+    expect(mintedResourceId(first, kind)).toBe(true);
+    for (const other of COLLECTIONS.filter((c) => c !== collection))
+      expect(mintedResourceId(first, other as typeof kind)).toBe(false);
+  });
+
+  it.each([
+    ["a selector", `folders/${UUID}`],
+    ["a name", "https://repo.metadatacenter.org/folders/home"],
+    ["another host's form", `https://resource.metadatacenter.org/folders/${UUID}`],
+    ["plain http", `http://repo.metadatacenter.org/folders/${UUID}`],
+    ["a trailing slash", `https://repo.metadatacenter.org/folders/${UUID}/`],
+    ["a number", 12],
+  ])("refuses %s as a minted identity", (_name, value) => {
+    expect(mintedResourceId(value, "folders")).toBe(false);
   });
 });

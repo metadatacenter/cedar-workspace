@@ -50,6 +50,11 @@
         >{{'Permissions.FolderNotice' | translate}}</span
       >
     </div>
+    } @if(current()) {
+    <section class="access-panel caller-access" aria-labelledby="caller-access-heading">
+      <h3 id="caller-access-heading">{{'Permissions.YourAccess' | translate}}</h3>
+      <p>{{callerAccessMessage}} {{managementMessage | translate}}</p>
+    </section>
     } @if(canManage) {
     <section class="access-panel">
       <h3>{{'Permissions.AddHeading' | translate}}</h3>
@@ -88,6 +93,14 @@
           {{'Permissions.Add' | translate}}
         </button>
       </form>
+    </section>
+    } @if(permissions(); as p) {
+    <section class="access-panel">
+      <h3>{{'Permissions.AccessHeading' | translate}}</h3>
+      <p>
+        {{'Permissions.TableIntro' | translate}}
+        @if(canManage) { {{'Permissions.SavedImmediately' | translate}} }
+      </p>
       <div
         class="role-help"
         [attr.aria-label]="'Permissions.RoleDescriptions' | translate"
@@ -105,15 +118,7 @@
           {{'Permissions.ManagerHelp' | translate}}</span
         >
       </div>
-    </section>
-    } @if(permissions(); as p) {
-    <section class="access-panel">
-      <h3>{{'Permissions.AccessHeading' | translate}}</h3>
-      <p>
-        {{'Permissions.TableIntro' | translate}}
-        {{(canManage ? 'Permissions.SavedImmediately' : 'Permissions.OnlyManager')
-        | translate}}
-      </p>
+      <p>{{'Permissions.OtherAccess' | translate}}</p>
       <div
         class="access-list"
         role="table"

@@ -1,4 +1,4 @@
-<header class="metadata-toolbar">
+<header #toolbar class="metadata-toolbar">
   <cedar-workspace-return
     [guarded]="true"
     [disabled]="saving()"
@@ -18,20 +18,138 @@
     [cedarTooltip]="saveRefused ? ('Metadata.SaveRefused' | translate) : null"
     ><button
       id="button-save-metadata"
+      [attr.aria-describedby]="validationErrors.length ? 'metadata-errors-summary' : null"
       class="primary"
       (click)="save()"
-      [disabled]="loading() || saving() || validationErrors.length > 0 || state.reloadRequired()"
+      [disabled]="loading() || saving() || recoveryDraft() || validationErrors.length > 0 || state.reloadRequired()"
     >
       {{'Common.Save' | translate}}
     </button></span
   >}
 </header>
 <main class="metadata-content">
-  @if(error()){
+  @if(draftStorageError()) {
   <p role="alert" class="alert">
-    {{error()}} @if((state.loadFailed() && !unreadable()) || (state.reloadRequired() &&
-    !state.uncertainCreation())) {
-    <button type="button" (click)="reload()" [disabled]="saving()">
+    {{'Metadata.DraftStorageFailed' | translate}}
+  </p>
+  } @if(recoveryDraft()) {
+  <p role="status" class="alert">
+    {{'Metadata.DraftAvailable' | translate}}
+    <button
+      type="button"
+      (click)="restoreRecovery()"
+      [disabled]="saving() || checkingSave() || !recoveryReady"
+    >
+      {{'Metadata.RestoreDraft' | translate}}
+    </button>
+    <button
+      type="button"
+      (click)="discardRecovery()"
+      [disabled]="saving() || checkingSave()"
+    >
+      {{'Metadata.DiscardDraft' | translate}}
+    </button>
+  </p>
+  } @if(canReviewLatest) {
+  <button type="button" (click)="reviewLatest()">
+    {{'Metadata.ReviewLatest' | translate}}
+  </button>
+  } @if(review(); as comparison) {
+  <section class="alert" aria-live="polite">
+    <p>{{'Metadata.ReviewExplanation' | translate}}</p>
+    <table>
+      <thead>
+        <tr>
+          <th>{{'Metadata.ReviewField' | translate}}</th>
+          <th>{{'Metadata.ReviewMine' | translate}}</th>
+          <th>{{'Metadata.ReviewServer' | translate}}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for(change of comparison.changes; track $index) {
+        <tr>
+          <th>{{reviewLabel(change.path)}}</th>
+          <td>{{reviewValue(change.mine)}}</td>
+          <td>{{reviewValue(change.latest)}}</td>
+        </tr>
+        @if(change.conflict) {
+        <tr>
+          <td colspan="3">
+            <label
+              ><input
+                type="radio"
+                spellcheck="false"
+                [name]="'recovery-choice-' + $index"
+                [checked]="change.choice === 'mine'"
+                (change)="reviewChoice(change.path, 'mine')"
+              />{{'Metadata.ReviewKeepMine' | translate}}</label
+            >
+            <label
+              ><input
+                type="radio"
+                spellcheck="false"
+                [name]="'recovery-choice-' + $index"
+                [checked]="change.choice === 'latest'"
+                (change)="reviewChoice(change.path, 'latest')"
+              />{{'Metadata.ReviewKeepLatest' | translate}}</label
+            >
+          </td>
+        </tr>
+        } }
+      </tbody>
+    </table>
+    <button
+      type="button"
+      (click)="applyReview()"
+      [disabled]="!comparison.complete || !canReviewLatest"
+    >
+      {{'Metadata.ReviewApply' | translate}}
+    </button>
+    <button type="button" (click)="review.set(null)">
+      {{'Common.Cancel' | translate}}
+    </button>
+  </section>
+  } @if(error()){
+  <p role="alert" class="alert">
+    {{error()}} @if(canRecheckOpeningAccess) {
+    <button
+      type="button"
+      (click)="recheckOpeningAccess()"
+      [disabled]="checkingSave() || saving()"
+    >
+      {{'Metadata.RecheckAccess' | translate}}
+    </button>
+    } @if(canCheckSave()) {
+    <button
+      type="button"
+      (click)="checkSaveStatus()"
+      [disabled]="checkingSave() || saving()"
+    >
+      {{'Metadata.CheckSave' | translate}}
+    </button>
+    } @if(canRecheckAccess()) {
+    <button
+      type="button"
+      (click)="checkSaveStatus()"
+      [disabled]="checkingSave() || saving()"
+    >
+      {{'Metadata.RecheckAccess' | translate}}
+    </button>
+    } @if(canSignInAgain) {
+    <button
+      type="button"
+      (click)="signInAgain()"
+      [disabled]="checkingSave() || saving()"
+    >
+      {{'Metadata.SignInAgain' | translate}}
+    </button>
+    } @if((state.loadFailed() && !unreadable() && !canRecheckOpeningAccess) ||
+    (state.reloadRequired() && !state.uncertainCreation())) {
+    <button
+      type="button"
+      (click)="reload()"
+      [disabled]="saving() || checkingSave()"
+    >
       {{(state.loadFailed() ? 'Common.Retry' : 'Metadata.Reload') | translate}}
     </button>
     }
@@ -50,64 +168,94 @@
   />
   @if(!writable()){
   <p role="status">{{'Metadata.ReadOnlyAccess' | translate}}</p>
-  } }
+  @if(canRecheckOpeningAccess) {
+  <p>
+    <button
+      type="button"
+      (click)="recheckOpeningAccess()"
+      [disabled]="saving() || checkingSave()"
+    >
+      {{'Metadata.RecheckAccess' | translate}}
+    </button>
+    <button
+      type="button"
+      (click)="signInAgain()"
+      [disabled]="saving() || checkingSave()"
+    >
+      {{'Metadata.SignInAgain' | translate}}
+    </button>
+  </p>
+  } } }
   <!-- Both summaries are about saving, which someone with read-only access cannot do. -->
-  @if(writable() && validationErrors.length){
-  <details
-    class="metadata-quality"
-    [attr.aria-label]="'Metadata.ErrorsRegion' | translate"
-  >
-    <summary>
-      <cedar-icon
-        size="small"
-        name="chevron-down"
-        class="validation-disclosure"
-      /><cedar-icon size="small" name="warning" />
-      <span
-        >{{i18n.counted('Metadata.Errors', validationErrors.length)
-        }}</span
-      >
-    </summary>
-    <ul>
-      @for(issue of validationErrors; track $index){
-      <li>
-        @if(issue.problem){
-        <button type="button" (click)="reveal(issue)">
-          {{issue.label}}: {{issue.message}}
-        </button>
-        } @else { {{issue.label}}: {{issue.message}} }
-      </li>
-      }
-    </ul>
-  </details>
-  } @if(writable() && validationWarnings.length){
-  <details
-    class="metadata-quality validation-summary--warning"
-    [attr.aria-label]="'Metadata.WarningsRegion' | translate"
-  >
-    <summary>
-      <cedar-icon
-        size="small"
-        name="chevron-down"
-        class="validation-disclosure"
-      /><cedar-icon size="small" name="warning" />
-      <span
-        >{{i18n.counted('Metadata.Warnings', validationWarnings.length)
-        }}</span
-      >
-    </summary>
-    <ul>
-      @for(issue of validationWarnings; track $index){
-      <li>
-        @if(issue.problem){
-        <button type="button" (click)="reveal(issue)">
-          {{issue.label}}: {{issue.message}}
-        </button>
-        } @else { {{issue.label}}: {{issue.message}} }
-      </li>
-      }
-    </ul>
-  </details>
-  }
+  <div class="metadata-issues" [cedarPinBelow]="toolbar">
+    @if(writable() && validationErrors.length){
+    <details
+      class="metadata-quality"
+      [attr.aria-label]="'Metadata.ErrorsRegion' | translate"
+    >
+      <summary id="metadata-errors-summary">
+        <cedar-icon
+          size="small"
+          name="chevron-down"
+          class="validation-disclosure"
+        /><cedar-icon size="small" name="warning" />
+        <span
+          >{{i18n.counted('Metadata.Errors', validationErrors.length) }}</span
+        >
+      </summary>
+      <ul>
+        @for(issue of validationErrors; track $index){
+        <li>
+          @if(issue.problem){
+          <button type="button" (click)="reveal(issue)">
+            {{issue.label}}: {{issue.message}}
+          </button>
+          } @else { {{issue.label}}: {{issue.message}} } @if(issue.diagnostic) {
+          <details class="metadata-diagnostic">
+            <summary>
+              <cedar-icon
+                size="small"
+                name="chevron-down"
+                class="diagnostic-disclosure"
+              />
+              {{'Metadata.TechnicalDetails' | translate}}
+            </summary>
+            <p>{{issue.diagnostic}}</p>
+          </details>
+          }
+        </li>
+        }
+      </ul>
+    </details>
+    } @if(writable() && validationWarnings.length){
+    <details
+      class="metadata-quality validation-summary--warning"
+      [attr.aria-label]="'Metadata.WarningsRegion' | translate"
+    >
+      <summary>
+        <cedar-icon
+          size="small"
+          name="chevron-down"
+          class="validation-disclosure"
+        /><cedar-icon size="small" name="warning" />
+        <span
+          >{{i18n.counted('Metadata.Warnings', validationWarnings.length)
+          }}</span
+        >
+      </summary>
+      <ul>
+        @for(issue of validationWarnings; track $index){
+        <li>
+          @if(issue.problem){
+          <button type="button" (click)="reveal(issue)">
+            {{issue.label}}: {{issue.message}}
+          </button>
+          } @else { {{issue.label}}: {{issue.message}} }
+        </li>
+        }
+      </ul>
+    </details>
+    }
+  </div>
   <div #editorHost [hidden]="loading()"></div>
 </main>
