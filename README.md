@@ -68,7 +68,7 @@ items are refreshed, and failed items can be explicitly retried. Selected descen
 travel with selected ancestors; cycles are rejected. Selection clears when the listing
 changes, so operations cannot accidentally include a hidden page.
 
-Angular CDK 22.2.0 and Selecto 1.26.3 are MIT licensed. CDK provides dragging and
+Angular CDK 22.2.3 and Selecto 1.26.3 are MIT licensed. CDK provides dragging and
 Selecto supplies marquee geometry; no commercial file-manager dependency is used.
 The isolated `experiments/` prototype is not part of the production build.
 
