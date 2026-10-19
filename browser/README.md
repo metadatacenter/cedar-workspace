@@ -2,7 +2,7 @@
 
 Build the production app with `npm run build`, install this directory with `npm ci`,
 then run `npm run test:browser` at the repository root for fast local checks.
-`npm run test:visual` runs the full suite in Playwright 1.63.0's ARM Linux container,
+`npm run test:visual` runs the full suite in Playwright 1.64.1's ARM Linux container,
 matching CI. Deliberate baseline changes use `npm run test:visual -- --update-snapshots`.
 Review every changed image; tolerances are zero. Never update snapshots to fix an
 unexplained failure. Failure traces and image diffs are uploaded by CI.
