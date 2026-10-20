@@ -541,9 +541,8 @@
     <footer class="paging">
       <button (click)="page(-1)" [disabled]="offset()===0||loading()">
         {{'Common.Previous' | translate}}</button
-      ><span
-        >{{'Dashboard.Displaying' | translate: {first: rows().length?offset()+1:0,
-        last: rows().length?offset()+rows().length:0, total: total()} }}</span
+      ><span>{{ displaying() }}</span
+      ><span class="sr-only listing-announcement" aria-live="polite" aria-atomic="true">{{ announcement() }}</span
       ><button
         (click)="page(1)"
         [disabled]="offset()+rows().length>=total()||loading()"

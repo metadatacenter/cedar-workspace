@@ -231,6 +231,13 @@ export class Workspace {
   readonly refreshing = signal(false);
   readonly error = signal("");
   readonly notice = signal("");
+  /**
+   * What the listing's status region says when a change of address brings another listing, as a
+   * search, a filter, a sort, a page or a folder does: the count the footer shows, or that nothing
+   * was found. The listing the page opens on goes unsaid, since the page itself says as much. So
+   * does a reload after an action or a refresh, each of which reports its own outcome.
+   */
+  readonly announcement = signal("");
   readonly rows = signal<Resource[]>([]);
   readonly path = signal<Resource[]>([]);
   readonly currentFolder = signal<Resource | undefined>(undefined);
@@ -349,6 +356,7 @@ export class Workspace {
           }
           const listingKey = this.params.toString();
           if (listingKey === this.listingKey && !selected) return;
+          const announce = this.listingKey !== null && listingKey !== this.listingKey;
           this.listingKey = listingKey;
           this.search = map.get("search") || "";
           this.folder = resourceIri(map.get("folderId") || this.api.profile.homeFolderId, this.api.profile.homeFolderId);
@@ -369,7 +377,7 @@ export class Workspace {
               ? Math.floor(offset / 50) * 50
               : 0,
           );
-          void this.load();
+          void this.load(false, announce);
         });
     } catch (e) {
       this.fail(e);
@@ -378,7 +386,7 @@ export class Workspace {
   fail(e: unknown) {
     this.error.set(e instanceof Error ? e.message : String(e));
   }
-  async load(refresh = false) {
+  async load(refresh = false, announce = false) {
     if (!this.state.active) return;
     if (!refresh) this.pendingMoveSelection = [];
     this.listingGeneration++;
@@ -389,6 +397,7 @@ export class Workspace {
     const operation = this.state.begin("listing", ["folder", "detail", "instances", "menu", "enrichment"]);
     this.loading.set(true);
     this.refreshing.set(refresh);
+    this.announcement.set("");
     this.error.set("");
     this.selected.set(undefined);
     this.selectionIds.set([]);
@@ -414,6 +423,8 @@ export class Workspace {
       if (!validListing(data)) throw new Error(this.i18n.t("Errors.InvalidListing"));
       this.rows.set(data.resources);
       this.total.set(data.totalCount);
+      if (announce)
+        this.announcement.set(data.resources.length ? this.displaying() : this.i18n.t("Dashboard.NoItems"));
       this.path.set(data.pathInfo || []);
       this.titles.name(this.pageName());
       void this.loadFolder();
@@ -963,6 +974,15 @@ export class Workspace {
       relativeTo: this.route,
       queryParamsHandling: "merge",
       queryParams: { offset: Math.max(0, this.offset() + delta * 50) },
+    });
+  }
+  /** Which rows the page shows, as "Displaying 1–50 of 120". */
+  displaying() {
+    const shown = this.rows().length;
+    return this.i18n.t("Dashboard.Displaying", {
+      first: shown ? this.offset() + 1 : 0,
+      last: shown ? this.offset() + shown : 0,
+      total: this.total(),
     });
   }
   /** " · 0.0.1 · Published" after an artifact's name, from what the report says of it. */
