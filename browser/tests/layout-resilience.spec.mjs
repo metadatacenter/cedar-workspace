@@ -1,4 +1,6 @@
-import { test, expect, dashboard, resource } from "./fixtures.mjs";
+import { test, expect, dashboard, action, resource } from "./fixtures.mjs";
+import { openFolderDeletion } from "./folder-deletion-fixture.mjs";
+import { selectionFixture, selectDeletion } from "./selection-deletion-fixture.mjs";
 
 /**
  * Whether Workspace's screens survive the conditions WCAG sets for reflow (1.4.10), resized text
@@ -50,7 +52,124 @@ const screens = {
     await expect(page.getByLabel("Instance name")).toHaveValue("Study record");
     return ["cedar-embeddable-editor"];
   },
+  // The dialogs Workspace opens itself, each over the page it acts on and with its content shown.
+  Permissions: async (page) => {
+    await dashboard(page);
+    await action(page, "Permissions…");
+    await expect(page.getByRole("combobox", { name: "User or group" })).toBeEnabled();
+  },
+  "ownership confirmation": async (page) => {
+    await screens.Permissions(page);
+    await page.getByRole("checkbox", { name: "Make Sam Curator the owner", exact: true }).click();
+    await expect(page.locator("dialog.confirmation-dialog")).toBeVisible();
+  },
+  Move: (page) => picker(page, "Move"),
+  Copy: (page) => picker(page, "Copy"),
+  Publish: async (page) => {
+    await dashboard(page);
+    await action(page, "Publish");
+    await expect(page.locator("dialog[open]").getByRole("textbox", { name: "Patch", exact: true })).toBeVisible();
+  },
+  "Create Draft": async (page) => {
+    await page.route("**/templates/template/report", (route) =>
+      route.fulfill({ json: { ...resource, "bibo:status": "bibo:published" } }),
+    );
+    await folders(page);
+    await dashboard(page);
+    await page.getByRole("button", { name: "Actions for Study metadata", exact: true }).click();
+    await page.locator(".resource-menu").getByRole("button", { name: "Create Draft", exact: true }).click();
+    await expect(page.locator("dialog .folder-scroll")).toHaveAttribute("aria-busy", "false");
+    await expect(page.locator("dialog .folder-scroll tbody tr")).toHaveCount(2);
+    await expect(page.locator("dialog[open]").getByRole("textbox", { name: "Patch", exact: true })).toHaveValue("1");
+  },
+  "New folder": async (page) => {
+    await dashboard(page);
+    await page.locator("#button-create").click();
+    await page.locator(".new-menu").getByRole("button", { name: "Folder", exact: true }).click();
+    await expect(page.locator("dialog[open]").getByLabel("Name", { exact: true })).toBeVisible();
+  },
+  rename: async (page) => {
+    await dashboard(page);
+    await action(page, "Rename");
+    await expect(page.locator("dialog[open]").getByLabel("Name", { exact: true })).toHaveValue("Study metadata");
+  },
+  "discard confirmation": async (page) => {
+    await screens.rename(page);
+    await page.locator("dialog[open]").getByLabel("Name", { exact: true }).fill("Changed");
+    await page.keyboard.press("Escape");
+    await expect(page.locator("dialog.confirmation-dialog")).toBeVisible();
+  },
+  "deletion confirmation": async (page) => {
+    await dashboard(page);
+    await action(page, "Delete");
+  },
+  "folder deletion": async (page) => {
+    await openFolderDeletion(page);
+  },
+  "selection deletion": async (page) => {
+    await selectionFixture(page);
+    await page.getByRole("button", { name: "List view", exact: true }).click();
+    await selectDeletion(page);
+  },
+  "OpenView confirmation": async (page) => {
+    await dashboard(page);
+    await action(page, "Enable Openview");
+  },
+  // The preview shows the artifact in CEE, which its own suite checks.
+  preview: async (page) => {
+    await dashboard(page);
+    await page.getByRole("button", { name: "Preview Study metadata", exact: true }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.locator("[aria-busy]")).toHaveAttribute("aria-busy", "false");
+    await expect(dialog.getByRole("heading", { level: 2 })).toHaveText("Study metadata");
+    return ["cedar-embeddable-editor"];
+  },
+  "group deletion confirmation": async (page) => {
+    await page.goto("/groups");
+    await page.getByRole("tab", { name: "Delete group", exact: true }).click();
+    const panel = page.getByRole("tabpanel", { name: "Delete group", exact: true });
+    const find = panel.getByRole("combobox", { name: "Group name", exact: true });
+    await find.fill("Research");
+    await find.press("Enter");
+    await expect(panel.getByLabel("Name", { exact: true })).toHaveValue("Research team");
+    await panel.getByRole("button", { name: "Delete group", exact: true }).click();
+    await expect(page.locator("dialog.confirmation-dialog")).toBeVisible();
+  },
 };
+/** A home folder holding a folder that takes items and one that does not, as Move and Copy list them. */
+async function folders(page) {
+  const folder = (id, name, allowed = true) => ({
+    "@id": id,
+    resourceType: "folder",
+    "schema:name": name,
+    "pav:lastUpdatedOn": "2026-01-02T12:00:00Z",
+    currentUserPermissions: { capabilities: allowed ? ["copyIntoFolder", "moveIntoFolder"] : [] },
+  });
+  const home = folder("home", "My workspace");
+  const children = [folder("archive", "Archive"), folder("restricted", "Read only", false)];
+  await page.route("**/folders/**", (route) => {
+    const url = new URL(route.request().url());
+    if (!url.searchParams.has("resource_types") && url.pathname.endsWith("/contents")) return route.fallback();
+    const id = decodeURIComponent(url.pathname.split("/folders/")[1].split("/")[0]);
+    if (url.pathname.endsWith("/contents"))
+      return route.fulfill({
+        json: {
+          resources: id === "home" ? children : [],
+          totalCount: id === "home" ? children.length : 0,
+          pathInfo: [home],
+        },
+      });
+    return route.fulfill({ json: [home, ...children].find((f) => f["@id"] === id) ?? home });
+  });
+}
+/** The Move or Copy dialog, its folders listed. */
+async function picker(page, label) {
+  await folders(page);
+  await dashboard(page);
+  await action(page, label);
+  await expect(page.locator("dialog .folder-scroll")).toHaveAttribute("aria-busy", "false");
+  await expect(page.locator("dialog .folder-scroll tbody tr")).toHaveCount(2);
+}
 /** Select the listing's artifact, which opens it in the Information panel. */
 async function select(page) {
   await page.locator('[data-resource-id="template"] .resource-icon').click();
@@ -300,7 +419,24 @@ function placeholders({ excluded }) {
  */
 const tables = [
   {
-    screens: ["dashboard list", "filter popover"],
+    // A dialog opened over the listing leaves it as it is.
+    screens: [
+      "dashboard list",
+      "filter popover",
+      "Permissions",
+      "ownership confirmation",
+      "Move",
+      "Copy",
+      "Publish",
+      "Create Draft",
+      "New folder",
+      "rename",
+      "discard confirmation",
+      "deletion confirmation",
+      "selection deletion",
+      "OpenView confirmation",
+      "preview",
+    ],
     target: "cedar-workspace.cedar-native-choices div.workspace div.table-scroll",
     reason:
       "The listing is a table of each item's name, last change, version and actions, which a narrow window scrolls inside its container.",
@@ -405,15 +541,27 @@ const fields = {
     },
     ["Search", "Search for a group"],
   ],
-  Permissions: [
-    async (page) => {
-      await dashboard(page);
-      await page.getByRole("button", { name: "Actions for Study metadata", exact: true }).click();
-      await page.locator(".resource-menu").getByRole("button", { name: "Permissions…", exact: true }).click();
-      await expect(page.getByRole("combobox", { name: "User or group" })).toBeEnabled();
-    },
-    ["Search", "Search by name"],
-  ],
+  // Permissions holds the only placeholder in a dialog. Each other dialog shows only those of the
+  // page behind it, which are measured again with the dialog over them.
+  Permissions: [screens.Permissions, ["Search", "Search by name"]],
+  "ownership confirmation": [screens["ownership confirmation"], ["Search", "Search by name"]],
+  ...Object.fromEntries(
+    [
+      "Move",
+      "Copy",
+      "Publish",
+      "Create Draft",
+      "New folder",
+      "rename",
+      "discard confirmation",
+      "deletion confirmation",
+      "folder deletion",
+      "selection deletion",
+      "OpenView confirmation",
+      "preview",
+    ].map((name) => [name, [screens[name], ["Search"]]]),
+  ),
+  "group deletion confirmation": [screens["group deletion confirmation"], ["Search", "Search for a group"]],
 };
 for (const [screen, [open, shown]] of Object.entries(fields))
   test(`${screen} draws its placeholders at 4.5:1`, async ({ page, api }) => {

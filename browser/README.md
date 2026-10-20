@@ -33,8 +33,9 @@ so an entry that no longer holds fails as well. Text a popup's shadow falls acro
 measures a little differently in each browser build, so its entry records the least
 contrast it must meet instead.
 
-`layout-resilience.spec.mjs` opens each page at 320 px, at 640 by 400 px (200% zoom)
-and with WCAG's text spacing, and fails on sideways scrolling, unreachable controls,
-clipped or overlapping text and placeholders under 4.5:1. A data table may scroll
-inside its own container, and the spec names each one. What it finds and leaves in
-place is listed in its exceptions, each with the visible change it needs.
+`layout-resilience.spec.mjs` opens each page and each dialog Workspace opens itself at
+320 px, at 640 by 400 px (200% zoom) and with WCAG's text spacing, and fails on sideways
+scrolling, unreachable controls, clipped or overlapping text and placeholders under 4.5:1.
+A data table may scroll inside its own container, and the spec names each one. What it
+finds and leaves in place is listed in its exceptions, each with the visible change it
+needs.
