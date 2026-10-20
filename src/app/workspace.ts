@@ -489,7 +489,10 @@ export class Workspace {
     this.refocus = null;
     afterNextRender(
       () => {
-        if (document.activeElement && document.activeElement !== document.body) return;
+        // A focused control the listing left disabled keeps focus until the browser next draws the
+        // page, and loses it then. This can run first, so such a control counts as having lost it.
+        const active = document.activeElement;
+        if (active && active !== document.body && !active.matches(":disabled")) return;
         const before =
           focused instanceof HTMLElement && focused !== document.body && focused.isConnected && !focused.matches(":disabled")
             ? focused
