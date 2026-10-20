@@ -355,7 +355,7 @@
           </tr>
         </thead>
         <tbody>
-          @for(r of rows();track r['@id']){
+          @for(r of rows();track r['@id'];let row=$index){
           <tr
             class="explorer-item"
             [class.explorer-schema]="['template','element','field'].includes(r.resourceType)"
@@ -407,10 +407,11 @@
                 </span>
                 }
               </span>
-              @if(grid()){<span class="explorer-name" [cedarTooltip]="title(r)"
+              @if(grid()){<span class="explorer-name" [id]="'resource-name-' + row" [cedarTooltip]="title(r)"
                 >{{title(r)}}</span
               >} @else if(r.resourceType==='folder') {
               <a
+                [id]="'resource-name-' + row"
                 routerLink="/dashboard"
                 [queryParams]="navigationQuery({folderId:r['@id']})"
                 (click)="$event.stopPropagation()"
@@ -418,6 +419,7 @@
               >
               } @else {
               <a
+                [id]="'resource-name-' + row"
                 [cedarTooltip]="title(r)"
                 [href]="link(r)"
                 (click)="$event.stopPropagation()"
@@ -468,17 +470,20 @@
             </td>
             }
             <td class="row-actions" (click)="$event.stopPropagation()">
+              <!-- Every row's icon links have the same names, so the row's name describes each. -->
               @if(offeredInOpenView(r)){<a
                 [href]="openView(r)"
                 target="_blank"
                 rel="noopener"
                 [attr.aria-label]="'Dashboard.OpenInOpenView' | translate"
+                [attr.aria-describedby]="'resource-name-' + row"
                 [cedarTooltip]="'Dashboard.OpenInOpenView' | translate"
                 ><cedar-icon name="external" /></a
               >} @if(r.resourceType==='template'&&can(r,'populate')){<a
                 class="explorer-populate"
                 [href]="link(r,true)"
                 [attr.aria-label]="'Dashboard.PopulateTemplate' | translate"
+                [attr.aria-describedby]="'resource-name-' + row"
                 [cedarTooltip]="'Dashboard.PopulateTemplate' | translate"
                 ><cedar-icon name="populate" /></a
               >} @if(!grid() && r.resourceType !== 'folder'){
