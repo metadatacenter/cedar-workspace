@@ -1040,6 +1040,37 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         this.state.reloadRequired())
     );
   }
+  /** Save is drawn as disabled, and ignores activation. */
+  get saveDisabled() {
+    return (
+      this.loading() ||
+      this.saving() ||
+      this.recoveryDraft() ||
+      this.validationErrors.length > 0 ||
+      this.state.reloadRequired()
+    );
+  }
+  /**
+   * Save is refused only because the page lists errors, which only its help explains. It is then
+   * marked aria-disabled rather than disabled, so it keeps focus and a keyboard reaches that help.
+   * A recovery draft or a required reload explains itself in an alert, and Save stays disabled.
+   */
+  get saveRefusedByErrors() {
+    return (
+      this.saveRefused &&
+      this.validationErrors.length > 0 &&
+      !this.recoveryDraft() &&
+      !this.state.reloadRequired()
+    );
+  }
+  /** Why Save is refused, when only its help says so, then the summary of the errors. */
+  get saveDescription() {
+    const ids = [
+      ...(this.saveRefusedByErrors ? ["metadata-save-help"] : []),
+      ...(this.validationErrors.length ? ["metadata-errors-summary"] : []),
+    ];
+    return ids.join(" ") || null;
+  }
   get missingRequired() {
     const q = this.quality();
     return Math.max(

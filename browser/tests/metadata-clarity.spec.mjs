@@ -33,9 +33,10 @@ test("mixed findings explain Save, use localized copy and keep diagnostics separ
   const errors = page.getByLabel("Metadata errors", { exact: true });
   const warnings = page.getByLabel("Metadata warnings", { exact: true });
   await expect(save).toBeDisabled();
+  // Save says why it refuses, as its help does, then which errors stop it.
   await expect(save).toHaveAttribute(
     "aria-describedby",
-    "metadata-errors-summary",
+    "metadata-save-help metadata-errors-summary",
   );
   await expect(errors.locator(":scope > summary")).toHaveText(
     "1 error — fix before saving",

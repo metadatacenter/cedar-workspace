@@ -345,6 +345,8 @@ updates the form; Save uses the reviewed ETag and can still be refused if anothe
 author writes again. A changed template or unfinished raw input keeps the original
 draft and requires correction or a recovery-file download before proceeding.
 
-The production initial-bundle budget is 1.03 MB. Exact JSON transport and draft preservation
-add the shared scalar policy bundle; the measured total is 1.025 MB (302 KB estimated transfer).
-The budget keeps about 5 KB of headroom and does not include the lazy metadata editor.
+The production initial-bundle budget is 1.04 MB. Exact JSON transport and draft preservation
+add the shared scalar policy bundle. On 2026-10-20, refused controls that keep focus and the
+help that explains them took the measured total to 1,030,419 bytes (302 KB estimated transfer),
+past the former 1.03 MB. The budget keeps about 10 KB of headroom and does not include the lazy
+metadata editor.

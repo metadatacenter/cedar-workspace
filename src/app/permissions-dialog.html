@@ -156,13 +156,25 @@
             class="owner-cell"
             role="cell"
             [cedarTooltip]="'Permissions.OwnerHelp' | translate"
-            ><input
-              spellcheck="false"
-              type="checkbox"
-              checked
-              disabled
+            ><!-- A disabled checkbox cannot take focus, so its help would need a pointer. This
+                 checkbox stands in for it and is drawn by the disabled one it holds. -->
+            <span
+              class="owner-refused"
+              role="checkbox"
+              tabindex="0"
+              aria-checked="true"
+              aria-disabled="true"
               [attr.aria-label]="'Permissions.IsOwner' | translate: {name: principalName(p.owner)}"
-          /></span>
+              aria-describedby="permissions-owner-help"
+              (keydown.space)="$event.preventDefault()"
+              ><input
+                spellcheck="false"
+                type="checkbox"
+                checked
+                disabled
+                tabindex="-1"
+                aria-hidden="true"
+            /></span></span>
           <span class="action-cell" role="cell"
             ><button
               disabled
@@ -210,14 +222,34 @@
             role="cell"
             [cedarTooltip]="(g.kind === 'group' ? 'Permissions.GroupCannotOwn' : 'Permissions.MakeUserOwner') | translate"
           >
+            @if(g.kind === 'group') {
+            <!-- A group's checkbox refuses rather than being disabled, so focus reaches its help. -->
+            <span
+              class="owner-refused"
+              role="checkbox"
+              tabindex="0"
+              aria-checked="false"
+              aria-disabled="true"
+              [attr.aria-label]="'Permissions.MakeOwner' | translate: {name: principalName(g.node)}"
+              aria-describedby="permissions-group-owner-help"
+              (keydown.space)="$event.preventDefault()"
+              ><input
+                spellcheck="false"
+                type="checkbox"
+                disabled
+                tabindex="-1"
+                aria-hidden="true"
+            /></span>
+            } @else {
             <input
               spellcheck="false"
               type="checkbox"
               [checked]="false"
               (click)="$event.preventDefault(); transfer(g)"
-              [disabled]="g.kind === 'group' || !canTransfer || busy() || stale()"
+              [disabled]="!canTransfer || busy() || stale()"
               [attr.aria-label]="'Permissions.MakeOwner' | translate: {name: principalName(g.node)}"
             />
+            }
           </span>
           <span class="action-cell" role="cell">
             @if(canManage) {
@@ -234,6 +266,8 @@
         </div>
         }
       </div>
+      <span hidden id="permissions-owner-help">{{'Permissions.OwnerHelp' | translate}}</span
+      ><span hidden id="permissions-group-owner-help">{{'Permissions.GroupCannotOwn' | translate}}</span>
     </section>
     }
   </div>

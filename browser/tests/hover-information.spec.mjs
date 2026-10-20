@@ -128,3 +128,114 @@ test("help on a wrapper stays closed when an enabled control inside it takes foc
   expect(await focusedControl(page)).toBe('checkbox "Make Sam Curator the owner"');
   await expect(page.getByRole("tooltip")).toHaveCount(0);
 });
+
+test("the Permissions dialog's owner checkboxes explain themselves to focus and to a screen reader", async ({
+  page,
+  api,
+}) => {
+  api.permissions.groupPermissions = [
+    { group: { "@id": "team", "schema:name": "Research team" }, role: "viewer" },
+  ];
+  await dashboard(page);
+  await action(page, "Permissions…");
+  const dialog = page.getByRole("dialog", { name: "Permissions" });
+  const tip = page.getByRole("tooltip");
+  const owner = dialog.getByRole("checkbox", { name: "Alex Researcher is the owner", exact: true });
+  const group = dialog.getByRole("checkbox", { name: "Make Research team the owner", exact: true });
+  const ownerHelp = "The owner can manage access and transfer ownership.";
+  const groupHelp = "A group cannot own a resource.";
+  await expect(owner).toBeChecked();
+  await expect(owner).toBeDisabled();
+  await expect(owner).toHaveAccessibleDescription(ownerHelp);
+  await expect(group).not.toBeChecked();
+  await expect(group).toBeDisabled();
+  await expect(group).toHaveAccessibleDescription(groupHelp);
+  // Each stand-in is exactly the disabled checkbox it shows, which the screen reader does not hear twice.
+  for (const standIn of [owner, group]) {
+    const shown = standIn.locator("input");
+    await expect(shown).toBeDisabled();
+    await expect(shown).toHaveAttribute("aria-hidden", "true");
+    expect(await standIn.boundingBox()).toEqual(await shown.boundingBox());
+  }
+
+  // Each takes keyboard focus, which opens the help a pointer opens.
+  await dialog.getByRole("combobox", { name: "User or group", exact: true }).focus();
+  expect(await tabSequence(page, 1)).toEqual(['checkbox "Alex Researcher is the owner"']);
+  await expect(tip).toHaveText(ownerHelp);
+  await page.keyboard.press("Space");
+  await page.keyboard.press("Enter");
+  await dialog.getByRole("combobox", { name: "Role for Research team", exact: true }).focus();
+  expect(await tabSequence(page, 1)).toEqual(['checkbox "Make Research team the owner"']);
+  await expect(tip).toHaveText(groupHelp);
+  await page.keyboard.press("Space");
+  await page.keyboard.press("Enter");
+  // A pointer refuses too, and hovering still opens the help.
+  await owner.click({ force: true });
+  await group.click({ force: true });
+  await expect(page.locator("dialog.confirmation-dialog")).toHaveCount(0);
+  expect(api.requests.filter((request) => request.method !== "GET")).toEqual([]);
+  await expect(owner).toBeChecked();
+  await expect(group).not.toBeChecked();
+  await expect(dialog).toBeVisible();
+  await page.mouse.move(0, 0);
+  await group.hover();
+  await expect(tip).toHaveText(groupHelp);
+  await page.mouse.move(0, 0);
+  await owner.hover();
+  await expect(tip).toHaveText(ownerHelp);
+
+  // A user's checkbox stays an ordinary one, which describes nothing it does not show.
+  const user = dialog.getByRole("checkbox", { name: "Make Sam Curator the owner", exact: true });
+  await expect(user).toBeEnabled();
+  await expect(user).toHaveAccessibleDescription("");
+});
+
+test("a refused Save explains itself to focus and to a screen reader", async ({ page, api }) => {
+  await page.goto("/instances/edit/instance");
+  await expect(page.getByLabel("Instance name")).toHaveValue("Study record");
+  const report = (problems) =>
+    page.evaluate((problems) => {
+      const editor = document.querySelector("cedar-embeddable-editor");
+      editor.dataQualityReport = { isValid: !problems.length, problems };
+      editor.dispatchEvent(new CustomEvent("change"));
+    }, problems);
+  await report([{ path: ["Email"], code: "valueShape", severity: "error", message: "Enter a valid email address." }]);
+  const save = page.getByRole("button", { name: "Save", exact: true });
+  const tip = page.getByRole("tooltip");
+  const refused = "Cannot save until errors are fixed";
+  await expect(save).toBeDisabled();
+  await expect(save).toHaveAttribute("aria-disabled", "true");
+  await expect(save).not.toHaveAttribute("disabled");
+  await expect(save).toHaveAccessibleDescription(`${refused} 1 error — fix before saving`);
+
+  // It takes keyboard focus, which opens the help a pointer opens, and refuses a key or a click.
+  await page.getByRole("button", { name: "Back to Workspace", exact: true }).focus();
+  expect(await tabSequence(page, 1)).toEqual(['button "Save"']);
+  await expect(tip).toHaveText(refused);
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("Space");
+  await save.click({ force: true });
+  await expect(page.locator(".metadata-save-status")).toHaveText("Unmodified");
+  expect(api.requests.filter((request) => request.method !== "GET")).toEqual([]);
+  await page.keyboard.press("Escape");
+  await expect(tip).toHaveCount(0);
+
+  // Once the errors are fixed, Save is an ordinary button again, with nothing to explain.
+  await report([]);
+  await expect(save).toBeEnabled();
+  await expect(save).not.toHaveAttribute("aria-disabled");
+  await expect(save).not.toHaveAttribute("aria-describedby");
+  await page.getByRole("button", { name: "Back to Workspace", exact: true }).focus();
+  expect(await tabSequence(page, 1)).toEqual(['button "Save"']);
+  await page.waitForTimeout(400);
+  await expect(tip).toHaveCount(0);
+
+  // A Save held back for a reload stays disabled, since the alert beside it says why.
+  api.fail = true;
+  await page.getByLabel("Instance name").fill("Changed record");
+  await save.click();
+  await expect(page.getByRole("alert")).toContainText("This item changed since you opened it.");
+  await expect(save).toHaveAttribute("disabled");
+  await expect(save).not.toHaveAttribute("aria-disabled");
+  await expect(save).not.toHaveAttribute("aria-describedby");
+});

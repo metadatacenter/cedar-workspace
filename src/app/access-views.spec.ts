@@ -296,11 +296,20 @@ describe("Permissions legacy view contracts", () => {
   });
   it("keeps ownership separate, protects the owner and groups, and uses compact bin actions", async () => {
     const { el } = await render();
+    // The owner's and a group's checkboxes refuse while keeping focus, so focus reaches their help.
     const ownerCheck = el.querySelector(
-      'input[aria-label="Ada Lovelace is the owner"]',
-    ) as HTMLInputElement;
-    expect(ownerCheck.checked).toBe(true);
-    expect(ownerCheck.disabled).toBe(true);
+      '[role="checkbox"][aria-label="Ada Lovelace is the owner"]',
+    )!;
+    expect(ownerCheck.getAttribute("aria-checked")).toBe("true");
+    expect(ownerCheck.getAttribute("aria-disabled")).toBe("true");
+    expect(ownerCheck.getAttribute("tabindex")).toBe("0");
+    expect(
+      (ownerCheck.querySelector("input") as HTMLInputElement).disabled,
+    ).toBe(true);
+    expect(
+      el.querySelector(`[id="${ownerCheck.getAttribute("aria-describedby")}"]`)
+        ?.textContent,
+    ).toBe("The owner can manage access and transfer ownership.");
     expect(
       el.querySelector('[aria-label="Ownership is separate from roles"]'),
     ).not.toBeNull();
@@ -311,13 +320,18 @@ describe("Permissions legacy view contracts", () => {
         ) as HTMLButtonElement
       ).disabled,
     ).toBe(true);
+    const groupCheck = el.querySelector(
+      '[role="checkbox"][aria-label="Make Researchers the owner"]',
+    )!;
+    expect(groupCheck.getAttribute("aria-checked")).toBe("false");
+    expect(groupCheck.getAttribute("aria-disabled")).toBe("true");
     expect(
-      (
-        el.querySelector(
-          '[aria-label="Make Researchers the owner"]',
-        ) as HTMLInputElement
-      ).disabled,
+      (groupCheck.querySelector("input") as HTMLInputElement).disabled,
     ).toBe(true);
+    expect(
+      el.querySelector(`[id="${groupCheck.getAttribute("aria-describedby")}"]`)
+        ?.textContent,
+    ).toBe("A group cannot own a resource.");
     expect(
       (
         el.querySelector(
