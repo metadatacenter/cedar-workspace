@@ -86,7 +86,7 @@
     </header>
     @if(error()) {
     <div class="alert" role="alert">
-      {{error()}} @if(recoveryGroup(); as group) {
+      <span [attr.lang]="error() | serverLanguage">{{error()}}</span> @if(recoveryGroup(); as group) {
       <button (click)="select(group)" [disabled]="busy() || selecting()">
         {{'Groups.Reload' | translate}}
       </button>

@@ -111,7 +111,7 @@
   </section>
   } @if(error()){
   <p role="alert" class="alert">
-    {{error()}} @if(canRecheckOpeningAccess) {
+    <span [attr.lang]="error() | serverLanguage">{{error()}}</span> @if(canRecheckOpeningAccess) {
     <button
       type="button"
       (click)="recheckOpeningAccess()"

@@ -119,7 +119,7 @@
 </header>
 @if(error()){
 <div class="alert" role="alert">
-  {{error()}}
+  <span [attr.lang]="error() | serverLanguage">{{error()}}</span>
   <button
     (focus)="errorOrigin = $event.relatedTarget"
     (click)="dismissError()"
@@ -662,7 +662,9 @@
       </dd>
       <dt>{{'Dashboard.Access' | translate}}</dt>
       <dd>
-        {{r.currentUserPermissions?.owner?('Common.Owner' | translate):role(r)}}
+        <span [attr.lang]="r.currentUserPermissions?.owner ? null : roleLanguage(r)"
+          >{{r.currentUserPermissions?.owner?('Common.Owner' | translate):role(r)}}</span
+        >
         @if(everyoneAccess(r); as everyone){<small>{{everyone | translate}}</small>}
       </dd>
     </dl>

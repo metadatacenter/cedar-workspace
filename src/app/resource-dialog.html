@@ -33,7 +33,7 @@
       >
     </p>
     } @if(error()){
-    <p class="alert" role="alert">{{error()}}</p>
+    <p class="alert" role="alert" [attr.lang]="error() | serverLanguage">{{error()}}</p>
     }
     @if(reloadRequired()) {
     <p role="status">{{(inspectionRequired() ? (settles ? 'ResourceDialog.InspectOutcome' : 'ResourceDialog.LegacyInspectOutcome') : 'ResourceDialog.RecoverRevision') | translate}}</p>

@@ -58,6 +58,7 @@ import {
   reconcileMetadata,
   ReconciliationChange,
 } from "./metadata-reconciliation";
+import { ServerLanguage } from "./server-text";
 
 export { metadataRoute, leaveMetadata } from "./metadata-route";
 
@@ -196,6 +197,7 @@ interface PendingMetadataCreation {
     PinBelow,
     FormsModule,
     TranslatePipe,
+    ServerLanguage,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: "./metadata-editor.html",

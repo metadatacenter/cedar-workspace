@@ -29,6 +29,7 @@ import { Resource, title, can } from "./resource";
 import { GroupPicker } from "./group-picker";
 import { Icon } from "./icon";
 import { I18n } from "./i18n";
+import { ServerLanguage } from "./server-text";
 
 export interface Principal {
   "@id": string;
@@ -64,6 +65,7 @@ export const principalName = (p: Principal, i18n: Pick<I18n, "t">) =>
     GroupPicker,
     Icon,
     TranslatePipe,
+    ServerLanguage,
   ],
   templateUrl: "./permissions-dialog.html",
   styleUrl: "./permissions-dialog.scss",

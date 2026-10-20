@@ -51,7 +51,7 @@
       }}
     </p>
     } @if(error()) {
-    <p class="alert" role="alert">{{ error() }}</p>
+    <p class="alert" role="alert" [attr.lang]="error() | serverLanguage">{{ error() }}</p>
     } @if(outcome(); as result) {
     <p class="alert" role="alert">{{ 'FolderDeletion.Stopped' | translate }}</p>
     <p>{{ outcomeMessage(result) }}</p>

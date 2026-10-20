@@ -61,6 +61,7 @@ import { ResourceDialog } from "./resource-dialog";
 import { PermissionsDialog } from "./permissions-dialog";
 import { I18n } from "./i18n";
 import { PageTitles } from "./page-title";
+import { ServerLanguage, serverLanguage } from "./server-text";
 export interface Action {
   id: string;
   label: string;
@@ -184,6 +185,7 @@ type InfoTab = "info" | "version";
     PermissionsDialog,
     Icon,
     TranslatePipe,
+    ServerLanguage,
   ],
   templateUrl: "./workspace.html",
 })
@@ -220,6 +222,11 @@ export class Workspace {
   role(r: Resource) {
     const role = r.currentUserPermissions?.role;
     return role ? this.i18n.known("Roles." + role, role) : "—";
+  }
+  /** The servers' language, for a role Workspace does not know and so shows as the server states it. */
+  roleLanguage(r: Resource) {
+    const role = r.currentUserPermissions?.role;
+    return role && !this.i18n.known("Roles." + role, "") ? serverLanguage : null;
   }
   /** A version's publication status, translated when Workspace knows it. */
   status(v: Resource) {

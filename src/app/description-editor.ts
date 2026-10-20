@@ -13,10 +13,11 @@ import { FormsModule } from "@angular/forms";
 import { TranslatePipe } from "@ngx-translate/core";
 import { Backend, Reply, failureText } from "./backend.service";
 import { Resource, can, title } from "./resource";
+import { ServerLanguage } from "./server-text";
 
 @Component({
   selector: "cedar-description-editor",
-  imports: [FormsModule, TranslatePipe],
+  imports: [FormsModule, TranslatePipe, ServerLanguage],
   template: `
     @if (editable) {
       <label for="resource-description">{{
@@ -56,7 +57,7 @@ import { Resource, can, title } from "./resource";
       }
     }
     @if (error()) {
-      <p role="alert">{{ error() }}</p>
+      <p role="alert" [attr.lang]="error() | serverLanguage">{{ error() }}</p>
       @if (!snapshot() || state.reloadRequired()) {
         <button type="button" [disabled]="busy()" (click)="load(true)">
           {{ "Common.Retry" | translate }}

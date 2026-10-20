@@ -20,6 +20,7 @@ import { NgTemplateOutlet } from "@angular/common";
 import { Icon } from "./icon";
 import { GroupPicker } from "./group-picker";
 import { I18n } from "./i18n";
+import { ServerLanguage } from "./server-text";
 export interface Group {
   "@id": string;
   "schema:name": string;
@@ -56,6 +57,7 @@ export const userName = (u: GroupUser, i18n: Pick<I18n, "t">) =>
     Icon,
     GroupPicker,
     TranslatePipe,
+    ServerLanguage,
   ],
   styleUrl: "./groups.scss",
   templateUrl: "./groups.html",

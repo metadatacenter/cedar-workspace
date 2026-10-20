@@ -32,7 +32,7 @@
   <div class="permissions-body">
     @if(error()) {
     <div role="alert" class="alert">
-      {{error()}} @if(failedChange()) {
+      <span [attr.lang]="error() | serverLanguage">{{error()}}</span> @if(failedChange()) {
       <p>{{'Permissions.NotSaved' | translate: {change: failedChange()} }}</p>
       }
       <button (click)="load()" [disabled]="busy()">{{'Permissions.Reload' |
