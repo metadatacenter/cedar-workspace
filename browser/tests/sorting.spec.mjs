@@ -175,7 +175,8 @@ test("pointer selections update visible order, folder grouping and version resul
   });
   await page.goto("/dashboard");
   await page.getByRole("button", { name: "List view", exact: true }).click();
-  const rows = page.locator("tbody td:first-child");
+  // Each row's name link, since the name cell also holds the type for a screen reader.
+  const rows = page.locator("tbody td:first-child a");
   await expect(rows).toHaveText(["Alpha", "Alpha historical", "Museum", "Zulu"]);
   const select = async name => {
     await page.getByRole("button", { name: "Sort options", exact: true }).click();

@@ -79,24 +79,28 @@ export function previewElement(element: CeeJsonObject): CeeJsonObject {
             "
             ><cedar-icon [name]="resource.resourceType"
           /></span>
+          <!-- Each hidden space keeps two facts apart when the dot between them is not read. -->
           <span class="preview-release"
             ><span>{{
               "ResourceTypes." + resource.resourceType | translate
             }}</span>
             @if (versioned) {
-              <span aria-hidden="true"> · </span
+              <span class="sr-only">&ngsp;</span
+              ><span aria-hidden="true"> · </span
               ><span [cedarTooltip]="'Common.Version' | translate">{{
                 resource["pav:version"] || ("Dashboard.Unversioned" | translate)
               }}</span>
               @if (status !== "—") {
-                <span aria-hidden="true"> · </span
+                <span class="sr-only">&ngsp;</span
+                ><span aria-hidden="true"> · </span
                 ><span [cedarTooltip]="'Dashboard.Status' | translate">{{
                   status
                 }}</span>
               }
             }
             @if (resource["pav:lastUpdatedOn"]; as updated) {
-              <span aria-hidden="true"> · </span
+              <span class="sr-only">&ngsp;</span
+              ><span aria-hidden="true"> · </span
               ><time [attr.datetime]="updated" [cedarTooltip]="updated">{{
                 updated | friendlyDate: now
               }}</time>

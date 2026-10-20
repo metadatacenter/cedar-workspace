@@ -576,6 +576,7 @@
     "DragToFolder": "Húzd egy mappára vagy a kuka ikonra",
     "MoveTo": "Áthelyezés ide: {{name}}",
     "Selected": "{{count}} kijelölve",
+    "RowSelected": "Kijelölve",
     "Clear": "Kijelölés törlése",
     "Cut": "Kivágás",
     "View": "Találatok nézete",

@@ -576,6 +576,7 @@
     "DragToFolder": "Drag onto a folder or the trash icon",
     "MoveTo": "Move here: {{name}}",
     "Selected": "{{count}} selected",
+    "RowSelected": "Selected",
     "Clear": "Clear selection",
     "Cut": "Cut",
     "View": "Result view",

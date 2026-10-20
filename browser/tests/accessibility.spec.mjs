@@ -466,7 +466,12 @@ const settled = [
   ),
   covered(".column-label", "Version", ["date filter"], datePopover),
   covered("time", "1 day ago", ["date filter"], datePopover),
-  covered("td:nth-child(3) > span", "·", ["date filter"], datePopover),
+  covered(
+    "td:nth-child(3) > span:nth-child(2)",
+    "·",
+    ["date filter"],
+    datePopover,
+  ),
   covered(
     ".paging > span:nth-child(2)",
     "Displaying 1–1 of 1",
@@ -476,7 +481,7 @@ const settled = [
   {
     rule: "color-contrast",
     target: "td:nth-child(3)",
-    text: "1.0.0 · Draft",
+    text: "1.0.0",
     states: ["date filter"],
     measured: "14.45:1",
     reason:

@@ -40,7 +40,8 @@ test("the grid view's cards say their type once, as the text they show", async (
   await page.goto("/dashboard?view=grid");
   const card = page.locator('[data-resource-id="template"]');
   await expect(card.locator(".explorer-kind")).toHaveText("Template ·");
-  await expect(card.locator(".sr-only")).toHaveCount(0);
+  await expect(card).toHaveAccessibleName(/^1\.0\.0 Draft Study metadata Preview Study metadata Template · /);
+  expect((await card.textContent()).match(/Template/g)).toHaveLength(1);
 });
 
 test("the last administrator's refused controls explain themselves to focus and to a screen reader", async ({

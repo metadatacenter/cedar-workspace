@@ -362,11 +362,11 @@
           <div class="groups-member-summary">
             <div class="groups-member-name">{{userName(m.user)}}</div>
           </div>
+          @if(onlyAdmin(m)) {
           <label
             class="groups-admin-control"
-            [cedarTooltip]="onlyAdmin(m) ? ('Groups.LastAdministrator' | translate) : ''"
+            [cedarTooltip]="'Groups.LastAdministrator' | translate"
           >
-            @if(onlyAdmin(m)) {
             <!-- A disabled checkbox cannot take focus, so its help would need a pointer. This
                  checkbox stands in for it and is drawn by the disabled one it holds. -->
             <span
@@ -386,7 +386,9 @@
                 tabindex="-1"
                 aria-hidden="true"
             /></span>
-            } @else {
+          </label>
+          } @else {
+          <label class="groups-admin-control">
             <input
               spellcheck="false"
               type="checkbox"
@@ -395,8 +397,8 @@
               [disabled]="!canAdmin || busy() || stale()"
               [attr.aria-label]="'Groups.IsAdministrator' | translate: {name: userName(m.user)}"
             />
-            }
           </label>
+          }
           <span
             class="groups-remove-member-wrapper"
             [cedarTooltip]="onlyAdmin(m) ? ('Groups.AssignAnother' | translate) : ''"

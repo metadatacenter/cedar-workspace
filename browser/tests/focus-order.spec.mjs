@@ -54,7 +54,7 @@ test("the dashboard's Tab order in grid view runs header, navigation, toolbar, t
     ...navigation,
     ...toolbar,
     'button "Sort options"',
-    'row "1.0.0Draft Study metadata Preview Study metadata Template · 1 day ago Populate template Actions for Study metadata"',
+    'row "1.0.0 Draft Study metadata Preview Study metadata Template · 1 day ago Populate template Actions for Study metadata"',
     'button "Preview Study metadata"',
     'link "Populate template"',
     'button "Actions for Study metadata"',
@@ -74,7 +74,7 @@ test("the dashboard's Tab order in list view reaches the column sorts and each r
     'button "Name"',
     'button "Last modified"',
     'button "Sort options"',
-    'row "Template Study metadata 1 day ago 1.0.0Draft Populate template Preview Study metadata Actions for Study metadata"',
+    'row "Template Study metadata 1 day ago 1.0.0 Draft Populate template Preview Study metadata Actions for Study metadata"',
     'link "Study metadata"',
     'link "Populate template"',
     'button "Preview Study metadata"',
@@ -114,7 +114,7 @@ test("with an item selected, Tab goes on from its row into the Information panel
     'button "Name"',
     'button "Last modified"',
     'button "Sort options"',
-    'row "Template Study metadata 1 day ago 1.0.0Draft Populate template Preview Study metadata Actions for Study metadata"',
+    'row "Template Study metadata 1 day ago 1.0.0 Draft Populate template Preview Study metadata Actions for Study metadata"',
   ]);
 });
 

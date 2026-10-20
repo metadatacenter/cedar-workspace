@@ -101,6 +101,7 @@ cd "$CEDAR_HOME/cedar-workspace"
 npm ci
 npm run build
 npm test
+npm run lint
 ```
 
 Gulp finishes configuration, CEE staging and the Angular build before starting the
@@ -124,7 +125,9 @@ restricted to the same-origin workspace. The former AngularJS controllers, servi
 `npm test` covers the modern Angular components, navigation, permission decisions,
 REST authentication and conditional writes, plus the retained plain-JavaScript Keycloak
 adapter. Node checks also verify generated deployment configuration, atomic asset
-staging and the npm package contents. With the native stack running and profile sourced, run
+staging and the npm package contents. `npm run lint` checks every component template,
+inline ones included, against angular-eslint's recommended and accessibility rules, and
+CI runs it too. With the native stack running and profile sourced, run
 `npm run smoke:workspace:modern:full` in `cedar-development/ops/e2e` for the modern
 Workspace journey, CED host conflict/versioning scenarios, all four account pages,
 and logout/retired-route checks.

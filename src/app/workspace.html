@@ -210,6 +210,7 @@
     </nav>
     }
   </aside>
+  <!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus -- The listing's cut and paste shortcuts reach main from the controls inside it, and main itself takes no input. -->
   <main (keydown)="explorerKeys($event)">
     @if(grid()){
     <h1 class="sr-only">{{'Common.Workspace' | translate}}</h1>
@@ -361,7 +362,7 @@
             class="explorer-item"
             [class.explorer-schema]="['template','element','field'].includes(r.resourceType)"
             [class.selected]="selectionIds().includes(r['@id'])"
-            [attr.aria-selected]="selectionIds().includes(r['@id'])"
+            [attr.aria-describedby]="selectionIds().includes(r['@id']) ? 'explorer-row-selected' : null"
             [attr.data-resource-id]="r['@id']"
             [attr.data-drop-id]="r.resourceType==='folder'?r['@id']:null"
             [class.explorer-drop-target]="dropTarget()===r['@id']"
@@ -399,6 +400,8 @@
                     >{{r['pav:version'] || ('Dashboard.Unversioned' |
                     translate)}}</span
                   >
+                  <!-- The hidden space keeps the version and status apart when the dot is not read. -->
+                  <span class="sr-only">&ngsp;</span>
                   <span aria-hidden="true"> · </span>
                   <span
                     class="explorer-status"
@@ -468,6 +471,9 @@
             <td>
               @if(versioned(r)){
               {{r['pav:version'] || ('Dashboard.Unversioned' | translate)}}<span
+                class="sr-only"
+                >&ngsp;</span
+              ><span
                 aria-hidden="true"
               > · </span
               >{{status(r)}}
@@ -507,6 +513,7 @@
               <button
                 (click)="toggleMenu(r, $event)"
                 [attr.aria-expanded]="menu()===r['@id']"
+                [attr.aria-controls]="menu()===r['@id'] ? 'resource-menu' : null"
                 [cedarTooltip]="'Dashboard.Actions' | translate"
                 [attr.aria-label]="'Dashboard.ActionsFor' | translate: {name: title(r)}"
               >
@@ -514,6 +521,7 @@
               </button>
               @if(menu()===r['@id']){
               <div
+                id="resource-menu"
                 class="resource-menu"
                 role="group"
                 [attr.aria-label]="'Dashboard.ArtifactActions' | translate"
@@ -534,6 +542,7 @@
           }
         </tbody>
       </table>
+      <span hidden id="explorer-row-selected">{{'Explorer.RowSelected' | translate}}</span>
       @if(refreshing()){
       <span class="sr-only" role="status"
         >{{'Dashboard.Refreshing' | translate}}</span
@@ -575,6 +584,8 @@
     >
       <button
         role="tab"
+        id="information-details-tab"
+        aria-controls="information-panel"
         [attr.aria-selected]="tab==='info'"
         (click)="tab='info'"
       >
@@ -583,6 +594,8 @@
       @if(versioned(r)){
       <button
         role="tab"
+        id="information-version-tab"
+        aria-controls="information-panel"
         [attr.aria-selected]="tab==='version'"
         (click)="tab='version'"
       >
@@ -591,6 +604,11 @@
       }
     </div>
     @if(tab==='info'){
+    <div
+      role="tabpanel"
+      id="information-panel"
+      aria-labelledby="information-details-tab"
+    >
     <dl>
       <dt>{{'Common.Type' | translate}}</dt>
       <dd>{{'ResourceTypes.' + r.resourceType | translate}}</dd>
@@ -827,8 +845,13 @@
       />
       }
     </section>
+    </div>
     } @else {
-    <div role="tabpanel">
+    <div
+      role="tabpanel"
+      id="information-panel"
+      aria-labelledby="information-version-tab"
+    >
       <article class="version">
         <dl>
           <dt>{{'Common.Type' | translate}}</dt>

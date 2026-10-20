@@ -8,6 +8,7 @@
   "scripts": {
     "start": "node tools/workspace.mjs start",
     "test": "ng test --watch=false && node --test tools/*.test.mjs",
+    "lint": "eslint src",
     "build": "ng build && node tools/stage-workspace.mjs",
     "format": "prettier --write \"src/**/*.{ts,html,scss}\" angular.json tsconfig*.json",
     "build:deployment": "node tools/workspace.mjs build",
@@ -29,9 +30,12 @@
     "@angular/build": "22.2.3",
     "@angular/cli": "22.2.3",
     "@angular/compiler-cli": "22.2.3",
+    "angular-eslint": "^22.6.0",
+    "eslint": "^10.13.0",
     "jsdom": "^30.0.1",
     "prettier": "^3.9.6",
     "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.0",
     "vitest": "^4.0.8"
   },
   "dependencies": {
