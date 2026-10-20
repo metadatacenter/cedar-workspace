@@ -37,7 +37,7 @@ for (const width of [1440, 375]) {
     await page.mouse.move(0, 0);
     if (process.env.WORKSPACE_VISUAL)
       await expect(page.locator(".groups-content")).toHaveScreenshot(`groups-delete-${width}.png`);
-    expect((await new AxeBuilder({ page }).include("#groups-page").withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"]).analyze()).violations).toEqual([]);
+    expect((await new AxeBuilder({ page }).include("#groups-page").withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze()).violations).toEqual([]);
 
     await manage.click();
     await expect(page.getByRole("button", { name: "Delete group", exact: true })).toHaveCount(0);
