@@ -60,6 +60,7 @@ import { FolderDeletionDialog } from "./folder-deletion-dialog";
 import { ResourceDialog } from "./resource-dialog";
 import { PermissionsDialog } from "./permissions-dialog";
 import { I18n } from "./i18n";
+import { PageTitles } from "./page-title";
 export interface Action {
   id: string;
   label: string;
@@ -196,6 +197,7 @@ export class Workspace {
   private destroy = inject(DestroyRef);
   private host: ElementRef<HTMLElement> = inject(ElementRef);
   private injector = inject(Injector);
+  private titles = inject(PageTitles);
   readonly title = (r: Resource) => title(r, this.i18n.t("Common.Untitled"));
   readonly can = can;
   readonly offeredInOpenView = offeredInOpenView;
@@ -324,6 +326,7 @@ export class Workspace {
       document.body.classList.remove("explorer-dragging", "explorer-can-drop");
       this.state.dispose();
       this.reports.dispose();
+      this.titles.name(null);
     });
   }
   async start() {
@@ -396,6 +399,7 @@ export class Workspace {
     if (!refresh) {
       this.path.set([]);
     }
+    this.titles.name(this.pageName());
     this.menu.set(null);
     try {
       const { data } = await this.api.request<Listing>(
@@ -411,6 +415,7 @@ export class Workspace {
       this.rows.set(data.resources);
       this.total.set(data.totalCount);
       this.path.set(data.pathInfo || []);
+      this.titles.name(this.pageName());
       void this.loadFolder();
       // Listings omit lifecycle actions. Enrich template links without blocking the table.
       void this.loadTemplateActions(data.resources);
@@ -438,6 +443,24 @@ export class Workspace {
         this.refreshing.set(false);
       }
     }
+  }
+  /**
+   * The name the page title gives this listing, which is what the breadcrumb shows: the search,
+   * the shared or community view, or the folder it marks as current. The home folder is Home, as
+   * the navigation calls it. Another folder's name arrives with its listing, and until then the
+   * page has no name of its own.
+   */
+  private pageName(): string | null {
+    const t = this.i18n.t.bind(this.i18n);
+    if (this.params.has("search"))
+      return t("Dashboard.SearchResults", { query: this.params.get("search") });
+    if (this.params.has("sharing"))
+      return t(this.params.get("sharing") === "shared-with-me" ? "Dashboard.SharedWithMe" : "Dashboard.SharedWithEveryone");
+    if (this.params.has("viewMode")) return t("Dashboard.CommunityFolders");
+    if (this.folder === this.api.profile.homeFolderId) return t("Common.Home");
+    const folder = this.path().at(-1);
+    if (!folder) return null;
+    return this.title(folder) === "/" ? t("Common.All") : this.title(folder);
   }
   /**
    * Select again the artifact an editor was opened on, once the listing holds it.
