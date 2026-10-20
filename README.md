@@ -343,5 +343,5 @@ author writes again. A changed template or unfinished raw input keeps the origin
 draft and requires correction or a recovery-file download before proceeding.
 
 The production initial-bundle budget is 1.03 MB. Exact JSON transport and draft preservation
-add the shared scalar policy bundle; the measured total is 1.022 MB (301 KB estimated transfer).
-The budget keeps about 8 KB of headroom and does not include the lazy metadata editor.
+add the shared scalar policy bundle; the measured total is 1.025 MB (302 KB estimated transfer).
+The budget keeps about 5 KB of headroom and does not include the lazy metadata editor.

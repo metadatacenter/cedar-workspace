@@ -22,7 +22,7 @@ import { Icon } from "./icon";
             | translate: { choice: text(), filter: label().toLowerCase() })
           : label()
       "
-      [attr.aria-controls]="controls()"
+      [attr.aria-controls]="expanded() ? controls() : null"
     >
       {{ text() }} <cedar-icon name="chevron-down" size="small" />
     </button>
