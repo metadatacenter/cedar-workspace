@@ -572,8 +572,9 @@
     [attr.aria-label]="'Dashboard.Information' | translate"
   >
     @if(right()){ @if(selected();as r){
+    <!-- The panel's icon links have the same names for every artifact, so the name here describes each. -->
     <h1>
-      <cedar-icon [name]="r.resourceType" /><span
+      <cedar-icon [name]="r.resourceType" /><span id="information-name"
         >{{title(r)}}</span
       >
     </h1>
@@ -629,6 +630,7 @@
           routerLink="/dashboard"
           [queryParams]="navigationQuery({folderId:id})"
           [attr.aria-label]="'Dashboard.OpenLocation' | translate"
+          aria-describedby="information-name"
           [cedarTooltip]="'Dashboard.OpenLocation' | translate"
           ><cedar-icon name="go-to"
         /></a>
@@ -794,6 +796,7 @@
           routerLink="/dashboard"
           [queryParams]="navigationQuery({folderId:r['@id']})"
           [attr.aria-label]="'Dashboard.OpenFolder' | translate"
+          aria-describedby="information-name"
           [cedarTooltip]="'Dashboard.OpenFolder' | translate"
           ><cedar-icon name="go-to"
         /></a>
@@ -827,6 +830,7 @@
           target="_blank"
           rel="noopener"
           [attr.aria-label]="'Dashboard.OpenInOpenView' | translate"
+          aria-describedby="information-name"
           [cedarTooltip]="'Dashboard.OpenInOpenView' | translate"
           ><cedar-icon name="external"
         /></a>
