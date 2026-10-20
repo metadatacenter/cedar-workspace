@@ -232,7 +232,7 @@ export class Workspace {
   readonly error = signal("");
   readonly notice = signal("");
   /**
-   * What the listing's status region says when a change of address brings another listing, as a
+   * What the listing's live region says when a change of address brings another listing, as a
    * search, a filter, a sort, a page or a folder does: the count the footer shows, or that nothing
    * was found. The listing the page opens on goes unsaid, since the page itself says as much. So
    * does a reload after an action or a refresh, each of which reports its own outcome.
@@ -386,6 +386,13 @@ export class Workspace {
   fail(e: unknown) {
     this.error.set(e instanceof Error ? e.message : String(e));
   }
+  /** The control focus came from to the error's dismiss button, which gets it back on dismissal. */
+  errorOrigin: EventTarget | null = null;
+  dismissError() {
+    this.error.set("");
+    if (this.errorOrigin instanceof HTMLElement && this.errorOrigin.isConnected) this.errorOrigin.focus();
+    this.errorOrigin = null;
+  }
   async load(refresh = false, announce = false) {
     if (!this.state.active) return;
     if (!refresh) this.pendingMoveSelection = [];
@@ -395,6 +402,7 @@ export class Workspace {
     clearTimeout(this.movedTimer);
     this.movedTarget.set("");
     const operation = this.state.begin("listing", ["folder", "detail", "instances", "menu", "enrichment"]);
+    const focused = document.activeElement;
     this.loading.set(true);
     this.refreshing.set(refresh);
     this.announcement.set("");
@@ -452,8 +460,49 @@ export class Workspace {
       if (operation.current()) {
         this.loading.set(false);
         this.refreshing.set(false);
+        this.restoreFocus(focused);
       }
     }
+  }
+  /**
+   * Where focus goes when drawing the next listing loses it, if not back to the control that had it
+   * when the listing began loading.
+   */
+  private refocus: (() => HTMLElement | null | undefined) | null = null;
+  /**
+   * Return focus that loading and drawing a listing took from the page. Loading disables Refresh and
+   * the page buttons, which takes focus from the one pressed, and a new listing can remove the row
+   * that had it. Focus goes back to the control that had it when that is still there and enabled,
+   * and otherwise where `refocus` says. Focus the person has since moved stays where they put it.
+   */
+  private restoreFocus(focused: Element | null) {
+    const fallback = this.refocus;
+    this.refocus = null;
+    afterNextRender(
+      () => {
+        if (document.activeElement && document.activeElement !== document.body) return;
+        const before =
+          focused instanceof HTMLElement && focused !== document.body && focused.isConnected && !focused.matches(":disabled")
+            ? focused
+            : null;
+        (before ?? fallback?.())?.focus();
+      },
+      { injector: this.injector },
+    );
+  }
+  /**
+   * After an action on `resources` that can remove their rows, focus lost with them goes to the row
+   * now in the place of the first, to the last row when none follows, and to Refresh when no row is
+   * left.
+   */
+  private refocusInPlaceOf(resources: Resource[]) {
+    const ids = resources.map((r) => r["@id"]);
+    const index = this.rows().findIndex((r) => ids.includes(r["@id"]));
+    if (index < 0) return;
+    this.refocus = () => {
+      const rows = this.host.nativeElement.querySelectorAll<HTMLElement>(".explorer-item");
+      return rows[Math.min(index, rows.length - 1)] ?? this.host.nativeElement.querySelector<HTMLElement>(".table-toolbar > button");
+    };
   }
   /**
    * The name the page title gives this listing, which is what the breadcrumb shows: the search,
@@ -970,6 +1019,10 @@ export class Workspace {
     });
   }
   page(delta: number) {
+    // A page button still disabled once the page is drawn, as Next is on the last page, hands focus
+    // to the other one.
+    this.refocus = () =>
+      [...this.host.nativeElement.querySelectorAll<HTMLButtonElement>(".paging button")].find((button) => !button.disabled);
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParamsHandling: "merge",
@@ -1106,10 +1159,18 @@ export class Workspace {
   }
   permissionsClosed(message?: string) {
     if (message) this.notice.set(message);
+    const resource = this.dialog()?.resource;
+    if (resource) this.refocusInPlaceOf([resource]);
     this.dialog.set(null);
     void this.load();
   }
-  saved() {
+  /**
+   * Close a dialog whose action succeeded and reload the listing. The action concerned `resources`
+   * when the selection bin deleted them, and the dialog's resource otherwise.
+   */
+  saved(resources?: Resource[]) {
+    const resource = this.dialog()?.resource;
+    this.refocusInPlaceOf(resources ?? (resource ? [resource] : []));
     this.dialog.set(null);
     this.notice.set(this.i18n.t("Common.Saved"));
     void this.load();

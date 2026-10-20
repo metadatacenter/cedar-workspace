@@ -121,7 +121,8 @@
 <div class="alert" role="alert">
   {{error()}}
   <button
-    (click)="error.set('')"
+    (focus)="errorOrigin = $event.relatedTarget"
+    (click)="dismissError()"
     [attr.aria-label]="'Dashboard.DismissError' | translate"
     [cedarTooltip]="'Dashboard.DismissError' | translate"
   >
@@ -968,6 +969,6 @@ d.resource) {
   [resources]="items"
   (closed)="deletionSelection.set(null)"
   (changed)="load(true)"
-  (saved)="deletionSelection.set(null); selectionIds.set([]); saved()"
+  (saved)="deletionSelection.set(null); selectionIds.set([]); saved(items)"
 />
 }

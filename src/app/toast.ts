@@ -19,6 +19,7 @@ import { Icon } from "./icon";
     >
       <cedar-icon name="check" /><span>{{ message() }}</span>
       <button
+        (focus)="origin = $event.relatedTarget"
         [attr.aria-label]="'Toast.Dismiss' | translate"
         [cedarTooltip]="'Toast.Dismiss' | translate"
         (click)="dismiss()"
@@ -47,8 +48,13 @@ export class Toast {
     this.pause();
     this.timer = setTimeout(() => this.visible.set(false), 6000);
   }
+  /** The control focus came from to the dismiss button, which gets it back on dismissal. */
+  origin: EventTarget | null = null;
   dismiss() {
     this.pause();
     this.visible.set(false);
+    if (this.origin instanceof HTMLElement && this.origin.isConnected)
+      this.origin.focus();
+    this.origin = null;
   }
 }

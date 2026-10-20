@@ -177,6 +177,13 @@ export class ResourceFilters {
     );
   }
   clear(kind?: "type" | "date") {
+    // Clearing removes the button pressed, so focus goes to the chip of the filter it cleared, or
+    // to the first chip when it cleared them all.
+    const host = this.host.nativeElement;
+    if (host.contains(document.activeElement))
+      host
+        .querySelectorAll<HTMLElement>("cedar-filter-chip button:not(.clear)")
+        [kind === "date" ? 1 : 0]?.focus();
     this.change.emit(
       kind === "type"
         ? { ...this.value(), types: [] }
