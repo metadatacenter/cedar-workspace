@@ -65,6 +65,45 @@ async function sortMenu(page) {
   await expect(page.getByRole("menu", { name: "Sort options" })).toBeVisible();
 }
 
+/** A home folder holding a folder that takes items and one that does not, as Move and Copy list them. */
+async function folders(page) {
+  const folder = (id, name, allowed = true) => ({
+    "@id": id,
+    resourceType: "folder",
+    "schema:name": name,
+    "pav:lastUpdatedOn": "2026-01-02T12:00:00Z",
+    currentUserPermissions: {
+      capabilities: allowed ? ["copyIntoFolder", "moveIntoFolder"] : [],
+    },
+  });
+  const home = folder("home", "My workspace");
+  const children = [folder("archive", "Archive"), folder("restricted", "Read only", false)];
+  await page.route("**/folders/**", (route) => {
+    const url = new URL(route.request().url());
+    if (!url.searchParams.has("resource_types") && url.pathname.endsWith("/contents"))
+      return route.fallback();
+    const id = decodeURIComponent(url.pathname.split("/folders/")[1].split("/")[0]);
+    if (url.pathname.endsWith("/contents"))
+      return route.fulfill({
+        json: {
+          resources: id === "home" ? children : [],
+          totalCount: id === "home" ? children.length : 0,
+          pathInfo: [home],
+        },
+      });
+    return route.fulfill({ json: [home, ...children].find((f) => f["@id"] === id) ?? home });
+  });
+}
+/** The Move or Copy dialog, its folders listed. */
+async function picker(page, label) {
+  await folders(page);
+  await dashboard(page);
+  await page.getByRole("button", { name: "Actions for Study metadata", exact: true }).click();
+  await page.locator(".resource-menu").getByRole("button", { name: label, exact: true }).click();
+  await expect(page.locator("dialog .folder-scroll")).toHaveAttribute("aria-busy", "false");
+  await expect(page.locator("dialog .folder-scroll tbody tr")).toHaveCount(2);
+}
+
 /**
  * One control of each kind, found in the state that shows it. Each is scanned once with the pointer
  * resting on it and once focused from the keyboard, since both change how it is drawn and both can
@@ -210,7 +249,40 @@ const states = {
       .click();
     await expect(page.getByRole("alert")).toContainText("Listing unavailable");
   },
+  "move dialog": (page) => picker(page, "Move"),
+  "copy dialog": (page) => picker(page, "Copy"),
+  "publish dialog": async (page) => {
+    await dashboard(page);
+    await action(page, "Publish");
+    await expect(
+      page.locator("dialog[open]").getByRole("textbox", { name: "Patch", exact: true }),
+    ).toBeVisible();
+  },
 };
+/**
+ * The states a narrow window rearranges, scanned again at the narrow width the visual suite takes.
+ * The panels stack, the toolbars wrap and the dialogs fill the width.
+ */
+for (const name of [
+  "dashboard",
+  "dashboard list",
+  "information panel",
+  "type filter",
+  "resource menu",
+  "user menu",
+  "selected group",
+  "profile",
+  "privacy",
+  "permissions",
+  "move dialog",
+  "publish dialog",
+]) {
+  const open = states[name];
+  states[`narrow ${name}`] = async (page) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    return open(page);
+  };
+}
 for (const [kind, [open, find]] of Object.entries(controls)) {
   states[`hovered ${kind}`] = async (page) => {
     await open(page);
@@ -254,6 +326,23 @@ const element = (page, node) =>
  */
 async function textContrast(page, node) {
   const text = element(page, node);
+  // Text a scroll container holds out of view, as a narrow window's table and a dialog's body can,
+  // is scrolled into view for the measurement and put back afterwards.
+  const scrolled = await text.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    const within = (area) =>
+      box.left >= area.left && box.top >= area.top && box.right <= area.right && box.bottom <= area.bottom;
+    let shown = within({ left: 0, top: 0, right: innerWidth, bottom: innerHeight });
+    for (let node = element.parentElement; node && shown; node = node.parentElement)
+      if (getComputedStyle(node).overflow !== "visible") shown = within(node.getBoundingClientRect());
+    if (shown) return false;
+    const positions = [];
+    for (let node = element.parentElement; node; node = node.parentElement)
+      positions.push([node, node.scrollLeft, node.scrollTop]);
+    window.__contrastScroll = { positions, x: scrollX, y: scrollY };
+    element.scrollIntoView({ block: "nearest", inline: "nearest" });
+    return true;
+  });
   const box = await text.boundingBox();
   const clip = {
     x: Math.floor(box.x),
@@ -286,6 +375,13 @@ async function textContrast(page, node) {
     element.style.cssText = element.dataset.contrastProbe;
     delete element.dataset.contrastProbe;
   });
+  if (scrolled)
+    await page.evaluate(() => {
+      const { positions, x, y } = window.__contrastScroll;
+      for (const [node, left, top] of positions) [node.scrollLeft, node.scrollTop] = [left, top];
+      scrollTo(x, y);
+      delete window.__contrastScroll;
+    });
   return page.evaluate(
     async ({ shown, hidden, color }) => {
       const pixels = async (png) => {
@@ -395,10 +491,35 @@ const typeFilterStates = [
   "type filter",
   "hovered checkbox",
   "focused checkbox",
+  "narrow type filter",
 ];
 const filters = [...typeFilterStates, "date filter"];
 const newMenu = "The open New menu";
 const datePopover = "The open date filter";
+/**
+ * Text of the listing a narrow window's open type filter lies over in part. The table scrolls
+ * sideways in its container there, so the text is measured scrolled into view.
+ */
+const narrowListing = (target, text, measured = "at least 4.5:1") => ({
+  rule: "color-contrast",
+  target,
+  text,
+  states: ["narrow type filter"],
+  measured,
+  reason: `In a narrow window the open type filter lies over part of the listing${
+    measured.startsWith("at least") ? ", and its shadow falls across this text" : ""
+  }. What shows of this text meets 4.5:1 against the row.`,
+});
+/** Text of the Permissions dialog's access list that a narrow window's dialog body scrolls out of view. */
+const narrowAccess = (target, text, measured) => ({
+  rule: "color-contrast",
+  target,
+  text,
+  states: ["narrow permissions"],
+  measured,
+  reason:
+    "In a narrow window the Permissions dialog's body scrolls, and axe cannot tell whether the dialog's surface lies under text scrolled out of view. Scrolled into view, nothing lies over it, and it meets 4.5:1 against the dialog.",
+});
 /** A popup button's `aria-controls`, which axe asks to have checked against the popup. */
 const popupButton = (label, popup, states) => ({
   rule: "aria-valid-attr-value",
@@ -415,6 +536,9 @@ const popupButton = (label, popup, states) => ({
  * a control whose background draws its icon, and it asks for review of a popup button that names
  * its popup. A state that leaves a result undecided which is not listed here fails, and so does an
  * entry none of its states produces, so the list says exactly what the gate has settled.
+ *
+ * Text a popup's shadow falls across measures a little differently with each renderer's glyph
+ * edges, so its entry gives the least it must measure, "at least 4.5:1", rather than one value.
  */
 const settled = [
   // Text an open menu or popover lies over. Each popup is opaque, so only what shows is measured.
@@ -475,8 +599,8 @@ const settled = [
   covered(
     ".paging > span:nth-child(2)",
     "Displaying 1–1 of 1",
-    ["date filter"],
-    datePopover,
+    ["date filter", "narrow type filter"],
+    "The open filter popover",
   ),
   {
     rule: "color-contrast",
@@ -487,6 +611,11 @@ const settled = [
     reason:
       "The open date filter lies over part of the row's version. What shows meets 4.5:1 against the row.",
   },
+  narrowListing('th[aria-sort="none"] > button', "Last modified"),
+  narrowListing(".column-label", "Version"),
+  narrowListing("time", "1 day ago"),
+  narrowListing("td:nth-child(3)", "1.0.0", "14.45:1"),
+  narrowListing("td:nth-child(3) > span:nth-child(2)", "·", "16.10:1"),
   // Text axe cannot see whole behind its background.
   {
     rule: "color-contrast",
@@ -506,6 +635,12 @@ const settled = [
     reason:
       "The ownership confirmation can scroll, and axe cannot tell whether its surface lies under all of its question. Nothing lies over it, and it meets 4.5:1 against the confirmation.",
   },
+  narrowAccess('span[data-cedar-help="Sam Curator"]', "Sam Curator", "16.10:1"),
+  narrowAccess(
+    '.access-row[role="row"]:nth-child(3) > .type-cell[role="cell"]',
+    "User",
+    "7.45:1",
+  ),
   // A control whose background draws its icon.
   {
     rule: "color-contrast",
@@ -542,7 +677,11 @@ async function settle(page, state, undecided) {
     const measured = measures[result.rule]
       ? await measures[result.rule](page, result.node)
       : "no measure";
-    if (entry)
+    if (entry?.measured.startsWith("at least "))
+      expect(parseFloat(measured), `${entry.target} “${entry.text}”`).toBeGreaterThanOrEqual(
+        parseFloat(entry.measured.slice("at least ".length)),
+      );
+    else if (entry)
       expect(measured, `${entry.target} “${entry.text}”`).toBe(entry.measured);
     else
       unlisted.push(
