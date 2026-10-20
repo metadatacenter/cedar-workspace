@@ -44,7 +44,7 @@ async function route(page, address) {
 }
 async function selected(page) {
   await dashboard(page);
-  await page.getByRole("row", { name: /^Study metadata/ }).click();
+  await page.getByRole("row", { name: /^Template Study metadata/ }).click();
   await expect(page.locator(".information h1")).toHaveText("Study metadata");
 }
 async function typeFilter(page) {
@@ -104,7 +104,7 @@ const controls = {
   ],
   "list row": [
     dashboard,
-    (page) => page.getByRole("row", { name: /^Study metadata/ }),
+    (page) => page.getByRole("row", { name: /^Template Study metadata/ }),
   ],
 };
 

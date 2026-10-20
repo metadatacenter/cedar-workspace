@@ -121,18 +121,24 @@ describe("Groups legacy view contracts", () => {
       el.querySelector(".groups-created-group #group-name"),
     ).not.toBeNull();
     expect(el.querySelector("#group-description")).not.toBeNull();
+    // The last administrator's controls refuse while keeping focus, so focus reaches their help.
+    const lastAdministrator = el.querySelector(
+      '[role="checkbox"][aria-label="Ada Lovelace is a Group Administrator"]',
+    );
+    expect(lastAdministrator?.getAttribute("aria-disabled")).toBe("true");
+    expect(lastAdministrator?.getAttribute("aria-checked")).toBe("true");
     expect(
-      el
-        .querySelector(
-          'input[aria-label="Ada Lovelace is a Group Administrator"]',
-        )
-        ?.hasAttribute("disabled"),
+      lastAdministrator?.querySelector("input")?.hasAttribute("disabled"),
     ).toBe(true);
+    const bin = el.querySelector(
+      '[aria-label="Remove Ada Lovelace from the group"]',
+    );
+    expect(bin?.hasAttribute("disabled")).toBe(false);
+    expect(bin?.getAttribute("aria-disabled")).toBe("true");
     expect(
-      el
-        .querySelector('[aria-label="Remove Ada Lovelace from the group"]')
-        ?.hasAttribute("disabled"),
-    ).toBe(true);
+      el.querySelector(`[id="${bin?.getAttribute("aria-describedby")}"]`)
+        ?.textContent,
+    ).toBe("Assign another Group Administrator before removing this member.");
     expect(
       el.querySelector(
         '[data-cedar-help="Assign another Group Administrator before removing this member."]',

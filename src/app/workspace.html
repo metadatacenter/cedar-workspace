@@ -408,6 +408,10 @@
                 </span>
                 }
               </span>
+              <!-- The list view shows the type only as an icon, and the icon's help needs a pointer. -->
+              @if(!grid()){<span class="sr-only"
+                >{{'ResourceTypes.' + r.resourceType | translate}}</span
+              >}
               @if(grid()){<span class="explorer-name" [id]="'resource-name-' + row" [cedarTooltip]="title(r)"
                 >{{title(r)}}</span
               >} @else if(r.resourceType==='folder') {

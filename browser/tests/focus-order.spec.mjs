@@ -74,7 +74,7 @@ test("the dashboard's Tab order in list view reaches the column sorts and each r
     'button "Name"',
     'button "Last modified"',
     'button "Sort options"',
-    'row "Study metadata 1 day ago 1.0.0Draft Populate template Preview Study metadata Actions for Study metadata"',
+    'row "Template Study metadata 1 day ago 1.0.0Draft Populate template Preview Study metadata Actions for Study metadata"',
     'link "Study metadata"',
     'link "Populate template"',
     'button "Preview Study metadata"',
@@ -88,7 +88,7 @@ test("with an item selected, Tab goes on from its row into the Information panel
   api,
 }) => {
   await loaded(page, "/dashboard?view=list");
-  await page.getByRole("row", { name: /^Study metadata/ }).click();
+  await page.getByRole("row", { name: /^Template Study metadata/ }).click();
   await expect(
     page
       .getByRole("complementary", { name: "Resource information" })
@@ -114,7 +114,7 @@ test("with an item selected, Tab goes on from its row into the Information panel
     'button "Name"',
     'button "Last modified"',
     'button "Sort options"',
-    'row "Study metadata 1 day ago 1.0.0Draft Populate template Preview Study metadata Actions for Study metadata"',
+    'row "Template Study metadata 1 day ago 1.0.0Draft Populate template Preview Study metadata Actions for Study metadata"',
   ]);
 });
 
@@ -173,6 +173,8 @@ test("Groups' Tab order runs header, the way back, the tabs, then the selected g
     'textbox "Description"',
     'button "Save"',
     'combobox "Add a member"',
+    'checkbox "Alex Researcher is a Group Administrator"',
+    'button "Remove Alex Researcher from the group"',
     'checkbox "Sam Curator is a Group Administrator"',
     'button "Remove Sam Curator from the group"',
     "(page)",
@@ -249,7 +251,7 @@ const records = ["a", "b", "c"].map((id) => ({
   "schema:name": `Record ${id}`,
 }));
 const row = (id) =>
-  `row "Record ${id} 1 day ago Preview Record ${id} Actions for Record ${id}"`;
+  `row "Instance Record ${id} 1 day ago Preview Record ${id} Actions for Record ${id}"`;
 
 /**
  * Home lists records a, b and c, after the Archive folder when `folder` is set. Deleting a record
@@ -302,7 +304,7 @@ async function records3(page, { folder = false } = {}) {
 
 /** Choose `name` from the menu of the record `id` by keyboard, as from its focused row. */
 async function command(page, id, name) {
-  await page.getByRole("row", { name: new RegExp(`^Record ${id} `) }).focus();
+  await page.getByRole("row", { name: new RegExp(`^Instance Record ${id} `) }).focus();
   await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");
@@ -332,7 +334,7 @@ test("deleting the focused item moves focus to the row in its place, the last ro
       .focus();
     await page.keyboard.press("Enter");
     await expect(
-      page.getByRole("row", { name: new RegExp(`^Record ${id} `) }),
+      page.getByRole("row", { name: new RegExp(`^Instance Record ${id} `) }),
     ).toHaveCount(0);
     await expect.poll(() => focusedControl(page)).toBe(next);
   }
@@ -343,13 +345,13 @@ test("deleting the focused item from the selection bin moves focus to the row in
   api,
 }) => {
   await records3(page);
-  await page.getByRole("row", { name: new RegExp("^Record b ") }).click();
+  await page.getByRole("row", { name: new RegExp("^Instance Record b ") }).click();
   await page.getByRole("button", { name: "Delete (1)", exact: true }).click();
   await page
     .getByRole("dialog")
     .getByRole("button", { name: "Delete", exact: true })
     .click();
-  await expect(page.getByRole("row", { name: /^Record b / })).toHaveCount(0);
+  await expect(page.getByRole("row", { name: /^Instance Record b / })).toHaveCount(0);
   await expect.poll(() => focusedControl(page)).toBe(row("c"));
 });
 
@@ -365,7 +367,7 @@ test("moving the focused item moves focus to the row in its place", async ({
     "false",
   );
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByRole("row", { name: /^Record b / })).toHaveCount(0);
+  await expect(page.getByRole("row", { name: /^Instance Record b / })).toHaveCount(0);
   await expect.poll(() => focusedControl(page)).toBe(row("c"));
 });
 

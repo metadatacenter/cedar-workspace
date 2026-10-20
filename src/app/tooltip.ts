@@ -48,7 +48,16 @@ export class Tooltip {
   }
 
   focus() {
-    if (this.host.matches(":focus-visible")) this.show(false);
+    // Help on a wrapper can explain why the control inside it refuses. It opens when that control
+    // takes keyboard focus, as it does for a focused host.
+    const focused = document.activeElement;
+    if (
+      this.host.matches(":focus-visible") ||
+      (focused !== this.host &&
+        this.host.contains(focused) &&
+        focused?.matches(':focus-visible[aria-disabled="true"]'))
+    )
+      this.show(false);
   }
 
   leave() {

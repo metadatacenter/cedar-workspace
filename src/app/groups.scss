@@ -280,6 +280,12 @@
     font-weight: var(--cedar-font-weight-regular);
   }
 
+  // The stand-in for a refused checkbox takes the size of the checkbox it holds, so the checkbox
+  // stays where it was and the focus ring fits it.
+  .groups-admin-refused {
+    display: flex;
+  }
+
   .groups-remove-member-wrapper {
     display: flex;
     width: 34px;

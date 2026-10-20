@@ -350,7 +350,7 @@
         <div class="groups-member-list-header">
           <span>{{'Groups.Administrator' | translate}}</span>
         </div>
-        } @for(m of members(); track m.user['@id']) {
+        } @for(m of members(); track m.user['@id']; let i = $index) {
         <div
           class="groups-member-row"
           role="listitem"
@@ -366,24 +366,49 @@
             class="groups-admin-control"
             [cedarTooltip]="onlyAdmin(m) ? ('Groups.LastAdministrator' | translate) : ''"
           >
+            @if(onlyAdmin(m)) {
+            <!-- A disabled checkbox cannot take focus, so its help would need a pointer. This
+                 checkbox stands in for it and is drawn by the disabled one it holds. -->
+            <span
+              class="groups-admin-refused"
+              role="checkbox"
+              tabindex="0"
+              aria-checked="true"
+              aria-disabled="true"
+              [attr.aria-label]="'Groups.IsAdministrator' | translate: {name: userName(m.user)}"
+              [attr.aria-describedby]="'group-member-' + i + '-admin-help'"
+              (keydown.space)="$event.preventDefault()"
+              ><input
+                spellcheck="false"
+                type="checkbox"
+                checked
+                disabled
+                tabindex="-1"
+                aria-hidden="true"
+            /></span>
+            } @else {
             <input
               spellcheck="false"
               type="checkbox"
               [checked]="m.administrator"
               (click)="$event.preventDefault(); toggleAdmin(m)"
-              [disabled]="!canAdmin || busy() || stale() || onlyAdmin(m)"
+              [disabled]="!canAdmin || busy() || stale()"
               [attr.aria-label]="'Groups.IsAdministrator' | translate: {name: userName(m.user)}"
             />
+            }
           </label>
           <span
             class="groups-remove-member-wrapper"
             [cedarTooltip]="onlyAdmin(m) ? ('Groups.AssignAnother' | translate) : ''"
           >
             @if(canAdmin) {
+            <!-- The last administrator's bin refuses rather than being disabled, so focus reaches its help. -->
             <button
               type="button"
               class="btn groups-remove-member"
-              [disabled]="busy() || stale() || onlyAdmin(m)"
+              [disabled]="busy() || stale()"
+              [attr.aria-disabled]="onlyAdmin(m) ? 'true' : null"
+              [attr.aria-describedby]="onlyAdmin(m) ? 'group-member-' + i + '-remove-help' : null"
               (click)="removeMember(m)"
               [attr.aria-label]="'Groups.RemoveMember' | translate: {name: userName(m.user)}"
             >
@@ -391,6 +416,13 @@
             </button>
             }
           </span>
+          @if(onlyAdmin(m)) {
+          <span hidden [id]="'group-member-' + i + '-admin-help'"
+            >{{'Groups.LastAdministrator' | translate}}</span
+          ><span hidden [id]="'group-member-' + i + '-remove-help'"
+            >{{'Groups.AssignAnother' | translate}}</span
+          >
+          }
         </div>
         } @empty { @if(restricted()) {
         <div class="groups-empty-members">
