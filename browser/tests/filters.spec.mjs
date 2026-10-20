@@ -1,12 +1,24 @@
 import { test, expect, dashboard } from "./fixtures.mjs";
 import AxeBuilder from "@axe-core/playwright";
 
+/**
+ * A filter's chip, wherever its name stands. An inactive chip is named by its filter; an active one
+ * by the choice it shows and then the filter.
+ */
+const chip = (page, filter) =>
+  page
+    .locator("cedar-filter-chip")
+    .nth(filter === "type" ? 0 : 1)
+    .getByRole("button")
+    .first();
+
 test("Type applies multiple selections, cancels drafts, clears independently and restores from URL", async ({
   page,
   api,
 }) => {
   await dashboard(page);
-  const type = page.getByRole("button", { name: "Type", exact: true });
+  const type = chip(page, "type");
+  await expect(type).toHaveAccessibleName("Type");
   await type.click();
   const popup = page.getByRole("dialog", { name: "Filter by type" });
   await expect(popup.getByRole("checkbox")).toHaveCount(5);
@@ -26,6 +38,10 @@ test("Type applies multiple selections, cancels drafts, clears independently and
   await popup.getByRole("button", { name: "Apply", exact: true }).click();
   await expect(page).toHaveURL(/resource_types=folder(?:%2C|,)template/);
   await expect(type).toHaveText("Folder, Template");
+  await expect(type).toHaveAccessibleName("Folder, Template (type filter)");
+  await expect(
+    page.getByRole("button", { name: "Folder, Template (type filter)", exact: true }),
+  ).toHaveAttribute("aria-expanded", "false");
   await type.click();
   await popup.getByLabel("Field", { exact: true }).check();
   await popup.getByRole("button", { name: "Cancel", exact: true }).click();
@@ -44,6 +60,17 @@ test("Type applies multiple selections, cancels drafts, clears independently and
   await page.getByRole("button", { name: "Clear type filter" }).click();
   await expect(page).not.toHaveURL(/resource_types/);
   await expect(type).toHaveText("Type");
+  await expect(type).toHaveAccessibleName("Type");
+});
+
+test("an active chip's name begins with its choice in Hungarian too", async ({ page, api }) => {
+  await page.addInitScript(() =>
+    Object.defineProperty(navigator, "languages", { get: () => ["hu-HU"] }),
+  );
+  await page.goto("/dashboard?resource_types=folder,template");
+  await expect(chip(page, "type")).toHaveText("Mappa, Sablon");
+  await expect(chip(page, "type")).toHaveAccessibleName("Mappa, Sablon (szűrő: típus)");
+  await expect(chip(page, "date")).toHaveAccessibleName("Utolsó módosítás");
 });
 
 test("date presets and inclusive custom ranges are sent to the listing API, including after reload", async ({
@@ -55,9 +82,8 @@ test("date presets and inclusive custom ranges are sent to the listing API, incl
   page.on("request", (r) => {
     if (r.url().includes("/contents?")) requests.push(new URL(r.url()));
   });
-  const date = page
-    .locator("cedar-resource-filters")
-    .getByRole("button", { name: "Last modified", exact: true });
+  const date = chip(page, "date");
+  await expect(date).toHaveAccessibleName("Last modified");
   await date.click();
   const popup = page.getByRole("dialog", { name: "Filter by last modified" });
   await popup.getByRole("button", { name: "Last 7 days", exact: true }).click();
@@ -69,6 +95,7 @@ test("date presets and inclusive custom ranges are sent to the listing API, incl
   );
   await popup.getByRole("button", { name: "Apply", exact: true }).click();
   await expect(date).toHaveText(/Last 7 days/);
+  await expect(date).toHaveAccessibleName("Last 7 days (last modified filter)");
   await expect
     .poll(() => requests.at(-1)?.searchParams.get("modified_before"))
     .toBe(String(Date.parse("2026-01-04T00:00:00Z")));
@@ -94,6 +121,7 @@ test("date presets and inclusive custom ranges are sent to the listing API, incl
     .toBe(String(Date.parse("2026-01-11T00:00:00Z")));
   await page.reload();
   await expect(date).toHaveText(/10 Jan 2026/);
+  await expect(date).toHaveAccessibleName("10 Jan 2026 – 10 Jan 2026 (last modified filter)");
   await page
     .getByRole("button", { name: "Clear filters", exact: true })
     .click();
@@ -136,7 +164,7 @@ for (const width of [1440, 375]) {
       });
     await page.getByRole("button", { name: "Apply", exact: true }).click();
     await expect(
-      page.getByRole("button", { name: "Type", exact: true }),
+      page.getByRole("button", { name: "Folder, Instance (type filter)", exact: true }),
     ).toHaveText("Folder, Instance");
     expect(
       await page.evaluate(

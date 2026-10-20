@@ -114,6 +114,7 @@
   "Filters": {
     "Region": "Resource filters",
     "ClearFilter": "Clear {{name}} filter",
+    "ActiveChip": "{{choice}} ({{filter}} filter)",
     "ClearFilters": "Clear filters",
     "ByType": "Filter by type",
     "ByLastModified": "Filter by last modified",

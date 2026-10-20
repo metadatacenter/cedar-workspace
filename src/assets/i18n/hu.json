@@ -114,6 +114,7 @@
   "Filters": {
     "Region": "Erőforrásszűrők",
     "ClearFilter": "Szűrő törlése: {{name}}",
+    "ActiveChip": "{{choice}} (szűrő: {{filter}})",
     "ClearFilters": "Szűrők törlése",
     "ByType": "Szűrés típus szerint",
     "ByLastModified": "Szűrés utolsó módosítás szerint",
