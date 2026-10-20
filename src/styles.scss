@@ -664,7 +664,7 @@ label {
     gap: var(--cedar-space-2);
     padding: var(--cedar-space-2);
   }
-  .brand span {
+  .brand .brand-label {
     display: none;
   }
   // Stacked panels leave no room for fixed regions, so a narrow page scrolls as a whole.

@@ -11,12 +11,13 @@
   >
     <cedar-icon name="panel-left" />
   </button>
+  <!-- Named by its hidden text, which repeats the visible label and stays when a narrow layout hides it. -->
   <a
     routerLink="/dashboard"
     [queryParams]="navigationQuery()"
     class="brand"
-    [attr.aria-label]="'Header.Brand' | translate"
-    ><img src="/img/cedar-mark.png" alt="" /><span class="brand-label"
+    ><img src="/img/cedar-mark.png" alt="" /><span class="sr-only">{{ 'Header.Brand' | translate }}</span
+    ><span class="brand-label" aria-hidden="true"
       >{{'Header.Brand' | translate}}<small class="brand-version"
         >{{ cedarVersion }}</small
       ></span

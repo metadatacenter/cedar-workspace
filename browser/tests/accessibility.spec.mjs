@@ -1,5 +1,22 @@
 import AxeBuilder from "@axe-core/playwright";
 import { test, expect, dashboard, action } from "./fixtures.mjs";
+
+/**
+ * Every rule axe-core tags for WCAG 2.0, 2.1 and 2.2 at levels A and AA, and Label in Name.
+ *
+ * Label in Name, WCAG 2.1's criterion 2.5.3, needs a control's accessible name to contain the text
+ * it shows. axe-core's rule for it is experimental, and a tag selection leaves experimental rules
+ * out, so it runs by name, as in the designer's, the term picker's and CEE's gates.
+ */
+async function violations(page) {
+  const tagged = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+    .analyze();
+  const named = await new AxeBuilder({ page })
+    .withRules(["label-content-name-mismatch"])
+    .analyze();
+  return [...tagged.violations, ...named.violations];
+}
 for (const route of [
   "dashboard",
   "groups",
@@ -17,10 +34,7 @@ for (const route of [
       await expect(page.locator("main")).toBeVisible();
       await expect(page.getByText("Loading…", { exact: true })).toHaveCount(0);
     }
-    const result = await new AxeBuilder({ page })
-      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
-      .analyze();
-    expect(result.violations).toEqual([]);
+    expect(await violations(page)).toEqual([]);
   });
 }
 
@@ -35,10 +49,7 @@ test("nested confirmation and permission toast remain accessible and operable", 
   });
   await owner.click();
   await expect(page.locator(".confirmation-dialog")).toBeVisible();
-  const result = await new AxeBuilder({ page })
-    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
-    .analyze();
-  expect(result.violations).toEqual([]);
+  expect(await violations(page)).toEqual([]);
   await page.keyboard.press("Escape");
   await expect(page.locator(".confirmation-dialog")).toHaveCount(0);
   await expect(owner).toBeFocused();

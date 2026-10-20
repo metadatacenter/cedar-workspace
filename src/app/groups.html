@@ -1,9 +1,10 @@
 <header class="topbar">
+  <!-- Named by its hidden text, which contains the visible label, so speech input reaches it by that label. -->
   <a
     href="/dashboard"
     class="brand"
-    [attr.aria-label]="'Header.Brand' | translate"
-    ><img src="/img/cedar-mark.png" alt="" /><span class="brand-label"
+    ><img src="/img/cedar-mark.png" alt="" /><span class="sr-only">{{ 'Header.Brand' | translate }}</span
+    ><span class="brand-label" aria-hidden="true"
       >{{'Common.Workspace' | translate}}<small class="brand-version"
         >{{ cedarVersion }}</small
       ></span
