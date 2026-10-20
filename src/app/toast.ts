@@ -9,9 +9,9 @@ import { Icon } from "./icon";
   template: `@if (message() && visible()) {
     <div
       class="toast"
-      role="status"
-      aria-live="polite"
-      aria-atomic="true"
+      [attr.role]="live() ? 'status' : null"
+      [attr.aria-live]="live() ? 'polite' : null"
+      [attr.aria-atomic]="live() ? 'true' : null"
       (mouseenter)="pause()"
       (mouseleave)="resume()"
       (focusin)="pause()"
@@ -32,6 +32,11 @@ import { Icon } from "./icon";
 })
 export class Toast {
   readonly message = input("");
+  /**
+   * Whether the toast is a polite status region itself. A page that says its outcomes in a status
+   * region of its own turns this off, so that each outcome is said once.
+   */
+  readonly live = input(true);
   readonly visible = signal(false);
   private timer?: ReturnType<typeof setTimeout>;
   constructor() {

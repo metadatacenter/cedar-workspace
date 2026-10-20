@@ -405,6 +405,10 @@
     "DetailsSaved": "Group details saved.",
     "Deleted": "Group deleted.",
     "MembersSaved": "Group members saved.",
+    "MemberAdded": "{{name}} added to the group.",
+    "MemberRemoved": "{{name}} removed from the group.",
+    "AdministratorAdded": "{{name}} is now a Group Administrator.",
+    "AdministratorRemoved": "{{name}} is no longer a Group Administrator.",
     "InvalidResponse": "The server returned incomplete or ambiguous group data. Reload before making changes.",
     "ReloadDirectory": "Reload groups"
   },

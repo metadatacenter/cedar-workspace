@@ -405,6 +405,10 @@
     "DetailsSaved": "A csoport adatai mentve.",
     "Deleted": "Csoport törölve.",
     "MembersSaved": "A csoport tagjai mentve.",
+    "MemberAdded": "{{name}} hozzáadva a csoporthoz.",
+    "MemberRemoved": "{{name}} eltávolítva a csoportból.",
+    "AdministratorAdded": "{{name}} mostantól csoportadminisztrátor.",
+    "AdministratorRemoved": "{{name}} már nem csoportadminisztrátor.",
     "InvalidResponse": "A szerver hiányos vagy nem egyértelmű csoportadatokat küldött. Módosítás előtt töltse be újra az adatokat.",
     "ReloadDirectory": "Csoportok újratöltése"
   },

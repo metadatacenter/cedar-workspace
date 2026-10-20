@@ -347,6 +347,6 @@ draft and requires correction or a recovery-file download before proceeding.
 
 The production initial-bundle budget is 1.04 MB. Exact JSON transport and draft preservation
 add the shared scalar policy bundle. On 2026-10-20, refused controls that keep focus and the
-help that explains them took the measured total to 1,030,419 bytes (302 KB estimated transfer),
-past the former 1.03 MB. The budget keeps about 10 KB of headroom and does not include the lazy
-metadata editor.
+help that explains them took the measured total past the former 1.03 MB, and the status regions
+of Groups and the description editor took it to 1,031,766 bytes (303 KB estimated transfer). The
+budget keeps about 8 KB of headroom and does not include the lazy metadata editor.

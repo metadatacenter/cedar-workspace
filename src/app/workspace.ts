@@ -238,6 +238,8 @@ export class Workspace {
   readonly refreshing = signal(false);
   readonly error = signal("");
   readonly notice = signal("");
+  /** A notice that a status region of its own already says, so the toast that shows it is silent. */
+  readonly saidNotice = signal("");
   /**
    * What the listing's live region says when a change of address brings another listing, as a
    * search, a filter, a sort, a page or a folder does: the count the footer shows, or that nothing
@@ -1001,7 +1003,9 @@ export class Workspace {
     if (!this.state.active) return;
     this.reports.begin(resource["@id"]);
     this.publishReport(resource, resource);
-    this.notice.set(this.i18n.t("Dashboard.DescriptionSaved"));
+    // The description editor says this outcome in its own status region.
+    this.saidNotice.set(this.i18n.t("Dashboard.DescriptionSaved"));
+    this.notice.set(this.saidNotice());
   }
   private checkReport(expected: Resource, data: unknown) {
     if (!validResourceReport(data, expected)) throw new Error(this.i18n.t("Errors.InvalidResourceReport"));

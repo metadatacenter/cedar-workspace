@@ -294,7 +294,9 @@ test("group members are removed immediately without confirmation and show a succ
   await remove.click();
   await expect(page.locator(".confirmation-dialog")).toHaveCount(0);
   await expect(page.locator(".groups-member-row")).toHaveCount(1);
-  await expect(page.getByRole("status")).toHaveText("Group members saved.");
+  // The toast shows the notice, and the page's status region says what changed.
+  await expect(page.locator(".toast")).toHaveText("Group members saved.");
+  await expect(page.getByRole("status")).toHaveText("Sam Curator removed from the group.");
   await tokenStyles(page.locator('.toast'), feedbackSpacing);
   expect(api.requests.filter((r) => r.method === "PUT")).toHaveLength(1);
   if (process.env.WORKSPACE_VISUAL)

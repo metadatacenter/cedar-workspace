@@ -130,7 +130,7 @@
   </button>
 </div>
 } @if(notice()){
-<cedar-toast [message]="notice()" />
+<cedar-toast [message]="notice()" [live]="notice() !== saidNotice()" />
 } @if(!ready()){
 <p class="loading" role="status">{{'Dashboard.Connecting' | translate}}</p>
 } @else {

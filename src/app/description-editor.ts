@@ -64,6 +64,9 @@ import { ServerLanguage } from "./server-text";
         </button>
       }
     }
+    <span class="sr-only" role="status" aria-live="polite" aria-atomic="true">{{
+      announcement()
+    }}</span>
   `,
   styleUrl: "./description-editor.scss",
 })
@@ -74,6 +77,11 @@ export class DescriptionEditor {
   readonly snapshot = signal<Reply<Resource> | null>(null);
   readonly busy = signal(false);
   readonly error = signal("");
+  /**
+   * What the editor's status region says: that a save succeeded. It is cleared when a save begins,
+   * so each save is said once. A failed save says nothing here, since its alert says it.
+   */
+  readonly announcement = signal("");
   private readonly api = inject(Backend);
   private loaded = "";
   private readonly i18n = inject(I18n);
@@ -99,6 +107,7 @@ export class DescriptionEditor {
       this.snapshot.set(null);
       this.draft.set(r["schema:description"] || "");
       this.error.set("");
+      this.announcement.set("");
       this.busy.set(false);
       if (this.editable) void this.load();
     });
@@ -139,6 +148,7 @@ export class DescriptionEditor {
     if (!operation) return;
     this.busy.set(true);
     this.error.set("");
+    this.announcement.set("");
     const updated = { ...snapshot.data, "schema:description": this.draft() };
     try {
       const reply = await this.api.request<Resource>(
@@ -155,6 +165,7 @@ export class DescriptionEditor {
       this.snapshot.set({ data: updated, etag: reply.etag });
       operation.finish();
       this.saved.emit(updated);
+      this.announcement.set(this.i18n.t("Dashboard.DescriptionSaved"));
       // Re-read the revision before another edit; the command may not return an ETag.
       await this.load();
     } catch (e) {
