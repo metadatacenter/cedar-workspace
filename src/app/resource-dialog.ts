@@ -57,6 +57,7 @@ import {
 } from "./resource";
 import { I18n } from "./i18n";
 import { ServerLanguage } from "./server-text";
+import { StatusRegion } from "./status-region";
 @Component({
   selector: "cedar-resource-dialog",
   imports: [
@@ -68,6 +69,7 @@ import { ServerLanguage } from "./server-text";
     FormsModule,
     TranslatePipe,
     ServerLanguage,
+    StatusRegion,
   ],
   templateUrl: "./resource-dialog.html",
 })

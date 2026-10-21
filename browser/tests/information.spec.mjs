@@ -323,7 +323,7 @@ test("derived-from and previous versions link to their artifacts beside copy con
   await expect(openInOpenView).toHaveAttribute('target', '_blank');
   await openView.getByRole('button', {name: 'Copy OpenView link', exact: true}).click();
   await expect.poll(() => page.evaluate(() => window.copiedId)).toMatch(/\/templates\/template$/);
-  await expect(page.getByText('Link copied.', {exact: true})).toBeVisible();
+  await expect(page.locator('.toast').getByText('Link copied.', {exact: true})).toBeVisible();
   // It reads as the Identifier does.
   const look = el => { const style = getComputedStyle(el); return [style.fontSize, style.color]; };
   expect(await publicLink.evaluate(look)).toEqual(await info.locator('.identifiers a').evaluate(look));

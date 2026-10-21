@@ -185,7 +185,7 @@ for (const width of [1440, 375]) {
     await expect(
       page.getByRole("button", { name: "Delete group", exact: true }),
     ).toHaveCount(0);
-    await expect(page.getByRole("status")).toHaveText("Group created.");
+    await expect(page.locator(".groups-announcement")).toHaveText("Group created.");
     await expect(page.locator(".groups-create-card")).toHaveCSS(
       "padding-top",
       "8px",

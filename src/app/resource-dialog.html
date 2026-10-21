@@ -7,8 +7,9 @@
   aria-labelledby="dialog-title"
   (cancel)="$event.preventDefault(); close()"
 >
+  <cedar-status [text]="preparing() ? ('Common.Loading' | translate) : ''" />
   @if(preparing()) {
-  <p class="dialog-preparing-status" role="status">{{'Common.Loading' | translate}}</p>
+  <p class="dialog-preparing-status">{{'Common.Loading' | translate}}</p>
   }
   <form class="dialog-stack" (ngSubmit)="submit()">
     <header class="dialog-heading">

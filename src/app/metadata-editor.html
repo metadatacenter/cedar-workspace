@@ -156,9 +156,10 @@
     </button>
     }
   </p>
-  } @if(notice()){
+  }
+  <!-- The toast stays in the page while empty, so that a screen reader announces each message that arrives in it. -->
   <cedar-toast [message]="notice()" />
-  } @if(!loading()) {
+  @if(!loading()) {
   <label for="instance-name">{{'Metadata.Name' | translate}}</label>
   <input
     spellcheck="false"
@@ -210,9 +211,9 @@
         <li>
           @if(issue.problem){
           <button type="button" (click)="reveal(issue)">
-            {{issue.label}}: {{issue.message}}
+            {{issue.label}}: <span [attr.lang]="issue.messageLanguage">{{issue.message}}</span>
           </button>
-          } @else { {{issue.label}}: {{issue.message}} } @if(issue.diagnostic) {
+          } @else { {{issue.label}}: <span [attr.lang]="issue.messageLanguage">{{issue.message}}</span> } @if(issue.diagnostic) {
           <details class="metadata-diagnostic">
             <summary>
               <cedar-icon
@@ -222,7 +223,7 @@
               />
               {{'Metadata.TechnicalDetails' | translate}}
             </summary>
-            <p>{{issue.diagnostic}}</p>
+            <p [attr.lang]="ceeDiagnosticLanguage">{{issue.diagnostic}}</p>
           </details>
           }
         </li>
@@ -250,9 +251,9 @@
         <li>
           @if(issue.problem){
           <button type="button" (click)="reveal(issue)">
-            {{issue.label}}: {{issue.message}}
+            {{issue.label}}: <span [attr.lang]="issue.messageLanguage">{{issue.message}}</span>
           </button>
-          } @else { {{issue.label}}: {{issue.message}} }
+          } @else { {{issue.label}}: <span [attr.lang]="issue.messageLanguage">{{issue.message}}</span> }
         </li>
         }
       </ul>

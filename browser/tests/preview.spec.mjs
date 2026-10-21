@@ -127,7 +127,9 @@ test('closing during a pending preview never mounts the late result',async ({pag
   const dialog = page.locator('dialog.artifact-preview');
   await expect(dialog).toHaveClass(/is-preparing/);
   await expect(dialog.locator('header')).toBeHidden();
-  await expect(dialog.getByRole('status', {includeHidden:true})).toBeVisible();
+  await expect(dialog.locator('.dialog-preparing-status')).toHaveText('Loading…');
+  // The status region stays exposed while the rest of the dialog is hidden, and says the same.
+  await expect(dialog.getByRole('status')).toHaveText('Loading…');
   await page.getByRole('button',{name:'Close preview'}).click();
   release();
   await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -144,7 +146,8 @@ for (const kind of ['template', 'element', 'field', 'instance']) {
     const dialog = page.locator('dialog.artifact-preview');
     await expect(dialog).toHaveClass(/is-preparing/);
     await expect(dialog.locator('header')).toBeHidden();
-    await expect(dialog.getByRole('status', {includeHidden:true})).toBeVisible();
+    await expect(dialog.locator('.dialog-preparing-status')).toHaveText('Loading…');
+    await expect(dialog.getByRole('status')).toHaveText('Loading…');
     await expect(dialog.getByRole('button', {name:'Close preview', exact:true})).toBeVisible();
     expect(await dialog.evaluate(el => el.matches(':modal'))).toBe(true);
     await page.evaluate(() => {
@@ -294,7 +297,7 @@ for (const kind of ['template', 'element', 'field', 'instance']) {
     const dialog = page.getByRole('dialog');
     await dialog.getByRole('button', {name:'Try out', exact:true}).click();
     await expect(dialog.locator('section')).toHaveAttribute('aria-busy', 'false');
-    await expect(dialog.getByRole('status')).toContainText('nothing is saved');
+    await expect(dialog.getByRole('status').and(dialog.locator('.try-out-notice'))).toContainText('nothing is saved');
     await expect(dialog.locator('.try-out-notice')).toHaveCSS('text-align', 'center');
     const viewer = dialog.locator(kind === 'field' ? 'cedar-embeddable-field' : 'cedar-embeddable-editor');
     const input = viewer.getByRole('textbox', {name:'Specimen name', exact:true});

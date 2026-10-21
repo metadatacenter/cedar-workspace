@@ -38,12 +38,14 @@
       <button (click)="load()" [disabled]="busy()">{{'Permissions.Reload' |
         translate}}</button>
     </div>
-    } @if(notice()) {
+    }
+    <!-- The toast and the status region stay in the dialog while empty, so that a screen reader announces each message that arrives in them. -->
     <cedar-toast [message]="notice()" />
-    } @if(busy()) {
-    <p role="status" [class.sr-only]="permissions()">
-      {{(permissions() ? 'Permissions.Saving' : 'Common.Loading') | translate}}
-    </p>
+    <cedar-status
+      [text]="busy() ? ((permissions() ? 'Permissions.Saving' : 'Common.Loading') | translate) : ''"
+    />
+    @if(busy() && !permissions()) {
+    <p>{{'Common.Loading' | translate}}</p>
     } @if(resource.resourceType === 'folder') {
     <div class="folder-notice">
       <cedar-icon name="folder" /><span

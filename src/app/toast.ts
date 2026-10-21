@@ -2,16 +2,14 @@ import { Tooltip } from "./tooltip";
 import { Component, effect, input, signal } from "@angular/core";
 import { TranslatePipe } from "@ngx-translate/core";
 import { Icon } from "./icon";
+import { StatusRegion } from "./status-region";
 
 @Component({
   selector: "cedar-toast",
-  imports: [Tooltip, Icon, TranslatePipe],
+  imports: [Tooltip, Icon, TranslatePipe, StatusRegion],
   template: `@if (message() && visible()) {
     <div
       class="toast"
-      [attr.role]="live() ? 'status' : null"
-      [attr.aria-live]="live() ? 'polite' : null"
-      [attr.aria-atomic]="live() ? 'true' : null"
       (mouseenter)="pause()"
       (mouseleave)="resume()"
       (focusin)="pause()"
@@ -27,16 +25,23 @@ import { Icon } from "./icon";
         <cedar-icon name="close" />
       </button>
     </div>
+  }
+  @if (live()) {
+    <cedar-status [text]="visible() && !saidElsewhere() ? message() : ''" />
   }`,
   styleUrl: "./toast.scss",
 })
 export class Toast {
   readonly message = input("");
   /**
-   * Whether the toast is a polite status region itself. A page that says its outcomes in a status
-   * region of its own turns this off, so that each outcome is said once.
+   * Whether the toast keeps a status region, which says each message while the toast shows it. A
+   * page keeps the toast in place while it has no message, so that the region is there before the
+   * first. A page that says every outcome in a status region of its own turns this off, so that
+   * each is said once.
    */
   readonly live = input(true);
+  /** Whether a status region elsewhere says the current message, so that the toast only shows it. */
+  readonly saidElsewhere = input(false);
   readonly visible = signal(false);
   private timer?: ReturnType<typeof setTimeout>;
   constructor() {

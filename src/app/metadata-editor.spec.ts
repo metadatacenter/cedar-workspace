@@ -711,6 +711,8 @@ describe("Modern metadata host", () => {
     expect(host.validationWarnings).toHaveLength(1);
     expect(host.validationErrors).toHaveLength(1);
     expect(host.validationErrors[0].message).toBe("Enter a text value.");
+    // CEE's explanation takes the page's language; its diagnostic is English.
+    expect(host.validationErrors[0].messageLanguage).toBeNull();
     expect(host.validationErrors[0].diagnostic).toBe("The answer must be a string.");
     // Each listed problem leads to its field.
     const reveal = vi.fn().mockResolvedValue(true);
@@ -909,21 +911,34 @@ describe("metadata warning messages", () => {
     value,
   });
 
-  it("states the warnings it presents through the translation files", () => {
-    expect(metadataWarningMessage(template, problem("required", null), t)).toBe(
-      "Metadata.ProblemRequired",
-    );
-    expect(metadataWarningMessage(template, problem("minItems", 1), t)).toBe(
-      'Metadata.ProblemMinItems {"count":1,"min":2}',
-    );
+  it("states the warnings it presents through the translation files, in the page's language", () => {
+    expect(metadataWarningMessage(template, problem("required", null), t)).toEqual({
+      text: "Metadata.ProblemRequired",
+      lang: null,
+    });
+    expect(metadataWarningMessage(template, problem("minItems", 1), t)).toEqual({
+      text: 'Metadata.ProblemMinItems {"count":1,"min":2}',
+      lang: null,
+    });
   });
 
-  it("keeps CEE's text for a problem it has no wording for", () => {
+  it("keeps CEE's text for a problem it has no wording for, marked as English", () => {
     expect(
       metadataWarningMessage(template, problem("minItems", 1, ["unknown"]), t),
-    ).toBe("CEE's English diagnostic");
-    expect(metadataWarningMessage(template, problem("pattern", "x"), t)).toBe(
-      "CEE's English diagnostic",
-    );
+    ).toEqual({ text: "CEE's English diagnostic", lang: "en" });
+    expect(metadataWarningMessage(template, problem("pattern", "x"), t)).toEqual({
+      text: "CEE's English diagnostic",
+      lang: "en",
+    });
+  });
+
+  it("shows CEE's explanation in the page's language", () => {
+    expect(
+      metadataWarningMessage(
+        template,
+        { ...problem("required", null), displayMessage: "Az érték megadása kötelező." },
+        t,
+      ),
+    ).toEqual({ text: "Az érték megadása kötelező.", lang: null });
   });
 });

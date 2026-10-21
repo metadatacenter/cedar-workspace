@@ -30,6 +30,7 @@ import { GroupPicker } from "./group-picker";
 import { Icon } from "./icon";
 import { I18n } from "./i18n";
 import { ServerLanguage } from "./server-text";
+import { StatusRegion } from "./status-region";
 
 export interface Principal {
   "@id": string;
@@ -66,6 +67,7 @@ export const principalName = (p: Principal, i18n: Pick<I18n, "t">) =>
     Icon,
     TranslatePipe,
     ServerLanguage,
+    StatusRegion,
   ],
   templateUrl: "./permissions-dialog.html",
   styleUrl: "./permissions-dialog.scss",

@@ -507,3 +507,139 @@ test("dismissing a notification or an error returns focus to where it came from"
     .poll(() => focusedControl(page))
     .toBe('button "Collapse information"');
 });
+
+const alex = { "@id": "owner", firstName: "Alex", lastName: "Researcher" };
+const sam = { "@id": "collaborator", firstName: "Sam", lastName: "Curator" };
+const kim = { "@id": "kim", firstName: "Kim", lastName: "Analyst" };
+
+/** Open the Research team on Groups' Manage tab, by keyboard. */
+async function researchTeam(page) {
+  await loaded(page, "/groups");
+  const find = page.getByRole("combobox", { name: "Find a group", exact: true });
+  await find.focus();
+  await page.keyboard.type("Research");
+  await page.keyboard.press("Enter");
+  await expect(page.getByLabel("Name", { exact: true })).toHaveValue("Research team");
+}
+
+test("creating a group moves focus to the emptied name, for the next group", async ({
+  page,
+  api,
+}) => {
+  await loaded(page, "/groups");
+  await page.getByRole("tab", { name: "Create group", exact: true }).click();
+  await page.getByLabel("Group name", { exact: true }).fill("Research team");
+  await page.keyboard.press("Tab");
+  expect(await focusedControl(page)).toBe('button "Create group"');
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".groups-created-group")).toBeVisible();
+  await expect.poll(() => focusedControl(page)).toBe('textbox "Group name"');
+  await expect(page.getByLabel("Group name", { exact: true })).toHaveValue("");
+});
+
+test("adding a member moves focus to the emptied member field, for the next member", async ({
+  page,
+  api,
+}) => {
+  api.members = [{ user: alex, administrator: true, member: true }];
+  await researchTeam(page);
+  const picker = page.getByRole("combobox", { name: "Add a member", exact: true });
+  await picker.focus();
+  await page.keyboard.type("Sam");
+  await page.keyboard.press("Enter");
+  await expect(picker).toHaveValue("Sam Curator");
+  await page.keyboard.press("Tab");
+  expect(await focusedControl(page)).toBe('button "Add member"');
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".groups-member-row")).toHaveCount(2);
+  await expect.poll(() => focusedControl(page)).toBe('combobox "Add a member"');
+  await expect(picker).toHaveValue("");
+});
+
+test("removing a member moves focus to the Remove button in its place, then to the last member's", async ({
+  page,
+  api,
+}) => {
+  const people = Object.fromEntries([alex, sam, kim].map((person) => [person["@id"], person]));
+  let roster = [
+    { user: alex, administrator: true, member: true },
+    { user: sam, administrator: false, member: true },
+    { user: kim, administrator: false, member: true },
+  ];
+  await page.route("**/api/group/groups/team/users", (route) => {
+    if (route.request().method() === "PUT")
+      roster = route
+        .request()
+        .postDataJSON()
+        .users.map((member) => ({ ...member, user: people[member.user["@id"]] }));
+    return route.fulfill({ json: { users: roster }, headers: { ETag: '"fixture-revision"' } });
+  });
+  await researchTeam(page);
+  for (const [name, next] of [
+    ["Sam Curator", "Kim Analyst"],
+    ["Kim Analyst", "Alex Researcher"],
+  ]) {
+    await page.getByRole("button", { name: `Remove ${name} from the group`, exact: true }).focus();
+    await page.keyboard.press("Enter");
+    await expect(page.locator(".groups-member-row").filter({ hasText: name })).toHaveCount(0);
+    await expect.poll(() => focusedControl(page)).toBe(`button "Remove ${next} from the group"`);
+  }
+});
+
+test("saving or cancelling a description moves focus to the description", async ({
+  page,
+  api,
+}) => {
+  await loaded(page, "/dashboard?view=list");
+  await page.getByRole("row", { name: /^Template Study metadata/ }).click();
+  const description = page
+    .getByRole("complementary", { name: "Resource information" })
+    .getByRole("textbox", { name: "Description", exact: true });
+  await expect(description).toBeEnabled();
+  await description.fill("A saved description");
+  expect(await tabSequence(page, 2)).toEqual(['button "Cancel"', 'button "Save"']);
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
+  await expect.poll(() => focusedControl(page)).toBe('textbox "Description"');
+  await expect(description).toBeEnabled();
+  await description.fill("A cancelled description");
+  expect(await tabSequence(page, 1)).toEqual(['button "Cancel"']);
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("button", { name: "Cancel", exact: true })).toHaveCount(0);
+  await expect.poll(() => focusedControl(page)).toBe('textbox "Description"');
+  await expect(description).toHaveValue("A representative template for shared research.");
+});
+
+test("a pointer that creates a group, adds a member or saves a description moves focus to no other control", async ({
+  page,
+  api,
+}) => {
+  // A control pressed with a pointer draws no focus outline, and each of these fields always
+  // draws one, so focus moving to it would show where nothing showed before.
+  api.members = [{ user: alex, administrator: true, member: true }];
+  await loaded(page, "/groups");
+  await page.getByRole("tab", { name: "Create group", exact: true }).click();
+  const name = page.getByLabel("Group name", { exact: true });
+  await name.fill("Research team");
+  await page.getByRole("button", { name: "Create group", exact: true }).click();
+  await expect(page.locator(".groups-created-group")).toBeVisible();
+  await expect(name).toHaveValue("");
+  await expect(name).not.toBeFocused();
+  const picker = page.getByRole("combobox", { name: "Add a member", exact: true });
+  await picker.fill("Sam");
+  await page.getByRole("option", { name: "Sam Curator", exact: true }).click();
+  await page.getByRole("button", { name: "Add member", exact: true }).click();
+  await expect(page.locator(".groups-member-row")).toHaveCount(2);
+  await expect(picker).toHaveValue("");
+  await expect(picker).not.toBeFocused();
+
+  await loaded(page, "/dashboard?view=list");
+  await page.getByRole("row", { name: /^Template Study metadata/ }).click();
+  const description = page.getByRole("textbox", { name: "Description", exact: true });
+  await expect(description).toBeEnabled();
+  await description.fill("A saved description");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
+  await expect(description).toBeEnabled();
+  await expect(description).not.toBeFocused();
+});

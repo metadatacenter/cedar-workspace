@@ -25,6 +25,11 @@ export class ServerText {
   wrote(text: string) {
     return this.messages.has(text);
   }
+
+  /** The language of `text` when a server wrote it, for its `lang` attribute, and null otherwise. */
+  language(text: string | null | undefined) {
+    return text && this.wrote(text) ? serverLanguage : null;
+  }
 }
 
 /** The language of a text a server wrote, for its `lang` attribute, and null for Workspace's own. */
@@ -32,6 +37,17 @@ export class ServerText {
 export class ServerLanguage implements PipeTransform {
   private readonly serverText = inject(ServerText);
   transform(text: string | null | undefined) {
-    return text && this.serverText.wrote(text) ? serverLanguage : null;
+    return this.serverText.language(text);
   }
+}
+
+/**
+ * One part of a text that Workspace joins from several, such as a list of failed moves, which
+ * gives each artifact's name and the message its move failed with. `lang` names the part's
+ * language, or is null for a part that takes the page's language, as Workspace's own words and an
+ * artifact's name do.
+ */
+export interface TextPart {
+  readonly text: string;
+  readonly lang: string | null;
 }

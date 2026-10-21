@@ -49,7 +49,7 @@ for (const committed of [true, false]) {
       await page.mouse.up();
     }
     await drag("a");
-    await expect(page.getByText("Moved 1 item.",{exact:true})).toBeVisible();
+    await expect(page.locator(".toast").getByText("Moved 1 item.",{exact:true})).toBeVisible();
     await expect(page.getByRole("alert")).toContainText("Listing unavailable");
     await expect(page.getByRole("alert")).toContainText("Move refused");
     expect(attempts).toEqual(["a","b","c"]);
@@ -69,7 +69,7 @@ for (const committed of [true, false]) {
     await expect(row("c")).toHaveAccessibleDescription("Selected");
     reportsDown = false; refusing = false;
     await drag("b");
-    await expect(page.getByText("Moved 2 items.",{exact:true})).toBeVisible();
+    await expect(page.locator(".toast").getByText("Moved 2 items.",{exact:true})).toBeVisible();
     expect(attempts).toEqual(committed ? ["a","b","c","c"] : ["a","b","c","b","c"]);
     await expect(page.getByRole("alert")).toContainText("Listing unavailable");
     await expect(page.locator("tr.selected")).toHaveCount(0);

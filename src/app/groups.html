@@ -99,8 +99,9 @@
     <cedar-toast [message]="notice()" [live]="false" />
     }
     <span class="sr-only groups-announcement" role="status" aria-live="polite" aria-atomic="true">{{ announcement() }}</span>
+    <cedar-status [text]="loading() || selecting() ? ('Common.Loading' | translate) : ''" />
     @if(loading() || selecting()) {
-    <p role="status">{{'Common.Loading' | translate}}</p>
+    <p>{{'Common.Loading' | translate}}</p>
     } @if(ready()) {
     <div
       class="groups-tabs"

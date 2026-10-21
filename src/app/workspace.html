@@ -119,7 +119,12 @@
 </header>
 @if(error()){
 <div class="alert" role="alert">
-  <span [attr.lang]="error() | serverLanguage">{{error()}}</span>
+  <span
+    >@for(part of errorParts(); track $index){@if(part.lang){<span
+      [attr.lang]="part.lang"
+      >{{part.text}}</span
+    >}@else{<ng-container>{{part.text}}</ng-container>}}</span
+  >
   <button
     (focus)="errorOrigin = $event.relatedTarget"
     (click)="dismissError()"
@@ -129,10 +134,12 @@
     <cedar-icon name="close" />
   </button>
 </div>
-} @if(notice()){
-<cedar-toast [message]="notice()" [live]="notice() !== saidNotice()" />
-} @if(!ready()){
-<p class="loading" role="status">{{'Dashboard.Connecting' | translate}}</p>
+}
+<!-- The toast and the status region stay in the page while empty, so that a screen reader announces each message that arrives in them. -->
+<cedar-toast [message]="notice()" [saidElsewhere]="notice() === saidNotice()" />
+<cedar-status [text]="ready() ? '' : ('Dashboard.Connecting' | translate)" />
+@if(!ready()){
+<p class="loading">{{'Dashboard.Connecting' | translate}}</p>
 } @else {
 <div
   class="workspace"
@@ -405,6 +412,7 @@
                   <span aria-hidden="true"> · </span>
                   <span
                     class="explorer-status"
+                    [attr.lang]="statusLanguage(r)"
                     [cedarTooltip]="'Dashboard.Status' | translate"
                     >{{status(r)}}</span
                   >
@@ -476,7 +484,9 @@
               ><span
                 aria-hidden="true"
               > · </span
-              >{{status(r)}}
+              >@if(statusLanguage(r); as lang){<span [attr.lang]="lang"
+                >{{status(r)}}</span
+              >}@else{<ng-container>{{status(r)}}</ng-container>}
               }
             </td>
             }
@@ -543,12 +553,8 @@
         </tbody>
       </table>
       <span hidden id="explorer-row-selected">{{'Explorer.RowSelected' | translate}}</span>
-      @if(refreshing()){
-      <span class="sr-only" role="status"
-        >{{'Dashboard.Refreshing' | translate}}</span
-      >
-      } @if(loading()&&!refreshing()){
-      <p class="empty" role="status">{{'Common.Loading' | translate}}</p>
+      @if(loading()&&!refreshing()){
+      <p class="empty">{{'Common.Loading' | translate}}</p>
       } @else if(!rows().length){
       <p class="empty">{{'Dashboard.NoItems' | translate}}</p>
       }
@@ -558,7 +564,9 @@
         {{'Common.Previous' | translate}}</button
       ><span>{{ displaying() }}</span
       ><span class="sr-only listing-announcement" aria-live="polite" aria-atomic="true">{{ announcement() }}</span
-      ><button
+      ><!-- The listing is marked busy while it loads, so its loading status is said from here, outside it. --><cedar-status
+        [text]="(refreshing() ? 'Dashboard.Refreshing' : loading() ? 'Common.Loading' : '') | translate"
+      /><button
         (click)="page(1)"
         [disabled]="offset()+rows().length>=total()||loading()"
       >
@@ -714,7 +722,7 @@
       <div class="detail-with-copy">
         <!-- The server names only a template the user may read; it reduces any other to its identifier. -->
         @if(based.activeUserCanRead !== false){
-        <a [href]="link(based)">{{title(based)}}{{versionAndStatus(based)}}</a>
+        <a [href]="link(based)">{{title(based)}}<ng-container *ngTemplateOutlet="release; context: { $implicit: based }" /></a>
         } @else {
         <span>{{'Dashboard.UnreadableTemplate' | translate}}</span>
         } @if(previewable(based)){
@@ -868,7 +876,7 @@
           </dd>
           <dt>{{'Dashboard.Status' | translate}}</dt>
           <dd>
-            {{status(r)}}@if(isLatest(r)){ ·
+            @if(statusLanguage(r); as lang){<span [attr.lang]="lang">{{status(r)}}</span>}@else{<ng-container>{{status(r)}}</ng-container>}@if(isLatest(r)){ ·
             {{'Dashboard.LatestVersion' | translate}}}
           </dd>
         </dl>
@@ -880,10 +888,10 @@
         </div>
         <div class="detail-with-copy">
           @if(latest.activeUserCanRead !== false){
-          <a [href]="link(latest)">{{title(latest)}}{{versionAndStatus(latest)}}</a>
+          <a [href]="link(latest)">{{title(latest)}}<ng-container *ngTemplateOutlet="release; context: { $implicit: latest }" /></a>
           } @else {
           <span
-            >{{'Dashboard.UnreadableVersion' | translate}}{{versionAndStatus(latest)}}</span
+            >{{'Dashboard.UnreadableVersion' | translate}}<ng-container *ngTemplateOutlet="release; context: { $implicit: latest }" /></span
           >
           } @if(previewable(latest)){
           <button
@@ -910,10 +918,10 @@
         </div>
         <div class="detail-with-copy">
           @if(next.activeUserCanRead !== false){
-          <a [href]="link(next)">{{title(next)}}{{versionAndStatus(next)}}</a>
+          <a [href]="link(next)">{{title(next)}}<ng-container *ngTemplateOutlet="release; context: { $implicit: next }" /></a>
           } @else {
           <span
-            >{{'Dashboard.UnreadableVersion' | translate}}{{versionAndStatus(next)}}</span
+            >{{'Dashboard.UnreadableVersion' | translate}}<ng-container *ngTemplateOutlet="release; context: { $implicit: next }" /></span
           >
           } @if(previewable(next)){
           <button
@@ -942,10 +950,10 @@
           @for(v of previous;track v['@id']){
           <div class="detail-with-copy">
             @if(v.activeUserCanRead !== false){
-            <a [href]="link(v)">{{title(v)}}{{versionAndStatus(v)}}</a>
+            <a [href]="link(v)">{{title(v)}}<ng-container *ngTemplateOutlet="release; context: { $implicit: v }" /></a>
             } @else {
             <span
-              >{{'Dashboard.UnreadableVersion' | translate}}{{versionAndStatus(v)}}</span
+              >{{'Dashboard.UnreadableVersion' | translate}}<ng-container *ngTemplateOutlet="release; context: { $implicit: v }" /></span
             >
             } @if(previewable(v)){
             <button
@@ -1006,3 +1014,9 @@ d.resource) {
   (saved)="deletionSelection.set(null); selectionIds.set([]); saved(items)"
 />
 }
+<!-- An artifact's version and status after its name, the status marked with its language where that is not the page's. -->
+<ng-template #release let-v
+  >@for(part of versionAndStatus(v); track $index){@if(part.lang){<span [attr.lang]="part.lang"
+    >{{part.text}}</span
+  >}@else{<ng-container>{{part.text}}</ng-container>}}</ng-template
+>

@@ -38,6 +38,7 @@ import {
   effect,
 } from "@angular/core";
 import { FriendlyDatePipe } from "./friendly-date";
+import { NgTemplateOutlet } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { TranslatePipe } from "@ngx-translate/core";
 import { ActivatedRoute, NavigationStart, Router, RouterLink } from "@angular/router";
@@ -54,6 +55,7 @@ import {
   resourceLink,
   collections,
   statusText,
+  statusLanguage,
 } from "./resource";
 import { Icon } from "./icon";
 import { FolderDeletionDialog } from "./folder-deletion-dialog";
@@ -61,7 +63,9 @@ import { ResourceDialog } from "./resource-dialog";
 import { PermissionsDialog } from "./permissions-dialog";
 import { I18n } from "./i18n";
 import { PageTitles } from "./page-title";
-import { ServerLanguage, serverLanguage } from "./server-text";
+import { ServerText, TextPart, serverLanguage } from "./server-text";
+import { StatusRegion } from "./status-region";
+import { returnFocus } from "./focus-return";
 export interface Action {
   id: string;
   label: string;
@@ -185,7 +189,8 @@ type InfoTab = "info" | "version";
     PermissionsDialog,
     Icon,
     TranslatePipe,
-    ServerLanguage,
+    StatusRegion,
+    NgTemplateOutlet,
   ],
   templateUrl: "./workspace.html",
 })
@@ -232,11 +237,29 @@ export class Workspace {
   status(v: Resource) {
     return statusText(v, this.i18n);
   }
+  /** The servers' language, for a status Workspace does not know and so shows as the server states it. */
+  statusLanguage(v: Resource) {
+    return statusLanguage(v, this.i18n);
+  }
   readonly now = signal(Date.now());
   readonly ready = signal(false);
   readonly loading = signal(false);
   readonly refreshing = signal(false);
   readonly error = signal("");
+  private readonly serverText = inject(ServerText);
+  /**
+   * An error Workspace joined from several messages, such as the list of failed moves, in parts
+   * that each keep their own language. It applies only while the error still shows that text.
+   */
+  private readonly joinedError = signal<{ text: string; parts: TextPart[] } | null>(null);
+  /** The error in parts, each with the language of its text. */
+  readonly errorParts = computed<TextPart[]>(() => {
+    const error = this.error(),
+      joined = this.joinedError();
+    return joined?.text === error
+      ? joined.parts
+      : [{ text: error, lang: this.serverText.language(error) }];
+  });
   readonly notice = signal("");
   /** A notice that a status region of its own already says, so the toast that shows it is silent. */
   readonly saidNotice = signal("");
@@ -487,20 +510,7 @@ export class Workspace {
   private restoreFocus(focused: Element | null) {
     const fallback = this.refocus;
     this.refocus = null;
-    afterNextRender(
-      () => {
-        // A focused control the listing left disabled keeps focus until the browser next draws the
-        // page, and loses it then. This can run first, so such a control counts as having lost it.
-        const active = document.activeElement;
-        if (active && active !== document.body && !active.matches(":disabled")) return;
-        const before =
-          focused instanceof HTMLElement && focused !== document.body && focused.isConnected && !focused.matches(":disabled")
-            ? focused
-            : null;
-        (before ?? fallback?.())?.focus();
-      },
-      { injector: this.injector },
-    );
+    returnFocus(focused, fallback, this.injector);
   }
   /**
    * After an action on `resources` that can remove their rows, focus lost with them goes to the row
@@ -820,8 +830,22 @@ export class Workspace {
           count: result.moved.length,
         }),
       );
-      const errors = [this.error(), ...result.failed.map(f => this.title(f.resource) + ": " + f.message)].filter(Boolean);
-      if (errors.length) this.error.set(errors.join("; "));
+      // The list names each artifact whose move failed and the message it failed with, which a
+      // server may have written, and keeps each message in its own language.
+      if (result.failed.length) {
+        const previous = this.error();
+        const parts: TextPart[] = previous ? [{ text: previous, lang: this.serverText.language(previous) }] : [];
+        for (const f of result.failed) {
+          if (parts.length) parts.push({ text: "; ", lang: null });
+          parts.push(
+            { text: this.title(f.resource) + ": ", lang: null },
+            { text: f.message, lang: this.serverText.language(f.message) },
+          );
+        }
+        const text = parts.map((part) => part.text).join("");
+        this.joinedError.set({ text, parts });
+        this.error.set(text);
+      }
       operation.finish();
     } catch (e) {
       operation.fail(e);
@@ -1052,14 +1076,16 @@ export class Workspace {
       total: this.total(),
     });
   }
-  /** " · 0.0.1 · Published" after an artifact's name, from what the report says of it. */
-  versionAndStatus(v: Resource): string {
+  /**
+   * " · 0.0.1 · Published" after an artifact's name, from what the report says of it. The status is
+   * a part of its own, so that a status Workspace does not know is marked with the servers' language.
+   */
+  versionAndStatus(v: Resource): TextPart[] {
     const status = this.status(v);
-    const parts = [
-      v["pav:version"] || this.i18n.t("Dashboard.Unversioned"),
-      ...(status === "—" ? [] : [status]),
+    return [
+      { text: " · " + (v["pav:version"] || this.i18n.t("Dashboard.Unversioned")), lang: null },
+      ...(status === "—" ? [] : [{ text: " · ", lang: null }, { text: status, lang: this.statusLanguage(v) }]),
     ];
-    return " · " + parts.join(" · ");
   }
   /**
    * Whether the artifact is the newest of its versions.

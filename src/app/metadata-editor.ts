@@ -58,7 +58,7 @@ import {
   reconcileMetadata,
   ReconciliationChange,
 } from "./metadata-reconciliation";
-import { ServerLanguage } from "./server-text";
+import { ServerLanguage, TextPart } from "./server-text";
 
 export { metadataRoute, leaveMetadata } from "./metadata-route";
 
@@ -144,32 +144,58 @@ function declaredMinItems(
   const min = property?.["minItems"];
   return typeof min === "number" ? min : undefined;
 }
-// Prefer CEE's localized explanation; retain the fallback for older bundles.
+/**
+ * The language of CEE's diagnostic for a problem: its `message`, which CEE keeps in English for
+ * troubleshooting whatever language it shows, and failing that its `code`, an English identifier.
+ */
+export const ceeDiagnosticLanguage = "en";
+/**
+ * A problem's text as the page shows it, and its language.
+ *
+ * CEE's explanation, `displayMessage`, comes first. CEE writes it in the language Workspace
+ * configures, which is the page's, and CEE ships a translation of every explanation in both of
+ * Workspace's languages. So it takes the page's language, as Workspace's own words do. Only CEE's
+ * diagnostic, which the page shows when an older bundle gives no explanation, is marked English.
+ */
+export function metadataProblemText(problem: MetadataProblem): TextPart {
+  return problem.displayMessage
+    ? { text: problem.displayMessage, lang: null }
+    : { text: problem.message || problem.code, lang: ceeDiagnosticLanguage };
+}
+// Prefer CEE's localized explanation; retain the fallback for older bundles, in Workspace's words
+// where it has its own.
 export function metadataWarningMessage(
   template: CeeJsonObject,
   problem: MetadataProblem,
   t: (key: string, params?: Record<string, unknown>) => string,
-): string {
+): TextPart {
   if (typeof problem.displayMessage === "string" && problem.displayMessage)
-    return problem.displayMessage;
+    return { text: problem.displayMessage, lang: null };
   switch (problem.code) {
     case "required":
-      return t("Metadata.ProblemRequired");
+      return { text: t("Metadata.ProblemRequired"), lang: null };
     case "minItems": {
       const min = declaredMinItems(template, problem.path);
       if (typeof problem.value === "number" && min !== undefined)
-        return t("Metadata.ProblemMinItems", { count: problem.value, min });
+        return {
+          text: t("Metadata.ProblemMinItems", { count: problem.value, min }),
+          lang: null,
+        };
     }
   }
-  return problem.message || problem.code;
+  return { text: problem.message || problem.code, lang: ceeDiagnosticLanguage };
 }
 // Problems the instance may be saved with: a required value nobody has given, and a list
 // shorter than its minimum. Every other problem refuses Save.
 
-/** One line of the page's error or warning list, and the problem it leads to, if any. */
+/**
+ * One line of the page's error or warning list, and the problem it leads to, if any. The message
+ * is marked with `messageLanguage` when that is not the page's, and a diagnostic is CEE's.
+ */
 export interface MetadataIssue {
   label: string;
   message: string;
+  messageLanguage?: string | null;
   problem?: CeeValidationProblem;
   diagnostic?: string;
 }
@@ -206,6 +232,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   readonly confirmation = inject(Confirmation);
   readonly api = inject(Backend);
   protected readonly i18n = inject(I18n);
+  readonly ceeDiagnosticLanguage = ceeDiagnosticLanguage;
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly loader = inject(CeeLoader);
@@ -1084,13 +1111,17 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     const problems = (q?.problems || []).filter(
       (p) => problemSeverity(p as MetadataProblem) === "warning",
     );
-    const items: MetadataIssue[] = problems.map((p) => ({
-      label: this.issueLabel(p),
-      message: metadataWarningMessage(this.template, p, (key, params) =>
+    const items: MetadataIssue[] = problems.map((p) => {
+      const message = metadataWarningMessage(this.template, p, (key, params) =>
         this.i18n.t(key, params),
-      ),
-      problem: p.path.length ? p : undefined,
-    }));
+      );
+      return {
+        label: this.issueLabel(p),
+        message: message.text,
+        messageLanguage: message.lang,
+        problem: p.path.length ? p : undefined,
+      };
+    });
     if (this.missingRequired && !problems.some((p) => p.code === "required"))
       items.push({
         label: this.i18n.t("Metadata.Label"),
@@ -1105,18 +1136,22 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     const q = this.quality();
     const items: MetadataIssue[] = (q?.problems || [])
       .filter((p) => problemSeverity(p as MetadataProblem) === "error")
-      .map((p) => ({
-        label: this.issueLabel(p),
-        message:
+      .map((p) => {
+        const message: TextPart =
           p.code === "reportUnavailable"
-            ? this.i18n.t("Metadata.ReviewInvalid")
-            : p.displayMessage || p.message || p.code,
-        diagnostic:
-          p.displayMessage && p.displayMessage !== p.message
-            ? p.message
-            : undefined,
-        problem: p.path.length ? p : undefined,
-      }));
+            ? { text: this.i18n.t("Metadata.ReviewInvalid"), lang: null }
+            : metadataProblemText(p);
+        return {
+          label: this.issueLabel(p),
+          message: message.text,
+          messageLanguage: message.lang,
+          diagnostic:
+            p.displayMessage && p.displayMessage !== p.message
+              ? p.message
+              : undefined,
+          problem: p.path.length ? p : undefined,
+        };
+      });
     if (
       q?.isValid === false &&
       !q.pendingValidation &&

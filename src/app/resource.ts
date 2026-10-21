@@ -2,6 +2,7 @@ import { TitleCasePipe } from "@angular/common";
 import { resourceSelector, resourcePathId } from "./resource-address";
 import { applyListingFilters } from "./listing-filters";
 import type { I18n } from "./i18n";
+import { serverLanguage } from "./server-text";
 export type ResourceType =
   "folder" | "template" | "element" | "field" | "instance";
 export interface Resource {
@@ -108,6 +109,14 @@ export function statusText(r: Resource, i18n: Pick<I18n, "known">): string {
   const status = r["bibo:status"]?.replace("bibo:", "");
   if (!status) return "—";
   return i18n.known("Status." + status, new TitleCasePipe().transform(status));
+}
+// The language of the status `statusText` shows, for its `lang` attribute. A status Workspace does
+// not know is shown as the term the server sent, such as Retracted for `bibo:retracted`. The
+// servers take those terms from the Bibliographic Ontology, whose names are English words, so they
+// are marked English. A translated status, and the dash for none, take the page's language.
+export function statusLanguage(r: Resource, i18n: Pick<I18n, "known">): string | null {
+  const status = r["bibo:status"]?.replace("bibo:", "");
+  return status && !i18n.known("Status." + status, "") ? serverLanguage : null;
 }
 // OpenView serves a resource made open and anything inside an open folder. Its path,
 // once read, settles the folders; until then the listing's flag stands in.
