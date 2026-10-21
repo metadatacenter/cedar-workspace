@@ -269,7 +269,7 @@ export class Profile implements OnInit, OnDestroy {
       ],
       [
         "Account.Profile.Examples.Instances",
-        `${curl} "${base}/search?is_based_on={TEMPLATE_ID}&resource_types=instance"${auth}`,
+        `${curl} "${base}/search?is_based_on={TEMPLATE_ID}"${auth}`,
       ],
     ];
   }
