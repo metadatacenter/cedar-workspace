@@ -5,13 +5,14 @@
     (activate)="back()"
   />
   <strong class="metadata-title">{{'Metadata.Title' | translate}}</strong>
+  <!-- The status region beside it says this status, so the status is read once. -->
   <span
     class="metadata-save-status"
     [class.has-save-state]="writable() && !loading() && !saving()"
     [class.is-dirty]="dirty() && writable() && !loading() && !saving()"
-    role="status"
+    aria-hidden="true"
     >{{saveStatus | translate}}</span
-  >
+  ><cedar-status [text]="saveStatus | translate" />
   @if(writable()) {<span
     class="metadata-save-action"
     [class.is-refused]="saveRefused"
@@ -30,12 +31,13 @@
   ><span hidden id="metadata-save-help">{{'Metadata.SaveRefused' | translate}}</span>}
 </header>
 <main class="metadata-content">
+  <cedar-status [text]="recoveryDraft() ? ('Metadata.DraftAvailable' | translate) : ''" />
   @if(draftStorageError()) {
   <p role="alert" class="alert">
     {{'Metadata.DraftStorageFailed' | translate}}
   </p>
   } @if(recoveryDraft()) {
-  <p role="status" class="alert">
+  <p class="alert">
     {{'Metadata.DraftAvailable' | translate}}
     <button
       type="button"
@@ -70,7 +72,7 @@
       <tbody>
         @for(change of comparison.changes; track $index) {
         <tr>
-          <th>{{reviewLabel(change.path)}}</th>
+          <th>@for(part of reviewLabel(change.path); track $index){@if(part.lang){<span [attr.lang]="part.lang">{{part.text}}</span>}@else{<ng-container>{{part.text}}</ng-container>}}</th>
           <td>{{reviewValue(change.mine)}}</td>
           <td>{{reviewValue(change.latest)}}</td>
         </tr>
@@ -157,8 +159,10 @@
     }
   </p>
   }
-  <!-- The toast stays in the page while empty, so that a screen reader announces each message that arrives in it. -->
+  <!-- The toast and the status region stay in the page while empty, so that a screen reader announces each message that arrives in them. -->
   <cedar-toast [message]="notice()" />
+  <!-- The region says the notice below, which is hidden from assistive technology so that it is read once. -->
+  <cedar-status [text]="!loading() && !writable() ? ('Metadata.ReadOnlyAccess' | translate) : ''" />
   @if(!loading()) {
   <label for="instance-name">{{'Metadata.Name' | translate}}</label>
   <input
@@ -170,7 +174,7 @@
     [readOnly]="!writable()"
   />
   @if(!writable()){
-  <p role="status">{{'Metadata.ReadOnlyAccess' | translate}}</p>
+  <p aria-hidden="true">{{'Metadata.ReadOnlyAccess' | translate}}</p>
   @if(canRecheckOpeningAccess) {
   <p>
     <button
@@ -211,9 +215,9 @@
         <li>
           @if(issue.problem){
           <button type="button" (click)="reveal(issue)">
-            {{issue.label}}: <span [attr.lang]="issue.messageLanguage">{{issue.message}}</span>
+            @for(part of issue.label; track $index){@if(part.lang){<span [attr.lang]="part.lang">{{part.text}}</span>}@else{<ng-container>{{part.text}}</ng-container>}}: <span [attr.lang]="issue.messageLanguage">{{issue.message}}</span>
           </button>
-          } @else { {{issue.label}}: <span [attr.lang]="issue.messageLanguage">{{issue.message}}</span> } @if(issue.diagnostic) {
+          } @else { @for(part of issue.label; track $index){@if(part.lang){<span [attr.lang]="part.lang">{{part.text}}</span>}@else{<ng-container>{{part.text}}</ng-container>}}: <span [attr.lang]="issue.messageLanguage">{{issue.message}}</span> } @if(issue.diagnostic) {
           <details class="metadata-diagnostic">
             <summary>
               <cedar-icon
@@ -251,9 +255,9 @@
         <li>
           @if(issue.problem){
           <button type="button" (click)="reveal(issue)">
-            {{issue.label}}: <span [attr.lang]="issue.messageLanguage">{{issue.message}}</span>
+            @for(part of issue.label; track $index){@if(part.lang){<span [attr.lang]="part.lang">{{part.text}}</span>}@else{<ng-container>{{part.text}}</ng-container>}}: <span [attr.lang]="issue.messageLanguage">{{issue.message}}</span>
           </button>
-          } @else { {{issue.label}}: <span [attr.lang]="issue.messageLanguage">{{issue.message}}</span> }
+          } @else { @for(part of issue.label; track $index){@if(part.lang){<span [attr.lang]="part.lang">{{part.text}}</span>}@else{<ng-container>{{part.text}}</ng-container>}}: <span [attr.lang]="issue.messageLanguage">{{issue.message}}</span> }
         </li>
         }
       </ul>

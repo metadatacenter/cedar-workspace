@@ -59,6 +59,7 @@ import {
   ReconciliationChange,
 } from "./metadata-reconciliation";
 import { ServerLanguage, TextPart } from "./server-text";
+import { StatusRegion } from "./status-region";
 
 export { metadataRoute, leaveMetadata } from "./metadata-route";
 
@@ -88,6 +89,30 @@ function pagesEntries(property: CeeJsonObject): boolean {
   const inputType = (items["_ui"] as CeeJsonObject | undefined)?.["inputType"];
   return inputType !== "checkbox" && inputType !== "list";
 }
+/**
+ * A language as a `lang` attribute takes it, or null where none is stated or the value is not a
+ * well-formed tag. A template may spell its language `hu_HU`.
+ */
+function languageTag(value: unknown): string | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  try {
+    return Intl.getCanonicalLocales(value.trim().replace(/_/g, "-"))[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+/**
+ * The language a template or element declares for its own text, with `@language` in its
+ * `@context`, where the model library reads it. A draft an older writer stored may hold it in the
+ * schema of its instances' context instead, where the library also looks.
+ */
+function declaredLanguage(container: CeeJsonObject): string | null {
+  const context = container["@context"] as CeeJsonObject | undefined;
+  const instances = (container["properties"] as CeeJsonObject | undefined)?.["@context"] as
+    | CeeJsonObject
+    | undefined;
+  return languageTag(context?.["@language"]) ?? languageTag(instances?.["@language"]);
+}
 // Resolve each property in its declaring parent, including repeated elements.
 // Use the same label precedence as CEE's rendered field headings. A repeated element or
 // field is numbered by the entry the problem is in, so two entries holding the same bad
@@ -97,35 +122,61 @@ export function metadataFieldLabel(
   path: string[],
   occurrences: readonly number[] = [],
 ): string {
+  return metadataFieldLabelParts(template, path, occurrences)
+    .map((part) => part.text)
+    .join("");
+}
+/**
+ * The label `metadataFieldLabel` gives, in parts that each carry the language of the template text
+ * they show, as CEE marks that text. A label is the text of the nearest template or element that
+ * declares a language: a field's label takes its container's, and an element's the one the element
+ * declares, or else its container's. A field's own `@language` is the language of its values, and
+ * does not apply. A key the template does not define, and an entry's number, take the page's.
+ */
+export function metadataFieldLabelParts(
+  template: CeeJsonObject,
+  path: string[],
+  occurrences: readonly number[] = [],
+): TextPart[] {
   let parent = template;
+  let language = declaredLanguage(template);
   let entry = 0;
-  return path
-    .map((key) => {
-      const properties = parent["properties"] as CeeJsonObject | undefined;
-      const property = properties?.[key] as CeeJsonObject | undefined;
-      if (!property) return /^\d+$/.test(key) ? `#${Number(key) + 1}` : key;
-      const index =
-        pagesEntries(property) && entry < occurrences.length
-          ? occurrences[entry++]
-          : undefined;
-      const child =
-        (property["items"] as CeeJsonObject | undefined) || property;
-      const labels = (parent["_ui"] as CeeJsonObject | undefined)?.[
-        "propertyLabels"
-      ] as CeeJsonObject | undefined;
-      // The parent's label for this use of the child counts only where it says something the key
-      // and the child's own name do not. Templates often repeat the key there.
-      const declared = labels?.[key];
-      const own = child["schema:name"];
-      const deployment =
-        declared == null || declared === key || declared === own
-          ? undefined
-          : declared;
-      const label = deployment ?? child["skos:prefLabel"] ?? own ?? key;
-      parent = child;
-      return index === undefined ? String(label) : `${label} ${index + 1}`;
-    })
-    .join(" · ");
+  const parts: TextPart[] = [];
+  for (const key of path) {
+    if (parts.length) parts.push({ text: " · ", lang: null });
+    const properties = parent["properties"] as CeeJsonObject | undefined;
+    const property = properties?.[key] as CeeJsonObject | undefined;
+    if (!property) {
+      parts.push({ text: /^\d+$/.test(key) ? `#${Number(key) + 1}` : key, lang: null });
+      continue;
+    }
+    const index =
+      pagesEntries(property) && entry < occurrences.length
+        ? occurrences[entry++]
+        : undefined;
+    const child =
+      (property["items"] as CeeJsonObject | undefined) || property;
+    const labels = (parent["_ui"] as CeeJsonObject | undefined)?.[
+      "propertyLabels"
+    ] as CeeJsonObject | undefined;
+    // The parent's label for this use of the child counts only where it says something the key
+    // and the child's own name do not. Templates often repeat the key there.
+    const declared = labels?.[key];
+    const own = child["schema:name"];
+    const deployment =
+      declared == null || declared === key || declared === own
+        ? undefined
+        : declared;
+    const label = deployment ?? child["skos:prefLabel"] ?? own ?? key;
+    if (String(child["@type"] ?? "").endsWith("/TemplateElement"))
+      language = declaredLanguage(child) ?? language;
+    parent = child;
+    parts.push({
+      text: index === undefined ? String(label) : `${label} ${index + 1}`,
+      lang: language,
+    });
+  }
+  return parts;
 }
 // The minimum a repeated property declares, read where its declaring parent states it.
 function declaredMinItems(
@@ -189,11 +240,12 @@ export function metadataWarningMessage(
 // shorter than its minimum. Every other problem refuses Save.
 
 /**
- * One line of the page's error or warning list, and the problem it leads to, if any. The message
- * is marked with `messageLanguage` when that is not the page's, and a diagnostic is CEE's.
+ * One line of the page's error or warning list, and the problem it leads to, if any. The label is
+ * in parts that carry the template's language, the message is marked with `messageLanguage` when
+ * that is not the page's, and a diagnostic is CEE's.
  */
 export interface MetadataIssue {
-  label: string;
+  label: TextPart[];
   message: string;
   messageLanguage?: string | null;
   problem?: CeeValidationProblem;
@@ -224,6 +276,7 @@ interface PendingMetadataCreation {
     FormsModule,
     TranslatePipe,
     ServerLanguage,
+    StatusRegion,
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: "./metadata-editor.html",
@@ -770,10 +823,12 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       ? this.i18n.t("Metadata.ReviewRemoved")
       : JsonSourcePolicy.stringify(value);
   }
-  reviewLabel(path: string[]) {
-    return (
-      metadataFieldLabel(this.template, path) || this.i18n.t("Metadata.Label")
-    );
+  /** A reviewed field's label, in parts that carry the template's language. */
+  reviewLabel(path: string[]): TextPart[] {
+    const label = metadataFieldLabelParts(this.template, path);
+    return label.some((part) => part.text)
+      ? label
+      : [{ text: this.i18n.t("Metadata.Label"), lang: null }];
   }
   applyReview() {
     const review = this.review();
@@ -1124,7 +1179,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     });
     if (this.missingRequired && !problems.some((p) => p.code === "required"))
       items.push({
-        label: this.i18n.t("Metadata.Label"),
+        label: [{ text: this.i18n.t("Metadata.Label"), lang: null }],
         message: this.i18n.counted(
           "Metadata.RequiredMissing",
           this.missingRequired,
@@ -1159,17 +1214,16 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       !this.validationWarnings.length
     )
       items.push({
-        label: this.i18n.t("Metadata.Label"),
+        label: [{ text: this.i18n.t("Metadata.Label"), lang: null }],
         message: this.i18n.t("Metadata.ReviewInvalid"),
       });
     return items;
   }
-  private issueLabel(problem: CeeValidationProblem): string {
-    return (
-      metadataFieldLabel(this.template, problem.path, problem.occurrences) ||
-      problem.field ||
-      this.i18n.t("Metadata.Label")
-    );
+  private issueLabel(problem: CeeValidationProblem): TextPart[] {
+    const label = metadataFieldLabelParts(this.template, problem.path, problem.occurrences);
+    return label.some((part) => part.text)
+      ? label
+      : [{ text: problem.field || this.i18n.t("Metadata.Label"), lang: null }];
   }
   /** Take the user to the field a listed problem is about, on whichever page and entry holds it. */
   reveal(issue: MetadataIssue) {

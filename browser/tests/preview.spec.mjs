@@ -297,7 +297,9 @@ for (const kind of ['template', 'element', 'field', 'instance']) {
     const dialog = page.getByRole('dialog');
     await dialog.getByRole('button', {name:'Try out', exact:true}).click();
     await expect(dialog.locator('section')).toHaveAttribute('aria-busy', 'false');
-    await expect(dialog.getByRole('status').and(dialog.locator('.try-out-notice'))).toContainText('nothing is saved');
+    await expect(dialog.locator('.try-out-notice')).toContainText('nothing is saved');
+    // The preview's status region says so once the trial has loaded.
+    await expect(dialog.getByRole('status')).toContainText('nothing is saved');
     await expect(dialog.locator('.try-out-notice')).toHaveCSS('text-align', 'center');
     const viewer = dialog.locator(kind === 'field' ? 'cedar-embeddable-field' : 'cedar-embeddable-editor');
     const input = viewer.getByRole('textbox', {name:'Specimen name', exact:true});

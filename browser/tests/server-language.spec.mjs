@@ -289,10 +289,22 @@ test("a status Workspace does not know is marked English wherever it shows, and 
   expect(await language(shown)).toBe("en");
 });
 
-test("CEE's explanations take the page's language, and its English diagnostics are marked English", async ({
+test("CEE's explanations take the page's language, its English diagnostics and a template's labels their own", async ({
   page,
   api,
 }) => {
+  // The template declares its text English, so its field labels are English in a Hungarian page.
+  const field = (name) => ({ "@type": "https://schema.metadatacenter.org/core/TemplateField", "schema:name": name });
+  await page.route("**/api/resource/templates/template", (route) =>
+    route.fulfill({
+      json: {
+        ...resource,
+        "@context": { "@language": "en" },
+        properties: { Email: field("Email address"), Title: field("Title"), Code: field("Sample code") },
+      },
+      headers: { ETag: '"fixture-revision"' },
+    }),
+  );
   await hungarian(page);
   await page.goto("/instances/edit/instance");
   await expect(page.locator("html")).toHaveAttribute("lang", "hu");
@@ -333,16 +345,19 @@ test("CEE's explanations take the page's language, and its English diagnostics a
   await errors.getByText("Technikai részletek", { exact: true }).click();
   await warnings.locator(":scope > summary").click();
   expect(await languages(errors.locator("li"))).toEqual([
-    ["Email:", "hu"],
+    ["Email address", "en"],
+    [":", "hu"],
     ["Adjon meg egy érvényes e-mail címet.", "hu"],
     ["Technikai részletek", "hu"],
     ["Not a valid email address.", "en"],
   ]);
   // Workspace words a missing value itself; it shows CEE's diagnostic for what it has no words for.
   expect(await languages(warnings.locator("ul"))).toEqual([
-    ["Title:", "hu"],
+    ["Title", "en"],
+    [":", "hu"],
     ["Egy kötelező érték hiányzik.", "hu"],
-    ["Code:", "hu"],
+    ["Sample code", "en"],
+    [":", "hu"],
     ["The value does not match the pattern.", "en"],
   ]);
 });

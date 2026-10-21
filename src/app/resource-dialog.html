@@ -7,7 +7,10 @@
   aria-labelledby="dialog-title"
   (cancel)="$event.preventDefault(); close()"
 >
-  <cedar-status [text]="preparing() ? ('Common.Loading' | translate) : ''" />
+  <!-- One status region says that the dialog is loading, then any revision it must reload or outcome it must check. -->
+  <cedar-status
+    [text]="(preparing() ? 'Common.Loading' : reloadRequired() ? (inspectionRequired() ? (settles ? 'ResourceDialog.InspectOutcome' : 'ResourceDialog.LegacyInspectOutcome') : 'ResourceDialog.RecoverRevision') : '') | translate"
+  />
   @if(preparing()) {
   <p class="dialog-preparing-status">{{'Common.Loading' | translate}}</p>
   }
@@ -37,7 +40,7 @@
     <p class="alert" role="alert" [attr.lang]="error() | serverLanguage">{{error()}}</p>
     }
     @if(reloadRequired()) {
-    <p role="status">{{(inspectionRequired() ? (settles ? 'ResourceDialog.InspectOutcome' : 'ResourceDialog.LegacyInspectOutcome') : 'ResourceDialog.RecoverRevision') | translate}}</p>
+    <p>{{(inspectionRequired() ? (settles ? 'ResourceDialog.InspectOutcome' : 'ResourceDialog.LegacyInspectOutcome') : 'ResourceDialog.RecoverRevision') | translate}}</p>
     @if(!inspectionRequired() || settles) {<button type="button" (click)="inspectionRequired() ? settle() : load()" [disabled]="busy()">{{'Common.Retry' | translate}}</button>}
     }
     <fieldset class="dialog-stack" [disabled]="busy()">

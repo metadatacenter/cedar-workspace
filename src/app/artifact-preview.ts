@@ -57,7 +57,10 @@ export function previewElement(element: CeeJsonObject): CeeJsonObject {
       [attr.aria-label]="name"
       (cancel)="$event.preventDefault(); $event.stopPropagation(); close()"
     >
-      <cedar-status [text]="loading() ? ('Common.Loading' | translate) : ''" />
+      <!-- One status region says that the preview is loading, then that a trial saves nothing. -->
+      <cedar-status
+        [text]="(loading() ? 'Common.Loading' : trying() && !error() ? 'Preview.Unsaved' : '') | translate"
+      />
       @if (loading()) {
         <div class="dialog-preparing-status">
           <span>{{ "Common.Loading" | translate }}</span>
@@ -138,7 +141,7 @@ export function previewElement(element: CeeJsonObject): CeeJsonObject {
           <p role="alert">{{ message | translate }}</p>
         }
         @if (trying() && !error()) {
-          <p class="try-out-notice" role="status">
+          <p class="try-out-notice">
             {{ "Preview.Unsaved" | translate }}
           </p>
         }

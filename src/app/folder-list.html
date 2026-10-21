@@ -1,3 +1,5 @@
+<!-- The list is marked busy while it loads, so its loading row is announced from here, outside it. -->
+<cedar-status [text]="busy() && !folders().length ? ('Common.Loading' | translate) : ''" />
 <div class="folder-scroll" [attr.aria-busy]="busy()">
   <table [attr.aria-label]="label()">
     <thead>

@@ -12,6 +12,7 @@ import {
   MetadataEditor,
   metadataKey,
   metadataFieldLabel,
+  metadataFieldLabelParts,
   metadataWarningMessage,
   metadataRoute,
   workspaceReturn,
@@ -886,6 +887,51 @@ describe("metadata field labels", () => {
     expect(metadataFieldLabel(schema, ["contributors_path"])).toBe(
       "contributors_path",
     );
+  });
+  it("gives each label the language of the nearest template or element that declares one", () => {
+    const element = "https://schema.metadatacenter.org/core/TemplateElement";
+    const field = "https://schema.metadatacenter.org/core/TemplateField";
+    const schema = {
+      "@context": { "@language": "hu_HU" },
+      properties: {
+        minta: {
+          "@type": element,
+          "schema:name": "Minta",
+          properties: {
+            tomeg: { "@type": field, "schema:name": "Tömeg", "@context": { "@language": "en" } },
+          },
+        },
+        sample: {
+          "@type": element,
+          "@context": { "@language": "en" },
+          "schema:name": "Sample",
+          properties: { weight: { "@type": field, "schema:name": "Weight" } },
+        },
+      },
+    };
+    // A field's own language is its values', so its label keeps the element's.
+    expect(metadataFieldLabelParts(schema, ["minta", "tomeg"])).toEqual([
+      { text: "Minta", lang: "hu-HU" },
+      { text: " · ", lang: null },
+      { text: "Tömeg", lang: "hu-HU" },
+    ]);
+    expect(metadataFieldLabelParts(schema, ["sample", "weight"])).toEqual([
+      { text: "Sample", lang: "en" },
+      { text: " · ", lang: null },
+      { text: "Weight", lang: "en" },
+    ]);
+    // A key the template does not define is not its text, and a template that declares no
+    // language, or one that is not a language tag, leaves its labels in the page's.
+    expect(metadataFieldLabelParts(schema, ["other"])).toEqual([{ text: "other", lang: null }]);
+    expect(
+      metadataFieldLabelParts({ properties: { name: { "schema:name": "Name" } } }, ["name"]),
+    ).toEqual([{ text: "Name", lang: null }]);
+    expect(
+      metadataFieldLabelParts(
+        { "@context": { "@language": "not a tag" }, properties: { name: { "schema:name": "Name" } } },
+        ["name"],
+      ),
+    ).toEqual([{ text: "Name", lang: null }]);
   });
 });
 
