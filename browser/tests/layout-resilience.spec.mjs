@@ -8,8 +8,9 @@ import { selectionFixture, selectDeletion } from "./selection-deletion-fixture.m
  * components share this method.
  *
  * - Reflow: a window 320 CSS px wide. The page and its own scroll containers must not scroll
- *   sideways, and every control must be reachable. A data table that needs scrolling in two
- *   dimensions may scroll inside its own container, and `tables` names each one.
+ *   sideways, no text may overlap other text, and every control must be reachable. A data table
+ *   that needs scrolling in two dimensions may scroll inside its own container, and `tables`
+ *   names each one.
  * - Resize: a window of 640 by 400 CSS px, which is a 1280 by 800 window at 200% zoom. No text may
  *   be clipped or overlap other text, and every control must be reachable.
  * - Text spacing: WCAG's line height, letter, word and paragraph spacing, set in the document and
@@ -190,8 +191,8 @@ const spacing = `* { line-height: 1.5 !important; letter-spacing: 0.12em !import
 
 /**
  * What a condition breaks on the page, as findings: `kind`, the element as `target` and its text.
- * Runs in the page. `reflow` and `resize` look for sideways scrolling or unreachable controls, and
- * `resize` and `text spacing` for clipped or overlapping text.
+ * Runs in the page. `reflow` and `resize` look for sideways scrolling or unreachable controls,
+ * `resize` and `text spacing` for clipped text, and all three for overlapping text.
  */
 function inspect({ condition, excluded }) {
   const roots = [document];
@@ -274,22 +275,22 @@ function inspect({ condition, excluded }) {
         add("unreachable control", control, `covered by ${describe(hit)}`);
     }
   }
-  if (condition !== "reflow") {
-    const runs = [];
-    for (const root of roots) {
-      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-        const owner = node.parentElement;
-        if (!node.textContent.trim() || !owner || hidden(owner)) continue;
-        if (owner.closest("select, option, script, style, textarea")) continue;
-        const range = document.createRange();
-        range.selectNodeContents(node);
-        const boxes = [...range.getClientRects()].filter((box) => box.width > 1 && box.height > 1);
-        if (boxes.length) runs.push({ node, owner, boxes });
-      }
+  const runs = [];
+  for (const root of roots) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const owner = node.parentElement;
+      if (!node.textContent.trim() || !owner || hidden(owner)) continue;
+      if (owner.closest("select, option, script, style, textarea")) continue;
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      const boxes = [...range.getClientRects()].filter((box) => box.width > 1 && box.height > 1);
+      if (boxes.length) runs.push({ node, owner, boxes });
     }
-    // Text something clips: a box with overflow hidden or clip whose content is larger than it, and
-    // which text runs past. An ellipsis hides text past the content box, padding and all.
+  }
+  // Text something clips: a box with overflow hidden or clip whose content is larger than it, and
+  // which text runs past. An ellipsis hides text past the content box, padding and all.
+  if (condition !== "reflow")
     for (const box of elements) {
       const style = getComputedStyle(box);
       const clipsX = ["hidden", "clip"].includes(style.overflowX);
@@ -327,46 +328,45 @@ function inspect({ condition, excluded }) {
           ellipsis ? "an ellipsis hides text offered nowhere else" : `${box.scrollWidth}×${box.scrollHeight} px in ${box.clientWidth}×${box.clientHeight} px`,
         );
     }
-    // Text that overlaps other text where both show. A text's boxes are cut to what the boxes that
-    // clip it leave showing, and text an open popup lies over does not show.
-    const open = elements.filter((node) => node.matches(popups) && !hidden(node));
-    const cut = (owner, run) => {
-      let [left, top, right, bottom] = [run.left, run.top, run.right, run.bottom];
-      for (let box = owner.parentElement; box; box = box.parentElement) {
-        if (getComputedStyle(box).overflow === "visible") continue;
-        const area = box.getBoundingClientRect();
-        [left, top] = [Math.max(left, area.left), Math.max(top, area.top)];
-        [right, bottom] = [Math.min(right, area.right), Math.min(bottom, area.bottom)];
+  // Text that overlaps other text where both show. A text's boxes are cut to what the boxes that
+  // clip it leave showing, and text an open popup lies over does not show.
+  const open = elements.filter((node) => node.matches(popups) && !hidden(node));
+  const cut = (owner, run) => {
+    let [left, top, right, bottom] = [run.left, run.top, run.right, run.bottom];
+    for (let box = owner.parentElement; box; box = box.parentElement) {
+      if (getComputedStyle(box).overflow === "visible") continue;
+      const area = box.getBoundingClientRect();
+      [left, top] = [Math.max(left, area.left), Math.max(top, area.top)];
+      [right, bottom] = [Math.min(right, area.right), Math.min(bottom, area.bottom)];
+    }
+    if (right - left <= 2 || bottom - top <= 2) return null;
+    const under = open.some((popup) => {
+      if (popup.contains(owner)) return false;
+      const area = popup.getBoundingClientRect();
+      return left < area.right && right > area.left && top < area.bottom && bottom > area.top;
+    });
+    return under ? null : { left, top, right, bottom };
+  };
+  const shown = runs
+    .map((run) => ({ ...run, boxes: run.boxes.map((box) => cut(run.owner, box)).filter(Boolean) }))
+    .filter((run) => run.boxes.length);
+  const reported = new Set();
+  for (let i = 0; i < shown.length; i++)
+    for (let j = i + 1; j < shown.length; j++) {
+      const [a, b] = [shown[i], shown[j]];
+      const overlap = a.boxes.some((p) =>
+        b.boxes.some(
+          (q) =>
+            Math.min(p.right, q.right) - Math.max(p.left, q.left) > 2 &&
+            Math.min(p.bottom, q.bottom) - Math.max(p.top, q.top) > 2,
+        ),
+      );
+      const key = describe(a.owner) + "|" + describe(b.owner);
+      if (overlap && !reported.has(key)) {
+        reported.add(key);
+        add("overlapping text", a.owner, `overlaps ${describe(b.owner)} “${text(b.owner)}”`);
       }
-      if (right - left <= 2 || bottom - top <= 2) return null;
-      const under = open.some((popup) => {
-        if (popup.contains(owner)) return false;
-        const area = popup.getBoundingClientRect();
-        return left < area.right && right > area.left && top < area.bottom && bottom > area.top;
-      });
-      return under ? null : { left, top, right, bottom };
-    };
-    const shown = runs
-      .map((run) => ({ ...run, boxes: run.boxes.map((box) => cut(run.owner, box)).filter(Boolean) }))
-      .filter((run) => run.boxes.length);
-    const reported = new Set();
-    for (let i = 0; i < shown.length; i++)
-      for (let j = i + 1; j < shown.length; j++) {
-        const [a, b] = [shown[i], shown[j]];
-        const overlap = a.boxes.some((p) =>
-          b.boxes.some(
-            (q) =>
-              Math.min(p.right, q.right) - Math.max(p.left, q.left) > 2 &&
-              Math.min(p.bottom, q.bottom) - Math.max(p.top, q.top) > 2,
-          ),
-        );
-        const key = describe(a.owner) + "|" + describe(b.owner);
-        if (overlap && !reported.has(key)) {
-          reported.add(key);
-          add("overlapping text", a.owner, `overlaps ${describe(b.owner)} “${text(b.owner)}”`);
-        }
-      }
-  }
+    }
   for (const [node, left, top] of scrolls) [node.scrollLeft, node.scrollTop] = [left, top];
   return findings;
 }
