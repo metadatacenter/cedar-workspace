@@ -356,5 +356,5 @@ help that explains them took the measured total past the former 1.03 MB, and the
 of Groups and the description editor took it to 1,031,766 bytes (303 KB estimated transfer). On
 2026-10-21, status regions that stay in the page for toasts and loading statuses, focus that
 returns after group and description changes, and text marked with its language took it to
-1,037,040 bytes (304 KB estimated transfer). The budget keeps about 3 KB of headroom and does not
+1,036,921 bytes (304 KB estimated transfer). The budget keeps about 3 KB of headroom and does not
 include the lazy metadata editor.

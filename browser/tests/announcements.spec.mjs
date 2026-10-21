@@ -35,37 +35,20 @@ async function listing(page) {
   });
 }
 
-/**
- * Record every text the status region `selector` takes from now on, and how many times a control
- * had taken focus when it last said something.
- */
+/** Record every text the status region `selector` takes from now on. */
 async function record(page, selector = ".listing-announcement") {
   await page.evaluate((selector) => {
     const region = document.querySelector(selector);
     window.__announcements = [];
-    window.__focusMoves = 0;
-    document.addEventListener("focusin", () => window.__focusMoves++, true);
-    new MutationObserver(() => {
-      const text = region.textContent.trim();
-      window.__announcements.push(text);
-      if (text) window.__focusMovesWhenSaid = window.__focusMoves;
-    }).observe(region, { childList: true, characterData: true, subtree: true });
+    new MutationObserver(() => window.__announcements.push(region.textContent.trim())).observe(
+      region,
+      { childList: true, characterData: true, subtree: true },
+    );
   }, selector);
   return () => page.evaluate(() => window.__announcements.filter(Boolean));
 }
 
-/** Whether, two frames on, no control has taken focus since the region last said something. */
-const focusKept = (page) =>
-  page.evaluate(
-    () =>
-      new Promise((done) =>
-        requestAnimationFrame(() =>
-          requestAnimationFrame(() => done(window.__focusMovesWhenSaid === window.__focusMoves)),
-        ),
-      ),
-  );
-
-/** Expect focus back on `control`, which the write disabled, rather than on the page. */
+/** Expect focus on `control`, where the write left it, rather than on the page. */
 const focusOn = (page, control) => expect.poll(() => focusedControl(page)).toBe(control);
 
 test("a search, a filter and a page change announce their results once, without moving focus", async ({
@@ -120,7 +103,7 @@ test("a search, a filter and a page change announce their results once, without 
   ]);
 });
 
-test("Groups says each outcome once, without moving focus, and leaves a failure to its alert", async ({
+test("Groups says each outcome once, leaves focus on a control, and leaves a failure to its alert", async ({
   page,
   api,
 }) => {
@@ -142,14 +125,15 @@ test("Groups says each outcome once, without moving focus, and leaves a failure 
   await expect(toast).not.toHaveAttribute("role");
   await expect(toast).not.toHaveAttribute("aria-live");
   await expect(page.locator("cedar-toast [role=status]")).toHaveCount(0);
-  expect(await focusKept(page)).toBe(true);
+  // The emptied name leaves Create disabled, so focus goes to the name for the next group.
+  await focusOn(page, 'textbox "Group name"');
 
   const sam = page.locator(".groups-member-row").filter({ hasText: "Sam Curator" });
   const bin = sam.getByRole("button", { name: "Remove Sam Curator from the group", exact: true });
   await bin.click();
   await expect(region).toHaveText("Sam Curator removed from the group.");
   await expect(toast).toHaveText("Group members saved.");
-  expect(await focusKept(page)).toBe(true);
+  await focusOn(page, 'button "Remove Alex Researcher from the group"');
 
   const picker = page.getByRole("combobox", { name: "Add a member", exact: true });
   await picker.fill("Sam");
@@ -157,7 +141,7 @@ test("Groups says each outcome once, without moving focus, and leaves a failure 
   const add = page.getByRole("button", { name: "Add member", exact: true });
   await add.click();
   await expect(region).toHaveText("Sam Curator added to the group.");
-  expect(await focusKept(page)).toBe(true);
+  await focusOn(page, 'combobox "Add a member"');
 
   const administrator = sam.getByRole("checkbox", { name: "Sam Curator is a Group Administrator", exact: true });
   await administrator.click();
@@ -194,7 +178,8 @@ test("Groups says each outcome once, without moving focus, and leaves a failure 
   await page.getByRole("button", { name: "Delete group", exact: true }).click();
   await confirmation.getByRole("button", { name: "Yes", exact: true }).click();
   await expect(region).toHaveText("Group deleted.");
-  expect(await focusKept(page)).toBe(true);
+  // The deleted group's details go with it, so focus goes to the tab's first control.
+  await focusOn(page, 'combobox "Group name"');
 
   expect(await announced()).toEqual([
     "Group created.",
@@ -207,7 +192,7 @@ test("Groups says each outcome once, without moving focus, and leaves a failure 
   ]);
 });
 
-test("each description save is said once without moving focus, and a failed one by its alert alone", async ({
+test("each description save is said once, leaves focus on the description, and a failed one is said by its alert alone", async ({
   page,
   api,
 }) => {
@@ -230,13 +215,14 @@ test("each description save is said once without moving focus, and a failed one 
   await expect(toast).toHaveText("Description saved.");
   await expect(toast).not.toHaveAttribute("role");
   await expect(page.locator("cedar-toast [role=status]")).toHaveText("");
-  expect(await focusKept(page)).toBe(true);
+  // Saving removes Save, so focus goes to the description.
+  await focusOn(page, 'textbox "Description"');
   await expect(description).toBeEnabled();
   await description.fill("A second description");
   await save.click();
   await expect(save).toHaveCount(0);
   await expect.poll(announced).toEqual(["Description saved.", "Description saved."]);
-  expect(await focusKept(page)).toBe(true);
+  await focusOn(page, 'textbox "Description"');
 
   api.fail = true;
   await expect(description).toBeEnabled();

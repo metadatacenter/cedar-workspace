@@ -145,32 +145,27 @@ export class DescriptionEditor {
    * Return focus that saving or cancelling took. A save that succeeds, and a cancel, remove Cancel
    * and Save, and reading the description again disables it. Focus goes back to the control that
    * had it when that is still there and enabled, and otherwise to the description, or to Retry when
-   * the description could not be read. Focus moves to the description only from a control the
-   * person reached with the keyboard: a control pressed with a pointer draws no focus outline, and
-   * the description always draws one.
+   * the description could not be read.
    */
-  private refocus(focused: Element | null, keyboard: boolean, state: RevisionCoordinator) {
+  private refocus(focused: Element | null, state: RevisionCoordinator) {
     // Focus that was on the page itself, as a pointer leaves it in some browsers, was not taken.
     if (state !== this.state || !focused || focused === document.body) return;
     const host = this.host.nativeElement;
     returnFocus(
       focused,
-      keyboard
-        ? () =>
-            host.querySelector<HTMLElement>("textarea:not(:disabled)") ??
-            host.querySelector<HTMLElement>("button:not(:disabled)")
-        : null,
+      () =>
+        host.querySelector<HTMLElement>("textarea:not(:disabled)") ??
+        host.querySelector<HTMLElement>("button:not(:disabled)"),
       this.injector,
     );
   }
   async cancel() {
     if (!this.state.active || this.busy()) return;
     const focused = document.activeElement,
-      keyboard = !!focused?.matches(":focus-visible"),
       state = this.state;
     this.draft.set(this.snapshot()?.data["schema:description"] || "");
     await this.load();
-    this.refocus(focused, keyboard, state);
+    this.refocus(focused, state);
   }
   async save() {
     const snapshot = this.snapshot();
@@ -178,7 +173,6 @@ export class DescriptionEditor {
     const operation = this.state.write();
     if (!operation) return;
     const focused = document.activeElement,
-      keyboard = !!focused?.matches(":focus-visible"),
       state = this.state;
     this.busy.set(true);
     this.error.set("");
@@ -209,6 +203,6 @@ export class DescriptionEditor {
     } finally {
       if (operation.current()) this.busy.set(false);
     }
-    this.refocus(focused, keyboard, state);
+    this.refocus(focused, state);
   }
 }

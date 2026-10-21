@@ -423,9 +423,7 @@ export class Groups implements OnInit, OnDestroy {
    * Run the write `action`, then show `message` and say `spoken`. A write disables the page's
    * controls, which takes focus from the one that had it, and can remove that control. Focus goes
    * back to it, and otherwise where `refocus` says, before the first control of the form it was in
-   * or of the open tab. Focus moves to another control only from one the person reached with the
-   * keyboard: a control pressed with a pointer draws no focus outline, and the text field focus
-   * would move to always draws one.
+   * or of the open tab.
    */
   private async write(
     action: (operation: Operation) => Promise<void>,
@@ -439,8 +437,7 @@ export class Groups implements OnInit, OnDestroy {
     const previousReload = this.stale();
     const operation = this.coordinator.write(!needsRevision);
     if (!operation) return;
-    const focused = document.activeElement,
-      keyboard = !!focused?.matches(":focus-visible");
+    const focused = document.activeElement;
     this.busy.set(true);
     this.error.set("");
     this.recoveryGroup.set(null);
@@ -468,11 +465,7 @@ export class Groups implements OnInit, OnDestroy {
         this.busy.set(false);
         // Focus that was on the page itself, as a pointer leaves it in some browsers, was not taken.
         if (focused && focused !== document.body)
-          returnFocus(
-            focused,
-            keyboard ? () => refocus?.() ?? this.firstControl(focused) : null,
-            this.injector,
-          );
+          returnFocus(focused, () => refocus?.() ?? this.firstControl(focused), this.injector);
       }
     }
   }
