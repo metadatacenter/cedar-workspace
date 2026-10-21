@@ -335,7 +335,7 @@ b,
 .destinations .active,
 .account-card dt,
 th {
-  font-weight: var(--cedar-font-weight-medium, 500);
+  font-weight: var(--cedar-font-weight-medium);
 }
 
 th {
@@ -664,7 +664,7 @@ label {
     gap: var(--cedar-space-2);
     padding: var(--cedar-space-2);
   }
-  .brand span {
+  .brand .brand-label {
     display: none;
   }
   // Stacked panels leave no room for fixed regions, so a narrow page scrolls as a whole.

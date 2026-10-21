@@ -1,6 +1,6 @@
 {
   "name": "cedar-workspace",
-  "version": "2.9.26",
+  "version": "2.9.27",
   "publishConfig": {
     "registry": "https://nexus.bmir.stanford.edu/repository/npm-cedar/"
   },
@@ -8,6 +8,7 @@
   "scripts": {
     "start": "node tools/workspace.mjs start",
     "test": "ng test --watch=false && node --test tools/*.test.mjs",
+    "lint": "eslint src",
     "build": "ng build && node tools/stage-workspace.mjs",
     "format": "prettier --write \"src/**/*.{ts,html,scss}\" angular.json tsconfig*.json",
     "build:deployment": "node tools/workspace.mjs build",
@@ -29,9 +30,12 @@
     "@angular/build": "22.2.3",
     "@angular/cli": "22.2.3",
     "@angular/compiler-cli": "22.2.3",
+    "angular-eslint": "^22.6.0",
+    "eslint": "^10.13.0",
     "jsdom": "^30.0.1",
     "prettier": "^3.9.6",
     "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.0",
     "vitest": "^4.0.8"
   },
   "dependencies": {
@@ -43,9 +47,9 @@
     "@angular/platform-browser": "22.2.3",
     "@angular/router": "22.2.3",
     "@ngx-translate/core": "^18.0.0",
-    "@org.metadatacenter/cedar-design-tokens": "0.1.0-dev.20261019.gaae98d73ebd7.t1932",
-    "cedar-embeddable-editor": "2.0.25",
-    "cedar-model-typescript-library": "npm:@org.metadatacenter/cedar-model-typescript-library@1.0.21-dev.20261019.g20e4c8ff49c9.t1932",
+    "@org.metadatacenter/cedar-design-tokens": "0.1.0-dev.20261021.g94a6cf571437.t0711",
+    "cedar-embeddable-editor": "2.0.27",
+    "cedar-model-typescript-library": "npm:@org.metadatacenter/cedar-model-typescript-library@1.0.23-dev.20261021.gaf01a35f5a33.t0711",
     "rxjs": "~7.8.2",
     "selecto": "1.26.3",
     "tslib": "^2.8.1"

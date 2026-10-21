@@ -194,6 +194,11 @@ select.readonly-role:disabled {
   margin: 0;
   padding: 0;
 }
+// The stand-in for a refused checkbox takes the size of the checkbox it holds, so the checkbox
+// stays where it was and the focus ring fits it.
+.owner-refused {
+  display: flex;
+}
 .action-cell {
   flex: 0 0 28px;
 }

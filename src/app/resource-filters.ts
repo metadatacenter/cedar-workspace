@@ -121,9 +121,12 @@ export class ResourceFilters {
     const gap =
       parseFloat(getComputedStyle(popup).getPropertyValue("--cedar-space-2")) ||
       8;
+    // Opened near the bottom of a short window, as at 200% zoom, the room below can be a few pixels.
+    // The popover keeps at least a quarter of the window, reaching past its bottom, and the page
+    // scrolls to the rest rather than the popover hiding its choices.
     popup.style.setProperty(
       "--filter-available-height",
-      `${Math.max(0, window.innerHeight - popup.getBoundingClientRect().top - gap)}px`,
+      `${Math.max(window.innerHeight / 4, window.innerHeight - popup.getBoundingClientRect().top - gap)}px`,
     );
   }
   close(restore = true) {
@@ -177,6 +180,13 @@ export class ResourceFilters {
     );
   }
   clear(kind?: "type" | "date") {
+    // Clearing removes the button pressed, so focus goes to the chip of the filter it cleared, or
+    // to the first chip when it cleared them all.
+    const host = this.host.nativeElement;
+    if (host.contains(document.activeElement))
+      host
+        .querySelectorAll<HTMLElement>("cedar-filter-chip button:not(.clear)")
+        [kind === "date" ? 1 : 0]?.focus();
     this.change.emit(
       kind === "type"
         ? { ...this.value(), types: [] }

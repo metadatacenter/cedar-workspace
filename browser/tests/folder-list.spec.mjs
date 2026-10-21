@@ -174,7 +174,7 @@ test('folder list fits a narrow dialog and remains accessible', async ({page, ap
   expect(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
   expect(await dialog.locator('.folder-scroll').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
   await page.mouse.move(0, 0);
-  const result = await new AxeBuilder({page}).include('cedar-resource-dialog').withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze();
+  const result = await new AxeBuilder({page}).include('cedar-resource-dialog').withTags(['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']).analyze();
   expect(result.violations).toEqual([]);
   if (process.env.WORKSPACE_VISUAL) await expect(dialog).toHaveScreenshot('folder-copy-narrow.png');
 });
@@ -207,7 +207,7 @@ for (const width of [1440, 375]) {
     await expect(dialog.getByRole('button', {name:'Save', exact:true})).toBeEnabled();
     await page.mouse.move(0, 0);
     if (process.env.WORKSPACE_VISUAL) await expect(dialog).toHaveScreenshot(`folder-copy-empty-${width}.png`);
-    expect((await new AxeBuilder({page}).include('cedar-resource-dialog').withTags(['wcag2a','wcag2aa','wcag21aa','wcag22aa']).analyze()).violations).toEqual([]);
+    expect((await new AxeBuilder({page}).include('cedar-resource-dialog').withTags(['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']).analyze()).violations).toEqual([]);
   });
 }
 

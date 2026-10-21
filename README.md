@@ -101,6 +101,7 @@ cd "$CEDAR_HOME/cedar-workspace"
 npm ci
 npm run build
 npm test
+npm run lint
 ```
 
 Gulp finishes configuration, CEE staging and the Angular build before starting the
@@ -124,7 +125,9 @@ restricted to the same-origin workspace. The former AngularJS controllers, servi
 `npm test` covers the modern Angular components, navigation, permission decisions,
 REST authentication and conditional writes, plus the retained plain-JavaScript Keycloak
 adapter. Node checks also verify generated deployment configuration, atomic asset
-staging and the npm package contents. With the native stack running and profile sourced, run
+staging and the npm package contents. `npm run lint` checks every component template,
+inline ones included, against angular-eslint's recommended and accessibility rules, and
+CI runs it too. With the native stack running and profile sourced, run
 `npm run smoke:workspace:modern:full` in `cedar-development/ops/e2e` for the modern
 Workspace journey, CED host conflict/versioning scenarios, all four account pages,
 and logout/retired-route checks.
@@ -342,6 +345,8 @@ updates the form; Save uses the reviewed ETag and can still be refused if anothe
 author writes again. A changed template or unfinished raw input keeps the original
 draft and requires correction or a recovery-file download before proceeding.
 
-The production initial-bundle budget is 1.03 MB. Exact JSON transport and draft preservation
-add the shared scalar policy bundle; the measured total is 1.022 MB (301 KB estimated transfer).
-The budget keeps about 8 KB of headroom and does not include the lazy metadata editor.
+The production initial-bundle budget is 1.04 MB. Exact JSON transport and draft preservation
+add the shared scalar policy bundle. On 2026-10-20, refused controls that keep focus and the
+help that explains them took the measured total past the former 1.03 MB, and the status regions
+of Groups and the description editor took it to 1,031,766 bytes (303 KB estimated transfer). The
+budget keeps about 8 KB of headroom and does not include the lazy metadata editor.

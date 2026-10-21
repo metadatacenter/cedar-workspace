@@ -60,6 +60,8 @@ import { FolderDeletionDialog } from "./folder-deletion-dialog";
 import { ResourceDialog } from "./resource-dialog";
 import { PermissionsDialog } from "./permissions-dialog";
 import { I18n } from "./i18n";
+import { PageTitles } from "./page-title";
+import { ServerLanguage, serverLanguage } from "./server-text";
 export interface Action {
   id: string;
   label: string;
@@ -183,6 +185,7 @@ type InfoTab = "info" | "version";
     PermissionsDialog,
     Icon,
     TranslatePipe,
+    ServerLanguage,
   ],
   templateUrl: "./workspace.html",
 })
@@ -196,6 +199,7 @@ export class Workspace {
   private destroy = inject(DestroyRef);
   private host: ElementRef<HTMLElement> = inject(ElementRef);
   private injector = inject(Injector);
+  private titles = inject(PageTitles);
   readonly title = (r: Resource) => title(r, this.i18n.t("Common.Untitled"));
   readonly can = can;
   readonly offeredInOpenView = offeredInOpenView;
@@ -219,6 +223,11 @@ export class Workspace {
     const role = r.currentUserPermissions?.role;
     return role ? this.i18n.known("Roles." + role, role) : "—";
   }
+  /** The servers' language, for a role Workspace does not know and so shows as the server states it. */
+  roleLanguage(r: Resource) {
+    const role = r.currentUserPermissions?.role;
+    return role && !this.i18n.known("Roles." + role, "") ? serverLanguage : null;
+  }
   /** A version's publication status, translated when Workspace knows it. */
   status(v: Resource) {
     return statusText(v, this.i18n);
@@ -229,6 +238,15 @@ export class Workspace {
   readonly refreshing = signal(false);
   readonly error = signal("");
   readonly notice = signal("");
+  /** A notice that a status region of its own already says, so the toast that shows it is silent. */
+  readonly saidNotice = signal("");
+  /**
+   * What the listing's live region says when a change of address brings another listing, as a
+   * search, a filter, a sort, a page or a folder does: the count the footer shows, or that nothing
+   * was found. The listing the page opens on goes unsaid, since the page itself says as much. So
+   * does a reload after an action or a refresh, each of which reports its own outcome.
+   */
+  readonly announcement = signal("");
   readonly rows = signal<Resource[]>([]);
   readonly path = signal<Resource[]>([]);
   readonly currentFolder = signal<Resource | undefined>(undefined);
@@ -324,6 +342,7 @@ export class Workspace {
       document.body.classList.remove("explorer-dragging", "explorer-can-drop");
       this.state.dispose();
       this.reports.dispose();
+      this.titles.name(null);
     });
   }
   async start() {
@@ -346,6 +365,7 @@ export class Workspace {
           }
           const listingKey = this.params.toString();
           if (listingKey === this.listingKey && !selected) return;
+          const announce = this.listingKey !== null && listingKey !== this.listingKey;
           this.listingKey = listingKey;
           this.search = map.get("search") || "";
           this.folder = resourceIri(map.get("folderId") || this.api.profile.homeFolderId, this.api.profile.homeFolderId);
@@ -366,7 +386,7 @@ export class Workspace {
               ? Math.floor(offset / 50) * 50
               : 0,
           );
-          void this.load();
+          void this.load(false, announce);
         });
     } catch (e) {
       this.fail(e);
@@ -375,7 +395,14 @@ export class Workspace {
   fail(e: unknown) {
     this.error.set(e instanceof Error ? e.message : String(e));
   }
-  async load(refresh = false) {
+  /** The control focus came from to the error's dismiss button, which gets it back on dismissal. */
+  errorOrigin: EventTarget | null = null;
+  dismissError() {
+    this.error.set("");
+    if (this.errorOrigin instanceof HTMLElement && this.errorOrigin.isConnected) this.errorOrigin.focus();
+    this.errorOrigin = null;
+  }
+  async load(refresh = false, announce = false) {
     if (!this.state.active) return;
     if (!refresh) this.pendingMoveSelection = [];
     this.listingGeneration++;
@@ -384,8 +411,10 @@ export class Workspace {
     clearTimeout(this.movedTimer);
     this.movedTarget.set("");
     const operation = this.state.begin("listing", ["folder", "detail", "instances", "menu", "enrichment"]);
+    const focused = document.activeElement;
     this.loading.set(true);
     this.refreshing.set(refresh);
+    this.announcement.set("");
     this.error.set("");
     this.selected.set(undefined);
     this.selectionIds.set([]);
@@ -396,6 +425,7 @@ export class Workspace {
     if (!refresh) {
       this.path.set([]);
     }
+    this.titles.name(this.pageName());
     this.menu.set(null);
     try {
       const { data } = await this.api.request<Listing>(
@@ -410,7 +440,10 @@ export class Workspace {
       if (!validListing(data)) throw new Error(this.i18n.t("Errors.InvalidListing"));
       this.rows.set(data.resources);
       this.total.set(data.totalCount);
+      if (announce)
+        this.announcement.set(data.resources.length ? this.displaying() : this.i18n.t("Dashboard.NoItems"));
       this.path.set(data.pathInfo || []);
+      this.titles.name(this.pageName());
       void this.loadFolder();
       // Listings omit lifecycle actions. Enrich template links without blocking the table.
       void this.loadTemplateActions(data.resources);
@@ -436,8 +469,70 @@ export class Workspace {
       if (operation.current()) {
         this.loading.set(false);
         this.refreshing.set(false);
+        this.restoreFocus(focused);
       }
     }
+  }
+  /**
+   * Where focus goes when drawing the next listing loses it, if not back to the control that had it
+   * when the listing began loading.
+   */
+  private refocus: (() => HTMLElement | null | undefined) | null = null;
+  /**
+   * Return focus that loading and drawing a listing took from the page. Loading disables Refresh and
+   * the page buttons, which takes focus from the one pressed, and a new listing can remove the row
+   * that had it. Focus goes back to the control that had it when that is still there and enabled,
+   * and otherwise where `refocus` says. Focus the person has since moved stays where they put it.
+   */
+  private restoreFocus(focused: Element | null) {
+    const fallback = this.refocus;
+    this.refocus = null;
+    afterNextRender(
+      () => {
+        // A focused control the listing left disabled keeps focus until the browser next draws the
+        // page, and loses it then. This can run first, so such a control counts as having lost it.
+        const active = document.activeElement;
+        if (active && active !== document.body && !active.matches(":disabled")) return;
+        const before =
+          focused instanceof HTMLElement && focused !== document.body && focused.isConnected && !focused.matches(":disabled")
+            ? focused
+            : null;
+        (before ?? fallback?.())?.focus();
+      },
+      { injector: this.injector },
+    );
+  }
+  /**
+   * After an action on `resources` that can remove their rows, focus lost with them goes to the row
+   * now in the place of the first, to the last row when none follows, and to Refresh when no row is
+   * left.
+   */
+  private refocusInPlaceOf(resources: Resource[]) {
+    const ids = resources.map((r) => r["@id"]);
+    const index = this.rows().findIndex((r) => ids.includes(r["@id"]));
+    if (index < 0) return;
+    this.refocus = () => {
+      const rows = this.host.nativeElement.querySelectorAll<HTMLElement>(".explorer-item");
+      return rows[Math.min(index, rows.length - 1)] ?? this.host.nativeElement.querySelector<HTMLElement>(".table-toolbar > button");
+    };
+  }
+  /**
+   * The name the page title gives this listing, which is what the breadcrumb shows: the search,
+   * the shared or community view, or the folder it marks as current. The home folder is Home, as
+   * the navigation calls it. Another folder's name arrives with its listing, and until then the
+   * page has no name of its own.
+   */
+  private pageName(): string | null {
+    const t = this.i18n.t.bind(this.i18n);
+    if (this.params.has("search"))
+      return t("Dashboard.SearchResults", { query: this.params.get("search") });
+    if (this.params.has("sharing"))
+      return t(this.params.get("sharing") === "shared-with-me" ? "Dashboard.SharedWithMe" : "Dashboard.SharedWithEveryone");
+    if (this.params.has("viewMode")) return t("Dashboard.CommunityFolders");
+    if (this.folder === this.api.profile.homeFolderId) return t("Common.Home");
+    const folder = this.path().at(-1);
+    if (!folder) return null;
+    return this.title(folder) === "/" ? t("Common.All") : this.title(folder);
   }
   /**
    * Select again the artifact an editor was opened on, once the listing holds it.
@@ -911,7 +1006,9 @@ export class Workspace {
     if (!this.state.active) return;
     this.reports.begin(resource["@id"]);
     this.publishReport(resource, resource);
-    this.notice.set(this.i18n.t("Dashboard.DescriptionSaved"));
+    // The description editor says this outcome in its own status region.
+    this.saidNotice.set(this.i18n.t("Dashboard.DescriptionSaved"));
+    this.notice.set(this.saidNotice());
   }
   private checkReport(expected: Resource, data: unknown) {
     if (!validResourceReport(data, expected)) throw new Error(this.i18n.t("Errors.InvalidResourceReport"));
@@ -936,10 +1033,23 @@ export class Workspace {
     });
   }
   page(delta: number) {
+    // A page button still disabled once the page is drawn, as Next is on the last page, hands focus
+    // to the other one.
+    this.refocus = () =>
+      [...this.host.nativeElement.querySelectorAll<HTMLButtonElement>(".paging button")].find((button) => !button.disabled);
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParamsHandling: "merge",
       queryParams: { offset: Math.max(0, this.offset() + delta * 50) },
+    });
+  }
+  /** Which rows the page shows, as "Displaying 1–50 of 120". */
+  displaying() {
+    const shown = this.rows().length;
+    return this.i18n.t("Dashboard.Displaying", {
+      first: shown ? this.offset() + 1 : 0,
+      last: shown ? this.offset() + shown : 0,
+      total: this.total(),
     });
   }
   /** " · 0.0.1 · Published" after an artifact's name, from what the report says of it. */
@@ -1063,10 +1173,18 @@ export class Workspace {
   }
   permissionsClosed(message?: string) {
     if (message) this.notice.set(message);
+    const resource = this.dialog()?.resource;
+    if (resource) this.refocusInPlaceOf([resource]);
     this.dialog.set(null);
     void this.load();
   }
-  saved() {
+  /**
+   * Close a dialog whose action succeeded and reload the listing. The action concerned `resources`
+   * when the selection bin deleted them, and the dialog's resource otherwise.
+   */
+  saved(resources?: Resource[]) {
+    const resource = this.dialog()?.resource;
+    this.refocusInPlaceOf(resources ?? (resource ? [resource] : []));
     this.dialog.set(null);
     this.notice.set(this.i18n.t("Common.Saved"));
     void this.load();

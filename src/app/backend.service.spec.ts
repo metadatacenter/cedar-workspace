@@ -2,6 +2,7 @@ import { TestBed } from "@angular/core/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Backend } from "./backend.service";
 import { Config } from "./resource";
+import { ServerText } from "./server-text";
 import { uncertainWrite } from "./write-failure";
 const config = {
   resourceRestAPI: "https://resource.example",
@@ -93,6 +94,17 @@ describe("Authorized backend", () => {
       "Untrusted",
     );
     expect(fetcher).not.toHaveBeenCalled();
+  });
+  it("notes a server's own message, which it writes in English, and not a message of Workspace's", async () => {
+    const serverText = TestBed.inject(ServerText);
+    fetcher.mockResolvedValue(
+      new Response(JSON.stringify({ message: "Neo4j is unavailable" }), { status: 503 }),
+    );
+    await expect(api.request("/folders/id")).rejects.toThrow("Neo4j is unavailable");
+    expect(serverText.wrote("Neo4j is unavailable")).toBe(true);
+    fetcher.mockResolvedValue(new Response("", { status: 503 }));
+    await expect(api.request("/folders/id")).rejects.toThrow("Request failed (503).");
+    expect(serverText.wrote("Request failed (503).")).toBe(false);
   });
   it("preserves the error key for feature-specific localisation", async () => {
     fetcher.mockResolvedValue(

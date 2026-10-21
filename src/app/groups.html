@@ -1,9 +1,10 @@
 <header class="topbar">
+  <!-- Named by its hidden text, which contains the visible label, so speech input reaches it by that label. -->
   <a
     href="/dashboard"
     class="brand"
-    [attr.aria-label]="'Header.Brand' | translate"
-    ><img src="/img/cedar-mark.png" alt="" /><span class="brand-label"
+    ><img src="/img/cedar-mark.png" alt="" /><span class="sr-only">{{ 'Header.Brand' | translate }}</span
+    ><span class="brand-label" aria-hidden="true"
       >{{'Common.Workspace' | translate}}<small class="brand-version"
         >{{ cedarVersion }}</small
       ></span
@@ -85,7 +86,7 @@
     </header>
     @if(error()) {
     <div class="alert" role="alert">
-      {{error()}} @if(recoveryGroup(); as group) {
+      <span [attr.lang]="error() | serverLanguage">{{error()}}</span> @if(recoveryGroup(); as group) {
       <button (click)="select(group)" [disabled]="busy() || selecting()">
         {{'Groups.Reload' | translate}}
       </button>
@@ -94,8 +95,11 @@
       }
     </div>
     } @if(notice()) {
-    <cedar-toast [message]="notice()" />
-    } @if(loading() || selecting()) {
+    <!-- The status region beside it says each outcome, so the toast only shows it. -->
+    <cedar-toast [message]="notice()" [live]="false" />
+    }
+    <span class="sr-only groups-announcement" role="status" aria-live="polite" aria-atomic="true">{{ announcement() }}</span>
+    @if(loading() || selecting()) {
     <p role="status">{{'Common.Loading' | translate}}</p>
     } @if(ready()) {
     <div
@@ -349,7 +353,7 @@
         <div class="groups-member-list-header">
           <span>{{'Groups.Administrator' | translate}}</span>
         </div>
-        } @for(m of members(); track m.user['@id']) {
+        } @for(m of members(); track m.user['@id']; let i = $index) {
         <div
           class="groups-member-row"
           role="listitem"
@@ -361,28 +365,55 @@
           <div class="groups-member-summary">
             <div class="groups-member-name">{{userName(m.user)}}</div>
           </div>
+          @if(onlyAdmin(m)) {
           <label
             class="groups-admin-control"
-            [cedarTooltip]="onlyAdmin(m) ? ('Groups.LastAdministrator' | translate) : ''"
+            [cedarTooltip]="'Groups.LastAdministrator' | translate"
           >
+            <!-- A disabled checkbox cannot take focus, so its help would need a pointer. This
+                 checkbox stands in for it and is drawn by the disabled one it holds. -->
+            <span
+              class="groups-admin-refused"
+              role="checkbox"
+              tabindex="0"
+              aria-checked="true"
+              aria-disabled="true"
+              [attr.aria-label]="'Groups.IsAdministrator' | translate: {name: userName(m.user)}"
+              [attr.aria-describedby]="'group-member-' + i + '-admin-help'"
+              (keydown.space)="$event.preventDefault()"
+              ><input
+                spellcheck="false"
+                type="checkbox"
+                checked
+                disabled
+                tabindex="-1"
+                aria-hidden="true"
+            /></span>
+          </label>
+          } @else {
+          <label class="groups-admin-control">
             <input
               spellcheck="false"
               type="checkbox"
               [checked]="m.administrator"
               (click)="$event.preventDefault(); toggleAdmin(m)"
-              [disabled]="!canAdmin || busy() || stale() || onlyAdmin(m)"
+              [disabled]="!canAdmin || busy() || stale()"
               [attr.aria-label]="'Groups.IsAdministrator' | translate: {name: userName(m.user)}"
             />
           </label>
+          }
           <span
             class="groups-remove-member-wrapper"
             [cedarTooltip]="onlyAdmin(m) ? ('Groups.AssignAnother' | translate) : ''"
           >
             @if(canAdmin) {
+            <!-- The last administrator's bin refuses rather than being disabled, so focus reaches its help. -->
             <button
               type="button"
               class="btn groups-remove-member"
-              [disabled]="busy() || stale() || onlyAdmin(m)"
+              [disabled]="busy() || stale()"
+              [attr.aria-disabled]="onlyAdmin(m) ? 'true' : null"
+              [attr.aria-describedby]="onlyAdmin(m) ? 'group-member-' + i + '-remove-help' : null"
               (click)="removeMember(m)"
               [attr.aria-label]="'Groups.RemoveMember' | translate: {name: userName(m.user)}"
             >
@@ -390,6 +421,13 @@
             </button>
             }
           </span>
+          @if(onlyAdmin(m)) {
+          <span hidden [id]="'group-member-' + i + '-admin-help'"
+            >{{'Groups.LastAdministrator' | translate}}</span
+          ><span hidden [id]="'group-member-' + i + '-remove-help'"
+            >{{'Groups.AssignAnother' | translate}}</span
+          >
+          }
         </div>
         } @empty { @if(restricted()) {
         <div class="groups-empty-members">

@@ -28,6 +28,7 @@ import { DialogKeyboard } from "./dialog-keyboard";
 import { Icon } from "./icon";
 import { I18n } from "./i18n";
 import { Resource, ResourceType, title } from "./resource";
+import { ServerLanguage } from "./server-text";
 export interface DeletionItem {
   id: string | null;
   name: string | null;
@@ -59,7 +60,7 @@ export interface DeletionOutcome {
 @Component({
   selector: "cedar-folder-deletion-dialog",
   host: { class: "resource-list" },
-  imports: [Tooltip, DialogKeyboard, Icon, TranslatePipe],
+  imports: [Tooltip, DialogKeyboard, Icon, TranslatePipe, ServerLanguage],
   templateUrl: "./folder-deletion-dialog.html",
   styles: [
     `

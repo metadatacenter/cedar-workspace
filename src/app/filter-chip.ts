@@ -3,6 +3,10 @@ import { Component, input, output } from "@angular/core";
 import { TranslatePipe } from "@ngx-translate/core";
 import { Icon } from "./icon";
 
+/**
+ * A filter's chip. An inactive chip shows the filter's name and is named by it. An active chip
+ * shows the filter's choice, and its name begins with that choice and goes on to name the filter.
+ */
 @Component({
   selector: "cedar-filter-chip",
   imports: [Tooltip, Icon, TranslatePipe],
@@ -12,9 +16,13 @@ import { Icon } from "./icon";
       (click)="toggle.emit()"
       aria-haspopup="dialog"
       [attr.aria-expanded]="expanded()"
-      [attr.aria-label]="label()"
-      [attr.aria-description]="active() ? text() : null"
-      [attr.aria-controls]="controls()"
+      [attr.aria-label]="
+        active()
+          ? ('Filters.ActiveChip'
+            | translate: { choice: text(), filter: label().toLowerCase() })
+          : label()
+      "
+      [attr.aria-controls]="expanded() ? controls() : null"
     >
       {{ text() }} <cedar-icon name="chevron-down" size="small" />
     </button>

@@ -2,8 +2,9 @@ import { Toast } from "./toast";
 import { WorkspaceReturn } from "./workspace-return";
 import { Component, Input } from "@angular/core";
 import { TranslatePipe } from "@ngx-translate/core";
+import { ServerLanguage } from "./server-text";
 @Component({
-  imports: [Toast, WorkspaceReturn, TranslatePipe],
+  imports: [Toast, WorkspaceReturn, TranslatePipe, ServerLanguage],
   selector: "cedar-account-shell",
   template: ` <header class="account-header">
       <cedar-workspace-return />
@@ -11,7 +12,7 @@ import { TranslatePipe } from "@ngx-translate/core";
     </header>
     <main class="account-content">
       @if (error) {
-        <p class="alert" role="alert">{{ error }}</p>
+        <p class="alert" role="alert" [attr.lang]="error | serverLanguage">{{ error }}</p>
       }
       @if (notice) {
         <cedar-toast [message]="notice" />

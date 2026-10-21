@@ -114,6 +114,7 @@
   "Filters": {
     "Region": "Erőforrásszűrők",
     "ClearFilter": "Szűrő törlése: {{name}}",
+    "ActiveChip": "{{choice}} (szűrő: {{filter}})",
     "ClearFilters": "Szűrők törlése",
     "ByType": "Szűrés típus szerint",
     "ByLastModified": "Szűrés utolsó módosítás szerint",
@@ -404,6 +405,10 @@
     "DetailsSaved": "A csoport adatai mentve.",
     "Deleted": "Csoport törölve.",
     "MembersSaved": "A csoport tagjai mentve.",
+    "MemberAdded": "{{name}} hozzáadva a csoporthoz.",
+    "MemberRemoved": "{{name}} eltávolítva a csoportból.",
+    "AdministratorAdded": "{{name}} mostantól csoportadminisztrátor.",
+    "AdministratorRemoved": "{{name}} már nem csoportadminisztrátor.",
     "InvalidResponse": "A szerver hiányos vagy nem egyértelmű csoportadatokat küldött. Módosítás előtt töltse be újra az adatokat.",
     "ReloadDirectory": "Csoportok újratöltése"
   },
@@ -575,6 +580,7 @@
     "DragToFolder": "Húzd egy mappára vagy a kuka ikonra",
     "MoveTo": "Áthelyezés ide: {{name}}",
     "Selected": "{{count}} kijelölve",
+    "RowSelected": "Kijelölve",
     "Clear": "Kijelölés törlése",
     "Cut": "Kivágás",
     "View": "Találatok nézete",

@@ -480,3 +480,42 @@ test("first instance copy help escapes the scrolling list and dismisses on scrol
   await page.keyboard.press('Escape');
   await expect(help).toHaveCount(0);
 });
+
+test("the panel's icon links are described by the artifact they open", async ({ page, api }) => {
+  const home = { "@id": "home", resourceType: "folder", "schema:name": "My workspace" };
+  const template = { ...resource, isOpen: true, pathInfo: [home, resource] };
+  const folder = {
+    ...resource,
+    "@id": "reports",
+    resourceType: "folder",
+    "schema:name": "Reports",
+    pathInfo: [home],
+  };
+  await page.route("**/api/resource/folders/home/contents?**", (route) =>
+    route.fulfill({ json: { resources: [folder, template], totalCount: 2, pathInfo: [home] } }),
+  );
+  await page.route("**/templates/template/report", (route) => route.fulfill({ json: template }));
+  await page.route("**/folders/reports", (route) => route.fulfill({ json: folder }));
+  await page.goto("/dashboard?view=list");
+  const info = page.getByRole("complementary", { name: "Resource information" });
+  const tip = page.getByRole("tooltip");
+  for (const [type, artifact, links] of [
+    ["Template", "Study metadata", ["Open location", "Open in OpenView"]],
+    ["Folder", "Reports", ["Open location", "Open folder"]],
+  ]) {
+    await page.getByRole("row", { name: new RegExp(`^${type} ${artifact} `) }).locator("td").nth(1).click();
+    await expect(info.getByRole("heading")).toHaveText(artifact);
+    for (const name of links) {
+      // The name stays the text the link's help shows; the description names the artifact.
+      const link = info.getByRole("link", { name, exact: true });
+      await expect(link).toHaveAccessibleName(name);
+      await expect(link).toHaveAccessibleDescription(artifact);
+      await link.hover();
+      await expect(tip).toHaveText(name);
+      await expect(link).toHaveAccessibleDescription(`${artifact} ${name}`);
+      await page.mouse.move(0, 0);
+      await expect(tip).toHaveCount(0);
+      await expect(link).toHaveAccessibleDescription(artifact);
+    }
+  }
+});

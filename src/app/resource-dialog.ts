@@ -56,6 +56,7 @@ import {
   openThroughText,
 } from "./resource";
 import { I18n } from "./i18n";
+import { ServerLanguage } from "./server-text";
 @Component({
   selector: "cedar-resource-dialog",
   imports: [
@@ -66,6 +67,7 @@ import { I18n } from "./i18n";
     VersionPicker,
     FormsModule,
     TranslatePipe,
+    ServerLanguage,
   ],
   templateUrl: "./resource-dialog.html",
 })

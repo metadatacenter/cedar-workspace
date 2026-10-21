@@ -4,6 +4,7 @@ import { resourcePathId } from "./resource-address";
 import type { UserProfile } from "./account-types";
 import { Injectable, inject } from "@angular/core";
 import { I18n } from "./i18n";
+import { ServerText } from "./server-text";
 import { Config, Resource, collections } from "./resource";
 import { useDeploymentApi } from "./resource-address";
 interface Auth {
@@ -67,6 +68,7 @@ export class Backend {
   config!: Config;
   profile!: UserProfile;
   private readonly i18n = inject(I18n);
+  private readonly serverText = inject(ServerText);
   get userId() {
     return this.auth.getParsedToken().sub;
   }
@@ -218,6 +220,9 @@ export class Backend {
             objects,
           );
         }
+        // The server's own words are shown as it wrote them, and marked as its language wherever
+        // they appear.
+        if (message) this.serverText.record(message);
         throw new HttpError(
           response.status,
           message ||

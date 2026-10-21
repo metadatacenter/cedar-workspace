@@ -138,7 +138,7 @@ body.explorer-dragging.explorer-can-drop * {
 }
 .explorer-grid .explorer-schema .explorer-name {
   line-height: var(--cedar-control-line-height-authoring);
-  max-height: 36px;
+  max-height: calc(2 * var(--cedar-control-line-height-authoring));
 }
 .explorer-grid .explorer-schema td:nth-child(2) {
   line-height: spacing.$card-meta-line-height;

@@ -85,7 +85,7 @@ for (const { type, tab, view, exit, listed } of cases) {
     await page.goto(view === "list" ? "/dashboard?view=list" : "/dashboard");
     const item = page.locator(`[data-resource-id="${fixture.current["@id"]}"]`);
     await item.locator(".resource-icon").click();
-    await expect(item).toHaveAttribute("aria-selected", "true");
+    await expect(item).toHaveAccessibleDescription("Selected");
     const info = page.locator(".information");
     await info.getByRole("tab", { name: tab, exact: true }).click();
     await expect(info.getByRole("tab", { name: tab, exact: true })).toHaveAttribute("aria-selected", "true");
@@ -99,7 +99,7 @@ for (const { type, tab, view, exit, listed } of cases) {
     // The selection is the opened artifact when the folder holds it, and otherwise the one whose
     // panel led there. A versioned artifact returns on the tab it was left on.
     const expected = listed ? opened : fixture.current;
-    await expect(page.locator(`[data-resource-id="${expected["@id"]}"]`)).toHaveAttribute("aria-selected", "true");
+    await expect(page.locator(`[data-resource-id="${expected["@id"]}"]`)).toHaveAccessibleDescription("Selected");
     await expect(info.locator("h1")).toContainText(expected["schema:name"]);
     const shown = TYPES[type].versioned ? tab : "Details";
     await expect(info.getByRole("tab", { name: shown, exact: true })).toHaveAttribute("aria-selected", "true");

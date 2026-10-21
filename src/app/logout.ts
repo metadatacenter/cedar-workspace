@@ -2,15 +2,16 @@ import { Component, inject, OnInit, signal } from "@angular/core";
 import { TranslatePipe } from "@ngx-translate/core";
 import { Backend } from "./backend.service";
 import { I18n } from "./i18n";
+import { ServerLanguage } from "./server-text";
 @Component({
   selector: "cedar-logout-page",
-  imports: [TranslatePipe],
+  imports: [TranslatePipe, ServerLanguage],
   template: `<header class="account-header">
       <h1>{{ "Logout.Title" | translate }}</h1>
     </header>
     <main class="account-content">
       @if (error()) {
-        <p role="alert">{{ error() }}</p>
+        <p role="alert" [attr.lang]="error() | serverLanguage">{{ error() }}</p>
         <a href="/logout">{{ "Logout.Retry" | translate }}</a>
       } @else {
         <p role="status">{{ "Logout.SigningOut" | translate }}</p>

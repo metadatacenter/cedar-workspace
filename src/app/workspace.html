@@ -11,12 +11,13 @@
   >
     <cedar-icon name="panel-left" />
   </button>
+  <!-- Named by its hidden text, which repeats the visible label and stays when a narrow layout hides it. -->
   <a
     routerLink="/dashboard"
     [queryParams]="navigationQuery()"
     class="brand"
-    [attr.aria-label]="'Header.Brand' | translate"
-    ><img src="/img/cedar-mark.png" alt="" /><span class="brand-label"
+    ><img src="/img/cedar-mark.png" alt="" /><span class="sr-only">{{ 'Header.Brand' | translate }}</span
+    ><span class="brand-label" aria-hidden="true"
       >{{'Header.Brand' | translate}}<small class="brand-version"
         >{{ cedarVersion }}</small
       ></span
@@ -118,9 +119,10 @@
 </header>
 @if(error()){
 <div class="alert" role="alert">
-  {{error()}}
+  <span [attr.lang]="error() | serverLanguage">{{error()}}</span>
   <button
-    (click)="error.set('')"
+    (focus)="errorOrigin = $event.relatedTarget"
+    (click)="dismissError()"
     [attr.aria-label]="'Dashboard.DismissError' | translate"
     [cedarTooltip]="'Dashboard.DismissError' | translate"
   >
@@ -128,7 +130,7 @@
   </button>
 </div>
 } @if(notice()){
-<cedar-toast [message]="notice()" />
+<cedar-toast [message]="notice()" [live]="notice() !== saidNotice()" />
 } @if(!ready()){
 <p class="loading" role="status">{{'Dashboard.Connecting' | translate}}</p>
 } @else {
@@ -208,6 +210,7 @@
     </nav>
     }
   </aside>
+  <!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus -- The listing's cut and paste shortcuts reach main from the controls inside it, and main itself takes no input. -->
   <main (keydown)="explorerKeys($event)">
     @if(grid()){
     <h1 class="sr-only">{{'Common.Workspace' | translate}}</h1>
@@ -354,12 +357,12 @@
           </tr>
         </thead>
         <tbody>
-          @for(r of rows();track r['@id']){
+          @for(r of rows();track r['@id'];let row=$index){
           <tr
             class="explorer-item"
             [class.explorer-schema]="['template','element','field'].includes(r.resourceType)"
             [class.selected]="selectionIds().includes(r['@id'])"
-            [attr.aria-selected]="selectionIds().includes(r['@id'])"
+            [attr.aria-describedby]="selectionIds().includes(r['@id']) ? 'explorer-row-selected' : null"
             [attr.data-resource-id]="r['@id']"
             [attr.data-drop-id]="r.resourceType==='folder'?r['@id']:null"
             [class.explorer-drop-target]="dropTarget()===r['@id']"
@@ -397,6 +400,8 @@
                     >{{r['pav:version'] || ('Dashboard.Unversioned' |
                     translate)}}</span
                   >
+                  <!-- The hidden space keeps the version and status apart when the dot is not read. -->
+                  <span class="sr-only">&ngsp;</span>
                   <span aria-hidden="true"> · </span>
                   <span
                     class="explorer-status"
@@ -406,10 +411,15 @@
                 </span>
                 }
               </span>
-              @if(grid()){<span class="explorer-name" [cedarTooltip]="title(r)"
+              <!-- The list view shows the type only as an icon, and the icon's help needs a pointer. -->
+              @if(!grid()){<span class="sr-only"
+                >{{'ResourceTypes.' + r.resourceType | translate}}</span
+              >}
+              @if(grid()){<span class="explorer-name" [id]="'resource-name-' + row" [cedarTooltip]="title(r)"
                 >{{title(r)}}</span
               >} @else if(r.resourceType==='folder') {
               <a
+                [id]="'resource-name-' + row"
                 routerLink="/dashboard"
                 [queryParams]="navigationQuery({folderId:r['@id']})"
                 (click)="$event.stopPropagation()"
@@ -417,6 +427,7 @@
               >
               } @else {
               <a
+                [id]="'resource-name-' + row"
                 [cedarTooltip]="title(r)"
                 [href]="link(r)"
                 (click)="$event.stopPropagation()"
@@ -460,6 +471,9 @@
             <td>
               @if(versioned(r)){
               {{r['pav:version'] || ('Dashboard.Unversioned' | translate)}}<span
+                class="sr-only"
+                >&ngsp;</span
+              ><span
                 aria-hidden="true"
               > · </span
               >{{status(r)}}
@@ -467,17 +481,20 @@
             </td>
             }
             <td class="row-actions" (click)="$event.stopPropagation()">
+              <!-- Every row's icon links have the same names, so the row's name describes each. -->
               @if(offeredInOpenView(r)){<a
                 [href]="openView(r)"
                 target="_blank"
                 rel="noopener"
                 [attr.aria-label]="'Dashboard.OpenInOpenView' | translate"
+                [attr.aria-describedby]="'resource-name-' + row"
                 [cedarTooltip]="'Dashboard.OpenInOpenView' | translate"
                 ><cedar-icon name="external" /></a
               >} @if(r.resourceType==='template'&&can(r,'populate')){<a
                 class="explorer-populate"
                 [href]="link(r,true)"
                 [attr.aria-label]="'Dashboard.PopulateTemplate' | translate"
+                [attr.aria-describedby]="'resource-name-' + row"
                 [cedarTooltip]="'Dashboard.PopulateTemplate' | translate"
                 ><cedar-icon name="populate" /></a
               >} @if(!grid() && r.resourceType !== 'folder'){
@@ -496,6 +513,7 @@
               <button
                 (click)="toggleMenu(r, $event)"
                 [attr.aria-expanded]="menu()===r['@id']"
+                [attr.aria-controls]="menu()===r['@id'] ? 'resource-menu' : null"
                 [cedarTooltip]="'Dashboard.Actions' | translate"
                 [attr.aria-label]="'Dashboard.ActionsFor' | translate: {name: title(r)}"
               >
@@ -503,7 +521,9 @@
               </button>
               @if(menu()===r['@id']){
               <div
+                id="resource-menu"
                 class="resource-menu"
+                role="group"
                 [attr.aria-label]="'Dashboard.ArtifactActions' | translate"
                 [style.left.px]="menuLeft()"
                 [style.top.px]="menuTop()"
@@ -522,6 +542,7 @@
           }
         </tbody>
       </table>
+      <span hidden id="explorer-row-selected">{{'Explorer.RowSelected' | translate}}</span>
       @if(refreshing()){
       <span class="sr-only" role="status"
         >{{'Dashboard.Refreshing' | translate}}</span
@@ -535,9 +556,8 @@
     <footer class="paging">
       <button (click)="page(-1)" [disabled]="offset()===0||loading()">
         {{'Common.Previous' | translate}}</button
-      ><span
-        >{{'Dashboard.Displaying' | translate: {first: rows().length?offset()+1:0,
-        last: rows().length?offset()+rows().length:0, total: total()} }}</span
+      ><span>{{ displaying() }}</span
+      ><span class="sr-only listing-announcement" aria-live="polite" aria-atomic="true">{{ announcement() }}</span
       ><button
         (click)="page(1)"
         [disabled]="offset()+rows().length>=total()||loading()"
@@ -552,8 +572,9 @@
     [attr.aria-label]="'Dashboard.Information' | translate"
   >
     @if(right()){ @if(selected();as r){
+    <!-- The panel's icon links have the same names for every artifact, so the name here describes each. -->
     <h1>
-      <cedar-icon [name]="r.resourceType" /><span
+      <cedar-icon [name]="r.resourceType" /><span id="information-name"
         >{{title(r)}}</span
       >
     </h1>
@@ -564,6 +585,8 @@
     >
       <button
         role="tab"
+        id="information-details-tab"
+        aria-controls="information-panel"
         [attr.aria-selected]="tab==='info'"
         (click)="tab='info'"
       >
@@ -572,6 +595,8 @@
       @if(versioned(r)){
       <button
         role="tab"
+        id="information-version-tab"
+        aria-controls="information-panel"
         [attr.aria-selected]="tab==='version'"
         (click)="tab='version'"
       >
@@ -580,6 +605,11 @@
       }
     </div>
     @if(tab==='info'){
+    <div
+      role="tabpanel"
+      id="information-panel"
+      aria-labelledby="information-details-tab"
+    >
     <dl>
       <dt>{{'Common.Type' | translate}}</dt>
       <dd>{{'ResourceTypes.' + r.resourceType | translate}}</dd>
@@ -600,6 +630,7 @@
           routerLink="/dashboard"
           [queryParams]="navigationQuery({folderId:id})"
           [attr.aria-label]="'Dashboard.OpenLocation' | translate"
+          aria-describedby="information-name"
           [cedarTooltip]="'Dashboard.OpenLocation' | translate"
           ><cedar-icon name="go-to"
         /></a>
@@ -631,7 +662,9 @@
       </dd>
       <dt>{{'Dashboard.Access' | translate}}</dt>
       <dd>
-        {{r.currentUserPermissions?.owner?('Common.Owner' | translate):role(r)}}
+        <span [attr.lang]="r.currentUserPermissions?.owner ? null : roleLanguage(r)"
+          >{{r.currentUserPermissions?.owner?('Common.Owner' | translate):role(r)}}</span
+        >
         @if(everyoneAccess(r); as everyone){<small>{{everyone | translate}}</small>}
       </dd>
     </dl>
@@ -765,6 +798,7 @@
           routerLink="/dashboard"
           [queryParams]="navigationQuery({folderId:r['@id']})"
           [attr.aria-label]="'Dashboard.OpenFolder' | translate"
+          aria-describedby="information-name"
           [cedarTooltip]="'Dashboard.OpenFolder' | translate"
           ><cedar-icon name="go-to"
         /></a>
@@ -798,6 +832,7 @@
           target="_blank"
           rel="noopener"
           [attr.aria-label]="'Dashboard.OpenInOpenView' | translate"
+          aria-describedby="information-name"
           [cedarTooltip]="'Dashboard.OpenInOpenView' | translate"
           ><cedar-icon name="external"
         /></a>
@@ -816,8 +851,13 @@
       />
       }
     </section>
+    </div>
     } @else {
-    <div role="tabpanel">
+    <div
+      role="tabpanel"
+      id="information-panel"
+      aria-labelledby="information-version-tab"
+    >
       <article class="version">
         <dl>
           <dt>{{'Common.Type' | translate}}</dt>
@@ -963,6 +1003,6 @@ d.resource) {
   [resources]="items"
   (closed)="deletionSelection.set(null)"
   (changed)="load(true)"
-  (saved)="deletionSelection.set(null); selectionIds.set([]); saved()"
+  (saved)="deletionSelection.set(null); selectionIds.set([]); saved(items)"
 />
 }

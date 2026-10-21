@@ -20,6 +20,7 @@ import { NgTemplateOutlet } from "@angular/common";
 import { Icon } from "./icon";
 import { GroupPicker } from "./group-picker";
 import { I18n } from "./i18n";
+import { ServerLanguage } from "./server-text";
 export interface Group {
   "@id": string;
   "schema:name": string;
@@ -56,6 +57,7 @@ export const userName = (u: GroupUser, i18n: Pick<I18n, "t">) =>
     Icon,
     GroupPicker,
     TranslatePipe,
+    ServerLanguage,
   ],
   styleUrl: "./groups.scss",
   templateUrl: "./groups.html",
@@ -74,6 +76,12 @@ export class Groups implements OnInit, OnDestroy {
   readonly stale = this.coordinator.reloadRequired;
   readonly uncertainCreation = signal(false);
   readonly notice = signal("");
+  /**
+   * What the page's status region says when a write succeeds: the outcome, such as "Group created."
+   * or "Sam Curator added to the group." It is cleared when a write begins, so the same outcome
+   * twice is said twice. A failure says nothing here, since its alert says it.
+   */
+  readonly announcement = signal("");
   readonly groups = signal<Group[]>([]);
   readonly users = signal<GroupUser[]>([]);
   readonly selected = signal<Group | null>(null);
@@ -388,6 +396,7 @@ export class Groups implements OnInit, OnDestroy {
     action: (operation: Operation) => Promise<void>,
     message: string,
     needsRevision = true,
+    spoken = message,
   ) {
     if (this.busy() || this.selecting() || (needsRevision && this.stale()))
       return;
@@ -398,11 +407,15 @@ export class Groups implements OnInit, OnDestroy {
     this.error.set("");
     this.recoveryGroup.set(null);
     this.notice.set("");
+    this.announcement.set("");
     try {
       await action(operation);
       if (!operation.current()) return;
       operation.finish();
-      if (!this.error()) this.notice.set(message);
+      if (!this.error()) {
+        this.notice.set(message);
+        this.announcement.set(spoken);
+      }
     } catch (e) {
       if (!operation.current()) return;
       operation.fail(e);
@@ -510,10 +523,10 @@ export class Groups implements OnInit, OnDestroy {
   async addMember() {
     const u = this.availableUsers.find((u) => u["@id"] === this.newMember);
     if (!u || !this.canAdmin) return;
-    await this.saveMembers([
-      ...(this.members() || []),
-      { user: u, administrator: false, member: true },
-    ]);
+    await this.saveMembers(
+      [...(this.members() || []), { user: u, administrator: false, member: true }],
+      this.i18n.t("Groups.MemberAdded", { name: this.userName(u) }),
+    );
   }
   async removeMember(m: Member) {
     if (
@@ -523,7 +536,10 @@ export class Groups implements OnInit, OnDestroy {
       this.busy()
     )
       return;
-    await this.saveMembers(this.members()!.filter((v) => v !== m));
+    await this.saveMembers(
+      this.members()!.filter((v) => v !== m),
+      this.i18n.t("Groups.MemberRemoved", { name: this.userName(m.user) }),
+    );
   }
   async toggleAdmin(m: Member) {
     const decision = this.coordinator.checkpoint();
@@ -557,9 +573,14 @@ export class Groups implements OnInit, OnDestroy {
       this.members()!.map((v) =>
         v === m ? { ...v, administrator: !v.administrator } : v,
       ),
+      this.i18n.t(
+        m.administrator ? "Groups.AdministratorRemoved" : "Groups.AdministratorAdded",
+        { name: this.userName(m.user) },
+      ),
     );
   }
-  private async saveMembers(proposed: Member[]) {
+  /** Save the roster `proposed`, and say `spoken` once it is saved. */
+  private async saveMembers(proposed: Member[], spoken: string) {
     const g = this.selected();
     if (
       !g ||
@@ -597,6 +618,6 @@ export class Groups implements OnInit, OnDestroy {
         this.restricted.set(true);
       }
       this.requireEtag(this.memberEtag);
-    }, this.i18n.t("Groups.MembersSaved"));
+    }, this.i18n.t("Groups.MembersSaved"), true, spoken);
   }
 }

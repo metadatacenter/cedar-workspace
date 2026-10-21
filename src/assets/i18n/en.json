@@ -114,6 +114,7 @@
   "Filters": {
     "Region": "Resource filters",
     "ClearFilter": "Clear {{name}} filter",
+    "ActiveChip": "{{choice}} ({{filter}} filter)",
     "ClearFilters": "Clear filters",
     "ByType": "Filter by type",
     "ByLastModified": "Filter by last modified",
@@ -404,6 +405,10 @@
     "DetailsSaved": "Group details saved.",
     "Deleted": "Group deleted.",
     "MembersSaved": "Group members saved.",
+    "MemberAdded": "{{name}} added to the group.",
+    "MemberRemoved": "{{name}} removed from the group.",
+    "AdministratorAdded": "{{name}} is now a Group Administrator.",
+    "AdministratorRemoved": "{{name}} is no longer a Group Administrator.",
     "InvalidResponse": "The server returned incomplete or ambiguous group data. Reload before making changes.",
     "ReloadDirectory": "Reload groups"
   },
@@ -575,6 +580,7 @@
     "DragToFolder": "Drag onto a folder or the trash icon",
     "MoveTo": "Move here: {{name}}",
     "Selected": "{{count}} selected",
+    "RowSelected": "Selected",
     "Clear": "Clear selection",
     "Cut": "Cut",
     "View": "Result view",

@@ -9,9 +9,9 @@ import { Icon } from "./icon";
   template: `@if (message() && visible()) {
     <div
       class="toast"
-      role="status"
-      aria-live="polite"
-      aria-atomic="true"
+      [attr.role]="live() ? 'status' : null"
+      [attr.aria-live]="live() ? 'polite' : null"
+      [attr.aria-atomic]="live() ? 'true' : null"
       (mouseenter)="pause()"
       (mouseleave)="resume()"
       (focusin)="pause()"
@@ -19,6 +19,7 @@ import { Icon } from "./icon";
     >
       <cedar-icon name="check" /><span>{{ message() }}</span>
       <button
+        (focus)="origin = $event.relatedTarget"
         [attr.aria-label]="'Toast.Dismiss' | translate"
         [cedarTooltip]="'Toast.Dismiss' | translate"
         (click)="dismiss()"
@@ -31,6 +32,11 @@ import { Icon } from "./icon";
 })
 export class Toast {
   readonly message = input("");
+  /**
+   * Whether the toast is a polite status region itself. A page that says its outcomes in a status
+   * region of its own turns this off, so that each outcome is said once.
+   */
+  readonly live = input(true);
   readonly visible = signal(false);
   private timer?: ReturnType<typeof setTimeout>;
   constructor() {
@@ -47,8 +53,13 @@ export class Toast {
     this.pause();
     this.timer = setTimeout(() => this.visible.set(false), 6000);
   }
+  /** The control focus came from to the dismiss button, which gets it back on dismissal. */
+  origin: EventTarget | null = null;
   dismiss() {
     this.pause();
     this.visible.set(false);
+    if (this.origin instanceof HTMLElement && this.origin.isConnected)
+      this.origin.focus();
+    this.origin = null;
   }
 }

@@ -294,7 +294,9 @@ test("group members are removed immediately without confirmation and show a succ
   await remove.click();
   await expect(page.locator(".confirmation-dialog")).toHaveCount(0);
   await expect(page.locator(".groups-member-row")).toHaveCount(1);
-  await expect(page.getByRole("status")).toHaveText("Group members saved.");
+  // The toast shows the notice, and the page's status region says what changed.
+  await expect(page.locator(".toast")).toHaveText("Group members saved.");
+  await expect(page.getByRole("status")).toHaveText("Sam Curator removed from the group.");
   await tokenStyles(page.locator('.toast'), feedbackSpacing);
   expect(api.requests.filter((r) => r.method === "PUT")).toHaveLength(1);
   if (process.env.WORKSPACE_VISUAL)
@@ -649,13 +651,13 @@ test("returning from the metadata editor selects the instance it opened", async 
   await page.goto("/dashboard");
   const card = page.locator('[data-resource-id="instance"]');
   await card.click({ position: { x: 8, y: 60 } });
-  await expect(card).toHaveAttribute("aria-selected", "true");
+  await expect(card).toHaveAccessibleDescription("Selected");
   await card.dblclick({ position: { x: 8, y: 60 } });
   await expect(page).toHaveURL(/\/instances\/edit\/instance/);
   await expect(page.getByLabel("Instance name")).toHaveValue("Study record");
   await page.locator("cedar-workspace-return").getByRole("button", { name: "Back to Workspace", exact: true }).click();
   await expect(page).toHaveURL(/\/dashboard/);
-  await expect(card).toHaveAttribute("aria-selected", "true");
+  await expect(card).toHaveAccessibleDescription("Selected");
   await expect(page).not.toHaveURL(/selected=/);
 });
 
@@ -668,7 +670,7 @@ test("links in the Info panel return to the artifact whose panel held them", asy
   await page.goto("/dashboard");
   const card = page.locator('[data-resource-id="template"]');
   await card.click({ position: { x: 8, y: 60 } });
-  await expect(card).toHaveAttribute("aria-selected", "true");
+  await expect(card).toHaveAccessibleDescription("Selected");
   const info = page.locator(".information");
   const toInstance = info.getByRole("link", { name: "Study record", exact: true });
   await expect(toInstance).toBeVisible();
@@ -683,7 +685,7 @@ test("links in the Info panel return to the artifact whose panel held them", asy
   await expect(page.getByLabel("Instance name")).toHaveValue("Study record");
   await page.locator("cedar-workspace-return").getByRole("button", { name: "Back to Workspace", exact: true }).click();
   await expect(page).toHaveURL(/\/dashboard/);
-  await expect(card).toHaveAttribute("aria-selected", "true");
+  await expect(card).toHaveAccessibleDescription("Selected");
   await expect(info).toContainText("Study metadata");
 });
 
@@ -702,13 +704,13 @@ test("Back from a folder opened in the Info panel selects that folder again", as
   await page.goto("/dashboard");
   const card = page.locator('[data-resource-id="child"]');
   await card.click({ position: { x: 8, y: 60 } });
-  await expect(card).toHaveAttribute("aria-selected", "true");
+  await expect(card).toHaveAccessibleDescription("Selected");
   const info = page.locator(".information");
   await info.getByRole("link", { name: "Open folder", exact: true }).click();
   await expect(page).toHaveURL(/folderId=child/);
   await expect(info).toContainText("Select an item to see its details");
   await page.goBack();
-  await expect(card).toHaveAttribute("aria-selected", "true");
+  await expect(card).toHaveAccessibleDescription("Selected");
   await expect(info.locator("h1")).toHaveText("Study folder");
   await expect(page).not.toHaveURL(/selected=/);
 });
@@ -719,14 +721,14 @@ for (const tab of ["Details", "Version"]) {
     await page.goto("/dashboard");
     const card = page.locator('[data-resource-id="template"]');
     await card.click({ position: { x: 8, y: 60 } });
-    await expect(card).toHaveAttribute("aria-selected", "true");
+    await expect(card).toHaveAccessibleDescription("Selected");
     const info = page.locator(".information");
     await info.getByRole("tab", { name: tab, exact: true }).click();
     await card.locator(".explorer-populate").click();
     await expect(page).toHaveURL(/\/instances\/create\/template/);
     await page.locator("cedar-workspace-return").getByRole("button", { name: "Back to Workspace", exact: true }).click();
     await expect(page).toHaveURL(/\/dashboard/);
-    await expect(card).toHaveAttribute("aria-selected", "true");
+    await expect(card).toHaveAccessibleDescription("Selected");
     await expect(info.getByRole("tab", { name: tab, exact: true })).toHaveAttribute("aria-selected", "true");
     await expect(page).not.toHaveURL(/[?&](selected|tab)=/);
   });
@@ -759,7 +761,7 @@ for (const listed of [false, true]) {
     // The Designer returns to the address it was given.
     await page.goto(new URL(page.url()).searchParams.get("returnTo"));
     const back = page.locator(`[data-resource-id="${listed ? "newer" : "template"}"]`);
-    await expect(back).toHaveAttribute("aria-selected", "true");
+    await expect(back).toHaveAccessibleDescription("Selected");
     await expect(info.getByRole("tab", { name: "Version", exact: true })).toHaveAttribute("aria-selected", "true");
     await expect(page).not.toHaveURL(/[?&](selected|tab)=/);
   });

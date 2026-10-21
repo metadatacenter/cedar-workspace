@@ -16,16 +16,18 @@
     class="metadata-save-action"
     [class.is-refused]="saveRefused"
     [cedarTooltip]="saveRefused ? ('Metadata.SaveRefused' | translate) : null"
-    ><button
+    ><!-- A Save the listed errors refuse stays focusable rather than disabled, so focus reaches its help. -->
+    <button
       id="button-save-metadata"
-      [attr.aria-describedby]="validationErrors.length ? 'metadata-errors-summary' : null"
+      [attr.aria-describedby]="saveDescription"
       class="primary"
-      (click)="save()"
-      [disabled]="loading() || saving() || recoveryDraft() || validationErrors.length > 0 || state.reloadRequired()"
+      (click)="saveDisabled || save()"
+      [disabled]="saveDisabled && !saveRefusedByErrors"
+      [attr.aria-disabled]="saveRefusedByErrors ? 'true' : null"
     >
       {{'Common.Save' | translate}}
     </button></span
-  >}
+  ><span hidden id="metadata-save-help">{{'Metadata.SaveRefused' | translate}}</span>}
 </header>
 <main class="metadata-content">
   @if(draftStorageError()) {
@@ -111,7 +113,7 @@
   </section>
   } @if(error()){
   <p role="alert" class="alert">
-    {{error()}} @if(canRecheckOpeningAccess) {
+    <span [attr.lang]="error() | serverLanguage">{{error()}}</span> @if(canRecheckOpeningAccess) {
     <button
       type="button"
       (click)="recheckOpeningAccess()"

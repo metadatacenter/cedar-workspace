@@ -229,6 +229,30 @@ describe("Angular Workspace", () => {
       }
     },
   );
+  it("hands focus from a page button the new page disables to the other one", async () => {
+    // A browser takes focus from a disabled control only when it next draws the page, which can
+    // come after the listing returns focus. This environment never takes it, so the listing must.
+    api.request.mockImplementation(async (path: string) => ({
+      data: path.includes("/contents")
+        ? { resources: [template], totalCount: 51, pathInfo: [folder] }
+        : folder,
+    }));
+    const f = await render();
+    const el = f.nativeElement as HTMLElement;
+    const button = (label: string) =>
+      [...el.querySelectorAll<HTMLButtonElement>(".paging button")].find(
+        (b) => b.textContent?.trim() === label,
+      )!;
+    button("Next").focus();
+    f.componentInstance.page(1);
+    await vi.waitFor(() => {
+      f.detectChanges();
+      expect(f.componentInstance.offset()).toBe(50);
+      expect(f.componentInstance.loading()).toBe(false);
+      expect(button("Next").disabled).toBe(true);
+      expect(document.activeElement).toBe(button("Previous"));
+    });
+  });
   it("hydrates Populate from the report even when listings omit available actions", async () => {
     const f = await render();
     expect(
