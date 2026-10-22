@@ -54,6 +54,11 @@
     // roots. Opacity keeps those descendants unpainted while they lay themselves out.
     opacity: 0;
   }
+  dialog.is-preparing > cedar-status {
+    // A preparing dialog's status region, drawn as nothing, stays exposed to
+    // assistive technology while the rest of the dialog is hidden.
+    visibility: visible;
+  }
   .dialog-preparing-status {
     visibility: visible;
     display: flex;

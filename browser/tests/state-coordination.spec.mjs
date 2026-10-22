@@ -85,7 +85,7 @@ test('read-only metadata shows no error or warning summary', async ({page, api})
     route.fulfill({json: {currentUserPermissions: {capabilities: []}}}));
   await page.goto('/instances/edit/instance');
   await expect(page.getByLabel('Instance name')).toHaveValue('Study record');
-  await expect(page.getByText('You have read-only access to this metadata.', {exact: true})).toBeVisible();
+  await expect(page.locator('p').getByText('You have read-only access to this metadata.', {exact: true})).toBeVisible();
   await page.evaluate(() => {
     const editor = document.querySelector('cedar-embeddable-editor');
     editor.dataQualityReport = {

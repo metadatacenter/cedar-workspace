@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { listingPath, resourceLink, Config, Resource, can } from "./resource";
+import {
+  listingPath,
+  resourceLink,
+  Config,
+  Resource,
+  can,
+  statusLanguage,
+  statusText,
+} from "./resource";
 const config = {
   workspaceFrontend: "https://workspace.example",
   templateDesignerFrontend: "https://designer.example",
@@ -135,5 +143,27 @@ describe("Workspace navigation contract", () => {
         "populate",
       ),
     ).toBe(true);
+  });
+});
+
+describe("A version's status", () => {
+  // Hungarian knows draft and published; Workspace knows no other status.
+  const hungarian = {
+    known: (key: string, fallback: string) =>
+      ({ "Status.draft": "Vázlat", "Status.published": "Közzétett" })[key] ?? fallback,
+  };
+  const version = (status?: string) =>
+    ({ "@id": "v", resourceType: "template", "bibo:status": status }) as Resource;
+  it("is translated when Workspace knows it, and takes the page's language", () => {
+    expect(statusText(version("bibo:draft"), hungarian)).toBe("Vázlat");
+    expect(statusLanguage(version("bibo:draft"), hungarian)).toBeNull();
+  });
+  it("is shown as the server's English term when Workspace does not know it, and marked English", () => {
+    expect(statusText(version("bibo:retracted"), hungarian)).toBe("Retracted");
+    expect(statusLanguage(version("bibo:retracted"), hungarian)).toBe("en");
+  });
+  it("is a dash, in the page's language, when there is none", () => {
+    expect(statusText(version(), hungarian)).toBe("—");
+    expect(statusLanguage(version(), hungarian)).toBeNull();
   });
 });

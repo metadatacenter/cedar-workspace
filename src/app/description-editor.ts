@@ -3,6 +3,8 @@ import { I18n } from "./i18n";
 import {
   Component,
   DestroyRef,
+  ElementRef,
+  Injector,
   effect,
   inject,
   input,
@@ -14,6 +16,7 @@ import { TranslatePipe } from "@ngx-translate/core";
 import { Backend, Reply, failureText } from "./backend.service";
 import { Resource, can, title } from "./resource";
 import { ServerLanguage } from "./server-text";
+import { returnFocus } from "./focus-return";
 
 @Component({
   selector: "cedar-description-editor",
@@ -85,6 +88,8 @@ export class DescriptionEditor {
   private readonly api = inject(Backend);
   private loaded = "";
   private readonly i18n = inject(I18n);
+  private readonly injector = inject(Injector);
+  private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
   state = new RevisionCoordinator();
   get editable() {
     return can(this.resource(), "updateResource");
@@ -136,16 +141,39 @@ export class DescriptionEditor {
       if (operation.current()) this.busy.set(false);
     }
   }
-  cancel() {
+  /**
+   * Return focus that saving or cancelling took. A save that succeeds, and a cancel, remove Cancel
+   * and Save, and reading the description again disables it. Focus goes back to the control that
+   * had it when that is still there and enabled, and otherwise to the description, or to Retry when
+   * the description could not be read.
+   */
+  private refocus(focused: Element | null, state: RevisionCoordinator) {
+    // Focus that was on the page itself, as a pointer leaves it in some browsers, was not taken.
+    if (state !== this.state || !focused || focused === document.body) return;
+    const host = this.host.nativeElement;
+    returnFocus(
+      focused,
+      () =>
+        host.querySelector<HTMLElement>("textarea:not(:disabled)") ??
+        host.querySelector<HTMLElement>("button:not(:disabled)"),
+      this.injector,
+    );
+  }
+  async cancel() {
     if (!this.state.active || this.busy()) return;
+    const focused = document.activeElement,
+      state = this.state;
     this.draft.set(this.snapshot()?.data["schema:description"] || "");
-    void this.load();
+    await this.load();
+    this.refocus(focused, state);
   }
   async save() {
     const snapshot = this.snapshot();
     if (!snapshot || !this.editable || !this.dirty || this.busy()) return;
     const operation = this.state.write();
     if (!operation) return;
+    const focused = document.activeElement,
+      state = this.state;
     this.busy.set(true);
     this.error.set("");
     this.announcement.set("");
@@ -175,5 +203,6 @@ export class DescriptionEditor {
     } finally {
       if (operation.current()) this.busy.set(false);
     }
+    this.refocus(focused, state);
   }
 }

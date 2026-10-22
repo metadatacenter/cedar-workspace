@@ -12,6 +12,7 @@ import {
   MetadataEditor,
   metadataKey,
   metadataFieldLabel,
+  metadataFieldLabelParts,
   metadataWarningMessage,
   metadataRoute,
   workspaceReturn,
@@ -711,6 +712,8 @@ describe("Modern metadata host", () => {
     expect(host.validationWarnings).toHaveLength(1);
     expect(host.validationErrors).toHaveLength(1);
     expect(host.validationErrors[0].message).toBe("Enter a text value.");
+    // CEE's explanation takes the page's language; its diagnostic is English.
+    expect(host.validationErrors[0].messageLanguage).toBeNull();
     expect(host.validationErrors[0].diagnostic).toBe("The answer must be a string.");
     // Each listed problem leads to its field.
     const reveal = vi.fn().mockResolvedValue(true);
@@ -885,6 +888,51 @@ describe("metadata field labels", () => {
       "contributors_path",
     );
   });
+  it("gives each label the language of the nearest template or element that declares one", () => {
+    const element = "https://schema.metadatacenter.org/core/TemplateElement";
+    const field = "https://schema.metadatacenter.org/core/TemplateField";
+    const schema = {
+      "@context": { "@language": "hu_HU" },
+      properties: {
+        minta: {
+          "@type": element,
+          "schema:name": "Minta",
+          properties: {
+            tomeg: { "@type": field, "schema:name": "Tömeg", "@context": { "@language": "en" } },
+          },
+        },
+        sample: {
+          "@type": element,
+          "@context": { "@language": "en" },
+          "schema:name": "Sample",
+          properties: { weight: { "@type": field, "schema:name": "Weight" } },
+        },
+      },
+    };
+    // A field's own language is its values', so its label keeps the element's.
+    expect(metadataFieldLabelParts(schema, ["minta", "tomeg"])).toEqual([
+      { text: "Minta", lang: "hu-HU" },
+      { text: " · ", lang: null },
+      { text: "Tömeg", lang: "hu-HU" },
+    ]);
+    expect(metadataFieldLabelParts(schema, ["sample", "weight"])).toEqual([
+      { text: "Sample", lang: "en" },
+      { text: " · ", lang: null },
+      { text: "Weight", lang: "en" },
+    ]);
+    // A key the template does not define is not its text, and a template that declares no
+    // language, or one that is not a language tag, leaves its labels in the page's.
+    expect(metadataFieldLabelParts(schema, ["other"])).toEqual([{ text: "other", lang: null }]);
+    expect(
+      metadataFieldLabelParts({ properties: { name: { "schema:name": "Name" } } }, ["name"]),
+    ).toEqual([{ text: "Name", lang: null }]);
+    expect(
+      metadataFieldLabelParts(
+        { "@context": { "@language": "not a tag" }, properties: { name: { "schema:name": "Name" } } },
+        ["name"],
+      ),
+    ).toEqual([{ text: "Name", lang: null }]);
+  });
 });
 
 describe("metadata warning messages", () => {
@@ -909,21 +957,34 @@ describe("metadata warning messages", () => {
     value,
   });
 
-  it("states the warnings it presents through the translation files", () => {
-    expect(metadataWarningMessage(template, problem("required", null), t)).toBe(
-      "Metadata.ProblemRequired",
-    );
-    expect(metadataWarningMessage(template, problem("minItems", 1), t)).toBe(
-      'Metadata.ProblemMinItems {"count":1,"min":2}',
-    );
+  it("states the warnings it presents through the translation files, in the page's language", () => {
+    expect(metadataWarningMessage(template, problem("required", null), t)).toEqual({
+      text: "Metadata.ProblemRequired",
+      lang: null,
+    });
+    expect(metadataWarningMessage(template, problem("minItems", 1), t)).toEqual({
+      text: 'Metadata.ProblemMinItems {"count":1,"min":2}',
+      lang: null,
+    });
   });
 
-  it("keeps CEE's text for a problem it has no wording for", () => {
+  it("keeps CEE's text for a problem it has no wording for, marked as English", () => {
     expect(
       metadataWarningMessage(template, problem("minItems", 1, ["unknown"]), t),
-    ).toBe("CEE's English diagnostic");
-    expect(metadataWarningMessage(template, problem("pattern", "x"), t)).toBe(
-      "CEE's English diagnostic",
-    );
+    ).toEqual({ text: "CEE's English diagnostic", lang: "en" });
+    expect(metadataWarningMessage(template, problem("pattern", "x"), t)).toEqual({
+      text: "CEE's English diagnostic",
+      lang: "en",
+    });
+  });
+
+  it("shows CEE's explanation in the page's language", () => {
+    expect(
+      metadataWarningMessage(
+        template,
+        { ...problem("required", null), displayMessage: "Az érték megadása kötelező." },
+        t,
+      ),
+    ).toEqual({ text: "Az érték megadása kötelező.", lang: null });
   });
 });

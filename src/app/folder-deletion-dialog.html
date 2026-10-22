@@ -44,12 +44,13 @@
     <p class="resource-dialog-resource">
       <cedar-icon name="folder" />{{ name }}
     </p>
-    } @if(busy()) {
-    <p role="status" [class.sr-only]="deleting() || simpleConfirmation">
-      {{ (deleting() ? 'FolderDeletion.Deleting' : simpleConfirmation ?
-      'SelectionDeletion.CheckingItems' : 'FolderDeletion.Checking') | translate
-      }}
-    </p>
+    }
+    <cedar-status
+      [text]="busy() ? ((deleting() ? 'FolderDeletion.Deleting' : simpleConfirmation ?
+      'SelectionDeletion.CheckingItems' : 'FolderDeletion.Checking') | translate) : ''"
+    />
+    @if(busy() && !deleting() && !simpleConfirmation) {
+    <p>{{ 'FolderDeletion.Checking' | translate }}</p>
     } @if(error()) {
     <p class="alert" role="alert" [attr.lang]="error() | serverLanguage">{{ error() }}</p>
     } @if(outcome(); as result) {

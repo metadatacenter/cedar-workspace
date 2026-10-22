@@ -8,11 +8,15 @@ import {
 } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { TranslatePipe } from "@ngx-translate/core";
+import { StatusRegion } from "./status-region";
 
 @Component({
   selector: "cedar-group-picker",
-  imports: [FormsModule, TranslatePipe],
+  imports: [FormsModule, TranslatePipe, StatusRegion],
   template: `
+    <cedar-status
+      [text]="open && query.trim() && !matches.length ? ('GroupPicker.NoMatches' | translate) : ''"
+    />
     @if (!labelledBy) {
       <label [for]="id + '-input'">{{ label }}</label>
     }
@@ -61,7 +65,7 @@ import { TranslatePipe } from "@ngx-translate/core";
         }
       </div>
     } @else if (open && query.trim()) {
-      <p role="status">{{ "GroupPicker.NoMatches" | translate }}</p>
+      <p>{{ "GroupPicker.NoMatches" | translate }}</p>
     }
   `,
   styleUrl: "./group-picker.scss",

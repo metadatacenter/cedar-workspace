@@ -105,7 +105,9 @@ for (const action of ['Copy', 'Move', 'Create Draft']) {
     await expect(dialog).toHaveAttribute('aria-busy', 'true');
     expect(await dialog.evaluate(el => el.matches(':modal'))).toBe(true);
     await expect(dialog.locator('form')).toBeHidden();
-    await expect(dialog.getByRole('status', {includeHidden: true})).toBeVisible();
+    await expect(dialog.locator('.dialog-preparing-status')).toHaveText('Loading…');
+    // The status region stays exposed while the rest of the dialog is hidden, and says the same.
+    await expect(dialog.getByRole('status')).toHaveText('Loading…');
     expect(await dialog.evaluate(el => getComputedStyle(el, '::backdrop').visibility)).toBe('visible');
     // Record only painted panels: there must be no small loading form, disabled
     // intermediate frame or subsequent resize as the breadcrumb and rows arrive.

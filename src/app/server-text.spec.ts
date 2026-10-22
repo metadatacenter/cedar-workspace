@@ -11,6 +11,8 @@ describe("Server text", () => {
     expect(language.transform("A kérés sikertelen (503).")).toBeNull();
     expect(language.transform("")).toBeNull();
     expect(language.transform(null)).toBeNull();
+    expect(text.language("The folder can not be found by id")).toBe("en");
+    expect(text.language("A kérés sikertelen (503).")).toBeNull();
   });
   it("keeps the hundred most recent messages, a repeated one counting as recent", () => {
     const text = TestBed.inject(ServerText);

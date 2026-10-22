@@ -1,4 +1,6 @@
+import { readFile } from "node:fs/promises";
 import { test, expect, dashboard, resource } from "./fixtures.mjs";
+import { focusedControl } from "./focus.mjs";
 
 const items = Array.from({ length: 120 }, (_, index) => ({
   ...resource,
@@ -34,35 +36,21 @@ async function listing(page) {
   });
 }
 
-/**
- * Record every text the status region `selector` takes from now on, and how many times a control
- * had taken focus when it last said something.
- */
+/** Record every text the status region `selector` takes from now on. */
 async function record(page, selector = ".listing-announcement") {
   await page.evaluate((selector) => {
     const region = document.querySelector(selector);
     window.__announcements = [];
-    window.__focusMoves = 0;
-    document.addEventListener("focusin", () => window.__focusMoves++, true);
-    new MutationObserver(() => {
-      const text = region.textContent.trim();
-      window.__announcements.push(text);
-      if (text) window.__focusMovesWhenSaid = window.__focusMoves;
-    }).observe(region, { childList: true, characterData: true, subtree: true });
+    new MutationObserver(() => window.__announcements.push(region.textContent.trim())).observe(
+      region,
+      { childList: true, characterData: true, subtree: true },
+    );
   }, selector);
   return () => page.evaluate(() => window.__announcements.filter(Boolean));
 }
 
-/** Whether, two frames on, no control has taken focus since the region last said something. */
-const focusKept = (page) =>
-  page.evaluate(
-    () =>
-      new Promise((done) =>
-        requestAnimationFrame(() =>
-          requestAnimationFrame(() => done(window.__focusMovesWhenSaid === window.__focusMoves)),
-        ),
-      ),
-  );
+/** Expect focus on `control`, where the write left it, rather than on the page. */
+const focusOn = (page, control) => expect.poll(() => focusedControl(page)).toBe(control);
 
 test("a search, a filter and a page change announce their results once, without moving focus", async ({
   page,
@@ -116,7 +104,7 @@ test("a search, a filter and a page change announce their results once, without 
   ]);
 });
 
-test("Groups says each outcome once, without moving focus, and leaves a failure to its alert", async ({
+test("Groups says each outcome once, leaves focus on a control, and leaves a failure to its alert", async ({
   page,
   api,
 }) => {
@@ -133,18 +121,20 @@ test("Groups says each outcome once, without moving focus, and leaves a failure 
   const create = page.getByRole("button", { name: "Create group", exact: true });
   await create.click();
   await expect(region).toHaveText("Group created.");
-  // The toast shows the outcome the region says, and is no live region itself, so it is said once.
+  // The toast shows the outcome the region says, and has no live region of its own, so it is said once.
   await expect(toast).toHaveText("Group created.");
   await expect(toast).not.toHaveAttribute("role");
   await expect(toast).not.toHaveAttribute("aria-live");
-  expect(await focusKept(page)).toBe(true);
+  await expect(page.locator("cedar-toast [role=status]")).toHaveCount(0);
+  // The emptied name leaves Create disabled, so focus goes to the name for the next group.
+  await focusOn(page, 'textbox "Group name"');
 
   const sam = page.locator(".groups-member-row").filter({ hasText: "Sam Curator" });
   const bin = sam.getByRole("button", { name: "Remove Sam Curator from the group", exact: true });
   await bin.click();
   await expect(region).toHaveText("Sam Curator removed from the group.");
   await expect(toast).toHaveText("Group members saved.");
-  expect(await focusKept(page)).toBe(true);
+  await focusOn(page, 'button "Remove Alex Researcher from the group"');
 
   const picker = page.getByRole("combobox", { name: "Add a member", exact: true });
   await picker.fill("Sam");
@@ -152,24 +142,25 @@ test("Groups says each outcome once, without moving focus, and leaves a failure 
   const add = page.getByRole("button", { name: "Add member", exact: true });
   await add.click();
   await expect(region).toHaveText("Sam Curator added to the group.");
-  expect(await focusKept(page)).toBe(true);
+  await focusOn(page, 'combobox "Add a member"');
 
   const administrator = sam.getByRole("checkbox", { name: "Sam Curator is a Group Administrator", exact: true });
   await administrator.click();
   await confirmation.getByRole("button", { name: "Yes", exact: true }).click();
   await expect(region).toHaveText("Sam Curator is now a Group Administrator.");
-  expect(await focusKept(page)).toBe(true);
+  // The write disabled the checkbox, and focus returns to it.
+  await focusOn(page, 'checkbox "Sam Curator is a Group Administrator"');
   await administrator.click();
   await confirmation.getByRole("button", { name: "Yes", exact: true }).click();
   await expect(region).toHaveText("Sam Curator is no longer a Group Administrator.");
-  expect(await focusKept(page)).toBe(true);
+  await focusOn(page, 'checkbox "Sam Curator is a Group Administrator"');
 
   const name = page.getByLabel("Name", { exact: true });
   await name.fill("Renamed team");
   const save = page.getByRole("button", { name: "Save", exact: true });
   await save.click();
   await expect(region).toHaveText("Group details saved.");
-  expect(await focusKept(page)).toBe(true);
+  await focusOn(page, 'button "Save"');
 
   // A failure clears the region and is said by its alert alone.
   api.fail = true;
@@ -188,7 +179,8 @@ test("Groups says each outcome once, without moving focus, and leaves a failure 
   await page.getByRole("button", { name: "Delete group", exact: true }).click();
   await confirmation.getByRole("button", { name: "Yes", exact: true }).click();
   await expect(region).toHaveText("Group deleted.");
-  expect(await focusKept(page)).toBe(true);
+  // The deleted group's details go with it, so focus goes to the tab's first control.
+  await focusOn(page, 'combobox "Group name"');
 
   expect(await announced()).toEqual([
     "Group created.",
@@ -201,7 +193,7 @@ test("Groups says each outcome once, without moving focus, and leaves a failure 
   ]);
 });
 
-test("each description save is said once without moving focus, and a failed one by its alert alone", async ({
+test("each description save is said once, leaves focus on the description, and a failed one is said by its alert alone", async ({
   page,
   api,
 }) => {
@@ -220,16 +212,18 @@ test("each description save is said once without moving focus, and a failed one 
   await description.fill("A first description");
   await save.click();
   await expect(region).toHaveText("Description saved.");
-  // The toast shows the outcome the region says, and is no live region itself, so it is said once.
+  // The toast shows the outcome the region says, and its own region stays empty, so it is said once.
   await expect(toast).toHaveText("Description saved.");
   await expect(toast).not.toHaveAttribute("role");
-  expect(await focusKept(page)).toBe(true);
+  await expect(page.locator("cedar-toast [role=status]")).toHaveText("");
+  // Saving removes Save, so focus goes to the description.
+  await focusOn(page, 'textbox "Description"');
   await expect(description).toBeEnabled();
   await description.fill("A second description");
   await save.click();
   await expect(save).toHaveCount(0);
   await expect.poll(announced).toEqual(["Description saved.", "Description saved."]);
-  expect(await focusKept(page)).toBe(true);
+  await focusOn(page, 'textbox "Description"');
 
   api.fail = true;
   await expect(description).toBeEnabled();
@@ -238,4 +232,429 @@ test("each description save is said once without moving focus, and a failed one 
   await expect(panel.getByRole("alert")).toBeVisible();
   await expect(region).toHaveText("");
   expect(await announced()).toEqual(["Description saved.", "Description saved."]);
+});
+
+/**
+ * Record, from the first script of each page loaded, each status region Workspace keeps: the text it
+ * held when it entered the page, and each text it said after. A screen reader may say nothing for a
+ * region that enters the page holding its text. Loading another page starts the record again.
+ */
+async function watchRegions(page) {
+  await page.addInitScript(() => {
+    window.__regions = [];
+    const seen = new WeakSet();
+    const visit = (node) => {
+      if (!(node instanceof Element)) return;
+      for (const region of [node, ...node.querySelectorAll("cedar-status")]) {
+        if (region.localName !== "cedar-status" || seen.has(region)) continue;
+        seen.add(region);
+        const entry = { entered: region.textContent, said: [] };
+        window.__regions.push(entry);
+        new MutationObserver(() => {
+          const text = region.textContent.trim();
+          if (text) entry.said.push(text);
+        }).observe(region, { childList: true, characterData: true, subtree: true });
+      }
+    };
+    new MutationObserver((records) => records.forEach((record) => record.addedNodes.forEach(visit))).observe(
+      document,
+      { childList: true, subtree: true },
+    );
+  });
+  return {
+    /** Every text this page's regions have said, in the order each region entered the page. */
+    said: () => page.evaluate(() => window.__regions.flatMap((entry) => entry.said)),
+    /** The texts this page's regions held when they entered it, which is always none. */
+    entered: () => page.evaluate(() => [...new Set(window.__regions.map((entry) => entry.entered))]),
+  };
+}
+
+/** Whether every status region `locator` finds is drawn as nothing: clipped to a pixel at most. */
+const drawnAsNothing = (locator) =>
+  locator.evaluateAll((regions) =>
+    regions.every((region) => {
+      const box = region.getBoundingClientRect(),
+        style = getComputedStyle(region);
+      return box.width <= 1 && box.height <= 1 && style.position === "absolute" && style.clipPath === "inset(50%)";
+    }),
+  );
+
+test("each toast says its message from a status region already in the page", async ({ page, api }) => {
+  const regions = await watchRegions(page);
+  await page.addInitScript(() =>
+    Object.defineProperty(navigator, "clipboard", { value: { writeText: async () => {} } }),
+  );
+  await dashboard(page);
+  const region = page.locator("cedar-toast [role=status]");
+  const toast = page.locator(".toast");
+  // On an ordinary page the region is there, empty and drawn as nothing, and there is no toast.
+  await expect(region).toHaveText("");
+  await expect(region).toHaveAttribute("aria-live", "polite");
+  expect(await drawnAsNothing(region)).toBe(true);
+  await expect(toast).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Actions for Study metadata", exact: true }).click();
+  await page.locator(".resource-menu").getByRole("button", { name: "Rename", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Save", exact: true }).click();
+  await expect(toast).toHaveText("Saved.");
+  await expect(region).toHaveText("Saved.");
+  // The toast only shows the message, so it is said once.
+  await expect(toast).not.toHaveAttribute("role");
+  await expect(toast).not.toHaveAttribute("aria-live");
+
+  await page.getByRole("button", { name: "Actions for Study metadata", exact: true }).click();
+  await page.locator(".resource-menu").getByRole("button", { name: "Permissions…", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  const dialogRegion = dialog.locator("cedar-toast [role=status]");
+  await expect(dialog.getByRole("combobox", { name: "Role for Sam Curator" })).toBeEnabled();
+  await expect(dialogRegion).toHaveText("");
+  await expect(dialog.locator(".toast")).toHaveCount(0);
+  await dialog.getByRole("combobox", { name: "Role for Sam Curator" }).selectOption("editor");
+  await expect(dialog.locator(".toast")).toHaveText("Permissions saved.");
+  await expect(dialogRegion).toHaveText("Permissions saved.");
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect(await regions.entered()).toEqual([""]);
+  expect(await regions.said()).toEqual(expect.arrayContaining(["Saved.", "Permissions saved."]));
+
+  await page.goto("/profile");
+  const accountRegion = page.locator("cedar-toast [role=status]");
+  await expect(page.getByRole("button", { name: "Copy First name", exact: true })).toBeVisible();
+  await expect(accountRegion).toHaveText("");
+  await page.getByRole("button", { name: "Copy First name", exact: true }).click();
+  await expect(toast).toHaveText("Copied.");
+  await expect(accountRegion).toHaveText("Copied.");
+  expect(await regions.entered()).toEqual([""]);
+  expect(await regions.said()).toEqual(["Copied."]);
+
+  await page.goto("/instances/edit/instance");
+  await expect(page.getByLabel("Instance name")).toHaveValue("Study record");
+  await expect(page.locator("cedar-toast [role=status]")).toHaveText("");
+  await expect(toast).toHaveCount(0);
+  expect(await regions.entered()).toEqual([""]);
+});
+
+test("loading statuses are said from status regions already in the page, outside what is busy", async ({
+  page,
+  api,
+}) => {
+  const regions = await watchRegions(page);
+  let release, gate = Promise.resolve();
+  const hold = () => (gate = new Promise((resolve) => (release = resolve)));
+  await page.route("**/api/user/users/owner", async (route) => {
+    await gate;
+    await route.fallback();
+  });
+  await page.route("**/api/resource/folders/home/contents?**", async (route) => {
+    await gate;
+    await route.fallback();
+  });
+  await page.route("**/api/resource/search?**", async (route) => {
+    await gate;
+    await route.fallback();
+  });
+
+  // The page waits for the account before it shows the workspace.
+  hold();
+  await page.goto("/dashboard?view=list");
+  const connecting = page.locator("p.loading");
+  await expect(connecting).toHaveText("Connecting to your workspace…");
+  await expect(connecting).not.toHaveAttribute("role");
+  const pageRegion = page.locator("cedar-workspace-page > cedar-status");
+  await expect(pageRegion).toHaveText("Connecting to your workspace…");
+  release();
+  await expect(pageRegion).toHaveText("");
+
+  // The listing is busy while it loads, so its region is in the footer beside it.
+  await expect(page.locator(".table-scroll")).toHaveAttribute("aria-busy", "false");
+  const listingRegion = page.locator(".paging > cedar-status");
+  await expect(listingRegion).toHaveText("");
+  hold();
+  await page.getByRole("button", { name: "Refresh workspace", exact: true }).click();
+  await expect(listingRegion).toHaveText("Refreshing…");
+  release();
+  await expect(listingRegion).toHaveText("");
+  hold();
+  const search = page.getByRole("textbox", { name: "Search workspace" });
+  await search.fill("study");
+  await search.press("Enter");
+  const loading = page.locator(".table-scroll p.empty");
+  await expect(loading).toHaveText("Loading…");
+  await expect(loading).not.toHaveAttribute("role");
+  await expect(listingRegion).toHaveText("Loading…");
+  release();
+  await expect(listingRegion).toHaveText("");
+  await expect(loading).toHaveCount(0);
+  // Nothing is busy, so no status region holds any text, and each is drawn as nothing.
+  const all = page.locator("cedar-status");
+  expect(await all.evaluateAll((found) => found.map((region) => region.textContent))).toEqual(
+    ["", "", ""],
+  );
+  expect(await drawnAsNothing(all)).toBe(true);
+  expect(await regions.entered()).toEqual([""]);
+  expect(await regions.said()).toEqual(
+    expect.arrayContaining(["Connecting to your workspace…", "Refreshing…", "Loading…"]),
+  );
+
+  // Groups says it is loading a group from its own region.
+  await page.goto("/groups");
+  const groupsRegion = page.locator(".groups-content > cedar-status");
+  const find = page.getByRole("combobox", { name: "Find a group", exact: true });
+  await expect(find).toBeEnabled();
+  await expect(groupsRegion).toHaveText("");
+  let releaseGroup;
+  await page.route("**/api/group/groups/team", async (route) => {
+    await new Promise((resolve) => (releaseGroup = resolve));
+    await route.fallback();
+  });
+  await find.fill("Research");
+  await find.press("Enter");
+  const groupLoading = page.locator(".groups-content > p").filter({ hasText: "Loading…" });
+  await expect(groupLoading).toBeVisible();
+  await expect(groupLoading).not.toHaveAttribute("role");
+  await expect(groupsRegion).toHaveText("Loading…");
+  releaseGroup();
+  await expect(groupsRegion).toHaveText("");
+  expect(await regions.entered()).toEqual([""]);
+});
+
+test("a dialog says what it is preparing from a status region that enters it empty", async ({ page, api }) => {
+  const regions = await watchRegions(page);
+  await dashboard(page);
+  let release;
+  await page.route("**/api/resource/templates/template/permissions", async (route) => {
+    if (route.request().method() === "GET") await new Promise((resolve) => (release = resolve));
+    await route.fallback();
+  });
+  await page.getByRole("button", { name: "Actions for Study metadata", exact: true }).click();
+  await page.locator(".resource-menu").getByRole("button", { name: "Permissions…", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  const busy = dialog.locator(".permissions-body > cedar-status");
+  await expect(busy).toHaveText("Loading…");
+  const loading = dialog.locator(".permissions-body > p").filter({ hasText: "Loading…" });
+  await expect(loading).toBeVisible();
+  await expect(loading).not.toHaveAttribute("role");
+  release();
+  await expect(busy).toHaveText("");
+  await dialog.getByRole("combobox", { name: "Role for Sam Curator" }).selectOption("editor");
+  await expect(dialog.locator(".toast")).toHaveText("Permissions saved.");
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+
+  // The Copy dialog hides all but its loading status while it reads the folders to copy into.
+  let releaseFolders;
+  await page.route("**/api/resource/folders/*/contents?**", async (route) => {
+    if (new URL(route.request().url()).searchParams.get("resource_types") === "folder")
+      await new Promise((resolve) => (releaseFolders = resolve));
+    await route.fallback();
+  });
+  await page.getByRole("button", { name: "Actions for Study metadata", exact: true }).click();
+  await page.locator(".resource-menu").getByRole("button", { name: "Copy", exact: true }).click();
+  const copy = page.locator("cedar-resource-dialog dialog");
+  await expect(copy).toHaveClass(/is-preparing/);
+  const preparing = copy.locator(".dialog-preparing-status");
+  await expect(preparing).toHaveText("Loading…");
+  await expect(preparing).not.toHaveAttribute("role");
+  await expect(copy.locator(":scope > cedar-status")).toHaveText("Loading…");
+  releaseFolders();
+  await expect(copy).not.toHaveClass(/is-preparing/);
+  await expect(copy.locator(":scope > cedar-status")).toHaveText("");
+  await copy.getByRole("button", { name: "Close dialog", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+
+  // So does the preview while it reads the artifact.
+  let releaseArtifact;
+  await page.route("**/api/resource/templates/template", async (route) => {
+    await new Promise((resolve) => (releaseArtifact = resolve));
+    await route.fallback();
+  });
+  await page.getByRole("button", { name: "Preview Study metadata", exact: true }).click();
+  const preview = page.locator("dialog.artifact-preview");
+  await expect(preview).toHaveClass(/is-preparing/);
+  await expect(preview.locator(".dialog-preparing-status > span")).not.toHaveAttribute("role");
+  await expect(preview.locator(":scope > cedar-status")).toHaveText("Loading…");
+  releaseArtifact();
+  await expect(preview).not.toHaveClass(/is-preparing/);
+  await expect(preview.locator(":scope > cedar-status")).toHaveText("");
+
+  expect(await regions.entered()).toEqual([""]);
+  expect(await regions.said()).toEqual(
+    expect.arrayContaining(["Loading…", "Saving permissions…", "Permissions saved."]),
+  );
+});
+
+test("a dialog's notices and its folder list's loading row are said from regions already in it", async ({
+  page,
+  api,
+}) => {
+  const regions = await watchRegions(page);
+  const folder = (id, name) => ({
+    "@id": id,
+    resourceType: "folder",
+    "schema:name": name,
+    currentUserPermissions: { capabilities: ["copyIntoFolder", "moveIntoFolder"] },
+  });
+  const home = folder("home", "My workspace"),
+    archive = folder("archive", "Archive");
+  // While set, home's folders are held until it is opened.
+  let homeHeld = null;
+  // The folder list reads home, which holds Archive, and Archive, which holds no folders.
+  await page.route("**/api/resource/folders/*/contents?**", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get("resource_types") !== "folder") return route.fallback();
+    const inArchive = url.pathname.includes("/archive/");
+    if (!inArchive && homeHeld) await homeHeld;
+    const resources = inArchive ? [] : [archive];
+    return route.fulfill({
+      json: { resources, totalCount: resources.length, pathInfo: inArchive ? [home, archive] : [home] },
+    });
+  });
+  await page.route("**/api/resource/folders/archive", (route) => route.fulfill({ json: archive }));
+  await dashboard(page);
+
+  // The Permissions dialog's person picker says when nothing matches.
+  await page.getByRole("button", { name: "Actions for Study metadata", exact: true }).click();
+  await page.locator(".resource-menu").getByRole("button", { name: "Permissions…", exact: true }).click();
+  const permissions = page.getByRole("dialog");
+  const picker = permissions.getByRole("combobox", { name: "User or group", exact: true });
+  const pickerRegion = permissions.locator("cedar-group-picker > cedar-status");
+  await expect(picker).toBeEnabled();
+  await expect(pickerRegion).toHaveText("");
+  await picker.fill("absent user");
+  const none = permissions.locator("cedar-group-picker p");
+  await expect(none).toHaveText("No matches found.");
+  await expect(none).not.toHaveAttribute("role");
+  await expect(pickerRegion).toHaveText("No matches found.");
+  await picker.fill("");
+  await expect(pickerRegion).toHaveText("");
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+
+  // The Copy dialog's folder list says it is loading while it shows a loading row.
+  await page.getByRole("button", { name: "Actions for Study metadata", exact: true }).click();
+  await page.locator(".resource-menu").getByRole("button", { name: "Copy", exact: true }).click();
+  const copy = page.locator("cedar-resource-dialog dialog");
+  await expect(copy).not.toHaveClass(/is-preparing/);
+  const listRegion = copy.locator("cedar-folder-list > cedar-status");
+  await expect(listRegion).toHaveText("");
+  await copy.locator(".folder-name").filter({ hasText: "Archive" }).click();
+  const row = copy.locator(".folder-scroll td[colspan]");
+  await expect(row).toHaveText("No subfolders");
+  let releaseHome;
+  homeHeld = new Promise((resolve) => (releaseHome = resolve));
+  await copy.locator(".breadcrumbs button").first().click();
+  await expect(row).toHaveText("Loading…");
+  await expect(row).not.toHaveAttribute("role");
+  await expect(listRegion).toHaveText("Loading…");
+  releaseHome();
+  homeHeld = null;
+  await expect(copy.locator(".folder-name")).toHaveText(["Archive"]);
+  await expect(listRegion).toHaveText("");
+  await copy.getByRole("button", { name: "Close dialog", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+
+  // The Rename dialog says when its revision must be reloaded before saving again.
+  await page.getByRole("button", { name: "Actions for Study metadata", exact: true }).click();
+  await page.locator(".resource-menu").getByRole("button", { name: "Rename", exact: true }).click();
+  const rename = page.locator("cedar-resource-dialog dialog");
+  const dialogRegion = rename.locator(":scope > cedar-status");
+  await expect(rename.getByRole("button", { name: "Save", exact: true })).toBeEnabled();
+  await expect(dialogRegion).toHaveText("");
+  api.fail = true;
+  await rename.getByRole("textbox").first().fill("Renamed");
+  await rename.getByRole("button", { name: "Save", exact: true }).click();
+  const recover = "Reload the current revision before saving again. Your edits will be kept.";
+  const notice = rename.locator("form > p").filter({ hasText: recover });
+  await expect(notice).toBeVisible();
+  await expect(notice).not.toHaveAttribute("role");
+  await expect(dialogRegion).toHaveText(recover);
+
+  expect(await regions.entered()).toEqual([""]);
+  expect(await regions.said()).toEqual(expect.arrayContaining(["No matches found.", "Loading…", recover]));
+});
+
+test("the preview says a trial saves nothing from its region once the trial has loaded", async ({
+  page,
+  api,
+}) => {
+  const regions = await watchRegions(page);
+  const { template } = JSON.parse(
+    await readFile(new URL("../fixtures/preview.json", import.meta.url), "utf8"),
+  );
+  // The preview runs the installed CEE bundle on a whole template.
+  await page.route("**/third_party_components/**", (route) =>
+    route.fulfill({
+      path: new URL("../../node_modules/cedar-embeddable-editor/cedar-embeddable-editor.js", import.meta.url)
+        .pathname,
+      contentType: "text/javascript",
+    }),
+  );
+  await page.route("**/api/resource/templates/template", (route) => route.fulfill({ json: template }));
+  await dashboard(page);
+  await page.getByRole("button", { name: "Preview Study metadata", exact: true }).click();
+  const preview = page.locator("dialog.artifact-preview");
+  const region = preview.locator(":scope > cedar-status");
+  await expect(preview).not.toHaveClass(/is-preparing/);
+  await expect(region).toHaveText("");
+  await preview.getByRole("button", { name: "Try out", exact: true }).click();
+  await expect(preview).not.toHaveClass(/is-preparing/);
+  const notice = preview.locator(".try-out-notice");
+  await expect(notice).toContainText("nothing is saved");
+  await expect(notice).not.toHaveAttribute("role");
+  await expect(region).toHaveText(
+    "Try it out — nothing is saved. Leaving this mode discards your entries.",
+  );
+  await preview.getByRole("button", { name: "Back to preview", exact: true }).click();
+  await expect(notice).toHaveCount(0);
+  await expect(region).toHaveText("");
+  expect(await regions.entered()).toEqual([""]);
+});
+
+test("the metadata editor says its save status and notices from regions already in the page", async ({
+  page,
+  api,
+}) => {
+  const regions = await watchRegions(page);
+  await page.goto("/instances/edit/instance");
+  const name = page.getByLabel("Instance name", { exact: true });
+  await expect(name).toHaveValue("Study record");
+  // The visible save status is hidden from assistive technology, so the region beside it says it once.
+  const status = page.locator(".metadata-save-status");
+  const statusRegion = page.locator(".metadata-toolbar > cedar-status");
+  await expect(status).toHaveText("Unmodified");
+  await expect(status).toHaveAttribute("aria-hidden", "true");
+  await expect(statusRegion).toHaveText("Unmodified");
+  await name.fill("Recover this name");
+  await expect(status).toHaveText("Modified");
+  await expect(statusRegion).toHaveText("Modified");
+  const draftRegion = page.locator(".metadata-content > cedar-status").first();
+  expect(await regions.entered()).toEqual([""]);
+  expect(await regions.said()).toEqual(expect.arrayContaining(["Unmodified", "Modified"]));
+
+  // Leaving with unsaved input keeps a draft, which the page offers when it opens again.
+  page.on("dialog", (dialog) => dialog.accept());
+  await page.reload();
+  await expect(name).toHaveValue("Study record");
+  const draft = "A recovery draft is available for this record. Restore it or explicitly discard it before saving.";
+  const offer = page.locator("p.alert").filter({ hasText: "A recovery draft is available" });
+  await expect(offer).toBeVisible();
+  await expect(offer).not.toHaveAttribute("role");
+  await expect(draftRegion).toHaveText(draft);
+  await page.getByRole("button", { name: "Discard recovery draft", exact: true }).click();
+  await page.locator("dialog.confirmation-dialog button.primary").click();
+  await expect(offer).toHaveCount(0);
+  await expect(draftRegion).toHaveText("");
+  expect(await regions.entered()).toEqual([""]);
+
+  // Read-only access is said by a region, and its notice is hidden from assistive technology.
+  await page.route("**/api/resource/template-instances/instance/report", (route) =>
+    route.fulfill({ json: { currentUserPermissions: { capabilities: [] } } }),
+  );
+  await page.goto("/instances/edit/instance");
+  await expect(name).toHaveValue("Study record");
+  const readOnly = page.locator("p").filter({ hasText: "You have read-only access to this metadata." });
+  await expect(readOnly).toBeVisible();
+  await expect(readOnly).toHaveAttribute("aria-hidden", "true");
+  await expect(page.getByRole("status").filter({ hasText: "You have read-only access to this metadata." })).toHaveCount(1);
+  expect(await regions.entered()).toEqual([""]);
 });

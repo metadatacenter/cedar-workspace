@@ -12,7 +12,15 @@ import { Tooltip } from "./tooltip";
 import { Toast } from "./toast";
 import { WorkspaceReturn } from "./workspace-return";
 import { Confirmation } from "./confirmation";
-import { Component, OnInit, OnDestroy, inject, signal } from "@angular/core";
+import {
+  Component,
+  ElementRef,
+  Injector,
+  OnInit,
+  OnDestroy,
+  inject,
+  signal,
+} from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { TranslatePipe } from "@ngx-translate/core";
 import { Backend, HttpError } from "./backend.service";
@@ -21,6 +29,8 @@ import { Icon } from "./icon";
 import { GroupPicker } from "./group-picker";
 import { I18n } from "./i18n";
 import { ServerLanguage } from "./server-text";
+import { StatusRegion } from "./status-region";
+import { returnFocus } from "./focus-return";
 export interface Group {
   "@id": string;
   "schema:name": string;
@@ -58,12 +68,16 @@ export const userName = (u: GroupUser, i18n: Pick<I18n, "t">) =>
     GroupPicker,
     TranslatePipe,
     ServerLanguage,
+    StatusRegion,
   ],
   styleUrl: "./groups.scss",
   templateUrl: "./groups.html",
 })
 export class Groups implements OnInit, OnDestroy {
   private readonly i18n = inject(I18n);
+  private readonly injector = inject(Injector);
+  /** The page's element, which a page built without one, as in a unit test, lacks. */
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef, { optional: true });
   readonly cedarVersion = window.cedarVersion || this.i18n.t("Common.Unknown");
   readonly confirmation = inject(Confirmation);
   readonly api = inject(Backend);
@@ -392,17 +406,38 @@ export class Groups implements OnInit, OnDestroy {
     }
     return value;
   }
+  /**
+   * The first control a person can use in the form that holds `focused`, and otherwise in the open
+   * tab. Creating a group or adding a member empties the form's field, which leaves its button
+   * disabled, so focus goes to that field for the next.
+   */
+  private firstControl(focused: Element | null) {
+    const usable = (root: Element | null | undefined) =>
+      root?.querySelector<HTMLElement>(
+        "input:not(:disabled), textarea:not(:disabled), button:not(:disabled)",
+      );
+    const form = focused?.isConnected ? focused.closest("form") : null;
+    return usable(form) ?? usable(this.host?.nativeElement.querySelector("[role=tabpanel]"));
+  }
+  /**
+   * Run the write `action`, then show `message` and say `spoken`. A write disables the page's
+   * controls, which takes focus from the one that had it, and can remove that control. Focus goes
+   * back to it, and otherwise where `refocus` says, before the first control of the form it was in
+   * or of the open tab.
+   */
   private async write(
     action: (operation: Operation) => Promise<void>,
     message: string,
     needsRevision = true,
     spoken = message,
+    refocus?: () => HTMLElement | null | undefined,
   ) {
     if (this.busy() || this.selecting() || (needsRevision && this.stale()))
       return;
     const previousReload = this.stale();
     const operation = this.coordinator.write(!needsRevision);
     if (!operation) return;
+    const focused = document.activeElement;
     this.busy.set(true);
     this.error.set("");
     this.recoveryGroup.set(null);
@@ -426,7 +461,12 @@ export class Groups implements OnInit, OnDestroy {
       const needsReload = needsRevision && this.stale();
       this.fail(e, needsReload ? this.selected() : null);
     } finally {
-      if (operation.current()) this.busy.set(false);
+      if (operation.current()) {
+        this.busy.set(false);
+        // Focus that was on the page itself, as a pointer leaves it in some browsers, was not taken.
+        if (focused && focused !== document.body)
+          returnFocus(focused, () => refocus?.() ?? this.firstControl(focused), this.injector);
+      }
     }
   }
   async create() {
@@ -536,9 +576,16 @@ export class Groups implements OnInit, OnDestroy {
       this.busy()
     )
       return;
+    // Focus lost with the member's row goes to the Remove button of the member now in its place, or
+    // of the last member when it was last.
+    const index = this.members()!.indexOf(m);
     await this.saveMembers(
       this.members()!.filter((v) => v !== m),
       this.i18n.t("Groups.MemberRemoved", { name: this.userName(m.user) }),
+      () => {
+        const buttons = this.host?.nativeElement.querySelectorAll<HTMLElement>(".groups-remove-member");
+        return buttons?.[Math.min(index, buttons.length - 1)];
+      },
     );
   }
   async toggleAdmin(m: Member) {
@@ -579,8 +626,12 @@ export class Groups implements OnInit, OnDestroy {
       ),
     );
   }
-  /** Save the roster `proposed`, and say `spoken` once it is saved. */
-  private async saveMembers(proposed: Member[], spoken: string) {
+  /** Save the roster `proposed`, and say `spoken` once it is saved. Focus lost goes where `refocus` says. */
+  private async saveMembers(
+    proposed: Member[],
+    spoken: string,
+    refocus?: () => HTMLElement | null | undefined,
+  ) {
     const g = this.selected();
     if (
       !g ||
@@ -618,6 +669,6 @@ export class Groups implements OnInit, OnDestroy {
         this.restricted.set(true);
       }
       this.requireEtag(this.memberEtag);
-    }, this.i18n.t("Groups.MembersSaved"), true, spoken);
+    }, this.i18n.t("Groups.MembersSaved"), true, spoken, refocus);
   }
 }

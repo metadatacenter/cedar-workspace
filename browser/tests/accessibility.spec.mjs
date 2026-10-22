@@ -619,7 +619,7 @@ const settled = [
   // Text axe cannot see whole behind its background.
   {
     rule: "color-contrast",
-    target: "section:nth-child(2) > p",
+    target: "section:nth-child(4) > p",
     text: "Choose one user or group",
     states: ["permissions"],
     measured: "7.45:1",

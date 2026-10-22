@@ -135,3 +135,229 @@ test("each place that shows a server's message marks it English", async ({ page,
   await page.goto("/profile");
   await shown(noProfile);
 });
+
+/** Each piece of text a node holds, trimmed, with the language it is in, in document order. */
+const languages = (locator) =>
+  locator.evaluate((root) => {
+    const parts = [];
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const text = walker.currentNode;
+      if (text.textContent.trim())
+        parts.push([text.textContent.trim(), text.parentElement.closest("[lang]")?.getAttribute("lang")]);
+    }
+    return parts;
+  });
+
+test("a list of failed moves marks each server message English, and the rest takes the page's language", async ({
+  page,
+  api,
+}) => {
+  const archive = {
+    ...resource,
+    "@id": "archive",
+    resourceType: "folder",
+    "schema:name": "Archive",
+    currentUserPermissions: { capabilities: ["readResource", "moveIntoFolder"] },
+  };
+  const samples = ["a", "b"].map((id) => ({
+    ...resource,
+    "@id": id,
+    resourceType: "instance",
+    "schema:name": "Sample " + id,
+  }));
+  await page.route("**/api/resource/**", (route) => {
+    const request = route.request(),
+      path = new URL(request.url()).pathname;
+    if (path.endsWith("/contents")) {
+      const resources = path.includes("/archive/") ? [] : [archive, ...samples];
+      return route.fulfill({ json: { resources, totalCount: resources.length, pathInfo: [] } });
+    }
+    // The server refuses one move with a message of its own, and fails the other with none, which
+    // Workspace words itself.
+    if (path.endsWith("/move-resource-to-folder"))
+      return request.postDataJSON()["@id"] === "a"
+        ? route.fulfill({ status: 403, json: { message: "Move refused" } })
+        : route.fulfill({ status: 503, body: "" });
+    const r = [archive, ...samples].find(
+      (r) => path.includes("/" + r["@id"] + "/") || path.endsWith("/" + r["@id"]),
+    );
+    return r
+      ? route.fulfill({
+          json: { ...r, pathInfo: [{ "@id": "home", resourceType: "folder" }, r] },
+          headers: { ETag: `"${r["@id"]}"` },
+        })
+      : route.fallback();
+  });
+  await hungarian(page);
+  await page.goto("/dashboard?view=list");
+  const row = (id) => page.locator(`[data-resource-id="${id}"]`);
+  await expect(row("b")).toBeVisible();
+  await row("a").locator(".resource-icon").click();
+  await row("b").locator(".resource-icon").click({ modifiers: ["ControlOrMeta"] });
+  const source = await row("a").locator(".resource-icon").boundingBox(),
+    target = await row("archive").boundingBox();
+  await page.mouse.move(source.x + source.width / 2, source.y + source.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(source.x + source.width / 2 + 10, source.y + source.height / 2 + 10, { steps: 3 });
+  await page.mouse.move(target.x + 50, target.y + target.height / 2, { steps: 12 });
+  await expect(page.locator("body")).toHaveClass(/explorer-can-drop/);
+  await page.mouse.up();
+  const alert = page.getByRole("alert");
+  await expect(alert).toContainText("Sample a: Move refused; Sample b: A kérés sikertelen (503).");
+  // Each artifact's name, and Workspace's own words, take the page's language; the server's are English.
+  expect(await languages(alert.locator(":scope > span"))).toEqual([
+    ["Sample a:", "hu"],
+    ["Move refused", "en"],
+    [";", "hu"],
+    ["Sample b:", "hu"],
+    ["A kérés sikertelen (503).", "hu"],
+  ]);
+});
+
+test("a status Workspace does not know is marked English wherever it shows, and a known one is translated", async ({
+  page,
+  api,
+}) => {
+  const retracted = { ...resource, "bibo:status": "bibo:retracted" };
+  const version = (id, number, status) => ({
+    ...resource,
+    "@id": id,
+    "pav:version": number,
+    "bibo:status": status,
+  });
+  await page.route("**/api/resource/folders/home/contents?**", (route) =>
+    route.fulfill({ json: { resources: [retracted], totalCount: 1, pathInfo: [] } }),
+  );
+  await page.route("**/templates/template/report", (route) =>
+    route.fulfill({
+      json: {
+        ...retracted,
+        // Newest first, and including the template itself.
+        versions: [
+          retracted,
+          version("older", "0.9.0", "bibo:retracted"),
+          version("oldest", "0.8.0", "bibo:draft"),
+        ],
+      },
+    }),
+  );
+  await hungarian(page);
+  await page.goto("/dashboard");
+  await expect(page.locator("html")).toHaveAttribute("lang", "hu");
+  const card = page.locator(".explorer-status");
+  await expect(card).toHaveText("Retracted");
+  expect(await language(card)).toBe("en");
+
+  await page.goto("/dashboard?view=list");
+  const cell = page.locator(".explorer-item td").filter({ hasText: "1.0.0" });
+  await expect(cell).toHaveText("1.0.0 · Retracted");
+  expect(await languages(cell)).toEqual([
+    ["1.0.0", "hu"],
+    ["·", "hu"],
+    ["Retracted", "en"],
+  ]);
+
+  await page.locator(".explorer-item td").nth(1).click();
+  await page.locator("#information-version-tab").click();
+  const status = page.locator(".version dd").nth(2);
+  await expect(status).toHaveText("Retracted · Legújabb verzió");
+  expect(await languages(status)).toEqual([
+    ["Retracted", "en"],
+    ["· Legújabb verzió", "hu"],
+  ]);
+  const previous = page.locator(".previous-versions a");
+  await expect(previous).toHaveText(["Study metadata · 0.9.0 · Retracted", "Study metadata · 0.8.0 · Vázlat"]);
+  expect(await languages(previous.first())).toEqual([
+    ["Study metadata", "hu"],
+    ["· 0.9.0", "hu"],
+    ["·", "hu"],
+    ["Retracted", "en"],
+  ]);
+  expect(await languages(previous.last())).toEqual([
+    ["Study metadata", "hu"],
+    ["· 0.8.0", "hu"],
+    ["·", "hu"],
+    ["Vázlat", "hu"],
+  ]);
+
+  await page.locator(".explorer-item .row-actions button").first().click();
+  const preview = page.locator("dialog.artifact-preview");
+  await expect(preview).not.toHaveClass(/is-preparing/);
+  const shown = preview.locator(".preview-facts").getByText("Retracted", { exact: true });
+  await expect(shown).toBeVisible();
+  expect(await language(shown)).toBe("en");
+});
+
+test("CEE's explanations take the page's language, its English diagnostics and a template's labels their own", async ({
+  page,
+  api,
+}) => {
+  // The template declares its text English, so its field labels are English in a Hungarian page.
+  const field = (name) => ({ "@type": "https://schema.metadatacenter.org/core/TemplateField", "schema:name": name });
+  await page.route("**/api/resource/templates/template", (route) =>
+    route.fulfill({
+      json: {
+        ...resource,
+        "@context": { "@language": "en" },
+        properties: { Email: field("Email address"), Title: field("Title"), Code: field("Sample code") },
+      },
+      headers: { ETag: '"fixture-revision"' },
+    }),
+  );
+  await hungarian(page);
+  await page.goto("/instances/edit/instance");
+  await expect(page.locator("html")).toHaveAttribute("lang", "hu");
+  await expect(page.getByLabel("Példány neve")).toHaveValue("Study record");
+  // CEE explains each problem in the language Workspace gives it, Hungarian here, and keeps its
+  // diagnostic in English. An older bundle gives a diagnostic only.
+  await page.evaluate(() => {
+    const editor = document.querySelector("cedar-embeddable-editor");
+    editor.dataQualityReport = {
+      isValid: false,
+      problems: [
+        {
+          path: ["Email"],
+          code: "valueShape",
+          severity: "error",
+          message: "Not a valid email address.",
+          displayMessage: "Adjon meg egy érvényes e-mail címet.",
+        },
+        {
+          path: ["Title"],
+          code: "required",
+          severity: "warning",
+          message: "A value is required.",
+        },
+        {
+          path: ["Code"],
+          code: "pattern",
+          severity: "warning",
+          message: "The value does not match the pattern.",
+        },
+      ],
+    };
+    editor.dispatchEvent(new CustomEvent("change"));
+  });
+  const errors = page.getByLabel("Metaadathibák", { exact: true });
+  const warnings = page.getByLabel("Metaadat-figyelmeztetések", { exact: true });
+  await errors.locator(":scope > summary").click();
+  await errors.getByText("Technikai részletek", { exact: true }).click();
+  await warnings.locator(":scope > summary").click();
+  expect(await languages(errors.locator("li"))).toEqual([
+    ["Email address", "en"],
+    [":", "hu"],
+    ["Adjon meg egy érvényes e-mail címet.", "hu"],
+    ["Technikai részletek", "hu"],
+    ["Not a valid email address.", "en"],
+  ]);
+  // Workspace words a missing value itself; it shows CEE's diagnostic for what it has no words for.
+  expect(await languages(warnings.locator("ul"))).toEqual([
+    ["Title", "en"],
+    [":", "hu"],
+    ["Egy kötelező érték hiányzik.", "hu"],
+    ["Sample code", "en"],
+    [":", "hu"],
+    ["The value does not match the pattern.", "en"],
+  ]);
+});

@@ -30,10 +30,12 @@ import { Icon } from "./icon";
 import {
   Resource,
   collections,
+  statusLanguage,
   statusText,
   title,
   versioned,
 } from "./resource";
+import { StatusRegion } from "./status-region";
 
 /** Render the element's contents as a transient template; the dialog owns its root heading. */
 export function previewElement(element: CeeJsonObject): CeeJsonObject {
@@ -46,7 +48,7 @@ export function previewElement(element: CeeJsonObject): CeeJsonObject {
 
 @Component({
   selector: "cedar-artifact-preview",
-  imports: [Tooltip, Icon, TranslatePipe, FriendlyDatePipe],
+  imports: [Tooltip, Icon, TranslatePipe, FriendlyDatePipe, StatusRegion],
   template: `
     <dialog
       #dialog
@@ -55,9 +57,13 @@ export function previewElement(element: CeeJsonObject): CeeJsonObject {
       [attr.aria-label]="name"
       (cancel)="$event.preventDefault(); $event.stopPropagation(); close()"
     >
+      <!-- One status region says that the preview is loading, then that a trial saves nothing. -->
+      <cedar-status
+        [text]="(loading() ? 'Common.Loading' : trying() && !error() ? 'Preview.Unsaved' : '') | translate"
+      />
       @if (loading()) {
         <div class="dialog-preparing-status">
-          <span role="status">{{ "Common.Loading" | translate }}</span>
+          <span>{{ "Common.Loading" | translate }}</span>
           <button
             class="dialog-close"
             autofocus
@@ -93,9 +99,11 @@ export function previewElement(element: CeeJsonObject): CeeJsonObject {
               @if (status !== "—") {
                 <span class="sr-only">&ngsp;</span
                 ><span aria-hidden="true"> · </span
-                ><span [cedarTooltip]="'Dashboard.Status' | translate">{{
-                  status
-                }}</span>
+                ><span
+                  [attr.lang]="statusLanguage"
+                  [cedarTooltip]="'Dashboard.Status' | translate"
+                  >{{ status }}</span
+                >
               }
             }
             @if (resource["pav:lastUpdatedOn"]; as updated) {
@@ -133,7 +141,7 @@ export function previewElement(element: CeeJsonObject): CeeJsonObject {
           <p role="alert">{{ message | translate }}</p>
         }
         @if (trying() && !error()) {
-          <p class="try-out-notice" role="status">
+          <p class="try-out-notice">
             {{ "Preview.Unsaved" | translate }}
           </p>
         }
@@ -173,6 +181,10 @@ export class ArtifactPreview implements AfterViewInit, OnDestroy {
   }
   get status() {
     return statusText(this.resource, this.i18n);
+  }
+  /** The servers' language, for a status Workspace does not know and so shows as the server states it. */
+  get statusLanguage() {
+    return statusLanguage(this.resource, this.i18n);
   }
   /** When the preview opened; the heading gives its date relative to this, as the tile does. */
   readonly now = Date.now();

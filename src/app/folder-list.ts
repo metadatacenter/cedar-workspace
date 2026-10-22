@@ -5,6 +5,7 @@ import { I18n } from "./i18n";
 import { Icon } from "./icon";
 import { Resource, title } from "./resource";
 import { Tooltip } from "./tooltip";
+import { StatusRegion } from "./status-region";
 
 export type FolderSort =
   "name" | "-name" | "lastUpdatedOnTS" | "-lastUpdatedOnTS";
@@ -13,7 +14,7 @@ export type FolderSort =
 @Component({
   selector: "cedar-folder-list",
   host: { class: "resource-list" },
-  imports: [TranslatePipe, FriendlyDatePipe, Icon, Tooltip],
+  imports: [TranslatePipe, FriendlyDatePipe, Icon, Tooltip, StatusRegion],
   templateUrl: "./folder-list.html",
   styleUrl: "./folder-list.scss",
 })

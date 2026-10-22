@@ -365,7 +365,9 @@ async function checkDialogSpacing(dialog) {
     return containers.map(container => {
       const style = getComputedStyle(container);
       const token = container.matches('.folder-picker') ? '--cedar-space-1' : '--cedar-space-3';
-      const children = [...container.children].filter(child => child.getBoundingClientRect().height > 0);
+      // A status region drawn as nothing is positioned out of the stack, and so takes no part in it.
+      const children = [...container.children].filter(child =>
+        child.getBoundingClientRect().height > 0 && !['absolute', 'fixed'].includes(getComputedStyle(child).position));
       return {
         name: container.className,
         expected: parseFloat(style.getPropertyValue(token)),

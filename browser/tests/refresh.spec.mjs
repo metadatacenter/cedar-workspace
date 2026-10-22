@@ -40,7 +40,8 @@ for (const empty of [false, true]) {
     await pending;
     await expect(refresh).toBeDisabled();
     await expect(page.locator(".table-scroll")).toHaveAttribute("aria-busy", "true");
-    await expect(page.getByRole("status")).toHaveText("Refreshing…");
+    // The listing is busy, so its status region, in the footer beside it, says so.
+    await expect(paging.getByRole("status")).toHaveText("Refreshing…");
     await expect(breadcrumb).toHaveText("My workspace");
     expect(await link.evaluate(el => el.isConnected)).toBe(true);
     expect(await breadcrumb.boundingBox()).toEqual(pathBefore);

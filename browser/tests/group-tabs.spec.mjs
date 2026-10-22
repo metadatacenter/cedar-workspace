@@ -59,7 +59,7 @@ for (const width of [1440, 375]) {
     await bin.click();
     await confirmation.getByRole("button", { name: "Yes", exact: true }).click();
     await expect(panel.locator(".groups-selected")).toHaveCount(0);
-    await expect(page.getByRole("status")).toHaveText("Group deleted.");
+    await expect(page.locator(".groups-announcement")).toHaveText("Group deleted.");
     expect(api.requests.filter(r => r.method !== "GET")).toEqual([
       expect.objectContaining({ method: "DELETE", path: "/api/group/groups/team", revision: '"fixture-revision"' }),
     ]);
@@ -263,6 +263,6 @@ test("recovering a group conflict keeps the draft and refreshes the save revisio
   await expect(name).toHaveValue("My unsaved name");
   await expect(page.getByLabel("Description", { exact: true })).toHaveValue("Server description");
   await expect(save).toBeEnabled(); await save.click();
-  await expect(page.getByRole("status")).toContainText("saved");
+  await expect(page.locator(".groups-announcement")).toContainText("saved");
   expect(revisions).toEqual(['"old"', '"fresh"']);
 });

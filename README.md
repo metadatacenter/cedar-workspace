@@ -296,6 +296,11 @@ Use `Toast` for successful modifications and copy feedback. It announces politel
 can be dismissed, expires after six seconds and pauses on hover or focus. Render it
 inside the owning dialog when one is open, so it remains accessible in the modal's
 layer. Errors, stale-write conflicts and actionable recovery messages stay inline.
+Keep the toast in the page while it has no message, rather than inside an `@if` on the
+message. Its status region must be present before a message arrives, or a screen reader
+may not announce it. A loading status uses `<cedar-status [text]>` the same way: the region
+stays in the page, drawn as nothing, outside any element marked `aria-busy` where the layout
+allows, and holds the status text only while the status lasts.
 
 Workspace report reads share ownership by resource across background enrichment,
 selection and menus. A newer request or saved description supersedes older reports,
@@ -348,5 +353,8 @@ draft and requires correction or a recovery-file download before proceeding.
 The production initial-bundle budget is 1.04 MB. Exact JSON transport and draft preservation
 add the shared scalar policy bundle. On 2026-10-20, refused controls that keep focus and the
 help that explains them took the measured total past the former 1.03 MB, and the status regions
-of Groups and the description editor took it to 1,031,766 bytes (303 KB estimated transfer). The
-budget keeps about 8 KB of headroom and does not include the lazy metadata editor.
+of Groups and the description editor took it to 1,031,766 bytes (303 KB estimated transfer). On
+2026-10-21, status regions that stay in the page for toasts and loading statuses, focus that
+returns after group and description changes, and text marked with its language took it to
+1,037,332 bytes (304 KB estimated transfer). The budget keeps about 3 KB of headroom and does not
+include the lazy metadata editor.
