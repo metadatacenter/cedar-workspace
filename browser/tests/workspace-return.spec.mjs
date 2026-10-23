@@ -18,7 +18,8 @@ for (const width of [1440, 375]) {
       await expect(control.locator('cedar-icon[name="back"] svg')).toHaveCount(1);
       if (!route.startsWith('instances')) {
         await control.click();
-        await expect(page).toHaveURL(/\/dashboard$/);
+        // The return names nothing, so the dashboard opens with the saved listing preferences.
+        await expect(page).toHaveURL(/\/dashboard\?sort=name$/);
       } else {
         await expect(page.getByLabel('Instance name', {exact:true})).toHaveValue('Study record');
         await control.click();

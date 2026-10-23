@@ -14,4 +14,6 @@ export interface UserProfile {
   homeFolderId: string;
   permissions?: string[];
   apiKeys?: ApiKey[];
+  /** The interface choices the profile keeps. The Workspace reads its listing preferences from here. */
+  uiPreferences?: { workspace?: unknown };
 }

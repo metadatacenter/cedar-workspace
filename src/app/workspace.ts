@@ -23,6 +23,17 @@ import {
   filtersFromParams,
   filterQuery,
 } from "./listing-filters";
+import {
+  ListingPreferences,
+  SavedListing,
+  defaultPreferences,
+  filterPreferences,
+  listingSort,
+  preferenceParams,
+  preferenceQuery,
+  preferencesFromParams,
+  sortPreferences,
+} from "./listing-preferences";
 import { ArtifactPreview } from "./artifact-preview";
 import { Toast } from "./toast";
 import {
@@ -338,6 +349,9 @@ export class Workspace {
   // The listing the URL names, without the artifact to select in it or the tab to show
   // it on: dropping those parameters once applied must not load the listing again.
   private listingKey: string | null = null;
+  // Whether the address has been read. Only the address the page opens on takes the saved preferences.
+  private opened = false;
+  private readonly savedListing = inject(SavedListing);
   // An artifact to select once the listing holds it, as an editor returning here names it,
   // and the Info panel tab it was left on.
   private reselect: string | null = null;
@@ -375,6 +389,20 @@ export class Workspace {
       this.route.queryParamMap
         .pipe(takeUntilDestroyed(this.destroy))
         .subscribe((map) => {
+          if (!this.opened) {
+            this.opened = true;
+            // An address that names no listing preference has come from elsewhere, and opens with the
+            // ones the profile keeps.
+            if (!preferenceParams.some((key) => map.has(key))) {
+              void this.router.navigate([], {
+                relativeTo: this.route,
+                queryParams: preferenceQuery(this.savedListing.current() ?? defaultPreferences()),
+                queryParamsHandling: "merge",
+                replaceUrl: true,
+              });
+              return;
+            }
+          }
           this.params = new URLSearchParams();
           // The view changes how the listing is shown, not what it holds, so it is not part of its key.
           this.grid.set(map.get(VIEW_PARAM) !== "list");
@@ -392,17 +420,7 @@ export class Workspace {
           this.listingKey = listingKey;
           this.search = map.get("search") || "";
           this.folder = resourceIri(map.get("folderId") || this.api.profile.homeFolderId, this.api.profile.homeFolderId);
-          const sort = map.get("sort") || "name";
-          this.sort = [
-            "name",
-            "-name",
-            "createdOnTS",
-            "-createdOnTS",
-            "lastUpdatedOnTS",
-            "-lastUpdatedOnTS",
-          ].includes(sort)
-            ? sort
-            : "name";
+          this.sort = listingSort(map.get("sort"));
           const offset = Number(map.get("offset") || 0);
           this.offset.set(
             Number.isSafeInteger(offset) && offset >= 0
@@ -965,15 +983,20 @@ export class Workspace {
     }
   }
   navigationQuery(destination: Record<string, string> = {}) {
-    // Sorting and the view are preferences; location, search, filters and paging are not.
-    return {
-      ...(this.params.has("sort") ? { sort: this.sort } : {}),
-      ...(this.params.get("folders") === "first" ? { folders: "first" } : {}),
-      ...(this.grid() ? {} : { [VIEW_PARAM]: "list" }),
-      ...destination,
-    };
+    // The listing preferences go wherever a link inside the Workspace goes. Location, search and
+    // paging do not.
+    return { ...preferenceQuery(this.preferences()), ...destination };
+  }
+  /** The listing preferences the address names. */
+  private preferences(): ListingPreferences {
+    return preferencesFromParams(this.params, this.grid());
+  }
+  /** Keep a preference the person has just chosen, with the others the address names. */
+  private remember(change: Partial<ListingPreferences>) {
+    this.savedListing.save({ ...this.preferences(), ...change });
   }
   setView(grid: boolean) {
+    this.remember({ viewMode: grid ? "grid" : "list" });
     this.grid.set(grid);
     // A preference, not a place: switching views adds no history entry.
     void this.router.navigate([], {
@@ -997,6 +1020,7 @@ export class Workspace {
     return filtersFromParams(this.params);
   }
   changeFilters(filters: ListingFilters) {
+    this.remember(filterPreferences(filters));
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParamsHandling: "merge",
@@ -1007,6 +1031,7 @@ export class Workspace {
     this.setSort(this.sort === field ? "-" + field : field);
   }
   setFoldersFirst(first: boolean) {
+    this.remember({ foldersFirst: first });
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParamsHandling: "merge",
@@ -1017,6 +1042,7 @@ export class Workspace {
     return this.params.get("version") === "latest" ? "latest" : "all";
   }
   setVersion(version: string) {
+    this.remember({ version: version === "latest" ? "latest" : "all" });
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParamsHandling: "merge",
@@ -1047,6 +1073,7 @@ export class Workspace {
     );
   }
   setSort(sort: string) {
+    this.remember(sortPreferences(sort));
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParamsHandling: "merge",

@@ -56,7 +56,20 @@ export const test = base.extend({
       ],
       fail: false,
       requests: [],
+      profileWrites: [],
       pending: false,
+      // The listing preferences the profile keeps, as the user server serves them to a new account.
+      listing: {
+        resourceTypes: [],
+        modified: null,
+        modifiedAfter: null,
+        modifiedBefore: null,
+        version: "all",
+        sortBy: "name",
+        sortDirection: "asc",
+        foldersFirst: false,
+        viewMode: "grid",
+      },
     };
     await page.addInitScript(() => {
       window.KeycloakUserHandler = class {
@@ -124,12 +137,16 @@ export const test = base.extend({
       const request = route.request(),
         url = new URL(request.url()),
         path = decodeURIComponent(url.pathname);
-      state.requests.push({
+      const record = {
         method: request.method(),
         path,
         body: request.postDataJSON(),
         revision: request.headers()["if-match"],
-      });
+      };
+      // Choosing a listing preference writes the profile in the background. It is recorded apart
+      // from the other requests, so a spec asserting what a dialog wrote need not discount it.
+      if (record.method === "PUT" && path === "/api/user/users/owner") state.profileWrites.push(record);
+      else state.requests.push(record);
       if (state.pending && request.method() !== "GET")
         await new Promise((resolve) => setTimeout(resolve, 250));
       if (state.fail && request.method() !== "GET")
@@ -147,14 +164,17 @@ export const test = base.extend({
       let body;
       if (path.endsWith("/summary")) body = { createdTimestamp: 1767268800000 };
       else if (path.endsWith("/apiKeys")) body = { apiKeys: [] };
-      else if (path === "/api/user/users/owner")
+      else if (path === "/api/user/users/owner") {
+        const submitted = request.method() === "PUT" ? request.postDataJSON() : {};
+        if ("uiPreferences.workspace" in submitted) state.listing = submitted["uiPreferences.workspace"];
         body = {
           ...owner,
           homeFolderId: "home",
           permissions: state.monitoring ? ["permission_monitor_read"] : [],
           email: "alex@example.org",
-          uiPreferences: { preferredDateFormat: "yyyy-MM-dd" },
+          uiPreferences: { preferredDateFormat: "yyyy-MM-dd", workspace: state.listing },
         };
+      }
       else if (path.endsWith("/permissions")) {
         if (request.method() === "PUT") {
           const submitted = request.postDataJSON();
