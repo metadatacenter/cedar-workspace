@@ -430,9 +430,14 @@ test("a page button keeps focus through loading, and the last page hands it to P
   await next.focus();
   await page.keyboard.press("Enter");
   await expect(footer).toHaveText("Displaying 51–100 of 120");
+  // The route changes the offset before the new listing arrives. The footer can therefore
+  // name page two while its request still disables Next; wait for page two's actual rows.
+  await expect(page.locator('[data-resource-id="item-51"]')).toBeVisible();
+  await expect(next).toBeEnabled();
   await expect.poll(() => focusedControl(page)).toBe('button "Next"');
   await page.keyboard.press("Enter");
   await expect(footer).toHaveText("Displaying 101–120 of 120");
+  await expect(page.locator('[data-resource-id="item-101"]')).toBeVisible();
   await expect(next).toBeDisabled();
   await expect.poll(() => focusedControl(page)).toBe('button "Previous"');
 });
@@ -597,12 +602,18 @@ test("saving or cancelling a description moves focus to the description", async 
     .getByRole("textbox", { name: "Description", exact: true });
   await expect(description).toBeEnabled();
   await description.fill("A saved description");
+  // Input dispatch precedes Angular's render of the dirty-state actions. Tab only once
+  // those controls exist, while still asserting the textarea retained focus.
+  await expect(page.getByRole("button", { name: "Save", exact: true })).toBeEnabled();
+  await expect(description).toBeFocused();
   expect(await tabSequence(page, 2)).toEqual(['button "Cancel"', 'button "Save"']);
   await page.keyboard.press("Enter");
   await expect(page.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
   await expect.poll(() => focusedControl(page)).toBe('textbox "Description"');
   await expect(description).toBeEnabled();
   await description.fill("A cancelled description");
+  await expect(page.getByRole("button", { name: "Cancel", exact: true })).toBeVisible();
+  await expect(description).toBeFocused();
   expect(await tabSequence(page, 1)).toEqual(['button "Cancel"']);
   await page.keyboard.press("Enter");
   await expect(page.getByRole("button", { name: "Cancel", exact: true })).toHaveCount(0);
@@ -641,11 +652,17 @@ test("a pointer press lands focus where the keyboard does, for groups and descri
   const description = page.getByRole("textbox", { name: "Description", exact: true });
   await expect(description).toBeEnabled();
   await description.fill("A saved description");
+  // Input dispatch precedes Angular's render of the dirty-state actions. Tab only once
+  // those controls exist, while still asserting the textarea retained focus.
+  await expect(page.getByRole("button", { name: "Save", exact: true })).toBeEnabled();
+  await expect(description).toBeFocused();
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
   await expect.poll(() => focusedControl(page)).toBe('textbox "Description"');
   await expect(description).toBeEnabled();
   await description.fill("A cancelled description");
+  await expect(page.getByRole("button", { name: "Cancel", exact: true })).toBeVisible();
+  await expect(description).toBeFocused();
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(page.getByRole("button", { name: "Cancel", exact: true })).toHaveCount(0);
   await expect.poll(() => focusedControl(page)).toBe('textbox "Description"');

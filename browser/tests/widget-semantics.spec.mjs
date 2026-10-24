@@ -42,7 +42,9 @@ test("a row's version and status are read as two words in both views", async ({ 
   await page.getByRole("button", { name: "Grid view", exact: true }).click();
   await expect(page.getByRole("row", { name: /^1\.0\.0 Draft Study metadata / })).toHaveCount(1);
   await page.getByRole("button", { name: "Preview Study metadata", exact: true }).click();
-  expect(await page.locator(".preview-facts").ariaSnapshot()).toBe(
+  // The preview first attaches hidden while opening. Preserve the exact accessibility tree
+  // assertion, but wait for that tree to become exposed instead of reading a single frame.
+  await expect.poll(() => page.locator(".preview-facts").ariaSnapshot()).toBe(
     ["- paragraph:", "  - text: Template 1.0.0 Draft", "  - time: 1 day ago"].join("\n"),
   );
 });

@@ -16,7 +16,7 @@ export default defineConfig({
     viewport: { width: 1440, height: 1000 },
     timezoneId: "UTC",
     locale: "en-US",
-    trace: "retain-on-failure",
+    trace: process.env.CEDAR_TEST_TRACE === "on" ? "retain-on-failure" : "on-first-retry",
   },
   webServer: {
     command: "node serve.mjs",

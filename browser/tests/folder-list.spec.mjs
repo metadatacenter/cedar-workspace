@@ -16,7 +16,10 @@ async function openPicker(page, action = 'Copy', many = false, options = {}) {
     if (!url.searchParams.has('resource_types') && url.pathname.endsWith('/contents')) return route.fallback();
     const current = [home, ...children].find(f => f['@id'] === id);
     if (url.pathname.endsWith('/contents')) {
-      if (options.pending) await options.pending;
+      if (options.pending) {
+        options.onPendingRequest?.();
+        await options.pending;
+      }
       if (options.fail) return route.fulfill({status: 503, json: {message: 'Folder unavailable'}});
       reads.push({id, sort: url.searchParams.get('sort'), offset: url.searchParams.get('offset')});
       let rows = id === 'home' ? [...children] : [];
@@ -145,10 +148,14 @@ test('initial destination errors are visible and a pending load can be cancelled
   const dialog = page.locator('cedar-resource-dialog dialog');
   await expect(dialog.getByRole('alert')).toBeVisible();
   await dialog.getByRole('button', {name:'Cancel', exact:true}).click();
-  let release;
+  let release, observed;
   const pending = new Promise(resolve => {release = resolve;});
-  await openPicker(page, 'Move', false, {pending});
+  const requested = new Promise(resolve => {observed = resolve;});
+  await openPicker(page, 'Move', false, {pending, onPendingRequest: observed});
   await expect(dialog).toHaveAttribute('aria-busy', 'true');
+  // Move reads its source before requesting destinations. Closing during that earlier read
+  // correctly prevents the folder request; this case must actually have a response in flight.
+  await requested;
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
   const returned = page.waitForResponse(response => response.url().includes('resource_types=folder'));

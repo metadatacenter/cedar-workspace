@@ -216,9 +216,14 @@ test('Version selector and menu share persisted server filtering', async ({page,
 test('Version selector fits each selected label with the same chevron spacing', async ({page, api}) => {
   await dashboard(page);
   const select = page.getByRole('combobox', {name: 'Version', exact: true});
+  await page.evaluate(() => document.fonts.ready);
   const widths = [];
   for (const value of ['all', 'latest', 'all']) {
     await select.selectOption(value);
+    // The native value changes before Angular paints the separate sizing label.
+    await expect(page.locator('.version-choice-label')).toHaveText(
+      (await select.locator('option:checked').textContent()).trim(),
+    );
     const geometry = await page.locator('.version-choice').evaluate(el => {
       const label = el.querySelector('.version-choice-label');
       const select = el.querySelector('select');
