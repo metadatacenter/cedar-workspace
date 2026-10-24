@@ -136,6 +136,14 @@ async function dragToBin(page, sourceId, selectedIds = []) {
   await expect(bin).toHaveClass(/explorer-delete-target/);
   await expect(page.locator('cedar-drag-preview')).toContainText('Drop to confirm deletion');
   await expect(page.locator('body')).toHaveClass(/explorer-can-drop/);
+  // The drop state and CDK's translated preview render separately. Check the final
+  // painted geometry before capturing the drag or releasing the pointer.
+  await expect.poll(async () => {
+    const preview = await page.locator('cedar-drag-preview').boundingBox();
+    return preview && {x: preview.x, y: preview.y};
+  }).toEqual({x: Math.round(destination.x + destination.width / 2),
+              y: Math.round(destination.y + destination.height / 2)});
+  await expect(page.getByRole('tooltip')).toHaveCount(0);
 }
 for (const grid of [true,false]) {
   for(const kind of ['single','multiple','folders']) test(`dropping ${kind} on the bin opens the usual confirmation in ${grid?'grid':'list'}`,async({page,api})=>{

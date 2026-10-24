@@ -17,7 +17,7 @@ async function openPicker(page, action = 'Copy', many = false, options = {}) {
     const current = [home, ...children].find(f => f['@id'] === id);
     if (url.pathname.endsWith('/contents')) {
       if (options.pending) {
-        options.onPendingRequest?.();
+        options.onPendingRequest?.(route.request());
         await options.pending;
       }
       if (options.fail) return route.fulfill({status: 503, json: {message: 'Folder unavailable'}});
@@ -155,14 +155,26 @@ test('initial destination errors are visible and a pending load can be cancelled
   await expect(dialog).toHaveAttribute('aria-busy', 'true');
   // Move reads its source before requesting destinations. Closing during that earlier read
   // correctly prevents the folder request; this case must actually have a response in flight.
-  await requested;
+  const request = await requested;
+  // Closing may abort the request instead of delivering a late response. Observe both
+  // terminal outcomes before cancelling, and prove neither can reopen the dialog.
+  const settled = new Promise(resolve => {
+    const done = candidate => {
+      if (candidate !== request) return;
+      page.off('requestfinished', done);
+      page.off('requestfailed', done);
+      resolve();
+    };
+    page.on('requestfinished', done);
+    page.on('requestfailed', done);
+  });
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
-  const returned = page.waitForResponse(response => response.url().includes('resource_types=folder'));
   release();
-  await returned;
+  await settled;
   await expect(page.getByRole('button', {name:'Actions for Study metadata', exact:true})).toBeFocused();
   await expect(dialog).toHaveCount(0);
+  expect(api.requests.filter(request => request.path.includes('/command/'))).toEqual([]);
 });
 
 test('folder pagination retains sorting and resets its offset when sorting changes', async ({page, api}) => {
