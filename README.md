@@ -103,7 +103,7 @@ with a reason, are in `tools/i18n-allowlist.json`.
 
 ## Local development
 
-Use Node 24.22.0. Start the managed app with `cedarcli native start frontend workspace`.
+Use Node 24.22.1. Start the managed app with `cedarcli native start frontend workspace`.
 For direct npm commands, export `CEDAR_HOME` and `CEDAR_PROFILE=develop`, then source
 `cedar-development/bin/templates/cedar-profile-native.sh`:
 
