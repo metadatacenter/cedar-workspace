@@ -40,10 +40,16 @@ for (const committed of [true, false]) {
     await expect(row("c")).toBeVisible();
     for (const id of ["a","b","c"]) await row(id).locator(".resource-icon").click({modifiers:id === "a" ? [] : ["ControlOrMeta"]});
     async function drag(id) {
-      const source = await row(id).locator(".resource-icon").boundingBox(), target = await row("destination").boundingBox();
-      await page.mouse.move(source.x + source.width/2,source.y + source.height/2);
+      await expect(page.locator(".table-scroll")).toHaveAttribute("aria-busy", "false");
+      await expect(row(id)).not.toHaveClass(/cdk-drag-disabled/);
+      // Recovery alerts can move the rows. Let Playwright wait for a stable,
+      // actionable icon before pressing, then measure the destination during the drag.
+      await row(id).locator(".resource-icon").hover();
+      const source = await row(id).locator(".resource-icon").boundingBox();
       await page.mouse.down();
       await page.mouse.move(source.x + source.width/2 + 10,source.y + source.height/2 + 10,{steps:3});
+      await expect(page.locator("body")).toHaveClass(/explorer-dragging/);
+      const target = await row("destination").boundingBox();
       await page.mouse.move(target.x + 50,target.y + target.height/2,{steps:12});
       await expect(page.locator("body")).toHaveClass(/explorer-can-drop/);
       await page.mouse.up();

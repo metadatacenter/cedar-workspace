@@ -49,6 +49,17 @@ Folders remain mixed by default. Folder grouping uses the server's compound
 `sort=foldersFirst,<field>` order before pagination, including search and shared
 views, and requires the corresponding microservice-library support.
 
+The type, last-modified and version filters, the sort, folder grouping and the view are
+listing preferences. Every link inside the Workspace carries them, so opening a folder, a
+breadcrumb, a sidebar destination or a search keeps them. Location, search and paging do
+not travel. Each choice a person makes is also written to the `uiPreferences.workspace`
+object of their user profile, and an address that names none of the preferences, such as
+the way back from an account page, opens with the saved ones. Every address the Workspace
+writes names its sort, even the default one, so the way back from an editor returns to the
+listing it left rather than to the saved preferences. The write runs in the background. When it fails, the choice still holds for the rest of the visit, and only the
+next visit starts without it. The legacy Workbench keeps its own preferences in other
+profile fields, so the two applications do not share these choices.
+
 ## Grid selection and moves
 
 The result toolbar switches between the existing list and 106px-high grid cards.
@@ -92,7 +103,7 @@ with a reason, are in `tools/i18n-allowlist.json`.
 
 ## Local development
 
-Use Node 24.22.0. Start the managed app with `cedarcli native start frontend workspace`.
+Use Node 24.22.1. Start the managed app with `cedarcli native start frontend workspace`.
 For direct npm commands, export `CEDAR_HOME` and `CEDAR_PROFILE=develop`, then source
 `cedar-development/bin/templates/cedar-profile-native.sh`:
 

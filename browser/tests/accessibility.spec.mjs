@@ -63,6 +63,10 @@ async function sortMenu(page) {
   await dashboard(page);
   await page.getByRole("button", { name: "Sort options", exact: true }).click();
   await expect(page.getByRole("menu", { name: "Sort options" })).toBeVisible();
+  // Opening schedules focus after the panel renders. Finish that handoff before a test
+  // moves focus elsewhere; otherwise the opening callback can take it back mid-audit.
+  await expect(page.getByRole("menu", { name: "Sort options" })
+    .locator('[aria-checked="true"]').first()).toBeFocused();
 }
 
 /** A home folder holding a folder that takes items and one that does not, as Move and Copy list them. */

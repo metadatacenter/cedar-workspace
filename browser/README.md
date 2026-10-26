@@ -4,7 +4,10 @@ Build the production app with `npm run build`, install this directory with `npm 
 then run `npm run test:browser` at the repository root for fast local checks.
 `npm run test:visual` runs the full suite in Playwright 1.64.1's ARM Linux container,
 matching CI. Deliberate baseline changes use `npm run test:visual -- --update-snapshots`.
-Review every changed image; tolerances are zero. Never update snapshots to fix an
+Review every changed image; the allowed differing-pixel count is zero and the
+per-pixel colour threshold is 0.02, matching CEE. The container honors
+`CEDAR_TEST_WORKERS` and owns a private dependency volume for each run.
+Never update snapshots to fix an
 unexplained failure. Failure traces and image diffs are uploaded by CI.
 
 The tests load the real built application with explicit API fixtures. Unknown API

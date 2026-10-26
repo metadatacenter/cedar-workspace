@@ -106,6 +106,8 @@ for (const kind of ["template", "element", "field", "instance"]) {
       const card = page.locator(`[data-resource-id="${artifact['@id']}"]`);
       const target = selector ? card.locator(selector) : card;
       const options = selector ? {} : {position: {x: 8, y: 60}};
+      // The address is settled once the listing it names is shown.
+      await expect(card).toBeVisible();
       const returnTo = page.url();
       await target.click(options);
       await expect(card).toHaveAccessibleDescription("Selected");
@@ -164,13 +166,13 @@ test('artifact card actions and list metadata do not trigger the double-click sh
   await setup(page, [resource]);
   const card = page.locator('[data-resource-id="template"]');
   await card.getByRole('button', {name: 'Actions for Study metadata', exact: true}).dblclick();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/dashboard\?sort=name$/);
   await page.getByRole('button', {name: 'List view', exact: true}).click();
   await card.locator('.resource-icon').dblclick();
   await card.locator('time').dblclick();
   await expect(card).toHaveAccessibleDescription("Selected");
-  // Still the dashboard; list view is the only thing the address records.
-  await expect(page).toHaveURL(/\/dashboard\?view=list$/);
+  // Still the dashboard. The address records the sort and the list view, and nothing the double-clicks did.
+  await expect(page).toHaveURL(/\/dashboard\?sort=name&view=list$/);
 });
 
 test("grid retains compact sizing, range and list selection, and moves a group with revisions", async ({
