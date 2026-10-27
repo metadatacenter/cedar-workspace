@@ -51,7 +51,6 @@
     "cedar-embeddable-editor": "npm:@org.metadatacenter/cedar-embeddable-editor@2.0.30-dev.20261026.b1c0bc0",
     "cedar-model-typescript-library": "npm:@org.metadatacenter/cedar-model-typescript-library@1.0.25-dev.20261026.a5c33ae",
     "rxjs": "~7.8.2",
-    "selecto": "1.26.3",
     "tslib": "^2.8.1"
   },
   "engines": {

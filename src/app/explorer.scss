@@ -121,7 +121,14 @@ body.explorer-dragging.explorer-can-drop * {
 .cdk-drag-preview {
   pointer-events: none !important;
 }
-.selecto-selection {
+// The selection directive shows and places the marquee during a drag across empty space. On a
+// compositing layer of its own, the marquee moves without repainting the cards beneath it.
+.explorer-marquee {
+  position: fixed;
+  display: none;
+  pointer-events: none;
+  will-change: transform;
+  z-index: var(--cedar-layer-menu);
   border: 1px solid var(--cedar-color-primary) !important;
   background: color-mix(
     in srgb,

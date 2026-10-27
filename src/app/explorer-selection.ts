@@ -9,7 +9,6 @@ import {
   Output,
   inject,
 } from "@angular/core";
-import Selecto from "selecto";
 
 export function selectionRange(order: string[], anchor: string, end: string) {
   const a = order.indexOf(anchor),
@@ -18,6 +17,22 @@ export function selectionRange(order: string[], anchor: string, end: string) {
     ? [end]
     : order.slice(Math.min(a, b), Math.max(a, b) + 1);
 }
+
+/** A drag across empty space, with each item's position when it began. */
+interface MarqueeDrag {
+  x: number;
+  y: number;
+  last: [number, number];
+  items: [HTMLElement, DOMRect][];
+  done: AbortController;
+}
+
+// Mouse events report whole pixels, but Chromium's pointer events report fractional positions.
+// The marquee keeps to whole pixels, so its border stays sharp.
+const pixel = (event: PointerEvent): [number, number] => [
+  Math.floor(event.clientX),
+  Math.floor(event.clientY),
+];
 
 /** Selection geometry is local to the currently loaded page, never hidden pages. */
 @Directive({
@@ -31,7 +46,11 @@ export class ExplorerSelection implements AfterViewInit, OnDestroy {
   @Output() selectionChange = new EventEmitter<string[]>();
   @Output() openItem = new EventEmitter<string>();
   private host = inject<ElementRef<HTMLElement>>(ElementRef);
-  private selecto?: Selecto;
+  private marquee = document.createElement("div");
+  private drag?: MarqueeDrag;
+  // The items the marquee last touched. They outlast the drag, and the next drag releases them
+  // when it starts.
+  private touched: HTMLElement[] = [];
   private anchor = "";
   private suppressClick = false;
   private base: string[] = [];
@@ -46,42 +65,85 @@ export class ExplorerSelection implements AfterViewInit, OnDestroy {
     return this.elements().map((e) => e.dataset["resourceId"]!);
   }
   ngAfterViewInit() {
-    const root = this.host.nativeElement;
-    this.selecto = new Selecto({
-      container: root,
-      dragContainer: root,
-      selectableTargets: [".explorer-item"],
-      selectByClick: false,
-      selectFromInside: false,
-      hitRate: 0,
-    });
-    this.selecto.on("dragStart", (event) => {
-      const input = event.inputEvent as MouseEvent;
-      if (
-        this.selectionDisabled ||
-        (input.target as Element).closest(".explorer-item,button,a,input,thead")
-      ) {
-        event.stop();
-        return;
-      }
-      this.base =
-        input.metaKey || input.ctrlKey || input.shiftKey ? this.selection : [];
-    });
-    this.selecto.on("select", (event) => {
-      if (!event.isDragStartEnd)
-        this.selectionChange.emit([
-          ...new Set([
-            ...this.base,
-            ...event.selected.map((e) => e.dataset["resourceId"]!),
-          ]),
-        ]);
-    });
-    this.selecto.on("selectEnd", (event) => {
-      if (!event.isDragStartEnd) this.ignoreClick();
-    });
+    this.marquee.className = "explorer-marquee";
+    this.host.nativeElement.append(this.marquee);
   }
   ngOnDestroy() {
-    this.selecto?.destroy();
+    this.drag?.done.abort();
+    this.marquee.remove();
+  }
+  @HostListener("pointerdown", ["$event"]) press(event: PointerEvent) {
+    // The middle and right buttons draw no marquee.
+    if (
+      this.drag ||
+      event.button === 1 ||
+      event.button === 2 ||
+      this.selectionDisabled ||
+      (event.target as Element).closest(".explorer-item,button,a,input,thead")
+    )
+      return;
+    this.base =
+      event.metaKey || event.ctrlKey || event.shiftKey ? this.selection : [];
+    const [x, y] = pixel(event);
+    const done = new AbortController();
+    this.drag = {
+      x,
+      y,
+      last: [x, y],
+      items: this.elements().map((e) => [e, e.getBoundingClientRect()]),
+      done,
+    };
+    const options = { signal: done.signal };
+    window.addEventListener("pointermove", (e) => this.stretch(e), options);
+    for (const type of ["pointerup", "pointercancel", "contextmenu", "blur"])
+      window.addEventListener(type, () => this.release(), options);
+    if (this.touched.length) this.touch([]);
+  }
+  // A drag would otherwise select the text it crosses.
+  @HostListener("selectstart", ["$event"]) keepText(event: Event) {
+    if (this.drag) event.preventDefault();
+  }
+  private stretch(event: PointerEvent) {
+    const drag = this.drag!;
+    const [x, y] = pixel(event);
+    if (x === drag.last[0] && y === drag.last[1]) return;
+    drag.last = [x, y];
+    const left = Math.min(x, drag.x),
+      top = Math.min(y, drag.y),
+      right = Math.max(x, drag.x),
+      bottom = Math.max(y, drag.y);
+    // The press and the pointer are opposite corners of the marquee.
+    this.marquee.style.inset = `${top}px calc(100% - ${right}px) calc(100% - ${bottom}px) ${left}px`;
+    this.marquee.style.display = "block";
+    // An item is touched as soon as the marquee reaches it, even along an edge.
+    this.touch(
+      drag.items
+        .filter(
+          ([, r]) =>
+            r.left <= right &&
+            left <= r.right &&
+            r.top <= bottom &&
+            top <= r.bottom,
+        )
+        .map(([item]) => item),
+    );
+  }
+  private touch(items: HTMLElement[]) {
+    if (
+      items.length === this.touched.length &&
+      items.every((item) => this.touched.includes(item))
+    )
+      return;
+    this.touched = items;
+    this.selectionChange.emit([
+      ...new Set([...this.base, ...items.map((e) => e.dataset["resourceId"]!)]),
+    ]);
+  }
+  private release() {
+    this.drag!.done.abort();
+    this.drag = undefined;
+    this.marquee.style.display = "none";
+    this.ignoreClick();
   }
   ignoreClick() {
     this.suppressClick = true;
