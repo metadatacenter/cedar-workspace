@@ -25,6 +25,9 @@ interface MarqueeDrag {
   last: [number, number];
   items: [HTMLElement, DOMRect][];
   done: AbortController;
+  // Whether the press clears the selection when it ends. A touch leaves the selection alone until
+  // then, since it may begin a scroll.
+  clearsOnRelease: boolean;
 }
 
 // Mouse events report whole pixels, but Chromium's pointer events report fractional positions.
@@ -48,8 +51,7 @@ export class ExplorerSelection implements AfterViewInit, OnDestroy {
   private host = inject<ElementRef<HTMLElement>>(ElementRef);
   private marquee = document.createElement("div");
   private drag?: MarqueeDrag;
-  // The items the marquee last touched. They outlast the drag, and the next drag releases them
-  // when it starts.
+  // The items the current or last marquee touched. Each press on empty space starts them afresh.
   private touched: HTMLElement[] = [];
   private anchor = "";
   private suppressClick = false;
@@ -82,8 +84,12 @@ export class ExplorerSelection implements AfterViewInit, OnDestroy {
       (event.target as Element).closest(".explorer-item,button,a,input,thead")
     )
       return;
-    this.base =
-      event.metaKey || event.ctrlKey || event.shiftKey ? this.selection : [];
+    const additive = event.metaKey || event.ctrlKey || event.shiftKey;
+    this.base = additive ? this.selection : [];
+    // Without a modifier key, a press on empty space clears the selection, whether or not a drag
+    // follows. A touch may begin a scroll instead, so it clears the selection only when it lifts
+    // without having scrolled.
+    const touch = event.pointerType === "touch";
     const [x, y] = pixel(event);
     const done = new AbortController();
     this.drag = {
@@ -92,12 +98,15 @@ export class ExplorerSelection implements AfterViewInit, OnDestroy {
       last: [x, y],
       items: this.elements().map((e) => [e, e.getBoundingClientRect()]),
       done,
+      clearsOnRelease: !additive && touch,
     };
     const options = { signal: done.signal };
     window.addEventListener("pointermove", (e) => this.stretch(e), options);
-    for (const type of ["pointerup", "pointercancel", "contextmenu", "blur"])
-      window.addEventListener(type, () => this.release(), options);
-    if (this.touched.length) this.touch([]);
+    window.addEventListener("pointerup", () => this.release(true), options);
+    for (const type of ["pointercancel", "contextmenu", "blur"])
+      window.addEventListener(type, () => this.release(false), options);
+    this.touched = [];
+    if (!additive && !touch) this.selectionChange.emit([]);
   }
   // A drag would otherwise select the text it crosses.
   @HostListener("selectstart", ["$event"]) keepText(event: Event) {
@@ -139,11 +148,14 @@ export class ExplorerSelection implements AfterViewInit, OnDestroy {
       ...new Set([...this.base, ...items.map((e) => e.dataset["resourceId"]!)]),
     ]);
   }
-  private release() {
-    this.drag!.done.abort();
+  private release(ended: boolean) {
+    const drag = this.drag!;
+    drag.done.abort();
     this.drag = undefined;
     this.marquee.style.display = "none";
     this.ignoreClick();
+    if (ended && drag.clearsOnRelease && !this.touched.length)
+      this.selectionChange.emit([]);
   }
   ignoreClick() {
     this.suppressClick = true;
