@@ -146,6 +146,10 @@ for (const [id, tab, shown] of [
 ]) {
   test(`a return that names ${id} on the ${tab} tab shows ${shown}, and the address forgets both`, async ({page, api}) => {
     await setup(page, [template]);
+    // The view switch can show before the test has seen the dashboard request its own listing, and a
+    // busy machine widens that gap. Counting starts once that listing is shown, so it counts only the
+    // listing the return loads.
+    await expect(page.locator('[data-resource-id="tpl"]')).toBeVisible();
     let listings = 0;
     page.on('request', r => { if (new URL(r.url()).pathname.endsWith('/contents')) listings++; });
     await page.goto(`/dashboard?selected=${id}&tab=${tab}`);
