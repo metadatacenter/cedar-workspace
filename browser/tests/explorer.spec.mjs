@@ -297,6 +297,223 @@ test("marquee selects cards and keyboard extends selection without opening a res
   await expect(page).toHaveURL(/dashboard/);
 });
 
+const marquee = (page) => page.locator(".explorer-marquee");
+async function cards(page) {
+  const boxes = {};
+  for (const id of ["destination", "a", "b", "c"])
+    boxes[id] = await page.locator(`[data-resource-id="${id}"]`).boundingBox();
+  return boxes;
+}
+async function expectSelected(page, ids) {
+  // Two frames let the last move's selection reach the cards, so a count of none is not read too early.
+  await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))));
+  await expect(page.locator(".explorer-item.selected")).toHaveCount(ids.length);
+  for (const id of ids) await expect(page.locator(`[data-resource-id="${id}"]`)).toHaveClass(/selected/);
+}
+
+test("the marquee selects a card its edge only touches", async ({ page, api }) => {
+  await setup(page);
+  const { destination: first, c: last } = await cards(page);
+  const x = Math.floor(first.x + 50);
+  // Down to the first row: a pixel short of the cards' top edge, then on it.
+  const top = Math.ceil(first.y);
+  await page.mouse.move(x, top - 10);
+  await page.mouse.down();
+  await page.mouse.move(x + 10, top - 1);
+  await expect(marquee(page)).toBeVisible();
+  await expectSelected(page, []);
+  await page.mouse.move(x + 10, top);
+  await expectSelected(page, ["destination"]);
+  await page.mouse.up();
+  // Up to the last card: a pixel short of its bottom edge, then on it.
+  const bottom = Math.floor(last.y + last.height);
+  await page.mouse.move(x, bottom + 15);
+  await page.mouse.down();
+  await page.mouse.move(x + 10, bottom + 1);
+  await expectSelected(page, []);
+  await page.mouse.move(x + 10, bottom);
+  await expectSelected(page, ["c"]);
+  await page.mouse.up();
+  await expectSelected(page, ["c"]);
+});
+
+for (const key of ["ControlOrMeta", "Shift", null]) {
+  test(`a marquee drawn ${key ? `with ${key} adds to` : "alone replaces"} the selection`, async ({ page, api }) => {
+    await setup(page);
+    const { a, b, c } = await cards(page);
+    await page.locator('[data-resource-id="a"]').click({ position: { x: 20, y: 90 } });
+    await expectSelected(page, ["a"]);
+    if (key) await page.keyboard.down(key);
+    // From the empty space below the third card, over the second and third, then back to the third.
+    await page.mouse.move(b.x + 35, c.y + 50);
+    await page.mouse.down();
+    await page.mouse.move(a.x + 50, a.y + 50, { steps: 4 });
+    await expectSelected(page, ["a", "b"]);
+    await page.mouse.move(b.x + 50, b.y + 50, { steps: 4 });
+    await expectSelected(page, key ? ["a", "b"] : ["b"]);
+    await page.mouse.up();
+    if (key) await page.keyboard.up(key);
+    await expectSelected(page, key ? ["a", "b"] : ["b"]);
+  });
+}
+
+test("a drag that begins on a card draws no marquee", async ({ page, api }) => {
+  await setup(page);
+  const { destination, a, b } = await cards(page);
+  await page.locator('[data-resource-id="c"]').click({ position: { x: 20, y: 90 } });
+  await expectSelected(page, ["c"]);
+  // The folder cannot be moved, so a press on it starts no drag of either kind.
+  await page.mouse.move(destination.x + 20, destination.y + 90);
+  await page.mouse.down();
+  await page.mouse.move(b.x + 40, b.y + 60, { steps: 8 });
+  await expect(marquee(page)).toBeHidden();
+  await expect(page.locator("body")).not.toHaveClass(/explorer-dragging/);
+  await expectSelected(page, ["c"]);
+  await page.mouse.up();
+  // A card that can be moved starts a move instead.
+  await page.mouse.move(a.x + 20, a.y + 90);
+  await page.mouse.down();
+  await page.mouse.move(b.x + 40, b.y + 60, { steps: 8 });
+  await expect(page.locator("body")).toHaveClass(/explorer-dragging/);
+  await expect(marquee(page)).toBeHidden();
+  await page.mouse.up();
+  await expect(page.locator("body")).not.toHaveClass(/explorer-dragging/);
+  await expect(marquee(page)).toBeHidden();
+});
+
+test("the click that ends a marquee drag changes nothing", async ({ page, api }) => {
+  await setup(page);
+  const { a, b, c } = await cards(page);
+  // Pressed on empty space and released over a card, the click lands on the explorer itself.
+  // Were it not ignored, it would clear the selection.
+  await page.mouse.move(b.x + 35, c.y + 50);
+  await page.mouse.down();
+  await page.mouse.move(a.x + 50, a.y + 50, { steps: 4 });
+  await page.mouse.up();
+  await expectSelected(page, ["a", "b"]);
+  // Released on empty space between two cards, likewise.
+  await page.mouse.move(b.x + 35, c.y + 50);
+  await page.mouse.down();
+  await page.mouse.move((a.x + a.width + b.x) / 2, b.y + 60, { steps: 4 });
+  await page.mouse.up();
+  await expectSelected(page, ["b"]);
+});
+
+test("a click on empty space clears the selection, however it was made", async ({ page, api }) => {
+  await setup(page);
+  const { a, b, c } = await cards(page);
+  const card = (id) => page.locator(`[data-resource-id="${id}"]`).click({ position: { x: 20, y: 90 } });
+  // Below the second card, where the second row holds no card.
+  const empty = [b.x + 35, c.y + 50];
+  await card("c");
+  await expectSelected(page, ["c"]);
+  await page.mouse.click(...empty);
+  await expectSelected(page, []);
+  // A card chosen after a marquee had touched others.
+  await page.mouse.move(...empty);
+  await page.mouse.down();
+  await page.mouse.move(a.x + 50, a.y + 50, { steps: 4 });
+  await page.mouse.up();
+  await expectSelected(page, ["a", "b"]);
+  await card("c");
+  await expectSelected(page, ["c"]);
+  await page.mouse.click(...empty);
+  await expectSelected(page, []);
+  // A card chosen after the last press on empty space.
+  await card("a");
+  await page.mouse.click(...empty);
+  await expectSelected(page, []);
+});
+
+for (const key of ["ControlOrMeta", "Shift"]) {
+  test(`a click on empty space with ${key} keeps the selection`, async ({ page, api }) => {
+    await setup(page);
+    const { b, c } = await cards(page);
+    await page.locator('[data-resource-id="a"]').click({ position: { x: 20, y: 90 } });
+    await expectSelected(page, ["a"]);
+    await page.keyboard.down(key);
+    await page.mouse.click(b.x + 35, c.y + 50);
+    await page.keyboard.up(key);
+    await expectSelected(page, ["a"]);
+  });
+}
+
+test("a marquee that touches no card leaves none selected", async ({ page, api }) => {
+  await setup(page);
+  const { b, c } = await cards(page);
+  await page.locator('[data-resource-id="c"]').click({ position: { x: 20, y: 90 } });
+  await expectSelected(page, ["c"]);
+  await page.mouse.move(b.x + 35, c.y + 50);
+  await page.mouse.down();
+  await page.mouse.move(b.x + 45, c.y + 55, { steps: 2 });
+  await expect(marquee(page)).toBeVisible();
+  await expectSelected(page, []);
+  await page.mouse.up();
+  await expectSelected(page, []);
+});
+
+test.describe("on a touchscreen", () => {
+  test.use({ hasTouch: true });
+  test("a tap on empty space clears the selection", async ({ page, api }) => {
+    await setup(page);
+    const { b, c } = await cards(page);
+    await page.locator('[data-resource-id="c"]').tap({ position: { x: 20, y: 90 } });
+    await expectSelected(page, ["c"]);
+    await page.touchscreen.tap(b.x + 35, c.y + 50);
+    await expectSelected(page, []);
+  });
+  test("a scroll that begins on empty space keeps the selection", async ({ page, api, browserName }) => {
+    test.skip(browserName !== "chromium", "Only Chromium takes touch input through its DevTools protocol.");
+    // Enough cards to scroll, with one alone in the last row of three.
+    const extra = Array.from({ length: 39 }, (_, i) => ({
+      ...resource,
+      "@id": `x${i}`,
+      resourceType: "instance",
+      "schema:name": `Extra ${i}`,
+    }));
+    await setup(page, extra);
+    await page.locator('[data-resource-id="a"]').tap({ position: { x: 20, y: 90 } });
+    await expectSelected(page, ["a"]);
+    const explorer = page.locator(".table-scroll");
+    await explorer.evaluate((e) => (e.scrollTop = e.scrollHeight));
+    const bottom = await explorer.evaluate((e) => e.scrollTop);
+    // The middle of the empty space beside the last card, beyond the reach of the browser's touch
+    // adjustment, which would move a touch near a card onto it.
+    const last = await page.locator(".explorer-item").last().boundingBox();
+    const [x, y] = [Math.floor(last.x + last.width * 1.5 + 10), Math.floor(last.y + last.height / 2)];
+    expect(await page.evaluate(([x, y]) => !document.elementFromPoint(x, y).closest(".explorer-item"), [x, y])).toBe(true);
+    // A finger drawn down the screen scrolls the explorer back up.
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] });
+    for (let step = 1; step <= 10; step++)
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x, y: y + step * 20 }] });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await expect.poll(() => explorer.evaluate((e) => e.scrollTop)).toBeLessThan(bottom);
+    await expectSelected(page, ["a"]);
+  });
+});
+
+test("the marquee spans the press and the pointer, and hides on release", async ({ page, api }) => {
+  await setup(page);
+  const { destination, a, b, c } = await cards(page);
+  await expect(marquee(page)).toBeHidden();
+  // From below the third card to the gap between the first two.
+  const x0 = Math.floor(b.x + 35), y0 = Math.floor(c.y + c.height + 10);
+  const x1 = Math.floor((destination.x + destination.width + a.x) / 2), y1 = Math.floor(a.y + 60);
+  await page.mouse.move(x0, y0);
+  await page.mouse.down();
+  await page.mouse.move(x1, y1, { steps: 6 });
+  await expect(marquee(page)).toBeVisible();
+  expect(await marquee(page).boundingBox()).toEqual({ x: x1, y: y1, width: x0 - x1, height: y0 - y1 });
+  await expect(marquee(page)).toHaveCSS("pointer-events", "none");
+  await expectSelected(page, ["a", "b"]);
+  if (process.env.WORKSPACE_VISUAL)
+    await expect(page).toHaveScreenshot("marquee.png");
+  await page.mouse.up();
+  await expect(marquee(page)).toBeHidden();
+  await expectSelected(page, ["a", "b"]);
+});
+
 for (const width of [1280, 375]) {
   test(`compact grid is accessible and fits at ${width}`, async ({
     page,

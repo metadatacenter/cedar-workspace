@@ -321,11 +321,14 @@ test("each toast says its message from a status region already in the page", asy
   const accountRegion = page.locator("cedar-toast [role=status]");
   await expect(page.getByRole("button", { name: "Copy First name", exact: true })).toBeVisible();
   await expect(accountRegion).toHaveText("");
+  // The page says it is loading when its account arrives after its status region speaks, which
+  // depends on how busy the machine is. Only what the toast adds is this test's concern.
+  const settled = await regions.said();
   await page.getByRole("button", { name: "Copy First name", exact: true }).click();
   await expect(toast).toHaveText("Copied.");
   await expect(accountRegion).toHaveText("Copied.");
   expect(await regions.entered()).toEqual([""]);
-  expect(await regions.said()).toEqual(["Copied."]);
+  expect(await regions.said()).toEqual([...settled, "Copied."]);
 
   await page.goto("/instances/edit/instance");
   await expect(page.getByLabel("Instance name")).toHaveValue("Study record");
