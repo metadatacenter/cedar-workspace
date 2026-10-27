@@ -301,6 +301,31 @@ test("marquee selects cards and keyboard extends selection without opening a res
   await expect(page).toHaveURL(/dashboard/);
 });
 
+// The selection tint is about 1.2:1, too faint to mark anything on its own.
+test("the pressed view and a selected row are marked in the theme colour as well as tinted", async ({
+  page,
+  api,
+}) => {
+  await setup(page);
+  const primary = "rgb(15, 118, 134)";
+  const frame = `${primary} 0px 0px 0px 1px inset`;
+  const grid = page.getByRole("button", { name: "Grid view", exact: true });
+  const list = page.getByRole("button", { name: "List view", exact: true });
+  await expect(grid).toHaveCSS("box-shadow", frame);
+  await expect(list).toHaveCSS("box-shadow", "none");
+  await list.click();
+  await expect(list).toHaveCSS("box-shadow", frame);
+  await expect(grid).toHaveCSS("box-shadow", "none");
+  const rows = page.locator(".explorer-item");
+  await rows.nth(1).locator(".explorer-modified").click();
+  await expect(rows.nth(1)).toHaveClass(/selected/);
+  // Longhands, because Chromium and WebKit order the outline shorthand differently.
+  await expect(rows.nth(1)).toHaveCSS("outline-style", "solid");
+  await expect(rows.nth(1)).toHaveCSS("outline-width", "1px");
+  await expect(rows.nth(1)).toHaveCSS("outline-color", primary);
+  await expect(rows.nth(2)).toHaveCSS("outline-style", "none");
+});
+
 const marquee = (page) => page.locator(".explorer-marquee");
 async function cards(page) {
   const boxes = {};
