@@ -4,8 +4,8 @@ import { selectionFixture, selectDeletion } from "./selection-deletion-fixture.m
 
 /**
  * Whether Workspace's screens survive the conditions WCAG sets for reflow (1.4.10), resized text
- * (1.4.4), text spacing (1.4.12) and the contrast of placeholder text (1.4.3). The four browser
- * components share this method.
+ * (1.4.4), text spacing (1.4.12), the contrast of placeholder text (1.4.3) and the contrast of a
+ * field's boundary (1.4.11). The four browser components share this method.
  *
  * - Reflow: a window 320 CSS px wide. The page and its own scroll containers must not scroll
  *   sideways, no text may overlap other text, and every control must be reachable. A data table
@@ -16,6 +16,9 @@ import { selectionFixture, selectDeletion } from "./selection-deletion-fixture.m
  * - Text spacing: WCAG's line height, letter, word and paragraph spacing, set in the document and
  *   every shadow root of a window 1280 px wide. No text may be clipped or overlap other text.
  * - Placeholders: every placeholder must meet 4.5:1 against the background it is drawn on.
+ * - Boundaries: every text-entry or selection control that draws a boundary must draw it at 3:1
+ *   against what lies outside it. The token test measures the token's value; this measures what
+ *   the browser draws, so a framework default or a local override that replaces the token fails.
  *
  * A finding the spec does not name in `exceptions` fails, and so does an exception no screen
  * produces, so the list says exactly what remains.
@@ -414,6 +417,107 @@ function placeholders({ excluded }) {
 }
 
 /**
+ * The boundary of each text-entry or selection control that draws one, measured against what lies
+ * outside it. Runs in the page.
+ *
+ * A control's boundary is drawn by the border of the control itself, of an ancestor at most three
+ * levels up whose box is at most 48px larger each way, or of an element in an absolutely positioned
+ * layer within such an ancestor. The strongest side of any of them is the one measured, against the
+ * colour outside the box that holds it. A control that draws no boundary is not measured, because
+ * 1.4.11 asks for contrast in what identifies a control rather than for a boundary; a disabled
+ * control is exempt, as 1.4.11 exempts inactive components.
+ */
+function boundaries({ excluded }) {
+  const roots = [document];
+  for (let i = 0; i < roots.length; i++)
+    for (const node of roots[i].querySelectorAll("*"))
+      if (node.shadowRoot && !excluded.some((selector) => node.matches(selector)))
+        roots.push(node.shadowRoot);
+  const canvas = new OffscreenCanvas(1, 1).getContext("2d", { willReadFrequently: true });
+  const rgba = (color) => {
+    canvas.clearRect(0, 0, 1, 1);
+    canvas.fillStyle = color;
+    canvas.fillRect(0, 0, 1, 1);
+    const [r, g, b, a] = canvas.getImageData(0, 0, 1, 1).data;
+    return [r, g, b, a / 255];
+  };
+  const over = ([r, g, b, a], [R, G, B]) => [r * a + R * (1 - a), g * a + G * (1 - a), b * a + B * (1 - a)];
+  const luminance = (channels) =>
+    channels
+      .map((value) => value / 255)
+      .map((value) => (value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4))
+      .reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index], 0);
+  const parent = (node) => node.assignedSlot ?? node.parentElement ?? node.getRootNode().host ?? null;
+  const contains = (outer, inner) => {
+    for (let node = inner; node; node = parent(node)) if (node === outer) return true;
+    return false;
+  };
+  // The element's own background, laid over each ancestor's in turn down to the page's white.
+  const behind = (element) => {
+    const layers = [];
+    for (let node = element; node; node = parent(node)) layers.push(rgba(getComputedStyle(node).backgroundColor));
+    let background = [255, 255, 255];
+    for (const layer of layers.reverse()) background = over(layer, background);
+    return background;
+  };
+  const borders = (element) => {
+    const own = getComputedStyle(element);
+    return ["Top", "Right", "Bottom", "Left"].flatMap((side) => {
+      const colour = rgba(own[`border${side}Color`]);
+      const drawn =
+        parseFloat(own[`border${side}Width`]) >= 1 &&
+        !["none", "hidden"].includes(own[`border${side}Style`]) &&
+        colour[3] > 0;
+      return drawn ? [colour] : [];
+    });
+  };
+  const controls =
+    'input:not([type="hidden"], [type="checkbox"], [type="radio"], [type="range"], [type="color"], ' +
+    '[type="file"], [type="button"], [type="submit"], [type="reset"], [type="image"]), textarea, select, ' +
+    '[role="textbox"], [role="combobox"], [role="searchbox"], [role="spinbutton"]';
+  const results = [];
+  for (const root of roots)
+    for (const field of root.querySelectorAll(controls)) {
+      if (!field.checkVisibility({ opacityProperty: true, visibilityProperty: true })) continue;
+      if (field.disabled || field.getAttribute("aria-disabled") === "true") continue;
+      const own = field.getBoundingClientRect();
+      if (own.width <= 1 || own.height <= 1) continue;
+      const drawers = [];
+      let box = field;
+      for (let level = 0; box && level <= 3; level++, box = parent(box)) {
+        const rect = box.getBoundingClientRect();
+        if (rect.width > own.width + 48 || rect.height > own.height + 48) break;
+        drawers.push({ element: box, holder: box });
+        if (box === field) continue;
+        for (const layer of box.querySelectorAll("*")) {
+          if (contains(field, layer) || contains(layer, field) || getComputedStyle(layer).position !== "absolute") continue;
+          for (const element of [layer, ...layer.querySelectorAll("*")])
+            if (element.checkVisibility({ visibilityProperty: true })) drawers.push({ element, holder: box });
+        }
+      }
+      let strongest;
+      for (const { element, holder } of drawers) {
+        const container = parent(holder);
+        const outside = container ? behind(container) : [255, 255, 255];
+        for (const colour of borders(element)) {
+          const boundary = over(colour, behind(element));
+          const [light, dark] = [luminance(boundary), luminance(outside)].sort((x, y) => y - x);
+          const ratio = (light + 0.05) / (dark + 0.05);
+          if (!strongest || ratio > strongest.ratio) strongest = { ratio, boundary, outside };
+        }
+      }
+      if (!strongest) continue;
+      results.push({
+        target: field.id || field.getAttribute("aria-label") || field.name || field.localName,
+        ratio: Math.floor(strongest.ratio * 100) / 100,
+        boundary: `rgb(${strongest.boundary.map(Math.round).join(", ")})`,
+        outside: `rgb(${strongest.outside.map(Math.round).join(", ")})`,
+      });
+    }
+  return results;
+}
+
+/**
  * Data tables that need scrolling in two dimensions, which may scroll sideways inside their own
  * container at 320 px rather than reflow.
  */
@@ -571,5 +675,18 @@ for (const [screen, [open, shown]] of Object.entries(fields))
     expect(
       measured.filter((field) => field.ratio < 4.5),
       "placeholders under 4.5:1",
+    ).toEqual([]);
+  });
+
+for (const [screen, open] of Object.entries(screens))
+  test(`${screen} draws its field boundaries at 3:1`, async ({ page, api }) => {
+    const excluded = (await open(page)) ?? [];
+    await page.mouse.move(0, 0);
+    const measured = await page.evaluate(boundaries, { excluded });
+    // A selector that stops matching would let the check pass by measuring nothing.
+    if (screen === "dashboard list") expect(measured.length, "controls that draw a boundary").toBeGreaterThan(0);
+    expect(
+      measured.filter((field) => field.ratio < 3),
+      "field boundaries under 3:1",
     ).toEqual([]);
   });
