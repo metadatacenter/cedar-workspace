@@ -1,6 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import { test, expect, resource } from './fixtures.mjs';
 const documents = JSON.parse(await readFile(new URL('../fixtures/preview.json', import.meta.url), 'utf8'));
+// The first preview on a page loads and starts the real CEE bundle, which can take longer than the
+// default 5 s on a loaded machine. A wait that includes that start-up allows 15 s.
+const ceeStartup = {timeout: 15000};
 async function setup(page, kind, options = {}) {
   const requests = [];
   // Exercise the actual installed CEE/CEF bundle, including its read-only controls.
@@ -166,7 +169,7 @@ for (const kind of ['template', 'element', 'field', 'instance']) {
       sample();
     });
     release();
-    await expect(dialog.locator('section')).toHaveAttribute('aria-busy', 'false');
+    await expect(dialog.locator('section')).toHaveAttribute('aria-busy', 'false', ceeStartup);
     await expect(dialog.getByRole('heading', {level:2})).toBeVisible();
     await expect.poll(() => page.evaluate(() => window.previewFrames.length)).toBeGreaterThan(2);
     const frames = await page.evaluate(() => {
@@ -184,7 +187,7 @@ test('preview fits a narrow screen without scaling its fonts', async ({page,api}
   const {button} = await setup(page,'instance');
   await button.click();
   const dialog = page.getByRole('dialog');
-  await expect(dialog.locator('[aria-busy]')).toHaveAttribute('aria-busy','false');
+  await expect(dialog.locator('[aria-busy]')).toHaveAttribute('aria-busy','false',ceeStartup);
   await expect(dialog.getByRole('alert')).toHaveCount(0);
   expect(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
   expect(await dialog.locator('section').evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
@@ -205,7 +208,7 @@ test('list rows offer the same preview without selecting or opening the artifact
   await expect(page.locator('.explorer-item').last().getByRole('button',{name:/^Preview /})).toHaveCount(0);
   await eyes.press('Enter');
   const dialog = page.getByRole('dialog');
-  await expect(dialog.locator('[aria-busy]')).toHaveAttribute('aria-busy','false');
+  await expect(dialog.locator('[aria-busy]')).toHaveAttribute('aria-busy','false',ceeStartup);
   await expect(dialog.getByRole('alert')).toHaveCount(0);
   await expect(dialog.locator('cedar-embeddable-editor .cee-spec-box')).toContainText('80');
   await page.getByRole('button',{name:'Close preview'}).click();
@@ -227,7 +230,7 @@ test('long previews scroll within the viewport while the close button stays visi
   await page.route('**/api/resource/templates/preview-item', route=>route.fulfill({json:template}));
   await button.click();
   const dialog = page.getByRole('dialog');
-  await expect(dialog.locator('[aria-busy]')).toHaveAttribute('aria-busy','false');
+  await expect(dialog.locator('[aria-busy]')).toHaveAttribute('aria-busy','false',ceeStartup);
   await expect(dialog.getByRole('alert')).toHaveCount(0);
   const body = dialog.locator('section');
   expect(await body.evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true);
@@ -243,7 +246,7 @@ for (const [name, type] of [['nihField', 'NIH Grant ID'], ['attributeField', 'At
     const {button} = await setup(page,'field',{artifact:documents[name]});
     await button.click();
     const dialog = page.getByRole('dialog');
-    await expect(dialog.locator('[aria-busy]')).toHaveAttribute('aria-busy','false');
+    await expect(dialog.locator('[aria-busy]')).toHaveAttribute('aria-busy','false',ceeStartup);
     const field = dialog.locator('cedar-embeddable-field');
     await expect(field.locator('.cee-field-type')).toHaveText(type);
     await expect(field.locator('.cee-field-type [data-field-type-icon]')).toBeVisible();
@@ -265,7 +268,7 @@ test('element previews retain separators between fields without a trailing rule'
   const {button} = await setup(page, 'element', {artifact});
   await button.click();
   const dialog = page.getByRole('dialog');
-  await expect(dialog.locator('[aria-busy]')).toHaveAttribute('aria-busy', 'false');
+  await expect(dialog.locator('[aria-busy]')).toHaveAttribute('aria-busy', 'false', ceeStartup);
   const fields = dialog.locator('.non-iterable-component');
   await expect(fields).toHaveCount(2);
   await expect(fields.first()).toHaveCSS('border-bottom-width', '1px');
@@ -280,7 +283,7 @@ test('moving the preview heading preserves nested element structure', async ({pa
   const {button} = await setup(page, 'element', {artifact});
   await button.click();
   const dialog = page.getByRole('dialog');
-  await expect(dialog.locator('[aria-busy]')).toHaveAttribute('aria-busy', 'false');
+  await expect(dialog.locator('[aria-busy]')).toHaveAttribute('aria-busy', 'false', ceeStartup);
   await expect(dialog.locator('header h2')).toHaveText(artifact['schema:name']);
   const nested = dialog.locator('mat-expansion-panel');
   await expect(nested).toHaveCount(1);

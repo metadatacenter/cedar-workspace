@@ -597,7 +597,9 @@ test("the preview says a trial saves nothing from its region once the trial has 
   await page.getByRole("button", { name: "Preview Study metadata", exact: true }).click();
   const preview = page.locator("dialog.artifact-preview");
   const region = preview.locator(":scope > cedar-status");
-  await expect(preview).not.toHaveClass(/is-preparing/);
+  // Opening the preview loads and starts the real CEE bundle, which can take longer than the
+  // default 5 s on a loaded machine.
+  await expect(preview).not.toHaveClass(/is-preparing/, { timeout: 15000 });
   await expect(region).toHaveText("");
   await preview.getByRole("button", { name: "Try out", exact: true }).click();
   await expect(preview).not.toHaveClass(/is-preparing/);

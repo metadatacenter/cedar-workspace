@@ -146,6 +146,10 @@ for (const [id, tab, shown] of [
 ]) {
   test(`a return that names ${id} on the ${tab} tab shows ${shown}, and the address forgets both`, async ({page, api}) => {
     await setup(page, [template]);
+    // The view switch can show before the test has seen the dashboard request its own listing, and a
+    // busy machine widens that gap. Counting starts once that listing is shown, so it counts only the
+    // listing the return loads.
+    await expect(page.locator('[data-resource-id="tpl"]')).toBeVisible();
     let listings = 0;
     page.on('request', r => { if (new URL(r.url()).pathname.endsWith('/contents')) listings++; });
     await page.goto(`/dashboard?selected=${id}&tab=${tab}`);
@@ -295,6 +299,31 @@ test("marquee selects cards and keyboard extends selection without opening a res
   await rows.nth(1).press("Shift+ArrowRight");
   await expect(page.locator(".explorer-item.selected")).toHaveCount(2);
   await expect(page).toHaveURL(/dashboard/);
+});
+
+// The selection tint is about 1.2:1, too faint to mark anything on its own.
+test("the pressed view and a selected row are marked in the theme colour as well as tinted", async ({
+  page,
+  api,
+}) => {
+  await setup(page);
+  const primary = "rgb(15, 118, 134)";
+  const frame = `${primary} 0px 0px 0px 1px inset`;
+  const grid = page.getByRole("button", { name: "Grid view", exact: true });
+  const list = page.getByRole("button", { name: "List view", exact: true });
+  await expect(grid).toHaveCSS("box-shadow", frame);
+  await expect(list).toHaveCSS("box-shadow", "none");
+  await list.click();
+  await expect(list).toHaveCSS("box-shadow", frame);
+  await expect(grid).toHaveCSS("box-shadow", "none");
+  const rows = page.locator(".explorer-item");
+  await rows.nth(1).locator(".explorer-modified").click();
+  await expect(rows.nth(1)).toHaveClass(/selected/);
+  // Longhands, because Chromium and WebKit order the outline shorthand differently.
+  await expect(rows.nth(1)).toHaveCSS("outline-style", "solid");
+  await expect(rows.nth(1)).toHaveCSS("outline-width", "1px");
+  await expect(rows.nth(1)).toHaveCSS("outline-color", primary);
+  await expect(rows.nth(2)).toHaveCSS("outline-style", "none");
 });
 
 const marquee = (page) => page.locator(".explorer-marquee");

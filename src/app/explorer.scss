@@ -26,8 +26,10 @@
   @include spacing.apply(padding, view-switch);
   border-radius: 0;
 }
+/* The tint alone is too faint to mark the pressed view, so it is framed in the theme colour too. */
 .explorer-view-switch [aria-pressed="true"] {
   background: var(--cedar-surface-selected);
+  @include patterns.selected-frame;
 }
 .explorer-item {
   user-select: none;
@@ -82,6 +84,12 @@ body.explorer-dragging.explorer-can-drop * {
 }
 .explorer-grid tr.selected {
   border-color: var(--cedar-color-primary);
+}
+/* The selection tint is about 1.2:1 against an ordinary row, too faint to mark a selection on its
+   own, so a selected row is also outlined in the theme colour, as a selected card is bordered. The
+   rule weighs no more than an element selector, so a row's focus, drop and move outlines win. */
+:where(.table-scroll:not(.explorer-grid)) tr:where(.selected) {
+  @include patterns.selected-outline;
 }
 .explorer-grid td {
   border: 0;
