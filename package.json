@@ -36,7 +36,7 @@
     "prettier": "^3.9.6",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.72.0",
-    "vitest": "^4.0.8"
+    "vitest": "^5.0.5"
   },
   "dependencies": {
     "@angular/cdk": "22.2.5",
