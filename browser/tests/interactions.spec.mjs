@@ -274,7 +274,7 @@ test("the way back from a designer is the address the router wrote", async ({
   expect(new URL(href).searchParams.get("returnTo")).toBe(page.url());
 });
 
-test("group members are removed immediately without confirmation and show a success notice", async ({
+test("group members are removed only once confirmed and show a success notice", async ({
   page,
   api,
 }) => {
@@ -291,8 +291,20 @@ test("group members are removed immediately without confirmation and show a succ
     .locator(".groups-member-row")
     .filter({ hasText: "Sam Curator" })
     .getByRole("button");
+  const confirmation = page.locator("dialog.confirmation-dialog");
   await remove.click();
-  await expect(page.locator(".confirmation-dialog")).toHaveCount(0);
+  await expect(confirmation).toContainText("Remove Sam Curator from group “Research team”?");
+  await expect(confirmation.locator('[data-cedar-icon="delete"]')).toHaveCount(1);
+  await expect(confirmation.locator('[data-cedar-icon="user"]')).toHaveCount(1);
+  // A refusal leaves the member and returns focus to the button that asked.
+  await confirmation.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(confirmation).toHaveCount(0);
+  await expect(remove).toBeFocused();
+  await expect(page.locator(".groups-member-row")).toHaveCount(2);
+  await expect(page.locator(".toast")).toHaveCount(0);
+  expect(api.requests.filter((r) => r.method === "PUT")).toHaveLength(0);
+  await remove.click();
+  await confirmation.getByRole("button", { name: "Yes", exact: true }).click();
   await expect(page.locator(".groups-member-row")).toHaveCount(1);
   // The toast shows the notice, and the page's status region says what changed.
   await expect(page.locator(".toast")).toHaveText("Group members saved.");

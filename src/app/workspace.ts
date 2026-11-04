@@ -17,6 +17,7 @@ import { ResourceMoves, validMoveShape } from "./resource-moves";
 import { CopyButton } from "./copy-button";
 import { DescriptionEditor } from "./description-editor";
 import { SortMenu } from "./sort-menu";
+import { CloseOnFocusOut, focusLeaves } from "./menu-focus";
 import { ResourceFilters } from "./resource-filters";
 import {
   ListingFilters,
@@ -190,6 +191,7 @@ type InfoTab = "info" | "version";
     Toast,
     ResourceFilters,
     SortMenu,
+    CloseOnFocusOut,
     DescriptionEditor,
     CopyButton,
     FormsModule,
@@ -691,6 +693,18 @@ export class Workspace {
       .forEach((menu) => {
         if (!menu.contains(target)) menu.open = false;
       });
+  }
+  /** Close the artifact menu when focus leaves it and the button that opened it. */
+  @HostListener("focusout", ["$event"]) leaveMenu(event: FocusEvent) {
+    if (
+      this.menu() &&
+      focusLeaves(
+        event,
+        this.host.nativeElement.querySelector(".resource-menu"),
+        this.menuTrigger,
+      )
+    )
+      this.menu.set(null);
   }
   @HostListener("window:resize")
   @HostListener("document:keydown.escape")

@@ -135,6 +135,70 @@ test("an open header menu takes Tab through its links before the next control", 
     'link "Logout"',
     'summary "Actions menu"',
   ]);
+  // Tab past its last link closed it.
+  await expect(page.locator(".header-menu").first()).not.toHaveAttribute("open");
+});
+
+for (const route of ["dashboard", "groups"])
+  test(`on ${route}, Tab out of a header menu closes it, and moving within it does not`, async ({
+    page,
+    api,
+  }) => {
+    await loaded(page, "/" + route);
+    const menu = (name) =>
+      page.locator(".header-menu").filter({ has: page.locator(`summary[aria-label="${name}"]`) });
+    const user = menu("User menu");
+    const actions = menu("Actions menu");
+    await page.locator('summary[aria-label="User menu"]').focus();
+    await page.keyboard.press("Enter");
+    await expect(user).toHaveAttribute("open");
+    expect(await tabSequence(page, 2)).toEqual(['link "Profile"', 'link "Settings"']);
+    expect(await tabSequence(page, 2, "Shift+Tab")).toEqual(['link "Profile"', 'summary "User menu"']);
+    await expect(user).toHaveAttribute("open");
+    expect(await tabSequence(page, 1, "Shift+Tab")).toEqual(['button "Search"']);
+    await expect(user).not.toHaveAttribute("open");
+    await expect.poll(() => focusedControl(page)).toBe('button "Search"');
+
+    await page.locator('summary[aria-label="Actions menu"]').focus();
+    await page.keyboard.press("Enter");
+    await expect(actions).toHaveAttribute("open");
+    expect(await tabSequence(page, 4)).toEqual([
+      'link "Groups"',
+      'link "Privacy"',
+      'link "Help"',
+      'link "About"',
+    ]);
+    await expect(actions).toHaveAttribute("open");
+    const next = route === "dashboard" ? 'button "Collapse information"' : 'link "Back to Workspace"';
+    expect(await tabSequence(page, 1)).toEqual([next]);
+    await expect(actions).not.toHaveAttribute("open");
+    await expect.poll(() => focusedControl(page)).toBe(next);
+  });
+
+test("Tab out of the New menu closes it, and moving within it does not", async ({
+  page,
+  api,
+}) => {
+  await loaded(page, "/dashboard");
+  const menu = page.locator(".new-menu");
+  await page.getByRole("button", { name: "New", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(menu).toHaveAttribute("open");
+  expect(await tabSequence(page, 4)).toEqual([
+    'button "Folder"',
+    'link "Field"',
+    'link "Element"',
+    'link "Template"',
+  ]);
+  await expect(menu).toHaveAttribute("open");
+  expect(await tabSequence(page, 1)).toEqual(['link "Home"']);
+  await expect(menu).not.toHaveAttribute("open");
+  await expect.poll(() => focusedControl(page)).toBe('link "Home"');
+  await page.getByRole("button", { name: "New", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(menu).toHaveAttribute("open");
+  expect(await tabSequence(page, 1, "Shift+Tab")).toEqual(['button "Collapse information"']);
+  await expect(menu).not.toHaveAttribute("open");
 });
 
 test("Groups' Tab order runs header, the way back, the tabs, then the selected group", async ({
@@ -380,25 +444,37 @@ test("Tab leaves an open resource menu for the next row, and Shift+Tab for its b
     name: "Actions for Record b",
     exact: true,
   });
+  const menu = page.locator(".resource-menu");
   await trigger.focus();
   await page.keyboard.press("Enter");
   await expect.poll(() => focusedControl(page)).toBe('button "Open"');
-  expect(await tabSequence(page, 7)).toEqual([
+  expect(await tabSequence(page, 6)).toEqual([
     'button "Permissions…"',
     'button "Copy"',
     'button "Move"',
     'button "Rename"',
     'button "Delete"',
     'button "Enable Openview"',
-    row("c"),
   ]);
-  await page.keyboard.press("Escape");
+  await expect(menu).toBeVisible();
+  // Focus leaving the menu closes it, and stays where Tab put it.
+  expect(await tabSequence(page, 1)).toEqual([row("c")]);
+  await expect(menu).toHaveCount(0);
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  await expect.poll(() => focusedControl(page)).toBe(row("c"));
   await trigger.focus();
   await page.keyboard.press("Enter");
   await expect.poll(() => focusedControl(page)).toBe('button "Open"');
+  // The button that opened the menu counts as part of it.
   expect(await tabSequence(page, 1, "Shift+Tab")).toEqual([
     'button "Actions for Record b"',
   ]);
+  await expect(menu).toBeVisible();
+  expect(await tabSequence(page, 1, "Shift+Tab")).toEqual([
+    'button "Preview Record b"',
+  ]);
+  await expect(menu).toHaveCount(0);
+  await expect.poll(() => focusedControl(page)).toBe('button "Preview Record b"');
 });
 
 const pages = Array.from({ length: 120 }, (_, index) => ({
@@ -580,11 +656,23 @@ test("removing a member moves focus to the Remove button in its place, then to t
     return route.fulfill({ json: { users: roster }, headers: { ETag: '"fixture-revision"' } });
   });
   await researchTeam(page);
+  // Refusing the question keeps the member, and focus goes back to the button that asked.
+  await page.getByRole("button", { name: "Remove Sam Curator from the group", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect.poll(() => focusedControl(page)).toBe('button "Cancel"');
+  await page.keyboard.press("Enter");
+  await expect(page.locator("dialog.confirmation-dialog")).toHaveCount(0);
+  await expect.poll(() => focusedControl(page)).toBe('button "Remove Sam Curator from the group"');
+  await expect(page.locator(".groups-member-row")).toHaveCount(3);
   for (const [name, next] of [
     ["Sam Curator", "Kim Analyst"],
     ["Kim Analyst", "Alex Researcher"],
   ]) {
     await page.getByRole("button", { name: `Remove ${name} from the group`, exact: true }).focus();
+    await page.keyboard.press("Enter");
+    // The question opens on Cancel, so Tab reaches Yes.
+    await expect.poll(() => focusedControl(page)).toBe('button "Cancel"');
+    await page.keyboard.press("Tab");
     await page.keyboard.press("Enter");
     await expect(page.locator(".groups-member-row").filter({ hasText: name })).toHaveCount(0);
     await expect.poll(() => focusedControl(page)).toBe(`button "Remove ${next} from the group"`);
@@ -644,6 +732,7 @@ test("a pointer press lands focus where the keyboard does, for groups and descri
   await expect.poll(() => focusedControl(page)).toBe('combobox "Add a member"');
 
   await page.getByRole("button", { name: "Remove Sam Curator from the group", exact: true }).click();
+  await page.locator("dialog.confirmation-dialog").getByRole("button", { name: "Yes", exact: true }).click();
   await expect(page.locator(".groups-member-row")).toHaveCount(1);
   await expect.poll(() => focusedControl(page)).toBe('button "Remove Alex Researcher from the group"');
 

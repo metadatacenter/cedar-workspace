@@ -312,10 +312,37 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
     );
   }
   async remove(grant: Grant) {
+    const current = this.grants.find(
+      (g) => g.kind === grant.kind && g.node["@id"] === grant.node["@id"],
+    );
     if (
-      !this.grants.some(
-        (g) => g.kind === grant.kind && g.node["@id"] === grant.node["@id"],
-      )
+      !current ||
+      !this.coordinator.active ||
+      this.busy() ||
+      this.stale() ||
+      !this.canManage
+    )
+      return;
+    const decision = this.coordinator.checkpoint();
+    const permissions = this.permissions();
+    const resource = this.resource;
+    if (
+      !(await this.confirmation.confirm(
+        this.i18n.t(
+          current.kind === "group"
+            ? "Permissions.ConfirmRemoveGroup"
+            : "Permissions.ConfirmRemoveUser",
+          {
+            name: this.principalName(current.node),
+            resource: this.title(resource),
+          },
+        ),
+        "permissions",
+        "delete",
+      )) ||
+      !decision() ||
+      this.permissions() !== permissions ||
+      this.resource !== resource
     )
       return;
     await this.save(

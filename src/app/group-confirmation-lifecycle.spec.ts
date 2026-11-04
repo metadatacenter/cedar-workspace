@@ -9,7 +9,7 @@ const group = { "@id": "team", "schema:name": "Team" };
 const me = { user: { "@id": "me" }, administrator: true, member: true };
 const other = { user: { "@id": "other" }, administrator: false, member: true };
 describe("Group confirmation navigation", () => {
-  for (const action of ["delete", "promote"])
+  for (const action of ["delete", "promote", "remove"])
     for (const tab of ["manage", "create", "delete"] as const)
       for (const approved of [true, false]) {
         it(`expires ${action} after leaving and returning to ${tab}, approved=${approved}`, async () => {
@@ -45,7 +45,11 @@ describe("Group confirmation navigation", () => {
           host.memberEtag = '"members"';
           host.activeTab = tab;
           const run = () =>
-            action === "delete" ? host.remove() : host.toggleAdmin(other);
+            action === "delete"
+              ? host.remove()
+              : action === "remove"
+                ? host.removeMember(other)
+                : host.toggleAdmin(other);
           const pending = run();
           await host.selectTab(tab === "manage" ? "delete" : "manage");
           await host.selectTab(tab);

@@ -132,6 +132,7 @@ test("Groups says each outcome once, leaves focus on a control, and leaves a fai
   const sam = page.locator(".groups-member-row").filter({ hasText: "Sam Curator" });
   const bin = sam.getByRole("button", { name: "Remove Sam Curator from the group", exact: true });
   await bin.click();
+  await confirmation.getByRole("button", { name: "Yes", exact: true }).click();
   await expect(region).toHaveText("Sam Curator removed from the group.");
   await expect(toast).toHaveText("Group members saved.");
   await focusOn(page, 'button "Remove Alex Researcher from the group"');

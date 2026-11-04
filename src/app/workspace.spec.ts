@@ -677,4 +677,43 @@ describe("Angular Workspace", () => {
     f.detectChanges();
     expect(f.nativeElement.querySelector(".resource-menu")).toBeNull();
   });
+  it("closes the artifact menu when focus leaves it and its button, and only then", async () => {
+    const f = await render();
+    const el = f.nativeElement as HTMLElement;
+    const trigger = el.querySelector<HTMLButtonElement>(
+      '[aria-label="Actions for A template"]',
+    )!;
+    trigger.click();
+    await f.whenStable();
+    f.detectChanges();
+    const items = [...el.querySelectorAll<HTMLButtonElement>(".resource-menu button")];
+    const leave = (from: Element, to: Element | null) => {
+      from.dispatchEvent(new FocusEvent("focusout", { bubbles: true, relatedTarget: to }));
+      f.detectChanges();
+    };
+    leave(items[0], items[1]);
+    leave(items[1], trigger);
+    leave(items[1], null);
+    expect(el.querySelector(".resource-menu")).not.toBeNull();
+    const outside = el.querySelector<HTMLButtonElement>('[aria-label="Refresh workspace"]')!;
+    outside.focus();
+    leave(trigger, outside);
+    expect(el.querySelector(".resource-menu")).toBeNull();
+    expect(document.activeElement).toBe(outside);
+  });
+  it("closes the header menus and the New menu when focus leaves them", async () => {
+    const f = await render();
+    const el = f.nativeElement as HTMLElement;
+    const outside = el.querySelector<HTMLButtonElement>('[aria-label="Refresh workspace"]')!;
+    const menus = [...el.querySelectorAll<HTMLDetailsElement>(".header-menu, .new-menu")];
+    expect(menus).toHaveLength(3);
+    for (const menu of menus) {
+      menu.open = true;
+      const [first, second] = menu.querySelectorAll("nav a, nav button");
+      first.dispatchEvent(new FocusEvent("focusout", { bubbles: true, relatedTarget: second }));
+      expect(menu.open).toBe(true);
+      second.dispatchEvent(new FocusEvent("focusout", { bubbles: true, relatedTarget: outside }));
+      expect(menu.open).toBe(false);
+    }
+  });
 });

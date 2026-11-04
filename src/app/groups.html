@@ -22,7 +22,7 @@
       <cedar-icon name="search" />
     </button>
   </form>
-  <details class="header-menu">
+  <details class="header-menu" cedarCloseOnFocusOut>
     <summary [attr.aria-label]="'Header.UserMenu' | translate">
       <cedar-icon name="user" />
     </summary>
@@ -42,7 +42,7 @@
       >
     </nav>
   </details>
-  <details class="header-menu">
+  <details class="header-menu" cedarCloseOnFocusOut>
     <summary
       [attr.aria-label]="'Header.ActionsMenu' | translate"
       [cedarTooltip]="'Header.ActionsMenu' | translate"

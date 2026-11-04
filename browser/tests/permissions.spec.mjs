@@ -68,6 +68,8 @@ for (const kind of ["user", "group"]) {
       finishWrite = undefined;
       finishReport = undefined;
       await dialog.getByRole("button", { name: operation === "add" ? "Add" : "Remove direct role for " + name, exact: true }).click();
+      if (operation === "remove")
+        await page.locator("dialog.confirmation-dialog").getByRole("button", { name: "Yes", exact: true }).click();
       await expect.poll(() => !!finishWrite).toBe(true);
       await expect(input).toBeDisabled();
       expect((await table.boundingBox()).y).toBe(initialTop);
@@ -83,6 +85,42 @@ for (const kind of ["user", "group"]) {
     }
   });
 }
+
+test("removing a direct role asks first, and a refusal keeps the role and returns focus to its Remove button", async ({ page, api }) => {
+  await dashboard(page);
+  await action(page, "Permissions…");
+  const dialog = page.getByRole("dialog", { name: "Permissions", exact: true });
+  const role = dialog.getByRole("combobox", { name: "Role for Sam Curator", exact: true });
+  const remove = dialog.getByRole("button", { name: "Remove direct role for Sam Curator", exact: true });
+  const confirmation = page.locator("dialog.confirmation-dialog");
+  const writes = () => api.requests.filter((r) => r.method === "PUT" && r.path.endsWith("/permissions"));
+  await expect(remove).toBeEnabled();
+  // The keyboard route: Enter opens the question with Cancel focused, and Enter again refuses.
+  await remove.focus();
+  await page.keyboard.press("Enter");
+  await expect(confirmation).toContainText("Remove the direct role for Sam Curator on “Study metadata”?");
+  await expect(confirmation.locator('[data-cedar-icon="delete"]')).toHaveCount(1);
+  await expect(confirmation.locator('[data-cedar-icon="permissions"]')).toHaveCount(1);
+  await expect(confirmation.getByRole("button", { name: "Cancel", exact: true })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(confirmation).toHaveCount(0);
+  await expect(remove).toBeFocused();
+  // Escape refuses too, and closes only the question. Space opens it, as Enter does.
+  await page.keyboard.press("Space");
+  await expect(confirmation).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(confirmation).toHaveCount(0);
+  await expect(dialog).toBeVisible();
+  await expect(remove).toBeFocused();
+  await expect(role).toBeVisible();
+  expect(writes()).toEqual([]);
+  await remove.click();
+  await confirmation.getByRole("button", { name: "Yes", exact: true }).click();
+  await expect(role).toHaveCount(0);
+  expect(writes().map((r) => r.body)).toEqual([
+    { owner: { "@id": "owner" }, userPermissions: [], groupPermissions: [] },
+  ]);
+});
 
 for (const failure of [403, 409, 412, 428, 503, "invalid", "no-revision"]) {
   test(`permissions ${failure} blocks another write until an explicit valid reload`, async ({ page, api }) => {
