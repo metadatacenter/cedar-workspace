@@ -9,6 +9,7 @@
         "build": {
           "builder": "@angular/build:application",
           "options": {
+            "statsJson": true,
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
             "index": "src/index.html",
