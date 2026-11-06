@@ -416,6 +416,8 @@ describe("Permissions dialog", () => {
     let resolve!: (value: unknown) => void;
     api.request.mockImplementationOnce(() => new Promise((r) => (resolve = r)));
     const pending = host.remove(g);
+    await vi.waitFor(() => expect(api.request).toHaveBeenCalledTimes(1));
+    vi.mocked(TestBed.inject(Confirmation).confirm).mockClear();
     await host.remove(u);
     await host.changeRole(u, "manager");
     await host.transfer(u);
@@ -430,6 +432,52 @@ describe("Permissions dialog", () => {
     api.request.mockResolvedValue({ data: initial, etag: '"last"' });
     await host.remove(u);
     expect(api.request).toHaveBeenCalledTimes(2);
+    expect(host.notice()).toBe("Permissions saved.");
+  });
+  it("names the user or group and the resource when it asks to remove a direct role", async () => {
+    host.permissions.set({
+      ...initial,
+      userPermissions: [{ user, role: "editor" }],
+      groupPermissions: [{ group: everyone, role: "viewer" }],
+    });
+    const before = host.permissions();
+    const confirm = vi
+      .mocked(TestBed.inject(Confirmation).confirm)
+      .mockResolvedValue(false);
+    await host.remove(host.grants[0]);
+    await host.remove(host.grants[1]);
+    expect(confirm.mock.calls).toEqual([
+      [
+        "Remove the direct role for Other on “Template”?",
+        "permissions",
+        "delete",
+      ],
+      [
+        "Remove the direct role for group “Everyone” on “Template”?",
+        "permissions",
+        "delete",
+      ],
+    ]);
+    expect(api.request).not.toHaveBeenCalled();
+    expect(host.permissions()).toBe(before);
+    expect(host.notice()).toBe("");
+    expect(host.busy()).toBe(false);
+  });
+  it("removes a direct role only once the removal is confirmed", async () => {
+    host.permissions.set({
+      ...initial,
+      userPermissions: [{ user, role: "viewer" }],
+    });
+    api.request.mockResolvedValue({ data: initial, etag: '"revision-2"' });
+    await host.remove(host.grants[0]);
+    expect(TestBed.inject(Confirmation).confirm).toHaveBeenCalledTimes(1);
+    expect(api.request).toHaveBeenCalledWith(
+      "/templates/artifact/permissions",
+      "PUT",
+      { owner: { "@id": "owner" }, userPermissions: [], groupPermissions: [] },
+      '"revision-1"',
+    );
+    expect(host.grants).toEqual([]);
     expect(host.notice()).toBe("Permissions saved.");
   });
   it("blocks grant writes while ownership is being transferred", async () => {
@@ -458,7 +506,7 @@ describe("Permissions dialog", () => {
     });
     const [u, g] = host.grants;
     api.request.mockReturnValue(new Promise(() => {}));
-    vi.mocked(TestBed.inject(Confirmation).confirm).mockImplementation(
+    vi.mocked(TestBed.inject(Confirmation).confirm).mockImplementationOnce(
       async () => {
         void host.remove(g);
         return true;
@@ -638,6 +686,29 @@ describe("Permissions dialog", () => {
           (call) => call[0] === "/command/transfer-resource-ownership",
         ),
       ).toBe(false);
+    });
+  }
+  for (const transition of ["reload", "destroy", "write"]) {
+    it(`removal confirmation cannot survive ${transition}`, async () => {
+      host.permissions.set({
+        ...initial,
+        userPermissions: [{ user, role: "viewer" }],
+      });
+      let decide!: (value: boolean) => void;
+      vi.mocked(TestBed.inject(Confirmation).confirm).mockImplementationOnce(
+        () => new Promise((resolve) => (decide = resolve)),
+      );
+      const removal = host.remove(host.grants[0]);
+      if (transition === "reload") await host.load();
+      else if (transition === "destroy") host.ngOnDestroy();
+      else {
+        api.request.mockRejectedValueOnce(new HttpError(400, "Rejected"));
+        await host.changeRole(host.grants[0], "editor");
+      }
+      api.request.mockClear();
+      decide(true);
+      await removal;
+      expect(api.request).not.toHaveBeenCalled();
     });
   }
   for (const response of [

@@ -11,6 +11,7 @@ import {
 } from "@angular/core";
 import { TranslatePipe } from "@ngx-translate/core";
 import { Icon } from "./icon";
+import { focusLeaves } from "./menu-focus";
 
 @Component({
   selector: "cedar-sort-menu",
@@ -115,14 +116,7 @@ export class SortMenu {
   }
   @HostListener("focusout", ["$event"])
   focusOut(event: FocusEvent) {
-    // Safari blurs the focused item on pointer-down without focusing the
-    // clicked button. Keep the menu mounted until that click can select it.
-    // Explicit focus transfers (including Tab) and outside clicks still dismiss.
-    if (
-      event.relatedTarget instanceof Node &&
-      !this.host.nativeElement.contains(event.relatedTarget)
-    )
-      this.close(false);
+    if (focusLeaves(event, this.host.nativeElement)) this.close(false);
   }
   @HostListener("window:resize")
   resized() {

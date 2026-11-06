@@ -41,7 +41,7 @@
       <cedar-icon name="search" />
     </button>
   </form>
-  <details class="header-menu">
+  <details class="header-menu" cedarCloseOnFocusOut>
     <summary
       [attr.aria-label]="'Header.UserMenu' | translate"
       [cedarTooltip]="'Header.UserMenu' | translate"
@@ -64,7 +64,7 @@
       >
     </nav>
   </details>
-  <details class="header-menu">
+  <details class="header-menu" cedarCloseOnFocusOut>
     <summary
       [attr.aria-label]="'Header.ActionsMenu' | translate"
       [cedarTooltip]="'Header.ActionsMenu' | translate"
@@ -152,7 +152,7 @@
     [attr.aria-label]="'Dashboard.Navigation' | translate"
   >
     @if(left()){
-    <details class="new-menu">
+    <details class="new-menu" cedarCloseOnFocusOut>
       <summary
         class="primary"
         id="button-create"

@@ -170,12 +170,16 @@ describe("Groups", () => {
     expect(request).not.toHaveBeenCalled();
     expect(TestBed.inject(Confirmation).confirm).not.toHaveBeenCalled();
   });
-  it("honors cancelled administrator and deletion confirmations", async () => {
+  it("honors cancelled administrator, removal and deletion confirmations", async () => {
     host.members.set([me, other]);
     vi.mocked(TestBed.inject(Confirmation).confirm).mockResolvedValue(false);
     await host.toggleAdmin(other);
+    await host.removeMember(other);
     await host.remove();
     expect(request).not.toHaveBeenCalled();
+    expect(host.members()).toEqual([me, other]);
+    expect(host.notice()).toBe("");
+    expect(host.announcement()).toBe("");
   });
   it("never gives special groups or ordinary members admin controls", async () => {
     host.selected.set({ ...g, specialGroup: true });
@@ -455,15 +459,26 @@ describe("Groups", () => {
     await host.addMember();
     expect(request).not.toHaveBeenCalled();
   });
-  it("removes members immediately, updates the roster, and restores that user to the picker", async () => {
+  it("removes a member once confirmed, updates the roster, and restores that user to the picker", async () => {
     host.users.set([me.user, other.user]);
     host.members.set([me, other]);
     request.mockResolvedValue({ data: { users: [me] }, etag: '"m2"' });
     await host.removeMember(other);
-    expect(TestBed.inject(Confirmation).confirm).not.toHaveBeenCalled();
+    expect(TestBed.inject(Confirmation).confirm).toHaveBeenCalledWith(
+      "Remove Other from group “Team”?",
+      "user",
+      "delete",
+    );
     expect(host.members()).toEqual([me]);
     expect(host.availableUsers).toEqual([other.user]);
     expect(host.notice()).toBe("Group members saved.");
+  });
+  it("asks nothing and writes nothing when a member is removed during another write", async () => {
+    host.members.set([me, other]);
+    host.busy.set(true);
+    await host.removeMember(other);
+    expect(TestBed.inject(Confirmation).confirm).not.toHaveBeenCalled();
+    expect(request).not.toHaveBeenCalled();
   });
   it("serializes membership edits and prevents a tab or selection change while saving", async () => {
     host.members.set([me, other]);
@@ -666,7 +681,7 @@ describe("Groups", () => {
       });
     }
   }
-  for (const action of ["delete", "administrator"]) {
+  for (const action of ["delete", "administrator", "removal"]) {
     for (const transition of ["destroy", "reload", "failed-write", "tab"]) {
       it(`${action} confirmation expires after ${transition}`, async () => {
         host.members.set([me, other]);
@@ -675,7 +690,11 @@ describe("Groups", () => {
           () => new Promise((resolve) => (decide = resolve)),
         );
         const pending =
-          action === "delete" ? host.remove() : host.toggleAdmin(other);
+          action === "delete"
+            ? host.remove()
+            : action === "removal"
+              ? host.removeMember(other)
+              : host.toggleAdmin(other);
         if (transition === "destroy") host.ngOnDestroy();
         if (transition === "tab") await host.selectTab("create");
         if (transition === "reload") {

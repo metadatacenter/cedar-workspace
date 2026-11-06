@@ -31,6 +31,7 @@ import { I18n } from "./i18n";
 import { ServerLanguage } from "./server-text";
 import { StatusRegion } from "./status-region";
 import { returnFocus } from "./focus-return";
+import { CloseOnFocusOut } from "./menu-focus";
 export interface Group {
   "@id": string;
   "schema:name": string;
@@ -69,6 +70,7 @@ export const userName = (u: GroupUser, i18n: Pick<I18n, "t">) =>
     TranslatePipe,
     ServerLanguage,
     StatusRegion,
+    CloseOnFocusOut,
   ],
   styleUrl: "./groups.scss",
   templateUrl: "./groups.html",
@@ -569,11 +571,31 @@ export class Groups implements OnInit, OnDestroy {
     );
   }
   async removeMember(m: Member) {
+    const decision = this.coordinator.checkpoint();
+    const tab = this.activeTab;
+    const group = this.selected();
     if (
+      !group ||
       !this.canAdmin ||
       this.onlyAdmin(m) ||
       !this.members()?.includes(m) ||
-      this.busy()
+      this.busy() ||
+      !(await this.confirmation.confirm(
+        this.i18n.t("Groups.ConfirmRemoveMember", {
+          name: this.userName(m.user),
+          group: this.groupName(group),
+        }),
+        "user",
+        "delete",
+      ))
+    )
+      return;
+    if (
+      !decision() ||
+      this.activeTab !== tab ||
+      this.selected() !== group ||
+      !this.members()?.includes(m) ||
+      this.onlyAdmin(m)
     )
       return;
     // Focus lost with the member's row goes to the Remove button of the member now in its place, or
