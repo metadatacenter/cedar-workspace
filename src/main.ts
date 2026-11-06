@@ -2,11 +2,6 @@ import { ConfirmationOutlet } from "./app/confirmation";
 import { Component } from "@angular/core";
 import { bootstrapApplication } from "@angular/platform-browser";
 import { provideRouter, RouterOutlet, TitleStrategy } from "@angular/router";
-import { Logout } from "./app/logout";
-import { Privacy } from "./app/privacy";
-import { Groups } from "./app/groups";
-import { Settings } from "./app/settings";
-import { Profile } from "./app/profile";
 import { Workspace } from "./app/workspace";
 import {
   detectLanguage,
@@ -32,15 +27,36 @@ bootstrapApplication(App, {
       { path: "", pathMatch: "full", redirectTo: "dashboard" },
       { path: "dashboard", component: Workspace },
       { path: "messaging", redirectTo: "dashboard", pathMatch: "full" },
-      { path: "profile", component: Profile, title: "Account.Profile.Title" },
+      {
+        path: "profile",
+        loadComponent: () =>
+          import("./app/profile").then((module) => module.Profile),
+        title: "Account.Profile.Title",
+      },
       {
         path: "settings",
-        component: Settings,
+        loadComponent: () =>
+          import("./app/settings").then((module) => module.Settings),
         title: "Account.Settings.Title",
       },
-      { path: "groups", component: Groups, title: "Groups.Title" },
-      { path: "privacy", component: Privacy, title: "Account.Privacy.Title" },
-      { path: "logout", component: Logout, title: "Logout.Title" },
+      {
+        path: "groups",
+        loadComponent: () =>
+          import("./app/groups").then((module) => module.Groups),
+        title: "Groups.Title",
+      },
+      {
+        path: "privacy",
+        loadComponent: () =>
+          import("./app/privacy").then((module) => module.Privacy),
+        title: "Account.Privacy.Title",
+      },
+      {
+        path: "logout",
+        loadComponent: () =>
+          import("./app/logout").then((module) => module.Logout),
+        title: "Logout.Title",
+      },
       {
         matcher: metadataRoute,
         title: "Metadata.Title",
