@@ -745,6 +745,13 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       !this.state.uncertainCreation()
     );
   }
+  private withSavedDescription(metadata: CeeJsonObject): CeeJsonObject {
+    const result = { ...metadata };
+    // Workspace owns the description. CEE can still expose an empty one after a create.
+    if (this.saved && Object.hasOwn(this.saved, "schema:description"))
+      result["schema:description"] = this.saved["schema:description"];
+    return result;
+  }
   async reviewLatest() {
     if (!this.canReviewLatest) return;
     const draft = this.cee.captureDraft();
@@ -781,10 +788,13 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       if (metadataKey(template.data) !== metadataKey(this.template))
         throw new Error(this.i18n.t("Metadata.ReviewTemplateChanged"));
       const base = {
-        ...parseJson<CeeJsonObject>(this.baseline),
+        ...this.withSavedDescription(parseJson<CeeJsonObject>(this.baseline)),
         "schema:name": this.saved!["schema:name"],
       };
-      const mine = { ...draft.metadata, "schema:name": this.chosenName() };
+      const mine = {
+        ...this.withSavedDescription(draft.metadata),
+        "schema:name": this.chosenName(),
+      };
       const choices = new Map<string, "mine" | "latest">();
       this.review.set({
         base,
@@ -1267,16 +1277,12 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       let baseline = metadataKey(current);
       const name = this.chosenName();
       const typedName = this.name.trim();
-      const metadata: CeeJsonObject = JsonSourcePolicy.clone(current);
+      const metadata = this.withSavedDescription(JsonSourcePolicy.clone(current));
       metadata["schema:name"] = name;
       metadata["schema:isBasedOn"] = this.template["@id"];
       let path: string;
       if (this.saved) {
         metadata["@id"] = this.saved["@id"];
-        // The host owns the instance description; CEE has no control for editing it.
-        // After a create, its unchanged form can still expose an empty description.
-        if (Object.hasOwn(this.saved, "schema:description"))
-          metadata["schema:description"] = this.saved["schema:description"];
         path =
           "/template-instances/" +
           encodeURIComponent(resourcePathId(String(this.saved["@id"])));
