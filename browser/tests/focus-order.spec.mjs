@@ -610,6 +610,9 @@ test("creating a group moves focus to the emptied name, for the next group", asy
   await loaded(page, "/groups");
   await page.getByRole("tab", { name: "Create group", exact: true }).click();
   await page.getByLabel("Group name", { exact: true }).fill("Research team");
+  // fill dispatches input before Angular's next render enables the submit button.
+  // Start the keyboard journey once the populated form is ready to submit.
+  await expect(page.getByRole("button", { name: "Create group", exact: true })).toBeEnabled();
   await page.keyboard.press("Tab");
   expect(await focusedControl(page)).toBe('button "Create group"');
   await page.keyboard.press("Enter");

@@ -18,7 +18,10 @@
               "browser": ""
             },
             "deployUrl": "/workspace-build/",
-            "styles": ["src/styles.scss"],
+            "styles": [
+              "node_modules/@org.metadatacenter/cedar-design-tokens/dist/fonts-hosted.css",
+              "src/styles.scss"
+            ],
             "stylePreprocessorOptions": {
               "includePaths": ["node_modules"]
             }

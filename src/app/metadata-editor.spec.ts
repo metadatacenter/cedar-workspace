@@ -21,7 +21,7 @@ import { Backend, HttpError } from "./backend.service";
 import { CeeLoader } from "./cee-loader";
 import { provideWorkspaceTranslations } from "./i18n";
 import { useDeploymentDomain } from "./resource-address";
-import type { CedarEmbeddableEditorElement } from "cedar-embeddable-editor";
+import type { CedarEmbeddableEditorElement, CeeJsonObject } from "cedar-embeddable-editor";
 
 describe("Modern metadata host", () => {
   let api: {
@@ -119,7 +119,7 @@ describe("Modern metadata host", () => {
     host = TestBed.runInInjectionContext(() => new MetadataEditor());
     host.editorHost = new ElementRef(document.createElement("div"));
     host.editor = new ElementRef(cee);
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}")));
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{}")));
   });
   afterEach(() => {
     useDeploymentDomain(null);
@@ -356,6 +356,96 @@ describe("Modern metadata host", () => {
     host.changed();
     expect(host.dirty()).toBe(false);
   });
+  it("reviews a new save and a reopened instance without inventing a description change", async () => {
+    let stored: CeeJsonObject = {};
+    const original = api.request.getMockImplementation()! as (
+      path: string, method?: string, body?: unknown,
+    ) => Promise<{ data: CeeJsonObject; etag: string }>;
+    api.request.mockImplementation(async (path, method = "GET", body) => {
+      if (method === "PUT") {
+        stored = structuredClone(body);
+        return { data: { "@id": stored["@id"] }, etag: '"saved"' };
+      }
+      if (path.startsWith("/template-instances/") && !path.endsWith("/report"))
+        return { data: structuredClone(stored), etag: '"saved"' };
+      return original(path, method, body);
+    });
+    Object.assign(cee, {
+      captureDraft: () => ({
+        format: "cedar-cee-draft", version: 1, template,
+        metadata: structuredClone(cee.currentMetadata), drafts: [],
+      }),
+    });
+    cee.currentMetadata["schema:description"] = "";
+    await host.ngAfterViewInit();
+    await host.save();
+    expect(stored["schema:description"]).toBe("Study description");
+    expect(cee.currentMetadata["schema:description"]).toBe("");
+    await host.reviewLatest();
+    expect(host.review()?.changes).toEqual([]);
+    expect(host.dirty()).toBe(false);
+
+    // A subsequent field edit must retain the host description too.
+    cee.currentMetadata["Notes"] = { "@value": "Edited after create" };
+    host.changed();
+    await host.save();
+    expect(stored["schema:description"]).toBe("Study description");
+    await host.reviewLatest();
+    expect(host.review()?.changes).toEqual([]);
+
+    // Reopen the server's saved document, as CEE's instance input does.
+    host.ngOnDestroy();
+    Object.assign(cee, { currentMetadata: structuredClone(stored) });
+    route.snapshot.paramMap = convertToParamMap({
+      mode: "edit", id: String(stored["@id"]).split("/").pop()!,
+    });
+    host = TestBed.runInInjectionContext(() => new MetadataEditor());
+    host.editorHost = new ElementRef(document.createElement("div"));
+    host.editor = new ElementRef(cee);
+    await host.ngAfterViewInit();
+    expect(host.error()).toBe("");
+    expect(host.dirty()).toBe(false);
+    expect(cee.currentMetadata["Notes"]).toEqual({ "@value": "Edited after create" });
+    await host.reviewLatest();
+    expect(host.error()).toBe("");
+    expect(host.review()?.changes).toEqual([]);
+
+    // A real server-side description edit remains visible and selects the latest value.
+    stored["schema:description"] = "Updated outside the metadata form";
+    await host.reviewLatest();
+    expect(host.review()?.changes).toEqual([{
+      path: ["schema:description"], mine: "Study description",
+      latest: "Updated outside the metadata form", conflict: false, choice: "latest",
+    }]);
+    expect(host.review()?.metadata["schema:description"]).toBe("Updated outside the metadata form");
+  });
+  it.each(["", "Imported instance description"])(
+    "does not manufacture a review difference for stored description %j", async description => {
+      const original = api.request.getMockImplementation()! as (
+        path: string, method?: string, body?: unknown,
+      ) => Promise<{ data: CeeJsonObject; etag: string }>;
+      api.request.mockImplementation(async (path, method = "GET", body) => {
+        const reply = await original(path, method, body);
+        if (path === "/template-instances/instance-id" && method === "GET")
+          return { ...reply, data: { ...reply.data, "schema:description": description } };
+        return reply;
+      });
+      cee.currentMetadata["schema:description"] = "";
+      Object.assign(cee, {
+        captureDraft: () => ({
+          format: "cedar-cee-draft", version: 1, template,
+          metadata: structuredClone(cee.currentMetadata), drafts: [],
+        }),
+      });
+      await edit();
+      await host.reviewLatest();
+      expect(host.review()!.changes.filter(change => change.path[0] === "schema:description")).toEqual([]);
+      await host.save();
+      const submitted = api.request.mock.lastCall![2];
+      expect(submitted["schema:description"]).toBe(description);
+      expect(Object.hasOwn(submitted, "schema:description")).toBe(true);
+    },
+  );
   it("creates once under a minted identity, then updates with each returned ETag without resetting CEE", async () => {
     await host.ngAfterViewInit();
     cee.currentMetadata["schema:description"] = "";

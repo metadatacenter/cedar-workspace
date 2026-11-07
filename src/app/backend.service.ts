@@ -8,7 +8,7 @@ import { ServerText } from "./server-text";
 import { Config, Resource, collections } from "./resource";
 import { useDeploymentApi } from "./resource-address";
 interface Auth {
-  initUserHandler(ok: (authenticated: boolean) => void, fail: () => void): void;
+  initUserHandler(ok: (authenticated: boolean) => void, fail: (error?: unknown) => void): void;
   refreshToken(seconds: number, ok: () => void, fail: () => void): void;
   getToken(): string;
   getParsedToken(): {
@@ -112,8 +112,8 @@ export class Backend {
     useDeploymentApi(this.config.resourceRestAPI);
     this.auth = new window.KeycloakUserHandler();
     const authenticated = await new Promise<boolean>((resolve, reject) =>
-      this.auth.initUserHandler(resolve, () =>
-        reject(new Error(this.i18n.t("Errors.SignInFailed"))),
+      this.auth.initUserHandler(resolve, (cause) =>
+        reject(new Error(this.i18n.t("Errors.SignInFailed"), { cause })),
       ),
     );
     return authenticated;

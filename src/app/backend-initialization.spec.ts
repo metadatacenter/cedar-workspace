@@ -41,6 +41,17 @@ describe("Backend initialization recovery", () => {
     expect(fetcher.mock.calls.filter(([path]) => path.startsWith("/config/"))).toHaveLength(stage === "profile" ? 1 : 2);
     expect(api.profile).toEqual(profile);
   });
+  it("retains the original initialization failure as the localized error's cause", async () => {
+    const cause = new Error("Timeout when waiting for 3rd party check iframe message.");
+    vi.stubGlobal("KeycloakUserHandler", class {
+      initUserHandler(_ok: unknown, fail: (error: unknown) => void) { fail(cause); }
+    });
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json(config)));
+    const api = TestBed.runInInjectionContext(() => new Backend());
+    const error = await api.init().catch(error => error);
+    expect(error.message).toBe("Sign-in failed. Please reload.");
+    expect(error.cause).toBe(cause);
+  });
   // The configured resource API names the base; a home folder minted under an earlier domain does not.
   it("learns the base to shorten against from the configured resource API, not the home folder", async () => {
     const uuid = "7f0a0f3e-f0e5-4c29-85fa-e646e0fbee22";
