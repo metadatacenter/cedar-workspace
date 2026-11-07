@@ -7,7 +7,7 @@ const source = await readFile(
   "utf8",
 );
 function setup() {
-  const calls = {};
+  const calls = { errors: [] };
   const keycloak = {
     init: async (options) => {
       calls.init = options;
@@ -24,6 +24,7 @@ function setup() {
     tokenParsed: { sub: "test" },
   };
   const context = {
+    console: { error: (...args) => calls.errors.push(args) },
     window: {
       cedarAuthUrl: "https://auth.example/",
       location: { origin: "https://workspace.example" },
@@ -72,4 +73,15 @@ test("logout returns the identity provider promise to the Angular host", async (
     handler.doLogout({ redirectUri: "https://workspace.example/" }),
     /unavailable/,
   );
+});
+
+test("initialization retains the original adapter failure in diagnostics and the callback", async () => {
+  const { handler, keycloak, calls } = setup();
+  const error = new Error("Timeout when waiting for 3rd party check iframe message.");
+  keycloak.init = async () => { throw error; };
+  let received;
+  await handler.initUserHandler(() => assert.fail(), value => { received = value; });
+  assert.equal(received, error);
+  assert.deepEqual(calls.errors, [["CEDAR authentication initialization failed", error]]);
+  assert.equal(JSON.stringify(calls.errors).includes(keycloak.token), false);
 });
