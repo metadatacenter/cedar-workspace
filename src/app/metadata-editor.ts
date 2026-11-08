@@ -1,4 +1,4 @@
-import { JsonSourcePolicy, parseJson, canonicalJson } from "./json-policy";
+import { JsonSourcePolicy, canonicalJson } from "./json-policy";
 import {
   mintResourceId,
   resourceSelector,
@@ -54,10 +54,6 @@ import {
   metadataDraftScope,
 } from "./metadata-draft";
 
-import {
-  reconcileMetadata,
-  ReconciliationChange,
-} from "./metadata-reconciliation";
 import { ServerLanguage, TextPart } from "./server-text";
 import { StatusRegion } from "./status-region";
 
@@ -301,17 +297,6 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   readonly creationCheckRefused = signal(false);
   private pendingUpdate?: PendingMetadataUpdate;
   private creation?: PendingMetadataCreation;
-  readonly review = signal<{
-    base: CeeJsonObject;
-    mine: CeeJsonObject;
-    latest: CeeJsonObject;
-    etag: string;
-    sourceKey: string;
-    choices: Map<string, "mine" | "latest">;
-    metadata: CeeJsonObject;
-    changes: ReconciliationChange[];
-    complete: boolean;
-  } | null>(null);
   readonly recoveryDraft = signal<MetadataDraft | null>(null);
   readonly draftStorageError = signal(false);
   private draftStore?: MetadataDraftStore;
@@ -735,172 +720,12 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     if (!this.draftStore || this.draftStorageError()) return;
     this.api.signIn();
   }
-  get canReviewLatest() {
-    return (
-      !!this.saved &&
-      !this.loading() &&
-      !this.saving() &&
-      !this.checkingSave() &&
-      !this.recoveryDraft() &&
-      !this.state.uncertainCreation()
-    );
-  }
   private withSavedDescription(metadata: CeeJsonObject): CeeJsonObject {
     const result = { ...metadata };
     // Workspace owns the description. CEE can still expose an empty one after a create.
     if (this.saved && Object.hasOwn(this.saved, "schema:description"))
       result["schema:description"] = this.saved["schema:description"];
     return result;
-  }
-  async reviewLatest() {
-    if (!this.canReviewLatest) return;
-    const draft = this.cee.captureDraft();
-    if (!draft || draft.drafts.length) {
-      this.error.set(this.i18n.t("Metadata.ReviewFinishInput"));
-      return;
-    }
-    const sourceKey = this.draftKey();
-    const operation = this.state.begin("recovery");
-    this.review.set(null);
-    this.checkingSave.set(true);
-    try {
-      const path =
-        "/template-instances/" +
-        encodeURIComponent(resourcePathId(String(this.saved!["@id"])));
-      const [latest, report] = await Promise.all([
-        this.api.request<CeeJsonObject>(path),
-        this.api.request<Resource>(path + "/report"),
-      ]);
-      if (!operation.current() || sourceKey !== this.draftKey()) return;
-      if (!can(report.data, "updateResource"))
-        throw new Error(this.i18n.t("Metadata.RecoveryReadOnly"));
-      if (
-        !latest.etag ||
-        latest.data["@id"] !== this.saved!["@id"] ||
-        latest.data["schema:isBasedOn"] !== this.template["@id"]
-      )
-        throw new Error(this.i18n.t("Metadata.RecoveryUnresolved"));
-      const template = await this.api.request<CeeJsonObject>(
-        "/templates/" +
-          encodeURIComponent(resourcePathId(String(this.template["@id"]))),
-      );
-      if (!operation.current() || sourceKey !== this.draftKey()) return;
-      if (metadataKey(template.data) !== metadataKey(this.template))
-        throw new Error(this.i18n.t("Metadata.ReviewTemplateChanged"));
-      const base = {
-        ...this.withSavedDescription(parseJson<CeeJsonObject>(this.baseline)),
-        "schema:name": this.saved!["schema:name"],
-      };
-      const mine = {
-        ...this.withSavedDescription(draft.metadata),
-        "schema:name": this.chosenName(),
-      };
-      const choices = new Map<string, "mine" | "latest">();
-      this.review.set({
-        base,
-        mine,
-        latest: latest.data,
-        etag: latest.etag,
-        sourceKey,
-        choices,
-        ...reconcileMetadata(base, mine, latest.data, choices),
-      });
-      this.error.set("");
-    } catch (error) {
-      if (operation.current())
-        this.error.set(
-          error instanceof Error
-            ? error.message
-            : this.i18n.t("Metadata.RecoveryUnavailable"),
-        );
-    } finally {
-      if (operation.current()) this.checkingSave.set(false);
-    }
-  }
-  reviewChoice(path: string[], choice: "mine" | "latest") {
-    const review = this.review();
-    if (!review) return;
-    const choices = new Map(review.choices);
-    choices.set(JSON.stringify(path), choice);
-    this.review.set({
-      ...review,
-      choices,
-      ...reconcileMetadata(review.base, review.mine, review.latest, choices),
-    });
-  }
-  reviewValue(value: unknown) {
-    return value === undefined
-      ? this.i18n.t("Metadata.ReviewRemoved")
-      : JsonSourcePolicy.stringify(value);
-  }
-  /** A reviewed field's label, in parts that carry the template's language. */
-  reviewLabel(path: string[]): TextPart[] {
-    const label = metadataFieldLabelParts(this.template, path);
-    return label.some((part) => part.text)
-      ? label
-      : [{ text: this.i18n.t("Metadata.Label"), lang: null }];
-  }
-  applyReview() {
-    const review = this.review();
-    if (!review?.complete || !this.canReviewLatest) return;
-    if (review.sourceKey !== this.draftKey()) {
-      this.review.set(null);
-      this.error.set(this.i18n.t("Metadata.ReviewStale"));
-      return;
-    }
-    const holder = document.createElement("div");
-    holder.hidden = true;
-    this.editorHost.nativeElement.append(holder);
-    try {
-      const candidate = this.loader.mountEditor(holder);
-      candidate.config = {
-        ...this.editorConfig!,
-        readOnlyMode: false,
-        defaultLanguage: this.i18n.language,
-        fallbackLanguage,
-      };
-      if (
-        !candidate.restoreDraft({
-          format: "cedar-cee-draft",
-          version: 1,
-          template: this.template,
-          metadata: review.metadata,
-          drafts: [],
-        })
-      )
-        throw new Error();
-      this.cee.removeEventListener("change", this.changed);
-      this.cee.removeEventListener("validationChange", this.validated);
-      this.editorHost.nativeElement.replaceChildren(candidate);
-      this.editor = new ElementRef(candidate);
-      this.saved = JsonSourcePolicy.clone(review.latest);
-      this.etag = review.etag;
-      this.baseline = metadataKey(review.latest);
-      this.baselineName = String(review.latest["schema:name"] ?? "");
-      this.name = String(review.metadata["schema:name"] ?? "");
-      this.latestRead = {
-        saved: this.saved,
-        etag: this.etag,
-        template: this.template,
-        writable: true,
-      };
-      this.writable.set(true);
-      this.recoveryTemplateChanged = false;
-      this.state.reloadRequired.set(false);
-      this.state.clearServer();
-      this.pendingUpdate = undefined;
-      this.canCheckSave.set(false);
-      this.canRecheckAccess.set(false);
-      this.review.set(null);
-      candidate.addEventListener("change", this.changed);
-      candidate.addEventListener("validationChange", this.validated);
-      this.changed();
-      this.notice.set(this.i18n.t("Metadata.ReviewApplied"));
-    } catch {
-      this.error.set(this.i18n.t("Metadata.RecoveryUnresolved"));
-    } finally {
-      holder.remove();
-    }
   }
   async discardRecovery() {
     if (this.saving() || this.checkingSave()) return;
