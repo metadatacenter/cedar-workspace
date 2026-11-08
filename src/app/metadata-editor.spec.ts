@@ -356,7 +356,7 @@ describe("Modern metadata host", () => {
     host.changed();
     expect(host.dirty()).toBe(false);
   });
-  it("reviews a new save and a reopened instance without inventing a description change", async () => {
+  it("preserves the description through creation, subsequent saves and reopening", async () => {
     let stored: CeeJsonObject = {};
     const original = api.request.getMockImplementation()! as (
       path: string, method?: string, body?: unknown,
@@ -381,8 +381,6 @@ describe("Modern metadata host", () => {
     await host.save();
     expect(stored["schema:description"]).toBe("Study description");
     expect(cee.currentMetadata["schema:description"]).toBe("");
-    await host.reviewLatest();
-    expect(host.review()?.changes).toEqual([]);
     expect(host.dirty()).toBe(false);
 
     // A subsequent field edit must retain the host description too.
@@ -390,8 +388,6 @@ describe("Modern metadata host", () => {
     host.changed();
     await host.save();
     expect(stored["schema:description"]).toBe("Study description");
-    await host.reviewLatest();
-    expect(host.review()?.changes).toEqual([]);
 
     // Reopen the server's saved document, as CEE's instance input does.
     host.ngOnDestroy();
@@ -406,21 +402,9 @@ describe("Modern metadata host", () => {
     expect(host.error()).toBe("");
     expect(host.dirty()).toBe(false);
     expect(cee.currentMetadata["Notes"]).toEqual({ "@value": "Edited after create" });
-    await host.reviewLatest();
-    expect(host.error()).toBe("");
-    expect(host.review()?.changes).toEqual([]);
-
-    // A real server-side description edit remains visible and selects the latest value.
-    stored["schema:description"] = "Updated outside the metadata form";
-    await host.reviewLatest();
-    expect(host.review()?.changes).toEqual([{
-      path: ["schema:description"], mine: "Study description",
-      latest: "Updated outside the metadata form", conflict: false, choice: "latest",
-    }]);
-    expect(host.review()?.metadata["schema:description"]).toBe("Updated outside the metadata form");
   });
   it.each(["", "Imported instance description"])(
-    "does not manufacture a review difference for stored description %j", async description => {
+    "preserves the stored description %j when saving", async description => {
       const original = api.request.getMockImplementation()! as (
         path: string, method?: string, body?: unknown,
       ) => Promise<{ data: CeeJsonObject; etag: string }>;
@@ -438,8 +422,6 @@ describe("Modern metadata host", () => {
         }),
       });
       await edit();
-      await host.reviewLatest();
-      expect(host.review()!.changes.filter(change => change.path[0] === "schema:description")).toEqual([]);
       await host.save();
       const submitted = api.request.mock.lastCall![2];
       expect(submitted["schema:description"]).toBe(description);
@@ -687,11 +669,13 @@ describe("Modern metadata host", () => {
       api.request.mockRejectedValue(new HttpError(status, "Deleted (404)"));
       await host.save();
       expect(host.error()).toBe(status === 412
-        ? "This item changed since you opened it. Your edits have been kept. Cancel and reopen to review the latest version."
+        ? "This item changed since you opened it. Your edits have been kept. Reload metadata to open the latest version; you will be asked to discard your edits."
         : "Deleted (404)");
       expect(host.name).toBe("Unsaved");
       expect(host.dirty()).toBe(true);
+      const calls = api.request.mock.calls.length;
       await host.save();
+      expect(api.request).toHaveBeenCalledTimes(calls);
       expect(api.request.mock.lastCall?.[3]).toBe('"i1"');
     },
   );

@@ -333,16 +333,14 @@ API, signed-in subject, artifact and create destination. It survives reload and 
 through sign-in; closing the tab clears it. It includes unfinished CEE input, the original
 baseline/revision and unresolved update evidence. A write is journaled before dispatch so an
 interrupted create stays blocked after reload. Storage failures are visible and do not erase
-the working form. Download a recovery file before closing the tab if the work must outlive it.
+the working form. Draft retention is limited to this tab; there is no recovery-file export or import.
 
 On returning, **Restore draft** is explicit: ordinary loading first reads current access and
 content, and saving stays blocked if the restored baseline is stale or its write outcome is
-unknown. **Import recovery draft** offers a downloaded copy only in its original account,
-deployment and record/destination; it does not apply it until Restore is chosen. Recovery files
-contain user data and are not artifacts for submission to the repository. Successful saves clear
+unknown. Successful saves clear
 clean drafts; confirmed navigation discards ordinary unsaved drafts, while uncertain outcomes
-remain recoverable. Restoring submitted element identities after newer structural edits still
-requires reconciliation and stays guarded. Browser coverage is `metadata-draft-recovery.spec.mjs`.
+remain recoverable. When submitted element identities cannot be safely restored after newer
+structural edits, saving stays blocked. Browser coverage is `metadata-draft-recovery.spec.mjs`.
 
 `workspace-lifecycle-matrix.spec.ts` crosses report scopes, arrival order, component
 recreation, permission changes and version changes. `metadata-lifecycle-matrix.spec.ts`
@@ -353,13 +351,12 @@ The browser state-coordination suite checks these host contracts in Chromium and
 WebKit using a CEE fixture that enforces set-once inputs; CEE's own rendering and
 controller suites remain in its repository.
 
-For an existing metadata instance, **Review latest saved version** performs a fresh
-artifact, permission and template read. It combines independent edits and asks for
-an explicit choice wherever both authors changed the same value. Repeated entries
-are compared as a whole, preserving occurrence identity. Applying the review only
-updates the form; Save uses the reviewed ETag and can still be refused if another
-author writes again. A changed template or unfinished raw input keeps the original
-draft and requires correction or a recovery-file download before proceeding.
+Metadata saves use the revision read when the record was opened. A stale-save refusal
+keeps the working form and retained draft intact and blocks further writes, including
+after reload and **Restore draft**. The editor provides no version comparison or merge.
+**Reload metadata** opens the latest saved record only after confirmation to discard
+unsaved edits; cancelling keeps the draft and the save guard. Browser coverage is
+`metadata-conflict.spec.mjs`.
 
 The production initial-bundle budget is 1.04 MB. Exact JSON transport and draft preservation
 add the shared scalar policy bundle. On 2026-10-20, refused controls that keep focus and the

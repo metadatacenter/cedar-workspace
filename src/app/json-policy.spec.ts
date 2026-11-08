@@ -1,19 +1,15 @@
 import type {CeeJsonObject} from "cedar-embeddable-editor";
 import {expect, it} from "vitest";
 import {canonicalJson, JsonSourcePolicy, parseJson} from "./json-policy";
-import {reconcileMetadata} from "./metadata-reconciliation";
 import {metadataUpdateOutcome} from "./metadata-save-recovery";
 import {MetadataDraft, MetadataDraftStore, metadataDraftScope} from "./metadata-draft";
 
 const source = '{"@id":"item","N":{"@value":9007199254740993},"D":{"@value":0.10000000000000001}}';
-it("preserves numbers through cloning, canonical comparison, merge and save recovery", () => {
+it("preserves numbers through cloning, canonical comparison and save recovery", () => {
   const data = parseJson<CeeJsonObject>(source);
   expect(JsonSourcePolicy.stringify(JsonSourcePolicy.clone(data))).toBe(source);
   expect(canonicalJson(data)).toBe(canonicalJson({...data, N: data["N"]}));
   expect(canonicalJson(data)).not.toBe(canonicalJson(JSON.parse(source)));
-  const merged = reconcileMetadata(data, {...data, name: "mine"}, {...data, extra: true});
-  expect(merged.complete).toBe(true);
-  expect(JsonSourcePolicy.stringify(merged.metadata)).toContain('"@value":9007199254740993');
   const pending = {opened: {"@id": "item"}, submitted: data, etag: '"1"'};
   expect(metadataUpdateOutcome(pending, {data: JsonSourcePolicy.clone(data), etag: '"2"'}, {})).toBe("saved");
   expect(metadataUpdateOutcome(pending, {data: JSON.parse(source), etag: '"2"'}, {})).toBe("unresolved");
