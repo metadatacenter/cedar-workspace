@@ -1,5 +1,6 @@
 @use "@org.metadatacenter/cedar-design-tokens/spacing";
 @use "@org.metadatacenter/cedar-design-tokens/patterns";
+@use "@org.metadatacenter/cedar-design-tokens/tokens";
 
 .explorer-toolbar {
   display: flex;
@@ -36,15 +37,14 @@
 }
 .explorer-item:focus-visible {
   outline: var(--cedar-focus-ring-width) solid var(--cedar-color-primary);
-  outline-offset: -2px;
+  outline-offset: -(tokens.$focus-ring-offset);
 }
 .explorer-drop-target {
   outline: var(--cedar-focus-ring-width) solid var(--cedar-color-primary) !important;
   background: var(--cedar-surface-selected) !important;
 }
 .explorer-drop-eligible:not(.explorer-drop-target) {
-  outline: 1px dashed var(--cedar-color-primary);
-  outline-offset: -1px;
+  @include patterns.selected-outline($style: dashed);
 }
 .explorer-drop-hint {
   display: inline-flex;
@@ -54,7 +54,7 @@
 }
 .explorer-move-complete {
   outline: var(--cedar-focus-ring-width) solid var(--cedar-status-success-text);
-  outline-offset: -2px;
+  outline-offset: -(tokens.$focus-ring-offset);
   background: var(--cedar-status-success-surface) !important;
 }
 body.explorer-dragging,
