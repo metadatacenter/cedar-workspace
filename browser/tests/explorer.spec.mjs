@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { test, expect, resource } from "./fixtures.mjs";
+import { CHROMIUM_ONLY } from "./browser-tags.mjs";
 const folder = {
   ...resource,
   "@id": "destination",
@@ -491,8 +492,8 @@ test.describe("on a touchscreen", () => {
     await page.touchscreen.tap(b.x + 35, c.y + 50);
     await expectSelected(page, []);
   });
-  test("a scroll that begins on empty space keeps the selection", async ({ page, api, browserName }) => {
-    test.skip(browserName !== "chromium", "Only Chromium takes touch input through its DevTools protocol.");
+  // Only Chromium takes a finger drawn through its DevTools protocol.
+  test("a scroll that begins on empty space keeps the selection", { tag: CHROMIUM_ONLY }, async ({ page, api }) => {
     // Enough cards to scroll, with one alone in the last row of three.
     const extra = Array.from({ length: 39 }, (_, i) => ({
       ...resource,
