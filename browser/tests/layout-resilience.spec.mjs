@@ -1065,19 +1065,7 @@ const tables = [
  * What the checks find that is left as it is, each with the visible change that would remove it.
  * Fixes that keep every captured width pixel-identical are made instead of listed here.
  */
-const exceptions = [
-  // The card's size comes from the design-token package's resource-card recipe, and its type and
-  // date share one line that ends in an ellipsis when it runs out of room.
-  {
-    screens: ["dashboard grid"],
-    conditions: ["text spacing"],
-    kind: "clipped text",
-    target: "div.table-scroll.explorer-grid tr.explorer-item.explorer-schema span.explorer-modified",
-    text: "Template · ",
-    change:
-      "Under WCAG text spacing a card's type and date, “Template · 1 day ago”, ends in an ellipsis. Keeping it whole needs the line to wrap and the card to grow with it, which also changes a card whose line is cut today, and a change to the recipe's card size.",
-  },
-];
+const exceptions = [];
 
 const named = (entry, finding) =>
   entry.kind === finding.kind &&
@@ -1212,8 +1200,8 @@ for (const [screen, open] of Object.entries(screens))
     const { measured, findings } = await page.evaluate(findFaintIndicators, {
       scope: null,
       exclude: excluded,
-      // A listing row is selected by class, because a plain table's rows take no aria-selected.
-      selected: ["tr.selected"],
+      // Every selection mark states its selection in ARIA, a listing row with aria-selected.
+      selected: [],
       exceptions: [],
     });
     // A selector that stops matching would let the check pass by measuring nothing.

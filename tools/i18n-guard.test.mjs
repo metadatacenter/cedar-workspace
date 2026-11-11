@@ -38,6 +38,8 @@ const sinkCalls = [
   { name: "confirm", pattern: /\bconfirm\s*\(/g, firstArgumentOnly: true },
   { name: "error.set", pattern: /\berror\.set\s*\(/g },
   { name: "notice.set", pattern: /\bnotice\.set\s*\(/g },
+  // Workspace sets its notice through this method.
+  { name: "notify", pattern: /\bthis\.notify\s*\(/g },
   { name: "failedChange.set", pattern: /\bfailedChange\.set\s*\(/g },
   { name: "ceeVersion.set", pattern: /\bceeVersion\.set\s*\(/g },
   { name: "closed.emit", pattern: /\bclosed\.emit\s*\(/g },

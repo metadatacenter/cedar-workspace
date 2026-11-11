@@ -193,11 +193,10 @@ body.explorer-dragging.explorer-can-drop * {
   transform: translateX(calc(var(--cedar-space-1) / 2));
 }
 
-// Reserve the eye's space on the date row.
+// Reserve the eye's space on the date row. The row wraps when it runs out of room, as the card's
+// recipe lets it, so nothing here cuts it.
 .explorer-grid .explorer-modified {
   display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .explorer-grid .explorer-item:has(.explorer-preview) .explorer-modified {
   @include spacing.apply(padding-right, control-reserve);

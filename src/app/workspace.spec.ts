@@ -6,6 +6,7 @@ import { I18n } from "./i18n";
 import { Backend } from "./backend.service";
 import { Config, Resource } from "./resource";
 import { useDeploymentApi, useDeploymentDomain } from "./resource-address";
+import { statusRegionDelay } from "./status-region";
 const folder: Resource = {
   "@id": "home",
   resourceType: "folder",
@@ -715,5 +716,151 @@ describe("Angular Workspace", () => {
       second.dispatchEvent(new FocusEvent("focusout", { bubbles: true, relatedTarget: outside }));
       expect(menu.open).toBe(false);
     }
+  });
+  // The listing is a grid, so that a row states its selection, and a grid is one Tab stop.
+  describe("the listing as a grid", () => {
+    const items: Resource[] = ["a", "b", "c"].map((id) => ({
+      ...template,
+      "@id": id,
+      "schema:name": `Template ${id}`,
+    }));
+    for (const list of [true, false])
+      describe(list ? "in list view" : "in grid view", () => {
+        async function listed() {
+          const f = await render();
+          f.componentInstance.grid.set(!list);
+          f.componentInstance.rows.set(items);
+          f.detectChanges();
+          const el = f.nativeElement as HTMLElement;
+          const rows = () => [...el.querySelectorAll<HTMLElement>(".explorer-item")];
+          const stops = () => {
+            f.detectChanges();
+            return rows()
+              .filter((row) => row.tabIndex === 0)
+              .map((row) => row.dataset["resourceId"]);
+          };
+          return { f, el, rows, stops };
+        }
+        it("is a multi-selectable grid whose rows each state their selection", async () => {
+          const { f, el, rows } = await listed();
+          const table = el.querySelector(".table-scroll table")!;
+          expect(table.getAttribute("role")).toBe("grid");
+          expect(table.getAttribute("aria-multiselectable")).toBe("true");
+          expect(rows().map((row) => row.getAttribute("role"))).toEqual(["row", "row", "row"]);
+          expect(rows().map((row) => row.getAttribute("aria-selected"))).toEqual(["false", "false", "false"]);
+          f.componentInstance.setSelection(["a", "c"]);
+          f.detectChanges();
+          expect(rows().map((row) => row.getAttribute("aria-selected"))).toEqual(["true", "false", "true"]);
+          // The state says it, so nothing describes a row as selected.
+          expect(rows().some((row) => row.hasAttribute("aria-describedby"))).toBe(false);
+          expect(el.querySelector("#explorer-row-selected")).toBeNull();
+        });
+        it("gives Tab one row, and every other row and its controls none", async () => {
+          const { rows, stops } = await listed();
+          expect(stops()).toEqual(["a"]);
+          expect(rows().map((row) => row.getAttribute("tabindex"))).toEqual(["0", "-1", "-1"]);
+          const controls = (row: HTMLElement) =>
+            [...row.querySelectorAll<HTMLElement>("a, button")].map((control) => control.getAttribute("tabindex"));
+          const [first, ...others] = rows().map(controls);
+          expect(first.length).toBeGreaterThan(0);
+          expect(first.every((tabindex) => tabindex === null)).toBe(true);
+          for (const other of others) {
+            expect(other).toHaveLength(first.length);
+            expect(other.every((tabindex) => tabindex === "-1")).toBe(true);
+          }
+        });
+        it("moves the stop to the row that takes focus, itself or in one of its controls", async () => {
+          const { rows, stops } = await listed();
+          rows()[1].dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+          expect(stops()).toEqual(["b"]);
+          rows()[2].querySelector("button")!.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+          expect(stops()).toEqual(["c"]);
+        });
+        it("starts at the first selected row until a row has held focus", async () => {
+          const { f, rows, stops } = await listed();
+          f.componentInstance.setSelection(["c", "b"]);
+          expect(stops()).toEqual(["b"]);
+          rows()[0].dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+          expect(stops()).toEqual(["a"]);
+        });
+        it("falls back when the row that held focus is no longer listed", async () => {
+          const { f, rows, stops } = await listed();
+          rows()[2].dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+          expect(stops()).toEqual(["c"]);
+          f.componentInstance.rows.set(items.slice(0, 2));
+          expect(stops()).toEqual(["a"]);
+          f.componentInstance.rows.set([]);
+          expect(stops()).toEqual([]);
+        });
+      });
+  });
+  // The toast and its status region react only to a changed notice, so an action that repeats the
+  // notice before it has to clear it first.
+  describe("a notice that repeats the one before it", () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    beforeEach(() =>
+      // jsdom has no clipboard, and replacing navigator wholesale loses its prototype.
+      Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true }),
+    );
+    afterEach(() => {
+      vi.useRealTimers();
+      delete (navigator as { clipboard?: unknown }).clipboard;
+    });
+    async function copied() {
+      const f = await render();
+      const el = f.nativeElement as HTMLElement;
+      // The status region holds no text until it has been in the page for its delay.
+      await new Promise((settled) => setTimeout(settled, 2 * statusRegionDelay));
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      const shown = () => {
+        f.detectChanges();
+        return {
+          toast: el.querySelector(".toast")?.textContent?.trim() ?? null,
+          said: el.querySelector("cedar-toast [role=status]")!.textContent,
+        };
+      };
+      const copy = () => f.componentInstance.copyLink("https://workspace.example/a");
+      await copy();
+      expect(shown()).toEqual({ toast: "Link copied.", said: "Link copied." });
+      return { f, shown, copy };
+    }
+    it("shows the toast again, and says it again, once the toast has gone", async () => {
+      const { f, shown, copy } = await copied();
+      vi.advanceTimersByTime(6000);
+      expect(shown()).toEqual({ toast: null, said: "" });
+      expect(f.componentInstance.notice()).toBe("Link copied.");
+      await copy();
+      // The notice is cleared, and the toast and the region take the change.
+      expect(shown()).toEqual({ toast: null, said: "" });
+      vi.advanceTimersByTime(statusRegionDelay);
+      expect(shown()).toEqual({ toast: "Link copied.", said: "Link copied." });
+    });
+    it("empties the region before saying it again, and shows the toast for a fresh six seconds", async () => {
+      const { shown, copy } = await copied();
+      vi.advanceTimersByTime(3000);
+      expect(shown().toast).toBe("Link copied.");
+      await copy();
+      expect(shown()).toEqual({ toast: null, said: "" });
+      vi.advanceTimersByTime(statusRegionDelay);
+      expect(shown()).toEqual({ toast: "Link copied.", said: "Link copied." });
+      // The first toast's six seconds would have ended by now.
+      vi.advanceTimersByTime(5900);
+      expect(shown().toast).toBe("Link copied.");
+      vi.advanceTimersByTime(100);
+      expect(shown()).toEqual({ toast: null, said: "" });
+    });
+    it("shows a different notice at once", async () => {
+      const { f, shown } = await copied();
+      await f.componentInstance.copyId("template-id");
+      expect(shown()).toEqual({ toast: "ID copied.", said: "ID copied." });
+    });
+    it("sets nothing once the page is gone", async () => {
+      const { f, copy } = await copied();
+      await copy();
+      expect(f.componentInstance.notice()).toBe("");
+      f.destroy();
+      vi.advanceTimersByTime(statusRegionDelay);
+      expect(f.componentInstance.notice()).toBe("");
+    });
   });
 });

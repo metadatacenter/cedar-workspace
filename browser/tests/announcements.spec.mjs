@@ -280,6 +280,49 @@ const drawnAsNothing = (locator) =>
     }),
   );
 
+test("a notice that repeats the one before it is shown and said again, for a fresh six seconds", async ({
+  page,
+  api,
+}) => {
+  await page.addInitScript(() =>
+    Object.defineProperty(navigator, "clipboard", { value: { writeText: async () => {} } }),
+  );
+  await page.clock.install();
+  await dashboard(page);
+  await page.getByRole("row", { name: /^Template Study metadata/ }).click();
+  const copy = page
+    .getByRole("complementary", { name: "Resource information" })
+    .getByRole("button", { name: "Copy identifier", exact: true });
+  const toast = page.locator(".toast");
+  const region = page.locator("cedar-toast [role=status]");
+  await expect(region).toHaveText("");
+  await record(page, "cedar-toast [role=status]");
+  // Every text the region takes, the empty ones included.
+  const texts = () => page.evaluate(() => window.__announcements);
+  await copy.click();
+  await expect(toast).toHaveText("ID copied.");
+  await expect(region).toHaveText("ID copied.");
+
+  // While the toast still shows, the same notice empties the region and fills it again, which a
+  // screen reader needs to say the same words twice.
+  await page.clock.runFor(3000);
+  await expect(toast).toBeVisible();
+  await copy.click();
+  await expect.poll(texts).toEqual(["ID copied.", "", "ID copied."]);
+  await expect(toast).toHaveText("ID copied.");
+  // The toast stays past the end of the first one's six seconds, for six of its own.
+  await page.clock.runFor(5000);
+  await expect(toast).toBeVisible();
+  await page.clock.runFor(1100);
+  await expect(toast).toHaveCount(0);
+  await expect(region).toHaveText("");
+
+  // Once the toast has gone, the same notice brings it back.
+  await copy.click();
+  await expect(toast).toHaveText("ID copied.");
+  await expect.poll(texts).toEqual(["ID copied.", "", "ID copied.", "", "ID copied."]);
+});
+
 test("each toast says its message from a status region already in the page", async ({ page, api }) => {
   const regions = await watchRegions(page);
   await page.addInitScript(() =>

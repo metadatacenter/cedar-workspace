@@ -7,7 +7,7 @@ const records = ["a", "b", "c"].map((id) => ({
 }));
 
 for (const view of ["list", "grid"])
-  test(`a selected ${view} row says it is selected without claiming a selectable table`, async ({
+  test(`the ${view} view is a multi-selectable grid whose rows say whether they are selected`, async ({
     page,
     api,
   }) => {
@@ -22,17 +22,24 @@ for (const view of ["list", "grid"])
     await page.goto(`/dashboard?view=${view}`);
     const row = (id) => page.locator(`[data-resource-id="${id}"]`);
     await expect(row("c")).toBeVisible();
-    // A plain table has no selectable rows, so no row states aria-selected.
-    await expect(page.locator(".explorer-item[aria-selected]")).toHaveCount(0);
-    for (const id of ["a", "b", "c"]) await expect(row(id)).toHaveAccessibleDescription("");
+    const grid = page.getByRole("grid", { name: "Workspace artifacts and folders", exact: true });
+    await expect(grid).toHaveAttribute("aria-multiselectable", "true");
+    // Every row of the listing is a row of the grid and states its selection, selected or not.
+    await expect(grid.getByRole("row").filter({ has: page.locator("td") })).toHaveCount(3);
+    for (const id of ["a", "b", "c"]) {
+      await expect(row(id)).toHaveRole("row");
+      await expect(row(id)).toHaveAttribute("aria-selected", "false");
+    }
     await row("a").locator(".resource-icon").click();
     await row("c").locator(".resource-icon").click({ modifiers: ["ControlOrMeta"] });
-    await expect(row("a")).toHaveAccessibleDescription("Selected");
-    await expect(row("b")).toHaveAccessibleDescription("");
-    await expect(row("c")).toHaveAccessibleDescription("Selected");
-    await expect(page.locator(".explorer-item[aria-selected]")).toHaveCount(0);
-    // The note is never shown, and reads in the page's language.
-    await expect(page.locator("#explorer-row-selected")).toBeHidden();
+    await expect(row("a")).toHaveAttribute("aria-selected", "true");
+    await expect(row("b")).toHaveAttribute("aria-selected", "false");
+    await expect(row("c")).toHaveAttribute("aria-selected", "true");
+    await expect(grid.getByRole("row", { selected: true })).toHaveCount(2);
+    // The state says it, so no row carries a description of its selection.
+    for (const id of ["a", "b", "c"]) await expect(row(id)).toHaveAccessibleDescription("");
+    // The header's row is no selectable row.
+    if (view === "list") await expect(grid.locator("thead tr")).not.toHaveAttribute("aria-selected");
   });
 
 test("a row's version and status are read as two words in both views", async ({ page, api }) => {

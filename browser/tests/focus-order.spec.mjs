@@ -321,7 +321,7 @@ const row = (id) =>
  * Home lists records a, b and c, after the Archive folder when `folder` is set. Deleting a record
  * or moving it into Archive takes it out of the listing.
  */
-async function records3(page, { folder = false } = {}) {
+async function records3(page, { folder = false, address = "/dashboard?view=list" } = {}) {
   const gone = new Set();
   await page.route("**/api/resource/**", (route) => {
     const request = route.request(),
@@ -363,7 +363,7 @@ async function records3(page, { folder = false } = {}) {
         })
       : route.fallback();
   });
-  await loaded(page, "/dashboard?view=list");
+  await loaded(page, address);
 }
 
 /** Choose `name` from the menu of the record `id` by keyboard, as from its focused row. */
@@ -435,7 +435,103 @@ test("moving the focused item moves focus to the row in its place", async ({
   await expect.poll(() => focusedControl(page)).toBe(row("c"));
 });
 
-test("Tab leaves an open resource menu for the next row, and Shift+Tab for its button", async ({
+/**
+ * The rows Tab stops at, by the record each shows: the one row whose tabindex is 0. The page draws
+ * the stop again after focus moves, so a test polls for it.
+ */
+const tabStops = (page) =>
+  page
+    .locator(".explorer-item")
+    .evaluateAll((rows) => rows.filter((row) => row.tabIndex === 0).map((row) => row.dataset.resourceId));
+
+test("the list is one Tab stop: Tab reaches one row and its controls, and the arrow keys the others", async ({
+  page,
+  api,
+}) => {
+  await records3(page);
+  await expect.poll(() => tabStops(page)).toEqual(["a"]);
+  // The column sorts stay Tab stops, and Tab goes on from them to the first row.
+  await page.getByRole("button", { name: "Name", exact: true }).focus();
+  expect(await tabSequence(page, 7)).toEqual([
+    'button "Last modified"',
+    'button "Sort options"',
+    row("a"),
+    'link "Record a"',
+    'button "Preview Record a"',
+    'button "Actions for Record a"',
+    // No other row and none of its controls takes Tab, and nothing follows the listing here.
+    "(page)",
+  ]);
+  // An arrow key moves to the next row and selects it, as before, and Tab then stops there.
+  await page.locator('[data-resource-id="a"]').focus();
+  await page.keyboard.press("ArrowDown");
+  expect(await focusedControl(page)).toBe(row("b"));
+  await expect(page.locator('[data-resource-id="b"]')).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator('[data-resource-id="a"]')).toHaveAttribute("aria-selected", "false");
+  await expect.poll(() => tabStops(page)).toEqual(["b"]);
+  expect(await tabSequence(page, 3)).toEqual([
+    'link "Record b"',
+    'button "Preview Record b"',
+    'button "Actions for Record b"',
+  ]);
+  expect(await tabSequence(page, 4, "Shift+Tab")).toEqual([
+    'button "Preview Record b"',
+    'link "Record b"',
+    row("b"),
+    'button "Sort options"',
+  ]);
+  // The row that last held focus stays the stop, so Tab comes back to it.
+  expect(await tabSequence(page, 1)).toEqual([row("b")]);
+  await page.keyboard.press("End");
+  expect(await focusedControl(page)).toBe(row("c"));
+  await page.keyboard.press("Home");
+  expect(await focusedControl(page)).toBe(row("a"));
+  await expect.poll(() => tabStops(page)).toEqual(["a"]);
+});
+
+test("the grid of cards is one Tab stop too, and a pointer press on a card's control moves it there", async ({
+  page,
+  api,
+}) => {
+  await records3(page, { address: "/dashboard" });
+  const card = (id) =>
+    `row "Record ${id} Preview Record ${id} Instance · 1 day ago Actions for Record ${id}"`;
+  await expect.poll(() => tabStops(page)).toEqual(["a"]);
+  await page.getByRole("button", { name: "Sort options", exact: true }).focus();
+  expect(await tabSequence(page, 4)).toEqual([
+    card("a"),
+    'button "Preview Record a"',
+    'button "Actions for Record a"',
+    "(page)",
+  ]);
+  await page.locator('[data-resource-id="a"]').focus();
+  await page.keyboard.press("ArrowRight");
+  expect(await focusedControl(page)).toBe(card("b"));
+  await expect.poll(() => tabStops(page)).toEqual(["b"]);
+  // A press on a control in another card focuses it, and Tab goes on within that card.
+  await page.getByRole("button", { name: "Actions for Record c", exact: true }).click();
+  await page.keyboard.press("Escape");
+  expect(await focusedControl(page)).toBe('button "Actions for Record c"');
+  await expect.poll(() => tabStops(page)).toEqual(["c"]);
+  expect(await tabSequence(page, 2, "Shift+Tab")).toEqual([
+    'button "Preview Record c"',
+    card("c"),
+  ]);
+});
+
+test("Tab enters the listing at the selected row when no row has held focus", async ({
+  page,
+  api,
+}) => {
+  // An editor's way back names the artifact to select again.
+  await records3(page, { address: "/dashboard?view=list&selected=b" });
+  await expect(page.locator('[data-resource-id="b"]')).toHaveAttribute("aria-selected", "true");
+  await expect.poll(() => tabStops(page)).toEqual(["b"]);
+  await page.getByRole("button", { name: "Sort options", exact: true }).focus();
+  expect(await tabSequence(page, 1)).toEqual([row("b")]);
+});
+
+test("Tab leaves an open resource menu for the control after the listing, and Shift+Tab for its button", async ({
   page,
   api,
 }) => {
@@ -445,6 +541,11 @@ test("Tab leaves an open resource menu for the next row, and Shift+Tab for its b
     exact: true,
   });
   const menu = page.locator(".resource-menu");
+  // The selected record's details follow the listing.
+  await page.getByRole("row", { name: /^Instance Record b / }).click();
+  await expect(
+    page.getByRole("complementary", { name: "Resource information" }).getByRole("heading"),
+  ).toHaveText("Record b");
   await trigger.focus();
   await page.keyboard.press("Enter");
   await expect.poll(() => focusedControl(page)).toBe('button "Open"');
@@ -457,11 +558,12 @@ test("Tab leaves an open resource menu for the next row, and Shift+Tab for its b
     'button "Enable Openview"',
   ]);
   await expect(menu).toBeVisible();
-  // Focus leaving the menu closes it, and stays where Tab put it.
-  expect(await tabSequence(page, 1)).toEqual([row("c")]);
+  // Focus leaving the menu closes it, and stays where Tab put it. The listing is one Tab stop, so
+  // that is past the rows that follow.
+  expect(await tabSequence(page, 1)).toEqual(['tab "Details"']);
   await expect(menu).toHaveCount(0);
   await expect(trigger).toHaveAttribute("aria-expanded", "false");
-  await expect.poll(() => focusedControl(page)).toBe(row("c"));
+  await expect.poll(() => focusedControl(page)).toBe('tab "Details"');
   await trigger.focus();
   await page.keyboard.press("Enter");
   await expect.poll(() => focusedControl(page)).toBe('button "Open"');
