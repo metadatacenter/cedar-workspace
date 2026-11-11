@@ -1,4 +1,8 @@
-import { resourceSelector, resourcePathId, resourceIri } from "./resource-address";
+import {
+  resourceSelector,
+  resourcePathId,
+  resourceIri,
+} from "./resource-address";
 import { OperationCoordinator } from "./operation-coordinator";
 import { validListing } from "./resource";
 import { validResourceReport } from "./resource-report";
@@ -54,7 +58,12 @@ import { FriendlyDatePipe } from "./friendly-date";
 import { NgTemplateOutlet } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { TranslatePipe } from "@ngx-translate/core";
-import { ActivatedRoute, NavigationStart, Router, RouterLink } from "@angular/router";
+import {
+  ActivatedRoute,
+  NavigationStart,
+  Router,
+  RouterLink,
+} from "@angular/router";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { Backend } from "./backend.service";
 import {
@@ -77,7 +86,8 @@ import { PermissionsDialog } from "./permissions-dialog";
 import { I18n } from "./i18n";
 import { PageTitles } from "./page-title";
 import { ServerText, TextPart, serverLanguage } from "./server-text";
-import { StatusRegion, statusRegionDelay } from "./status-region";
+import { StatusRegion } from "./status-region";
+import { NoticeRepeater } from "./notice-repeater";
 import { returnFocus } from "./focus-return";
 export interface Action {
   id: string;
@@ -226,8 +236,7 @@ export class Workspace {
   readonly versioned = versioned;
   readonly actions = (r: Resource) => actions(r, this.i18n);
   attribution(userId?: string, name?: string): string {
-    if (this.isCurrentUser(userId))
-      return this.i18n.t("Dashboard.ByYou");
+    if (this.isCurrentUser(userId)) return this.i18n.t("Dashboard.ByYou");
     return name ? this.i18n.t("Dashboard.By", { name }) : "";
   }
   ownerName(r: Resource): string {
@@ -246,7 +255,9 @@ export class Workspace {
   /** The servers' language, for a role Workspace does not know and so shows as the server states it. */
   roleLanguage(r: Resource) {
     const role = r.currentUserPermissions?.role;
-    return role && !this.i18n.known("Roles." + role, "") ? serverLanguage : null;
+    return role && !this.i18n.known("Roles." + role, "")
+      ? serverLanguage
+      : null;
   }
   /** A version's publication status, translated when Workspace knows it. */
   status(v: Resource) {
@@ -266,7 +277,10 @@ export class Workspace {
    * An error Workspace joined from several messages, such as the list of failed moves, in parts
    * that each keep their own language. It applies only while the error still shows that text.
    */
-  private readonly joinedError = signal<{ text: string; parts: TextPart[] } | null>(null);
+  private readonly joinedError = signal<{
+    text: string;
+    parts: TextPart[];
+  } | null>(null);
   /** The error in parts, each with the language of its text. */
   readonly errorParts = computed<TextPart[]>(() => {
     const error = this.error(),
@@ -278,26 +292,10 @@ export class Workspace {
   readonly notice = signal("");
   /** A notice that a status region of its own already says, so the toast that shows it is silent. */
   readonly saidNotice = signal("");
-  private noticeTimer?: ReturnType<typeof setTimeout>;
-  /**
-   * Show `message` as the notice. The toast and its status region react only to a changed notice,
-   * so one that repeats the notice before it is cleared first and set again after
-   * `statusRegionDelay`. A screen reader says a region's text again only when the region was empty
-   * for that long.
-   */
+  /** Shows a repeated notice again, which the toast would otherwise leave as it was. */
+  private readonly notices = new NoticeRepeater(this.notice);
   private notify(message: string) {
-    const clearing = this.noticeTimer !== undefined;
-    clearTimeout(this.noticeTimer);
-    this.noticeTimer = undefined;
-    if (!clearing && this.notice() !== message) {
-      this.notice.set(message);
-      return;
-    }
-    this.notice.set("");
-    this.noticeTimer = setTimeout(() => {
-      this.noticeTimer = undefined;
-      this.notice.set(message);
-    }, statusRegionDelay);
+    this.notices.show(message);
   }
   /**
    * What the listing's live region says when a change of address brings another listing, as a
@@ -355,16 +353,25 @@ export class Workspace {
   readonly deleteDrop = signal(false);
   readonly dropTarget = signal("");
   readonly dragging = signal<Resource[]>([]);
-  readonly validDropIds = computed(() => new Set(
-    [...this.rows(), ...this.path()].filter(target =>
-      this.dragging().every(r => can(r, "moveResource")) &&
-      target["@id"] !== this.folder &&
-      validMoveShape(this.dragging(), target) &&
-      (can(target, "moveIntoFolder") || this.path().some(p => p["@id"] === target["@id"]))
-    ).map(target => target["@id"]),
-  ));
+  readonly validDropIds = computed(
+    () =>
+      new Set(
+        [...this.rows(), ...this.path()]
+          .filter(
+            (target) =>
+              this.dragging().every((r) => can(r, "moveResource")) &&
+              target["@id"] !== this.folder &&
+              validMoveShape(this.dragging(), target) &&
+              (can(target, "moveIntoFolder") ||
+                this.path().some((p) => p["@id"] === target["@id"])),
+          )
+          .map((target) => target["@id"]),
+      ),
+  );
   readonly dropName = computed(() => {
-    const target = [...this.rows(), ...this.path()].find(r => r["@id"] === this.dropTarget());
+    const target = [...this.rows(), ...this.path()].find(
+      (r) => r["@id"] === this.dropTarget(),
+    );
     return target ? this.title(target) : "";
   });
   readonly movedTarget = signal("");
@@ -376,8 +383,15 @@ export class Workspace {
       this.selection().every((r) => can(r, "moveResource")),
   );
   canDrag(r: Resource) {
-    const items = this.selectionIds().includes(r["@id"]) ? this.selection() : [r];
-    return items.length > 0 && items.every(item => can(item, "moveResource") || can(item, "deleteResource"));
+    const items = this.selectionIds().includes(r["@id"])
+      ? this.selection()
+      : [r];
+    return (
+      items.length > 0 &&
+      items.every(
+        (item) => can(item, "moveResource") || can(item, "deleteResource"),
+      )
+    );
   }
   readonly selected = signal<Resource | undefined>(undefined);
   readonly instances = signal<Resource[]>([]);
@@ -407,14 +421,28 @@ export class Workspace {
   // and the Info panel tab it was left on.
   private reselect: string | null = null;
   private reselectTab: InfoTab = "info";
-  readonly state = new OperationCoordinator<"listing" | "folder" | "detail" | "instances" | "menu" | "enrichment" | "move">();
+  readonly state = new OperationCoordinator<
+    | "listing"
+    | "folder"
+    | "detail"
+    | "instances"
+    | "menu"
+    | "enrichment"
+    | "move"
+  >();
   private listingGeneration = 0;
   // Detail, menus and background enrichment publish into the same resource state.
   private reports = new OperationCoordinator<string>();
   constructor() {
     effect(() => {
-      document.body.classList.toggle("explorer-dragging", this.dragging().length > 0);
-      document.body.classList.toggle("explorer-can-drop", !!this.dropTarget() || this.deleteDrop());
+      document.body.classList.toggle(
+        "explorer-dragging",
+        this.dragging().length > 0,
+      );
+      document.body.classList.toggle(
+        "explorer-can-drop",
+        !!this.dropTarget() || this.deleteDrop(),
+      );
     });
     const clock = setInterval(() => this.now.set(Date.now()), 60_000);
     this.router.events
@@ -426,7 +454,7 @@ export class Workspace {
     this.destroy.onDestroy(() => {
       clearInterval(clock);
       clearTimeout(this.movedTimer);
-      clearTimeout(this.noticeTimer);
+      this.notices.cancel();
       this.tooltips.resume();
       document.body.classList.remove("explorer-dragging", "explorer-can-drop");
       this.state.dispose();
@@ -448,7 +476,9 @@ export class Workspace {
             if (!preferenceParams.some((key) => map.has(key))) {
               void this.router.navigate([], {
                 relativeTo: this.route,
-                queryParams: preferenceQuery(this.savedListing.current() ?? defaultPreferences()),
+                queryParams: preferenceQuery(
+                  this.savedListing.current() ?? defaultPreferences(),
+                ),
                 queryParamsHandling: "merge",
                 replaceUrl: true,
               });
@@ -459,19 +489,29 @@ export class Workspace {
           // The view changes how the listing is shown, not what it holds, so it is not part of its key.
           this.grid.set(map.get(VIEW_PARAM) !== "list");
           map.keys
-            .filter((key) => ![SELECTED_PARAM, TAB_PARAM, VIEW_PARAM].includes(key))
+            .filter(
+              (key) => ![SELECTED_PARAM, TAB_PARAM, VIEW_PARAM].includes(key),
+            )
             .forEach((key) => this.params.set(key, map.get(key)!));
           const selected = map.get(SELECTED_PARAM);
           if (selected) {
-            this.reselect = resourceIri(selected, this.api.profile.homeFolderId);
-            this.reselectTab = map.get(TAB_PARAM) === "version" ? "version" : "info";
+            this.reselect = resourceIri(
+              selected,
+              this.api.profile.homeFolderId,
+            );
+            this.reselectTab =
+              map.get(TAB_PARAM) === "version" ? "version" : "info";
           }
           const listingKey = this.params.toString();
           if (listingKey === this.listingKey && !selected) return;
-          const announce = this.listingKey !== null && listingKey !== this.listingKey;
+          const announce =
+            this.listingKey !== null && listingKey !== this.listingKey;
           this.listingKey = listingKey;
           this.search = map.get("search") || "";
-          this.folder = resourceIri(map.get("folderId") || this.api.profile.homeFolderId, this.api.profile.homeFolderId);
+          this.folder = resourceIri(
+            map.get("folderId") || this.api.profile.homeFolderId,
+            this.api.profile.homeFolderId,
+          );
           this.sort = listingSort(map.get("sort"));
           const offset = Number(map.get("offset") || 0);
           this.offset.set(
@@ -492,7 +532,8 @@ export class Workspace {
   errorOrigin: EventTarget | null = null;
   dismissError() {
     this.error.set("");
-    if (this.errorOrigin instanceof HTMLElement && this.errorOrigin.isConnected) this.errorOrigin.focus();
+    if (this.errorOrigin instanceof HTMLElement && this.errorOrigin.isConnected)
+      this.errorOrigin.focus();
     this.errorOrigin = null;
   }
   async load(refresh = false, announce = false) {
@@ -503,7 +544,13 @@ export class Workspace {
     this.reports = new OperationCoordinator<string>();
     clearTimeout(this.movedTimer);
     this.movedTarget.set("");
-    const operation = this.state.begin("listing", ["folder", "detail", "instances", "menu", "enrichment"]);
+    const operation = this.state.begin("listing", [
+      "folder",
+      "detail",
+      "instances",
+      "menu",
+      "enrichment",
+    ]);
     const focused = document.activeElement;
     this.loading.set(true);
     this.refreshing.set(refresh);
@@ -530,11 +577,16 @@ export class Workspace {
         ),
       );
       if (!operation.current()) return;
-      if (!validListing(data)) throw new Error(this.i18n.t("Errors.InvalidListing"));
+      if (!validListing(data))
+        throw new Error(this.i18n.t("Errors.InvalidListing"));
       this.rows.set(data.resources);
       this.total.set(data.totalCount);
       if (announce)
-        this.announcement.set(data.resources.length ? this.displaying() : this.i18n.t("Dashboard.NoItems"));
+        this.announcement.set(
+          data.resources.length
+            ? this.displaying()
+            : this.i18n.t("Dashboard.NoItems"),
+        );
       this.path.set(data.pathInfo || []);
       this.titles.name(this.pageName());
       void this.loadFolder();
@@ -542,7 +594,11 @@ export class Workspace {
       void this.loadTemplateActions(data.resources);
       this.restoreSelection();
       if (refresh && this.pendingMoveSelection.length) {
-        this.selectionIds.set(this.pendingMoveSelection.filter(id => this.rows().some(r => r["@id"] === id)));
+        this.selectionIds.set(
+          this.pendingMoveSelection.filter((id) =>
+            this.rows().some((r) => r["@id"] === id),
+          ),
+        );
         this.pendingMoveSelection = [];
       }
       operation.finish();
@@ -552,9 +608,12 @@ export class Workspace {
         if (!refresh) {
           this.rows.set([]);
           this.total.set(0);
-        }
-        else if (this.pendingMoveSelection.length) {
-          this.selectionIds.set(this.pendingMoveSelection.filter(id => this.rows().some(r => r["@id"] === id)));
+        } else if (this.pendingMoveSelection.length) {
+          this.selectionIds.set(
+            this.pendingMoveSelection.filter((id) =>
+              this.rows().some((r) => r["@id"] === id),
+            ),
+          );
         }
         this.fail(e);
       }
@@ -592,8 +651,14 @@ export class Workspace {
     const index = this.rows().findIndex((r) => ids.includes(r["@id"]));
     if (index < 0) return;
     this.refocus = () => {
-      const rows = this.host.nativeElement.querySelectorAll<HTMLElement>(".explorer-item");
-      return rows[Math.min(index, rows.length - 1)] ?? this.host.nativeElement.querySelector<HTMLElement>(".table-toolbar > button");
+      const rows =
+        this.host.nativeElement.querySelectorAll<HTMLElement>(".explorer-item");
+      return (
+        rows[Math.min(index, rows.length - 1)] ??
+        this.host.nativeElement.querySelector<HTMLElement>(
+          ".table-toolbar > button",
+        )
+      );
     };
   }
   /**
@@ -607,7 +672,11 @@ export class Workspace {
     if (this.params.has("search"))
       return t("Dashboard.SearchResults", { query: this.params.get("search") });
     if (this.params.has("sharing"))
-      return t(this.params.get("sharing") === "shared-with-me" ? "Dashboard.SharedWithMe" : "Dashboard.SharedWithEveryone");
+      return t(
+        this.params.get("sharing") === "shared-with-me"
+          ? "Dashboard.SharedWithMe"
+          : "Dashboard.SharedWithEveryone",
+      );
     if (this.params.has("viewMode")) return t("Dashboard.CommunityFolders");
     if (this.folder === this.api.profile.homeFolderId) return t("Common.Home");
     const folder = this.path().at(-1);
@@ -666,9 +735,16 @@ export class Workspace {
     const params = url.search
       .slice(1)
       .split("&")
-      .filter((param) => param && ![SELECTED_PARAM, TAB_PARAM].includes(param.split("=")[0]));
+      .filter(
+        (param) =>
+          param && ![SELECTED_PARAM, TAB_PARAM].includes(param.split("=")[0]),
+      );
     if (keep) {
-      params.push(SELECTED_PARAM + "=" + encodeURIComponent(resourceSelector(keep["@id"])));
+      params.push(
+        SELECTED_PARAM +
+          "=" +
+          encodeURIComponent(resourceSelector(keep["@id"])),
+      );
       if (this.tab !== "info") params.push(TAB_PARAM + "=" + this.tab);
     }
     url.search = params.join("&");
@@ -684,7 +760,11 @@ export class Workspace {
    * or Forward starts, because the browser has already moved to another entry.
    */
   private rememberSelection(event: NavigationStart) {
-    if (event.navigationTrigger !== "imperative" || this.router.currentNavigation()?.extras.replaceUrl) return;
+    if (
+      event.navigationTrigger !== "imperative" ||
+      this.router.currentNavigation()?.extras.replaceUrl
+    )
+      return;
     const here = this.returnHere();
     if (here !== location.href) history.replaceState(history.state, "", here);
   }
@@ -711,12 +791,21 @@ export class Workspace {
     for (let i = 0; i < templates.length; i += 4) {
       if (!operation.current()) return;
       const reports = await Promise.allSettled(
-        templates.slice(i, i + 4).map((r, index) =>
-          owners[i + index].current() ? this.api.report(r) : Promise.resolve(null)),
+        templates
+          .slice(i, i + 4)
+          .map((r, index) =>
+            owners[i + index].current()
+              ? this.api.report(r)
+              : Promise.resolve(null),
+          ),
       );
       if (!operation.current()) return;
       for (const [index, report] of reports.entries()) {
-        if (owners[i + index].current() && report.status === "fulfilled" && report.value) {
+        if (
+          owners[i + index].current() &&
+          report.status === "fulfilled" &&
+          report.value
+        ) {
           try {
             this.checkReport(templates[i + index], report.value.data);
             this.publishReport(templates[i + index], report.value.data);
@@ -833,8 +922,17 @@ export class Workspace {
   }
   doubleClickItem(r: Resource, event: MouseEvent) {
     const target = event.target as Element;
-    if (this.loading() || this.moving() || target.closest("a,button,input,.row-actions")) return;
-    if (this.grid() || r.resourceType === "folder" || target === event.currentTarget)
+    if (
+      this.loading() ||
+      this.moving() ||
+      target.closest("a,button,input,.row-actions")
+    )
+      return;
+    if (
+      this.grid() ||
+      r.resourceType === "folder" ||
+      target === event.currentTarget
+    )
       this.openItem(r["@id"]);
   }
   openItem(id: string) {
@@ -856,7 +954,9 @@ export class Workspace {
     const element = document
       .elementFromPoint(event.pointerPosition.x, event.pointerPosition.y)
       ?.closest<HTMLElement>("[data-drop-id], .selection-delete");
-    const deleteTarget = !!element?.matches(".selection-delete:not(:disabled)") && this.dragging().length > 0;
+    const deleteTarget =
+      !!element?.matches(".selection-delete:not(:disabled)") &&
+      this.dragging().length > 0;
     this.deleteDrop.set(deleteTarget);
     const id = element?.dataset["dropId"];
     this.dropTarget.set(id && this.validDropIds().has(id) ? id : "");
@@ -871,7 +971,11 @@ export class Workspace {
     event.source.reset();
     explorer.ignoreClick();
     this.tooltips.resume();
-    if (deleting) this.reviewDeletion(resources, this.host.nativeElement.querySelector(".selection-delete"));
+    if (deleting)
+      this.reviewDeletion(
+        resources,
+        this.host.nativeElement.querySelector(".selection-delete"),
+      );
     else if (target) void this.moveItems(resources, target);
   }
   cutSelection() {
@@ -881,7 +985,8 @@ export class Workspace {
     if (!this.state.active || this.moving() || !resources.length) return;
     const operation = this.state.begin("move");
     let generation = this.listingGeneration;
-    const current = () => operation.current() && generation === this.listingGeneration;
+    const current = () =>
+      operation.current() && generation === this.listingGeneration;
     this.moving.set(true);
     this.error.set("");
     try {
@@ -890,7 +995,7 @@ export class Workspace {
       this.cutItems.update((items) =>
         items.filter((r) => !result.moved.includes(r["@id"])),
       );
-      this.pendingMoveSelection = result.failed.map(f => f.resource["@id"]);
+      this.pendingMoveSelection = result.failed.map((f) => f.resource["@id"]);
       const reload = this.load(true);
       generation = this.listingGeneration;
       await reload;
@@ -916,7 +1021,9 @@ export class Workspace {
       // server may have written, and keeps each message in its own language.
       if (result.failed.length) {
         const previous = this.error();
-        const parts: TextPart[] = previous ? [{ text: previous, lang: this.serverText.language(previous) }] : [];
+        const parts: TextPart[] = previous
+          ? [{ text: previous, lang: this.serverText.language(previous) }]
+          : [];
         for (const f of result.failed) {
           if (parts.length) parts.push({ text: "; ", lang: null });
           parts.push(
@@ -964,7 +1071,8 @@ export class Workspace {
           "&limit=50&offset=0",
       );
       if (operation.current()) {
-        if (!validListing(data)) throw new Error(this.i18n.t("Errors.InvalidListing"));
+        if (!validListing(data))
+          throw new Error(this.i18n.t("Errors.InvalidListing"));
         this.instances.set(data.resources);
         this.instanceTotal.set(data.totalCount);
         this.instancesLoaded.set(true);
@@ -1043,7 +1151,8 @@ export class Workspace {
       operation.finish();
     } catch (e) {
       operation.fail(e);
-      if (operation.current() && owner.current() && this.menu() === r["@id"]) this.fail(e);
+      if (operation.current() && owner.current() && this.menu() === r["@id"])
+        this.fail(e);
     }
   }
   navigationQuery(destination: Record<string, string> = {}) {
@@ -1076,7 +1185,11 @@ export class Workspace {
     void this.router.navigate(["/dashboard"], {
       queryParams: this.navigationQuery({
         ...(sharing ? { sharing } : {}),
-        ...(search ? { search } : sharing ? {} : { folderId: resourceSelector(this.folder) }),
+        ...(search
+          ? { search }
+          : sharing
+            ? {}
+            : { folderId: resourceSelector(this.folder) }),
       }),
     });
   }
@@ -1125,7 +1238,8 @@ export class Workspace {
     this.notify(this.saidNotice());
   }
   private checkReport(expected: Resource, data: unknown) {
-    if (!validResourceReport(data, expected)) throw new Error(this.i18n.t("Errors.InvalidResourceReport"));
+    if (!validResourceReport(data, expected))
+      throw new Error(this.i18n.t("Errors.InvalidResourceReport"));
   }
   private publishReport(resource: Resource, data: Resource) {
     if (this.selected()?.["@id"] === resource["@id"])
@@ -1151,7 +1265,11 @@ export class Workspace {
     // A page button still disabled once the page is drawn, as Next is on the last page, hands focus
     // to the other one.
     this.refocus = () =>
-      [...this.host.nativeElement.querySelectorAll<HTMLButtonElement>(".paging button")].find((button) => !button.disabled);
+      [
+        ...this.host.nativeElement.querySelectorAll<HTMLButtonElement>(
+          ".paging button",
+        ),
+      ].find((button) => !button.disabled);
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParamsHandling: "merge",
@@ -1174,8 +1292,17 @@ export class Workspace {
   versionAndStatus(v: Resource): TextPart[] {
     const status = this.status(v);
     return [
-      { text: " · " + (v["pav:version"] || this.i18n.t("Dashboard.Unversioned")), lang: null },
-      ...(status === "—" ? [] : [{ text: " · ", lang: null }, { text: status, lang: this.statusLanguage(v) }]),
+      {
+        text:
+          " · " + (v["pav:version"] || this.i18n.t("Dashboard.Unversioned")),
+        lang: null,
+      },
+      ...(status === "—"
+        ? []
+        : [
+            { text: " · ", lang: null },
+            { text: status, lang: this.statusLanguage(v) },
+          ]),
     ];
   }
   /**
@@ -1186,7 +1313,9 @@ export class Workspace {
    */
   isLatest(r: Resource): boolean {
     if (!r["pav:version"]) return false;
-    return r.versions?.length ? !this.latestVersion(r) : r.isLatestVersion !== false;
+    return r.versions?.length
+      ? !this.latestVersion(r)
+      : r.isLatestVersion !== false;
   }
   /** The newest version when it is not this one; the report lists versions newest first. */
   latestVersion(r: Resource): Resource | undefined {
@@ -1267,7 +1396,9 @@ export class Workspace {
       if (id === "open" || id === "populate") {
         if (r.resourceType === "folder")
           void this.router.navigate(["/dashboard"], {
-            queryParams: this.navigationQuery({ folderId: resourceSelector(r["@id"]) }),
+            queryParams: this.navigationQuery({
+              folderId: resourceSelector(r["@id"]),
+            }),
           });
         else location.assign(this.link(r, id === "populate"));
         return;

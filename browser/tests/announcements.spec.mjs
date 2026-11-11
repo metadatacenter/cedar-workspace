@@ -373,6 +373,10 @@ test("each toast says its message from a status region already in the page", asy
   await expect(accountRegion).toHaveText("Copied.");
   expect(await regions.entered()).toEqual([""]);
   expect(await regions.said()).toEqual([...settled, "Copied."]);
+  // A second copy repeats the notice, which is shown and said again.
+  await page.getByRole("button", { name: "Copy First name", exact: true }).click();
+  await expect.poll(() => regions.said()).toEqual([...settled, "Copied.", "Copied."]);
+  await expect(toast).toHaveText("Copied.");
 
   await page.goto("/instances/edit/instance");
   await expect(page.getByLabel("Instance name")).toHaveValue("Study record");
