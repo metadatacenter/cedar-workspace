@@ -43,9 +43,7 @@ describe("Profile", () => {
   afterEach(() => vi.restoreAllMocks());
   it("says Copied again when a second copy repeats it", async () => {
     vi.useFakeTimers();
-    vi.stubGlobal("navigator", {
-      clipboard: { writeText: vi.fn().mockResolvedValue(undefined) },
-    });
+    vi.stubGlobal("navigator", { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
     try {
       await host.copy("first");
       const copied = host.notice();
@@ -256,38 +254,26 @@ describe("Profile", () => {
     expect(host.description).toBe("Next key");
     expect(host.keys()).toEqual([key]);
   });
-  for (const invalid of [
-    null,
-    {},
-    { homeFolderId: "home", apiKeys: null },
-    { homeFolderId: "home", apiKeys: [key, key] },
-  ]) {
+  for (const invalid of [null, {}, { homeFolderId: "home", apiKeys: null }, { homeFolderId: "home", apiKeys: [key, key] }]) {
     it(`invalid incoming profile ${JSON.stringify(invalid)} cannot enable key mutations`, async () => {
       request.mockResolvedValueOnce({ data: invalid });
       await host.ngOnInit();
       expect(host.ready()).toBe(false);
       expect(host.error()).toContain("valid API-key state");
-      request.mockClear();
-      await host.mutate("create");
-      expect(request).not.toHaveBeenCalled();
-      request
-        .mockResolvedValueOnce({
-          data: { homeFolderId: "home", apiKeys: [key] },
-        })
-        .mockResolvedValueOnce({ data: {} });
+      request.mockClear(); await host.mutate("create"); expect(request).not.toHaveBeenCalled();
+      request.mockResolvedValueOnce({ data: { homeFolderId: "home", apiKeys: [key] } }).mockResolvedValueOnce({ data: {} });
       await host.ngOnInit();
-      expect(host.ready()).toBe(true);
-      expect(host.error()).toBe("");
+      expect(host.ready()).toBe(true); expect(host.error()).toBe("");
     });
   }
   for (const action of ["create", "regenerate", "delete"] as const) {
     it(`unchanged successful ${action} response is not an acknowledgement`, async () => {
-      const keys = [key, { ...key, id: "other" }];
-      host.keys.set(keys);
+      const keys = [key, { ...key, id: "other" }]; host.keys.set(keys);
       request.mockResolvedValueOnce({ data: { apiKeys: keys } });
       await host.mutate(action, action === "create" ? undefined : key);
       expect(host.reloadRequired()).toBe(true);
       expect(host.notice()).toBe("");
     });
   }
+
 });
