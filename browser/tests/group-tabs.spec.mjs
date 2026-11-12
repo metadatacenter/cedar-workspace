@@ -32,6 +32,7 @@ for (const width of [1440, 375]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     // Loading disables the picker and can clear WebKit focus. Capture a known state.
     await expect(search).toBeEnabled();
+    await expect(search).toHaveValue("");
     await search.focus();
     await expect(search).toBeFocused();
     await page.mouse.move(0, 0);

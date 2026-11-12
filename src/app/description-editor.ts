@@ -5,6 +5,7 @@ import {
   DestroyRef,
   ElementRef,
   Injector,
+  afterNextRender,
   effect,
   inject,
   input,
@@ -17,6 +18,7 @@ import { Backend, Reply, failureText } from "./backend.service";
 import { Resource, can, title } from "./resource";
 import { ServerLanguage } from "./server-text";
 import { returnFocus } from "./focus-return";
+import { statusRegionDelay } from "./status-region";
 
 @Component({
   selector: "cedar-description-editor",
@@ -85,6 +87,8 @@ export class DescriptionEditor {
    * so each save is said once. A failed save says nothing here, since its alert says it.
    */
   readonly announcement = signal("");
+  private announcementGeneration = 0;
+  private announcementTimer?: ReturnType<typeof setTimeout>;
   private readonly api = inject(Backend);
   private loaded = "";
   private readonly i18n = inject(I18n);
@@ -101,7 +105,10 @@ export class DescriptionEditor {
     );
   }
   constructor() {
-    inject(DestroyRef).onDestroy(() => this.state.dispose());
+    inject(DestroyRef).onDestroy(() => {
+      this.state.dispose();
+      clearTimeout(this.announcementTimer);
+    });
     effect(() => {
       const r = this.resource();
       const key = JSON.stringify([r["@id"], this.editable]);
@@ -112,10 +119,38 @@ export class DescriptionEditor {
       this.snapshot.set(null);
       this.draft.set(r["schema:description"] || "");
       this.error.set("");
-      this.announcement.set("");
+      this.clearAnnouncement();
       this.busy.set(false);
       if (this.editable) void this.load();
     });
+  }
+  private clearAnnouncement(): number {
+    clearTimeout(this.announcementTimer);
+    this.announcement.set("");
+    return ++this.announcementGeneration;
+  }
+  private saySaved(state: RevisionCoordinator, generation: number) {
+    // A fast reply can arrive before Angular renders the empty region. Render it first, then
+    // leave the same interval as the shared status region before repeating the success text.
+    afterNextRender(
+      () => {
+        if (
+          state !== this.state ||
+          !state.active ||
+          generation !== this.announcementGeneration
+        )
+          return;
+        this.announcementTimer = setTimeout(() => {
+          if (
+            state === this.state &&
+            state.active &&
+            generation === this.announcementGeneration
+          )
+            this.announcement.set(this.i18n.t("Dashboard.DescriptionSaved"));
+        }, statusRegionDelay);
+      },
+      { injector: this.injector },
+    );
   }
   async load(preserveDraft = false) {
     const r = this.resource();
@@ -131,7 +166,8 @@ export class DescriptionEditor {
       if (!reply.etag)
         throw new Error(this.i18n.t("ResourceDialog.NoRevision"));
       this.snapshot.set({ ...reply, data: { ...r, ...reply.data } });
-      if (!preserveDraft) this.draft.set(reply.data["schema:description"] || "");
+      if (!preserveDraft)
+        this.draft.set(reply.data["schema:description"] || "");
       operation.finish();
     } catch (e) {
       operation.fail(e);
@@ -176,7 +212,7 @@ export class DescriptionEditor {
       state = this.state;
     this.busy.set(true);
     this.error.set("");
-    this.announcement.set("");
+    const announcementGeneration = this.clearAnnouncement();
     const updated = { ...snapshot.data, "schema:description": this.draft() };
     try {
       const reply = await this.api.request<Resource>(
@@ -193,7 +229,7 @@ export class DescriptionEditor {
       this.snapshot.set({ data: updated, etag: reply.etag });
       operation.finish();
       this.saved.emit(updated);
-      this.announcement.set(this.i18n.t("Dashboard.DescriptionSaved"));
+      this.saySaved(state, announcementGeneration);
       // Re-read the revision before another edit; the command may not return an ETag.
       await this.load();
     } catch (e) {

@@ -6,6 +6,11 @@ export default defineConfig({
   fullyParallel: true,
   workers: process.env.CEDAR_TEST_WORKERS ? Number(process.env.CEDAR_TEST_WORKERS) : undefined,
   projects: [
+    ...["firefox", "webkit"].map((browserName) => ({
+      name: `${browserName}-accessibility`,
+      testMatch: /(?:accessibility|layout-resilience|focus-order|announcements)\.spec\.mjs/,
+      use: { browserName },
+    })),
     { name: "", use: {
       browserName: "chromium",
       // Repaint complete tiles after selection clears the information panel. Reusing

@@ -1,6 +1,27 @@
 import { test, expect, resource } from "./fixtures.mjs";
 import { focusedControl, tabSequence } from "./focus.mjs";
 
+// Keep this application-order test inside the document. Playwright Firefox cannot reliably
+// Tab out to browser chrome and back (microsoft/playwright#39268, reproduced on plain HTML).
+// The end marker is a test-host stop; restarting at the non-tabbable start marker tests the
+// remaining application order without pretending to verify the browser toolbar.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    document.addEventListener("DOMContentLoaded", () => {
+      for (const position of ["start", "end"]) {
+        const marker = document.createElement("span");
+        marker.dataset.testTabBoundary = position;
+        marker.tabIndex = position === "start" ? -1 : 0;
+        marker.setAttribute("aria-label", "Test host boundary");
+        marker.style.cssText =
+          "position:fixed;left:0;top:0;width:1px;height:1px;";
+        if (position === "start") document.body.prepend(marker);
+        else document.body.append(marker);
+      }
+    });
+  });
+});
+
 /** Tab from where focus is until it comes back round, naming each stop once. */
 async function cycle(page) {
   const stops = await tabSequence(page, 1);
@@ -16,6 +37,7 @@ async function loaded(page, address) {
   await expect(page.locator("main").first()).toBeVisible();
   await expect(page.getByText("Loading…", { exact: true })).toHaveCount(0);
   await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+  await page.locator('[data-test-tab-boundary="start"]').focus();
 }
 
 const header = [
@@ -136,7 +158,9 @@ test("an open header menu takes Tab through its links before the next control", 
     'summary "Actions menu"',
   ]);
   // Tab past its last link closed it.
-  await expect(page.locator(".header-menu").first()).not.toHaveAttribute("open");
+  await expect(page.locator(".header-menu").first()).not.toHaveAttribute(
+    "open",
+  );
 });
 
 for (const route of ["dashboard", "groups"])
@@ -146,16 +170,26 @@ for (const route of ["dashboard", "groups"])
   }) => {
     await loaded(page, "/" + route);
     const menu = (name) =>
-      page.locator(".header-menu").filter({ has: page.locator(`summary[aria-label="${name}"]`) });
+      page
+        .locator(".header-menu")
+        .filter({ has: page.locator(`summary[aria-label="${name}"]`) });
     const user = menu("User menu");
     const actions = menu("Actions menu");
     await page.locator('summary[aria-label="User menu"]').focus();
     await page.keyboard.press("Enter");
     await expect(user).toHaveAttribute("open");
-    expect(await tabSequence(page, 2)).toEqual(['link "Profile"', 'link "Settings"']);
-    expect(await tabSequence(page, 2, "Shift+Tab")).toEqual(['link "Profile"', 'summary "User menu"']);
+    expect(await tabSequence(page, 2)).toEqual([
+      'link "Profile"',
+      'link "Settings"',
+    ]);
+    expect(await tabSequence(page, 2, "Shift+Tab")).toEqual([
+      'link "Profile"',
+      'summary "User menu"',
+    ]);
     await expect(user).toHaveAttribute("open");
-    expect(await tabSequence(page, 1, "Shift+Tab")).toEqual(['button "Search"']);
+    expect(await tabSequence(page, 1, "Shift+Tab")).toEqual([
+      'button "Search"',
+    ]);
     await expect(user).not.toHaveAttribute("open");
     await expect.poll(() => focusedControl(page)).toBe('button "Search"');
 
@@ -169,7 +203,10 @@ for (const route of ["dashboard", "groups"])
       'link "About"',
     ]);
     await expect(actions).toHaveAttribute("open");
-    const next = route === "dashboard" ? 'button "Collapse information"' : 'link "Back to Workspace"';
+    const next =
+      route === "dashboard"
+        ? 'button "Collapse information"'
+        : 'link "Back to Workspace"';
     expect(await tabSequence(page, 1)).toEqual([next]);
     await expect(actions).not.toHaveAttribute("open");
     await expect.poll(() => focusedControl(page)).toBe(next);
@@ -197,7 +234,9 @@ test("Tab out of the New menu closes it, and moving within it does not", async (
   await page.getByRole("button", { name: "New", exact: true }).focus();
   await page.keyboard.press("Enter");
   await expect(menu).toHaveAttribute("open");
-  expect(await tabSequence(page, 1, "Shift+Tab")).toEqual(['button "Collapse information"']);
+  expect(await tabSequence(page, 1, "Shift+Tab")).toEqual([
+    'button "Collapse information"',
+  ]);
   await expect(menu).not.toHaveAttribute("open");
 });
 
@@ -321,7 +360,10 @@ const row = (id) =>
  * Home lists records a, b and c, after the Archive folder when `folder` is set. Deleting a record
  * or moving it into Archive takes it out of the listing.
  */
-async function records3(page, { folder = false, address = "/dashboard?view=list" } = {}) {
+async function records3(
+  page,
+  { folder = false, address = "/dashboard?view=list" } = {},
+) {
   const gone = new Set();
   await page.route("**/api/resource/**", (route) => {
     const request = route.request(),
@@ -368,7 +410,9 @@ async function records3(page, { folder = false, address = "/dashboard?view=list"
 
 /** Choose `name` from the menu of the record `id` by keyboard, as from its focused row. */
 async function command(page, id, name) {
-  await page.getByRole("row", { name: new RegExp(`^Instance Record ${id} `) }).focus();
+  await page
+    .getByRole("row", { name: new RegExp(`^Instance Record ${id} `) })
+    .focus();
   await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");
@@ -409,13 +453,17 @@ test("deleting the focused item from the selection bin moves focus to the row in
   api,
 }) => {
   await records3(page);
-  await page.getByRole("row", { name: new RegExp("^Instance Record b ") }).click();
+  await page
+    .getByRole("row", { name: new RegExp("^Instance Record b ") })
+    .click();
   await page.getByRole("button", { name: "Delete (1)", exact: true }).click();
   await page
     .getByRole("dialog")
     .getByRole("button", { name: "Delete", exact: true })
     .click();
-  await expect(page.getByRole("row", { name: /^Instance Record b / })).toHaveCount(0);
+  await expect(
+    page.getByRole("row", { name: /^Instance Record b / }),
+  ).toHaveCount(0);
   await expect.poll(() => focusedControl(page)).toBe(row("c"));
 });
 
@@ -431,7 +479,9 @@ test("moving the focused item moves focus to the row in its place", async ({
     "false",
   );
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByRole("row", { name: /^Instance Record b / })).toHaveCount(0);
+  await expect(
+    page.getByRole("row", { name: /^Instance Record b / }),
+  ).toHaveCount(0);
   await expect.poll(() => focusedControl(page)).toBe(row("c"));
 });
 
@@ -442,7 +492,11 @@ test("moving the focused item moves focus to the row in its place", async ({
 const tabStops = (page) =>
   page
     .locator(".explorer-item")
-    .evaluateAll((rows) => rows.filter((row) => row.tabIndex === 0).map((row) => row.dataset.resourceId));
+    .evaluateAll((rows) =>
+      rows
+        .filter((row) => row.tabIndex === 0)
+        .map((row) => row.dataset.resourceId),
+    );
 
 test("the list is one Tab stop: Tab reaches one row and its controls, and the arrow keys the others", async ({
   page,
@@ -466,8 +520,14 @@ test("the list is one Tab stop: Tab reaches one row and its controls, and the ar
   await page.locator('[data-resource-id="a"]').focus();
   await page.keyboard.press("ArrowDown");
   expect(await focusedControl(page)).toBe(row("b"));
-  await expect(page.locator('[data-resource-id="b"]')).toHaveAttribute("aria-selected", "true");
-  await expect(page.locator('[data-resource-id="a"]')).toHaveAttribute("aria-selected", "false");
+  await expect(page.locator('[data-resource-id="b"]')).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(page.locator('[data-resource-id="a"]')).toHaveAttribute(
+    "aria-selected",
+    "false",
+  );
   await expect.poll(() => tabStops(page)).toEqual(["b"]);
   expect(await tabSequence(page, 3)).toEqual([
     'link "Record b"',
@@ -509,7 +569,9 @@ test("the grid of cards is one Tab stop too, and a pointer press on a card's con
   expect(await focusedControl(page)).toBe(card("b"));
   await expect.poll(() => tabStops(page)).toEqual(["b"]);
   // A press on a control in another card focuses it, and Tab goes on within that card.
-  await page.getByRole("button", { name: "Actions for Record c", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Actions for Record c", exact: true })
+    .click();
   await page.keyboard.press("Escape");
   expect(await focusedControl(page)).toBe('button "Actions for Record c"');
   await expect.poll(() => tabStops(page)).toEqual(["c"]);
@@ -525,7 +587,10 @@ test("Tab enters the listing at the selected row when no row has held focus", as
 }) => {
   // An editor's way back names the artifact to select again.
   await records3(page, { address: "/dashboard?view=list&selected=b" });
-  await expect(page.locator('[data-resource-id="b"]')).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator('[data-resource-id="b"]')).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
   await expect.poll(() => tabStops(page)).toEqual(["b"]);
   await page.getByRole("button", { name: "Sort options", exact: true }).focus();
   expect(await tabSequence(page, 1)).toEqual([row("b")]);
@@ -544,7 +609,9 @@ test("Tab leaves an open resource menu for the control after the listing, and Sh
   // The selected record's details follow the listing.
   await page.getByRole("row", { name: /^Instance Record b / }).click();
   await expect(
-    page.getByRole("complementary", { name: "Resource information" }).getByRole("heading"),
+    page
+      .getByRole("complementary", { name: "Resource information" })
+      .getByRole("heading"),
   ).toHaveText("Record b");
   await trigger.focus();
   await page.keyboard.press("Enter");
@@ -576,7 +643,9 @@ test("Tab leaves an open resource menu for the control after the listing, and Sh
     'button "Preview Record b"',
   ]);
   await expect(menu).toHaveCount(0);
-  await expect.poll(() => focusedControl(page)).toBe('button "Preview Record b"');
+  await expect
+    .poll(() => focusedControl(page))
+    .toBe('button "Preview Record b"');
 });
 
 const pages = Array.from({ length: 120 }, (_, index) => ({
@@ -698,11 +767,16 @@ const kim = { "@id": "kim", firstName: "Kim", lastName: "Analyst" };
 /** Open the Research team on Groups' Manage tab, by keyboard. */
 async function researchTeam(page) {
   await loaded(page, "/groups");
-  const find = page.getByRole("combobox", { name: "Find a group", exact: true });
+  const find = page.getByRole("combobox", {
+    name: "Find a group",
+    exact: true,
+  });
   await find.focus();
   await page.keyboard.type("Research");
   await page.keyboard.press("Enter");
-  await expect(page.getByLabel("Name", { exact: true })).toHaveValue("Research team");
+  await expect(page.getByLabel("Name", { exact: true })).toHaveValue(
+    "Research team",
+  );
 }
 
 test("creating a group moves focus to the emptied name, for the next group", async ({
@@ -714,7 +788,9 @@ test("creating a group moves focus to the emptied name, for the next group", asy
   await page.getByLabel("Group name", { exact: true }).fill("Research team");
   // fill dispatches input before Angular's next render enables the submit button.
   // Start the keyboard journey once the populated form is ready to submit.
-  await expect(page.getByRole("button", { name: "Create group", exact: true })).toBeEnabled();
+  await expect(
+    page.getByRole("button", { name: "Create group", exact: true }),
+  ).toBeEnabled();
   await page.keyboard.press("Tab");
   expect(await focusedControl(page)).toBe('button "Create group"');
   await page.keyboard.press("Enter");
@@ -729,7 +805,10 @@ test("adding a member moves focus to the emptied member field, for the next memb
 }) => {
   api.members = [{ user: alex, administrator: true, member: true }];
   await researchTeam(page);
-  const picker = page.getByRole("combobox", { name: "Add a member", exact: true });
+  const picker = page.getByRole("combobox", {
+    name: "Add a member",
+    exact: true,
+  });
   await picker.focus();
   await page.keyboard.type("Sam");
   await page.keyboard.press("Enter");
@@ -746,7 +825,9 @@ test("removing a member moves focus to the Remove button in its place, then to t
   page,
   api,
 }) => {
-  const people = Object.fromEntries([alex, sam, kim].map((person) => [person["@id"], person]));
+  const people = Object.fromEntries(
+    [alex, sam, kim].map((person) => [person["@id"], person]),
+  );
   let roster = [
     { user: alex, administrator: true, member: true },
     { user: sam, administrator: false, member: true },
@@ -757,30 +838,52 @@ test("removing a member moves focus to the Remove button in its place, then to t
       roster = route
         .request()
         .postDataJSON()
-        .users.map((member) => ({ ...member, user: people[member.user["@id"]] }));
-    return route.fulfill({ json: { users: roster }, headers: { ETag: '"fixture-revision"' } });
+        .users.map((member) => ({
+          ...member,
+          user: people[member.user["@id"]],
+        }));
+    return route.fulfill({
+      json: { users: roster },
+      headers: { ETag: '"fixture-revision"' },
+    });
   });
   await researchTeam(page);
   // Refusing the question keeps the member, and focus goes back to the button that asked.
-  await page.getByRole("button", { name: "Remove Sam Curator from the group", exact: true }).focus();
+  await page
+    .getByRole("button", {
+      name: "Remove Sam Curator from the group",
+      exact: true,
+    })
+    .focus();
   await page.keyboard.press("Enter");
   await expect.poll(() => focusedControl(page)).toBe('button "Cancel"');
   await page.keyboard.press("Enter");
   await expect(page.locator("dialog.confirmation-dialog")).toHaveCount(0);
-  await expect.poll(() => focusedControl(page)).toBe('button "Remove Sam Curator from the group"');
+  await expect
+    .poll(() => focusedControl(page))
+    .toBe('button "Remove Sam Curator from the group"');
   await expect(page.locator(".groups-member-row")).toHaveCount(3);
   for (const [name, next] of [
     ["Sam Curator", "Kim Analyst"],
     ["Kim Analyst", "Alex Researcher"],
   ]) {
-    await page.getByRole("button", { name: `Remove ${name} from the group`, exact: true }).focus();
+    await page
+      .getByRole("button", {
+        name: `Remove ${name} from the group`,
+        exact: true,
+      })
+      .focus();
     await page.keyboard.press("Enter");
     // The question opens on Cancel, so Tab reaches Yes.
     await expect.poll(() => focusedControl(page)).toBe('button "Cancel"');
     await page.keyboard.press("Tab");
     await page.keyboard.press("Enter");
-    await expect(page.locator(".groups-member-row").filter({ hasText: name })).toHaveCount(0);
-    await expect.poll(() => focusedControl(page)).toBe(`button "Remove ${next} from the group"`);
+    await expect(
+      page.locator(".groups-member-row").filter({ hasText: name }),
+    ).toHaveCount(0);
+    await expect
+      .poll(() => focusedControl(page))
+      .toBe(`button "Remove ${next} from the group"`);
   }
 });
 
@@ -797,21 +900,34 @@ test("saving or cancelling a description moves focus to the description", async 
   await description.fill("A saved description");
   // Input dispatch precedes Angular's render of the dirty-state actions. Tab only once
   // those controls exist, while still asserting the textarea retained focus.
-  await expect(page.getByRole("button", { name: "Save", exact: true })).toBeEnabled();
+  await expect(
+    page.getByRole("button", { name: "Save", exact: true }),
+  ).toBeEnabled();
   await expect(description).toBeFocused();
-  expect(await tabSequence(page, 2)).toEqual(['button "Cancel"', 'button "Save"']);
+  expect(await tabSequence(page, 2)).toEqual([
+    'button "Cancel"',
+    'button "Save"',
+  ]);
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Save", exact: true }),
+  ).toHaveCount(0);
   await expect.poll(() => focusedControl(page)).toBe('textbox "Description"');
   await expect(description).toBeEnabled();
   await description.fill("A cancelled description");
-  await expect(page.getByRole("button", { name: "Cancel", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Cancel", exact: true }),
+  ).toBeVisible();
   await expect(description).toBeFocused();
   expect(await tabSequence(page, 1)).toEqual(['button "Cancel"']);
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("button", { name: "Cancel", exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Cancel", exact: true }),
+  ).toHaveCount(0);
   await expect.poll(() => focusedControl(page)).toBe('textbox "Description"');
-  await expect(description).toHaveValue("A representative template for shared research.");
+  await expect(description).toHaveValue(
+    "A representative template for shared research.",
+  );
 });
 
 test("a pointer press lands focus where the keyboard does, for groups and descriptions", async ({
@@ -828,7 +944,10 @@ test("a pointer press lands focus where the keyboard does, for groups and descri
   await expect(name).toHaveValue("");
   await expect.poll(() => focusedControl(page)).toBe('textbox "Group name"');
 
-  const picker = page.getByRole("combobox", { name: "Add a member", exact: true });
+  const picker = page.getByRole("combobox", {
+    name: "Add a member",
+    exact: true,
+  });
   await picker.fill("Sam");
   await page.getByRole("option", { name: "Sam Curator", exact: true }).click();
   await page.getByRole("button", { name: "Add member", exact: true }).click();
@@ -836,28 +955,49 @@ test("a pointer press lands focus where the keyboard does, for groups and descri
   await expect(picker).toHaveValue("");
   await expect.poll(() => focusedControl(page)).toBe('combobox "Add a member"');
 
-  await page.getByRole("button", { name: "Remove Sam Curator from the group", exact: true }).click();
-  await page.locator("dialog.confirmation-dialog").getByRole("button", { name: "Yes", exact: true }).click();
+  await page
+    .getByRole("button", {
+      name: "Remove Sam Curator from the group",
+      exact: true,
+    })
+    .click();
+  await page
+    .locator("dialog.confirmation-dialog")
+    .getByRole("button", { name: "Yes", exact: true })
+    .click();
   await expect(page.locator(".groups-member-row")).toHaveCount(1);
-  await expect.poll(() => focusedControl(page)).toBe('button "Remove Alex Researcher from the group"');
+  await expect
+    .poll(() => focusedControl(page))
+    .toBe('button "Remove Alex Researcher from the group"');
 
   await loaded(page, "/dashboard?view=list");
   await page.getByRole("row", { name: /^Template Study metadata/ }).click();
-  const description = page.getByRole("textbox", { name: "Description", exact: true });
+  const description = page.getByRole("textbox", {
+    name: "Description",
+    exact: true,
+  });
   await expect(description).toBeEnabled();
   await description.fill("A saved description");
   // Input dispatch precedes Angular's render of the dirty-state actions. Tab only once
   // those controls exist, while still asserting the textarea retained focus.
-  await expect(page.getByRole("button", { name: "Save", exact: true })).toBeEnabled();
+  await expect(
+    page.getByRole("button", { name: "Save", exact: true }),
+  ).toBeEnabled();
   await expect(description).toBeFocused();
   await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Save", exact: true }),
+  ).toHaveCount(0);
   await expect.poll(() => focusedControl(page)).toBe('textbox "Description"');
   await expect(description).toBeEnabled();
   await description.fill("A cancelled description");
-  await expect(page.getByRole("button", { name: "Cancel", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Cancel", exact: true }),
+  ).toBeVisible();
   await expect(description).toBeFocused();
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Cancel", exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Cancel", exact: true }),
+  ).toHaveCount(0);
   await expect.poll(() => focusedControl(page)).toBe('textbox "Description"');
 });

@@ -13,6 +13,7 @@ export async function focusedControl(page) {
       element = element.shadowRoot.activeElement;
     if (
       !element ||
+      element.hasAttribute("data-test-tab-boundary") ||
       element === document.body ||
       element === document.documentElement
     )
@@ -22,13 +23,18 @@ export async function focusedControl(page) {
     element.setAttribute("data-test-focused", String(window.__focusMark));
     return {
       mark: window.__focusMark,
-      summary: element.localName === "summary" ? element.getAttribute("aria-label") : null,
+      summary:
+        element.localName === "summary"
+          ? element.getAttribute("aria-label")
+          : null,
     };
   });
   if (found === null) return "(page)";
   let snapshot = null;
   try {
-    snapshot = await page.locator(`[data-test-focused="${found.mark}"]`).ariaSnapshot({ timeout: 1000 });
+    snapshot = await page
+      .locator(`[data-test-focused="${found.mark}"]`)
+      .ariaSnapshot({ timeout: 1000 });
   } catch {
     // Read as gone below.
   }
@@ -59,7 +65,23 @@ export async function focusedControl(page) {
 export async function tabSequence(page, count, key = "Tab") {
   const stops = [];
   for (let i = 0; i < count; i++) {
-    await page.keyboard.press(key);
+    if (key === "Tab") {
+      await page.evaluate(() => {
+        if (
+          document.activeElement?.getAttribute("data-test-tab-boundary") ===
+          "end"
+        )
+          document.querySelector('[data-test-tab-boundary="start"]')?.focus();
+      });
+    }
+    // Safari on macOS uses Option-Tab to include links with its default keyboard settings.
+    const tab =
+      process.platform === "darwin" &&
+      page.context().browser()?.browserType().name() === "webkit" &&
+      key.includes("Tab")
+        ? `Alt+${key}`
+        : key;
+    await page.keyboard.press(tab);
     stops.push(await focusedControl(page));
   }
   return stops;
