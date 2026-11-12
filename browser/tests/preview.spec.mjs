@@ -77,7 +77,7 @@ for (const kind of ['template','element','field','instance']) {
       await expect(text).toHaveValue('Collected specimen');
     } else await expect(viewer.locator('.cee-spec-box')).toContainText('80');
     await expect(viewer.locator('input:not([type=hidden]):not([readonly]):not(:disabled),textarea:not([readonly]):not(:disabled),select:not(:disabled),[contenteditable=true]')).toHaveCount(0);
-    const metrics = await viewer.evaluate(el => ({transform:getComputedStyle(el).transform, font:getComputedStyle(el.shadowRoot.querySelector('input, .cee-spec-box')).fontSize}));
+    const metrics = await viewer.evaluate(el => ({transform:getComputedStyle(el).transform, font:getComputedStyle(el.shadowRoot.querySelector('input, textarea, .cee-spec-box')).fontSize}));
     expect(metrics.transform).toBe('none');
     expect(parseFloat(metrics.font)).toBeGreaterThanOrEqual(14);
     expect((await dialog.boundingBox()).width).toBeCloseTo(page.viewportSize().width * 0.6, 0);
@@ -159,7 +159,7 @@ for (const kind of ['template', 'element', 'field', 'instance']) {
         const el = document.querySelector('dialog.artifact-preview');
         if (el && getComputedStyle(el).visibility === 'visible') {
           const viewer = el.querySelector('cedar-embeddable-editor, cedar-embeddable-field');
-          const field = viewer?.shadowRoot?.querySelector('input, .cee-spec-box');
+          const field = viewer?.shadowRoot?.querySelector('input, textarea, .cee-spec-box');
           window.previewFrames.push({height:el.getBoundingClientRect().height,
             viewerHeight:viewer?.getBoundingClientRect().height ?? 0,
             fieldHeight:field?.getBoundingClientRect().height ?? 0});

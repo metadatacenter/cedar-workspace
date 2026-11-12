@@ -38,6 +38,7 @@ import {
 import { ArtifactPreview } from "./artifact-preview";
 import { Toast } from "./toast";
 import {
+  ChangeDetectorRef,
   Component,
   DestroyRef,
   HostListener,
@@ -77,6 +78,7 @@ import { I18n } from "./i18n";
 import { PageTitles } from "./page-title";
 import { ServerText, TextPart, serverLanguage } from "./server-text";
 import { StatusRegion } from "./status-region";
+import { NoticeRepeater } from "./notice-repeater";
 import { returnFocus } from "./focus-return";
 export interface Action {
   id: string;
@@ -217,6 +219,7 @@ export class Workspace {
   private destroy = inject(DestroyRef);
   private host: ElementRef<HTMLElement> = inject(ElementRef);
   private injector = inject(Injector);
+  private changeDetector = inject(ChangeDetectorRef);
   private titles = inject(PageTitles);
   readonly title = (r: Resource) => title(r, this.i18n.t("Common.Untitled"));
   readonly can = can;
@@ -276,6 +279,11 @@ export class Workspace {
   readonly notice = signal("");
   /** A notice that a status region of its own already says, so the toast that shows it is silent. */
   readonly saidNotice = signal("");
+  /** Shows a repeated notice again, which the toast would otherwise leave as it was. */
+  private readonly notices = new NoticeRepeater(this.notice);
+  private notify(message: string) {
+    this.notices.show(message);
+  }
   /**
    * What the listing's live region says when a change of address brings another listing, as a
    * search, a filter, a sort, a page or a folder does: the count the footer shows, or that nothing
@@ -293,6 +301,32 @@ export class Workspace {
   readonly selection = computed(() =>
     this.rows().filter((r) => this.selectionIds().includes(r["@id"])),
   );
+  /** The row that last held focus, itself or in one of its controls. */
+  readonly focusedRow = signal("");
+  /**
+   * The row Tab enters the listing at, which is a grid and so one Tab stop: the row that last held
+   * focus, else the first selected row, else the first row. The arrow keys move between rows.
+   */
+  readonly tabStop = computed(() => {
+    const ids = this.rows().map((r) => r["@id"]);
+    const focused = this.focusedRow();
+    if (ids.includes(focused)) return focused;
+    const selected = this.selectionIds();
+    return ids.find((id) => selected.includes(id)) ?? ids[0] ?? "";
+  });
+  /** A control inside a row takes Tab only in the row Tab enters the listing at. */
+  rowControlTabindex(r: Resource): -1 | null {
+    return this.tabStop() === r["@id"] ? null : -1;
+  }
+  /**
+   * Make the row that took focus the Tab stop. The row's controls take Tab at once, so a Tab
+   * pressed before the next render reaches them rather than leaving the listing.
+   */
+  rowFocused(id: string) {
+    if (this.focusedRow() === id) return;
+    this.focusedRow.set(id);
+    this.changeDetector.detectChanges();
+  }
   readonly moving = signal(false);
   readonly cutItems = signal<Resource[]>([]);
   openSelectionDeletion(event: Event) {
@@ -377,6 +411,7 @@ export class Workspace {
     this.destroy.onDestroy(() => {
       clearInterval(clock);
       clearTimeout(this.movedTimer);
+      this.notices.cancel();
       this.tooltips.resume();
       document.body.classList.remove("explorer-dragging", "explorer-can-drop");
       this.state.dispose();
@@ -857,7 +892,7 @@ export class Workspace {
           .map((f) => f.resource["@id"])
           .filter((id) => this.rows().some((r) => r["@id"] === id)),
       );
-      this.notice.set(
+      this.notify(
         this.i18n.counted("Explorer.Moved", result.moved.length, {
           count: result.moved.length,
         }),
@@ -941,7 +976,7 @@ export class Workspace {
   private async copy(value: string, notice: string) {
     try {
       await navigator.clipboard.writeText(value);
-      this.notice.set(this.i18n.t(notice));
+      this.notify(this.i18n.t(notice));
     } catch (e) {
       this.fail(e);
     }
@@ -1072,7 +1107,7 @@ export class Workspace {
     this.publishReport(resource, resource);
     // The description editor says this outcome in its own status region.
     this.saidNotice.set(this.i18n.t("Dashboard.DescriptionSaved"));
-    this.notice.set(this.saidNotice());
+    this.notify(this.saidNotice());
   }
   private checkReport(expected: Resource, data: unknown) {
     if (!validResourceReport(data, expected)) throw new Error(this.i18n.t("Errors.InvalidResourceReport"));
@@ -1239,7 +1274,7 @@ export class Workspace {
     this.dialog.set({ action });
   }
   permissionsClosed(message?: string) {
-    if (message) this.notice.set(message);
+    if (message) this.notify(message);
     const resource = this.dialog()?.resource;
     if (resource) this.refocusInPlaceOf([resource]);
     this.dialog.set(null);
@@ -1253,7 +1288,7 @@ export class Workspace {
     const resource = this.dialog()?.resource;
     this.refocusInPlaceOf(resources ?? (resource ? [resource] : []));
     this.dialog.set(null);
-    this.notice.set(this.i18n.t("Common.Saved"));
+    this.notify(this.i18n.t("Common.Saved"));
     void this.load();
   }
 }

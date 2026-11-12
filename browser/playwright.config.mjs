@@ -1,4 +1,5 @@
 import { defineConfig } from "@playwright/test";
+import { CHROMIUM_ONLY } from "./tests/browser-tags.mjs";
 const port = Number(process.env.PORT || 4797);
 export default defineConfig({
   testDir: "./tests",
@@ -11,7 +12,7 @@ export default defineConfig({
       // partial raster tiles can leave stray pixels in otherwise empty screenshot areas.
       launchOptions: { args: ["--disable-partial-raster"] },
     } },
-    { name: "webkit", testMatch: ["api-key-state.spec.mjs", "state-coordination.spec.mjs", "workspace-return.spec.mjs", "folder-deletion.spec.mjs", "selection-deletion.spec.mjs", "bulk-delete-recovery.spec.mjs", "folder-list.spec.mjs", "explorer.spec.mjs", "bulk-move-recovery.spec.mjs", "sorting.spec.mjs", "permissions.spec.mjs", "group-tabs.spec.mjs", "information.spec.mjs", "refresh.spec.mjs", "tooltip.spec.mjs", "native-choices.spec.mjs", "preview.spec.mjs", "return-matrix.spec.mjs"], use: { browserName: "webkit" } },
+    { name: "webkit", testMatch: ["api-key-state.spec.mjs", "state-coordination.spec.mjs", "workspace-return.spec.mjs", "folder-deletion.spec.mjs", "selection-deletion.spec.mjs", "bulk-delete-recovery.spec.mjs", "folder-list.spec.mjs", "explorer.spec.mjs", "bulk-move-recovery.spec.mjs", "sorting.spec.mjs", "permissions.spec.mjs", "group-tabs.spec.mjs", "information.spec.mjs", "refresh.spec.mjs", "tooltip.spec.mjs", "native-choices.spec.mjs", "preview.spec.mjs", "return-matrix.spec.mjs"], grepInvert: new RegExp(CHROMIUM_ONLY), use: { browserName: "webkit" } },
   ],
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,

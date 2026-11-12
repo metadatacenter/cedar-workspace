@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { test, expect, resource } from "./fixtures.mjs";
+import { CHROMIUM_ONLY } from "./browser-tags.mjs";
 const folder = {
   ...resource,
   "@id": "destination",
@@ -60,7 +61,7 @@ for (const grid of [true, false]) {
       if (!grid) await page.getByRole("button", {name: "List view", exact: true}).click();
       const folderRow = page.locator('[data-resource-id="destination"]');
       await folderRow.locator(target).click();
-      await expect(folderRow).toHaveAccessibleDescription("Selected");
+      await expect(folderRow).toHaveAttribute("aria-selected", "true");
       await expect(page).not.toHaveURL(/folderId=destination/);
       await folderRow.locator(target).dblclick();
       await expect(page).toHaveURL(/folderId=destination/);
@@ -110,7 +111,7 @@ for (const kind of ["template", "element", "field", "instance"]) {
       await expect(card).toBeVisible();
       const returnTo = page.url();
       await target.click(options);
-      await expect(card).toHaveAccessibleDescription("Selected");
+      await expect(card).toHaveAttribute("aria-selected", "true");
       await expect(page).toHaveURL(returnTo);
       await target.dblclick(options);
       await expect(page).toHaveURL(url => url.pathname === editorPath);
@@ -126,7 +127,7 @@ test('a return that names an artifact selects it once, and the address forgets i
   await setup(page);
   await page.goto('/dashboard?selected=b');
   const card = page.locator('[data-resource-id="b"]');
-  await expect(card).toHaveAccessibleDescription("Selected");
+  await expect(card).toHaveAttribute("aria-selected", "true");
   await expect(page.locator('.information')).toContainText('Sample b');
   await expect(page).not.toHaveURL(/selected=/);
   // An artifact the listing does not hold selects nothing.
@@ -153,7 +154,7 @@ for (const [id, tab, shown] of [
     let listings = 0;
     page.on('request', r => { if (new URL(r.url()).pathname.endsWith('/contents')) listings++; });
     await page.goto(`/dashboard?selected=${id}&tab=${tab}`);
-    await expect(page.locator(`[data-resource-id="${id}"]`)).toHaveAccessibleDescription("Selected");
+    await expect(page.locator(`[data-resource-id="${id}"]`)).toHaveAttribute("aria-selected", "true");
     const info = page.locator('.information');
     await expect(info.getByRole('tab', {name: shown, exact: true})).toHaveAttribute('aria-selected', 'true');
     await expect(info.locator('.version')).toHaveCount(shown === 'Version' ? 1 : 0);
@@ -174,7 +175,7 @@ test('artifact card actions and list metadata do not trigger the double-click sh
   await page.getByRole('button', {name: 'List view', exact: true}).click();
   await card.locator('.resource-icon').dblclick();
   await card.locator('time').dblclick();
-  await expect(card).toHaveAccessibleDescription("Selected");
+  await expect(card).toHaveAttribute("aria-selected", "true");
   // Still the dashboard. The address records the sort and the list view, and nothing the double-clicks did.
   await expect(page).toHaveURL(/\/dashboard\?sort=name&view=list$/);
 });
@@ -491,8 +492,8 @@ test.describe("on a touchscreen", () => {
     await page.touchscreen.tap(b.x + 35, c.y + 50);
     await expectSelected(page, []);
   });
-  test("a scroll that begins on empty space keeps the selection", async ({ page, api, browserName }) => {
-    test.skip(browserName !== "chromium", "Only Chromium takes touch input through its DevTools protocol.");
+  // Only Chromium takes a finger drawn through its DevTools protocol.
+  test("a scroll that begins on empty space keeps the selection", { tag: CHROMIUM_ONLY }, async ({ page, api }) => {
     // Enough cards to scroll, with one alone in the last row of three.
     const extra = Array.from({ length: 39 }, (_, i) => ({
       ...resource,
@@ -700,7 +701,7 @@ for (const grid of [true, false]) {
       const first = page.locator('[data-resource-id="a"]');
       const last = page.locator('[data-resource-id="c"]');
       await first.locator(grid ? '.explorer-name' : '.resource-icon').click();
-      await expect(first).toHaveAccessibleDescription("Selected");
+      await expect(first).toHaveAttribute("aria-selected", "true");
       const url = page.url();
       const endpoint = target === 'name' ? last.locator(grid ? '.explorer-name' : 'a').first()
         : target === 'icon' ? last.locator('.resource-icon') : last.locator('td').nth(1);

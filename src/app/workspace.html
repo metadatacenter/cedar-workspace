@@ -314,7 +314,9 @@
       (selectionChange)="setSelection($event)"
       (openItem)="openItem($event)"
     >
-      <table>
+      <!-- A grid, so that its rows take aria-selected. It is one Tab stop: the arrow keys move
+           between rows, and Tab reaches one row and the controls inside it. -->
+      <table role="grid" aria-multiselectable="true">
         <caption class="sr-only">
           {{'Dashboard.TableCaption' | translate}}
         </caption>
@@ -365,17 +367,21 @@
         </thead>
         <tbody>
           @for(r of rows();track r['@id'];let row=$index){
+          <!-- The grid view draws each row as a card, in place of its table display. The role is
+               stated, so that aria-selected sits on a row whichever way a browser derives one. -->
           <tr
+            role="row"
             class="explorer-item"
             [class.explorer-schema]="['template','element','field'].includes(r.resourceType)"
             [class.selected]="selectionIds().includes(r['@id'])"
-            [attr.aria-describedby]="selectionIds().includes(r['@id']) ? 'explorer-row-selected' : null"
+            [attr.aria-selected]="selectionIds().includes(r['@id'])"
             [attr.data-resource-id]="r['@id']"
             [attr.data-drop-id]="r.resourceType==='folder'?r['@id']:null"
             [class.explorer-drop-target]="dropTarget()===r['@id']"
             [class.explorer-drop-eligible]="validDropIds().has(r['@id'])"
             [class.explorer-move-complete]="movedTarget()===r['@id']"
-            tabindex="0"
+            [attr.tabindex]="tabStop() === r['@id'] ? 0 : -1"
+            (focusin)="rowFocused(r['@id'])"
             cdkDrag
             [cdkDragDisabled]="loading() || moving() || !canDrag(r)"
             [cdkDragStartDelay]="{mouse:0,touch:180}"
@@ -430,6 +436,7 @@
                 [id]="'resource-name-' + row"
                 routerLink="/dashboard"
                 [queryParams]="navigationQuery({folderId:r['@id']})"
+                [attr.tabindex]="rowControlTabindex(r)"
                 (click)="$event.stopPropagation()"
                 >{{title(r)}}</a
               >
@@ -438,6 +445,7 @@
                 [id]="'resource-name-' + row"
                 [cedarTooltip]="title(r)"
                 [href]="link(r)"
+                [attr.tabindex]="rowControlTabindex(r)"
                 (click)="$event.stopPropagation()"
                 >{{title(r)}}</a
               >
@@ -448,6 +456,7 @@
               <button
                 class="explorer-preview"
                 type="button"
+                [attr.tabindex]="rowControlTabindex(r)"
                 [cedarTooltip]="'Preview.Label' | translate"
                 [attr.data-preview-id]="r['@id']"
                 [attr.aria-label]="'Preview.For' | translate:{name:title(r)}"
@@ -498,6 +507,7 @@
                 rel="noopener"
                 [attr.aria-label]="'Dashboard.OpenInOpenView' | translate"
                 [attr.aria-describedby]="'resource-name-' + row"
+                [attr.tabindex]="rowControlTabindex(r)"
                 [cedarTooltip]="'Dashboard.OpenInOpenView' | translate"
                 ><cedar-icon name="external" /></a
               >} @if(r.resourceType==='template'&&can(r,'populate')){<a
@@ -505,11 +515,13 @@
                 [href]="link(r,true)"
                 [attr.aria-label]="'Dashboard.PopulateTemplate' | translate"
                 [attr.aria-describedby]="'resource-name-' + row"
+                [attr.tabindex]="rowControlTabindex(r)"
                 [cedarTooltip]="'Dashboard.PopulateTemplate' | translate"
                 ><cedar-icon name="populate" /></a
               >} @if(!grid() && r.resourceType !== 'folder'){
               <button
                 type="button"
+                [attr.tabindex]="rowControlTabindex(r)"
                 [cedarTooltip]="'Preview.Label' | translate"
                 [attr.data-preview-id]="r['@id']"
                 [attr.aria-label]="'Preview.For' | translate:{name:title(r)}"
@@ -522,6 +534,7 @@
               }
               <button
                 (click)="toggleMenu(r, $event)"
+                [attr.tabindex]="rowControlTabindex(r)"
                 [attr.aria-expanded]="menu()===r['@id']"
                 [attr.aria-controls]="menu()===r['@id'] ? 'resource-menu' : null"
                 [cedarTooltip]="'Dashboard.Actions' | translate"
@@ -552,7 +565,6 @@
           }
         </tbody>
       </table>
-      <span hidden id="explorer-row-selected">{{'Explorer.RowSelected' | translate}}</span>
       @if(loading()&&!refreshing()){
       <p class="empty">{{'Common.Loading' | translate}}</p>
       } @else if(!rows().length){

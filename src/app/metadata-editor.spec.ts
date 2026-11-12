@@ -741,26 +741,83 @@ describe("Modern metadata host", () => {
     await host.save();
     expect(host.notice()).toBe("Saved.");
   });
-  it("blocks pending validation without dirtying a loaded instance or showing a provisional error", async () => {
-    await edit();
-    Object.assign(cee.dataQualityReport, {
-      isValid: false,
-      pendingValidation: true,
-      problems: [],
+  // CEE reports a pending check as an invalid report that cannot be saved and lists no problem.
+  describe("while CEE is still validating", () => {
+    const writes = () => api.request.mock.calls.filter(([, method]) => method === "PUT");
+    const validating = (pending: boolean, problems: object[] = []) => {
+      Object.assign(cee.dataQualityReport, {
+        isValid: !pending && !problems.length,
+        canSave: !pending && !problems.length,
+        pendingValidation: pending,
+        problems,
+      });
+      host.validated();
+    };
+    beforeEach(async () => {
+      await edit();
+      validating(true);
+      api.request.mockClear();
     });
-    host.validated();
-    expect(host.dirty()).toBe(false);
-    expect(host.validationErrors).toEqual([]);
-    api.request.mockClear();
-    await host.save();
-    expect(api.request).not.toHaveBeenCalled();
-    Object.assign(cee.dataQualityReport, {
-      isValid: true,
-      pendingValidation: false,
+    it("neither dirties a loaded instance, shows a provisional error nor refuses Save", () => {
+      expect(host.dirty()).toBe(false);
+      expect(host.validationErrors).toEqual([]);
+      // Save looks enabled: it is not marked refused, its help stays away and a click reaches it.
+      expect(host.saveRefused).toBe(false);
+      expect(host.saveRefusedByErrors).toBe(false);
+      expect(host.saveDisabled).toBeFalsy();
+      // Validation alone leaves the status as it was.
+      expect(host.saveStatus).toBe("Metadata.UnmodifiedStatus");
     });
-    host.validated();
-    expect(host.dirty()).toBe(false);
-    expect(host.validationErrors).toEqual([]);
+    it("holds a requested save until validation finishes, then saves once", async () => {
+      await host.save();
+      expect(host.saveStatus).toBe("Metadata.Validating");
+      // A second request while the first waits adds no save.
+      await host.save();
+      // Neither does a report that is still pending.
+      validating(true);
+      host.changed();
+      expect(writes()).toHaveLength(0);
+      expect(host.saveStatus).toBe("Metadata.Validating");
+      validating(false);
+      await vi.waitFor(() => expect(host.notice()).toBe("Saved."));
+      expect(writes()).toHaveLength(1);
+      expect(host.saveStatus).toBe("Metadata.SavedStatus");
+      // The save has run, so a later report starts none.
+      validating(false);
+      await Promise.resolve();
+      expect(writes()).toHaveLength(1);
+      expect(host.dirty()).toBe(false);
+      expect(host.validationErrors).toEqual([]);
+    });
+    it("ends refused by the errors validation finds, with the errors listed", async () => {
+      await host.save();
+      validating(false, [
+        { path: ["Email"], field: "Email", code: "valueType", message: "The answer must be a string." },
+      ]);
+      await Promise.resolve();
+      expect(writes()).toHaveLength(0);
+      expect(host.validationErrors).toHaveLength(1);
+      expect(host.saveRefusedByErrors).toBe(true);
+      expect(host.saveDescription).toBe("metadata-save-help metadata-errors-summary");
+      expect(host.saveStatus).toBe("Metadata.UnmodifiedStatus");
+    });
+    it("drops a waiting save when the editor is destroyed", async () => {
+      await host.save();
+      host.ngOnDestroy();
+      expect(host.saveWaiting()).toBe(false);
+      validating(false);
+      await Promise.resolve();
+      expect(writes()).toHaveLength(0);
+    });
+    it("drops a waiting save when the instance is loaded again", async () => {
+      await host.save();
+      await host.reload();
+      expect(host.saveStatus).toBe("Metadata.UnmodifiedStatus");
+      api.request.mockClear();
+      validating(false);
+      await Promise.resolve();
+      expect(writes()).toHaveLength(0);
+    });
   });
   it("blocks structural defects but permits warnings once they are corrected", async () => {
     await edit();

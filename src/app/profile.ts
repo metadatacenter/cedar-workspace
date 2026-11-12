@@ -12,6 +12,7 @@ import { Backend } from "./backend.service";
 import { AccountShell } from "./account-shell";
 import { ApiKey, UserProfile } from "./account-types";
 import { I18n } from "./i18n";
+import { NoticeRepeater } from "./notice-repeater";
 /**
  * An account date in the viewer's locale. `locale` is left undefined for
  * English, which keeps the browser's default locale as before localization.
@@ -54,6 +55,8 @@ export class Profile implements OnInit, OnDestroy {
   readonly busy = signal(false);
   readonly error = signal("");
   readonly notice = signal("");
+  /** Shows a repeated notice, such as a second "Copied.", again. */
+  private readonly notices = new NoticeRepeater(this.notice);
   readonly keys = signal<ApiKey[]>([]);
   readonly revealed = signal(new Set<string>());
   profile!: UserProfile;
@@ -67,6 +70,7 @@ export class Profile implements OnInit, OnDestroy {
     this.loading.set(true);
     this.ready.set(false);
     this.error.set("");
+    this.notices.cancel();
     this.notice.set("");
     this.revealed.set(new Set());
     try {
@@ -147,7 +151,7 @@ export class Profile implements OnInit, OnDestroy {
     const current = this.coordinator.checkpoint();
     try {
       await navigator.clipboard.writeText(value);
-      if (current()) this.notice.set(this.i18n.t("Account.Profile.Copied"));
+      if (current()) this.notices.show(this.i18n.t("Account.Profile.Copied"));
     } catch {
       if (current()) this.error.set(this.i18n.t("Account.Profile.CopyFailed"));
     }
@@ -189,6 +193,7 @@ export class Profile implements OnInit, OnDestroy {
     const description = this.description;
     this.busy.set(true);
     this.error.set("");
+    this.notices.cancel();
     this.notice.set("");
     try {
       const path =

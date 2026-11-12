@@ -28,11 +28,20 @@ test("the list view gives each row's type as text that takes no Tab stop", async
     await expect(row.locator(".resource-icon")).toHaveAttribute("aria-hidden", "true");
     await expect(row.getByText(type, { exact: true })).toHaveClass("sr-only");
   }
-  const reachable = await page
+  const focusable = await page
     .locator(".explorer-item td:first-child *")
-    .evaluateAll((nodes) => nodes.filter((node) => node.tabIndex >= 0).map((node) => node.localName));
-  // Only the folder's and the artifacts' name links take focus in the name cell.
-  expect(reachable).toEqual(["a", "a", "a"]);
+    .evaluateAll((nodes) =>
+      nodes
+        .filter((node) => node.matches("a[href], button, input, [tabindex]"))
+        .map((node) => [node.localName, node.tabIndex]),
+    );
+  // Only the folder's and the artifacts' name links take focus in the name cell. The listing is one
+  // Tab stop, so Tab reaches the link in the first row alone.
+  expect(focusable).toEqual([
+    ["a", 0],
+    ["a", -1],
+    ["a", -1],
+  ]);
 });
 
 test("the grid view's cards say their type once, as the text they show", async ({ page, api }) => {

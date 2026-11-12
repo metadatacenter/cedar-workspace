@@ -424,6 +424,7 @@
   "Metadata": {
     "Title": "Metadata Editor",
     "SaveRefused": "Cannot save until errors are fixed",
+    "Validating": "Validating…",
     "ReadOnly": "Read only",
     "ModifiedStatus": "Modified",
     "UnmodifiedStatus": "Unmodified",
@@ -570,7 +571,6 @@
     "DragToFolder": "Drag onto a folder or the trash icon",
     "MoveTo": "Move here: {{name}}",
     "Selected": "{{count}} selected",
-    "RowSelected": "Selected",
     "Clear": "Clear selection",
     "Cut": "Cut",
     "View": "Result view",

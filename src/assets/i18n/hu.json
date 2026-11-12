@@ -424,6 +424,7 @@
   "Metadata": {
     "Title": "Metaadat-szerkesztő",
     "SaveRefused": "Nem menthető, amíg a hibák nincsenek kijavítva",
+    "Validating": "Ellenőrzés…",
     "ReadOnly": "Csak olvasható",
     "ModifiedStatus": "Módosítva",
     "UnmodifiedStatus": "Változatlan",
@@ -570,7 +571,6 @@
     "DragToFolder": "Húzd egy mappára vagy a kuka ikonra",
     "MoveTo": "Áthelyezés ide: {{name}}",
     "Selected": "{{count}} kijelölve",
-    "RowSelected": "Kijelölve",
     "Clear": "Kijelölés törlése",
     "Cut": "Kivágás",
     "View": "Találatok nézete",

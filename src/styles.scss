@@ -698,6 +698,19 @@ label {
     gap: var(--cedar-space-1);
   }
 }
+// From 364 px the dashboard's search holds its placeholder beside the other controls in the top
+// bar, in Hungarian ("Keresés", 50 px) as in English ("Search", 43 px from 357 px). Narrower, it
+// takes a full row beneath them, spaced from them by the top bar's gap. Only the drawing order
+// changes, so focus and reading still reach it after the brand.
+@media (max-width: 363px) {
+  cedar-workspace-page > .topbar {
+    flex-wrap: wrap;
+  }
+  cedar-workspace-page > .topbar > .search {
+    order: 1;
+    flex-basis: 100%;
+  }
+}
 
 .instance-list {
   max-height: 200px;

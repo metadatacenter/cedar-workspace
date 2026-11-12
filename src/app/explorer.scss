@@ -1,5 +1,6 @@
 @use "@org.metadatacenter/cedar-design-tokens/spacing";
 @use "@org.metadatacenter/cedar-design-tokens/patterns";
+@use "@org.metadatacenter/cedar-design-tokens/tokens";
 
 .explorer-toolbar {
   display: flex;
@@ -36,15 +37,14 @@
 }
 .explorer-item:focus-visible {
   outline: var(--cedar-focus-ring-width) solid var(--cedar-color-primary);
-  outline-offset: -2px;
+  outline-offset: -(tokens.$focus-ring-offset);
 }
 .explorer-drop-target {
   outline: var(--cedar-focus-ring-width) solid var(--cedar-color-primary) !important;
   background: var(--cedar-surface-selected) !important;
 }
 .explorer-drop-eligible:not(.explorer-drop-target) {
-  outline: 1px dashed var(--cedar-color-primary);
-  outline-offset: -1px;
+  @include patterns.selected-outline($style: dashed);
 }
 .explorer-drop-hint {
   display: inline-flex;
@@ -54,7 +54,7 @@
 }
 .explorer-move-complete {
   outline: var(--cedar-focus-ring-width) solid var(--cedar-status-success-text);
-  outline-offset: -2px;
+  outline-offset: -(tokens.$focus-ring-offset);
   background: var(--cedar-status-success-surface) !important;
 }
 body.explorer-dragging,
@@ -138,11 +138,7 @@ body.explorer-dragging.explorer-can-drop * {
   will-change: transform;
   z-index: var(--cedar-layer-menu);
   border: 1px solid var(--cedar-color-primary) !important;
-  background: color-mix(
-    in srgb,
-    var(--cedar-color-primary) 13%,
-    transparent
-  ) !important;
+  background: patterns.drag-selection-tint() !important;
 }
 .explorer-grid .explorer-schema {
   @include spacing.apply(padding-block, resource-card-inset);
@@ -197,11 +193,10 @@ body.explorer-dragging.explorer-can-drop * {
   transform: translateX(calc(var(--cedar-space-1) / 2));
 }
 
-// Reserve the eye's space on the date row.
+// Reserve the eye's space on the date row. The row wraps when it runs out of room, as the card's
+// recipe lets it, so nothing here cuts it.
 .explorer-grid .explorer-modified {
   display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .explorer-grid .explorer-item:has(.explorer-preview) .explorer-modified {
   @include spacing.apply(padding-right, control-reserve);

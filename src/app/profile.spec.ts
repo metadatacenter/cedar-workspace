@@ -5,6 +5,7 @@ import { Profile, displayAccountDate } from "./profile";
 import { Backend, HttpError } from "./backend.service";
 import { canChangeKey } from "./api-key-state";
 import { ApiKey } from "./account-types";
+import { statusRegionDelay } from "./status-region";
 describe("Profile", () => {
   let host: Profile;
   let request: ReturnType<typeof vi.fn>;
@@ -40,6 +41,23 @@ describe("Profile", () => {
     vi.spyOn(TestBed.inject(Confirmation), "confirm").mockResolvedValue(true);
   });
   afterEach(() => vi.restoreAllMocks());
+  it("says Copied again when a second copy repeats it", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("navigator", { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
+    try {
+      await host.copy("first");
+      const copied = host.notice();
+      expect(copied).not.toBe("");
+      await host.copy("second");
+      // Cleared first, so the toast and its status region see a change and say it again.
+      expect(host.notice()).toBe("");
+      vi.advanceTimersByTime(statusRegionDelay);
+      expect(host.notice()).toBe(copied);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
   it("masks keys until explicitly revealed and keeps examples free of secrets", async () => {
     await host.ngOnInit();
     expect(host.keyText(key)).not.toContain(key.key);

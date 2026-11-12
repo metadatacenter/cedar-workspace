@@ -290,6 +290,8 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   editor!: ElementRef<CedarEmbeddableEditorElement>;
   readonly loading = signal(true);
   readonly saving = signal(false);
+  /** Save was requested while CEE was still validating, and runs once the validation finishes. */
+  readonly saveWaiting = signal(false);
   readonly checkingSave = signal(false);
   readonly canCheckSave = signal(false);
   readonly canRecheckAccess = signal(false);
@@ -383,6 +385,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   private async load() {
     const operation = this.state.begin("load", ["save", "recovery"]);
     this.loading.set(true);
+    this.saveWaiting.set(false);
     this.checkingSave.set(false);
     this.canCheckSave.set(false);
     this.canRecheckAccess.set(false);
@@ -593,7 +596,9 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     }
   }
   readonly validated = () => {
-    if (!this.loading() && this.alive) this.refreshQuality();
+    if (this.loading() || !this.alive) return;
+    this.refreshQuality();
+    this.resumeSave();
   };
   readonly changed = () => {
     if (this.loading() || !this.alive) return;
@@ -605,7 +610,14 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     );
     this.notice.set("");
     this.keepRecovery();
+    this.resumeSave();
   };
+  /** Run the save that waited for CEE's validation, once the report says it has finished. */
+  private resumeSave() {
+    if (!this.saveWaiting() || this.quality()?.pendingValidation) return;
+    this.saveWaiting.set(false);
+    void this.save();
+  }
 
   private recoveryValue(pending = this.pendingUpdate): MetadataDraft | null {
     const draft = this.editor?.nativeElement.captureDraft?.();
@@ -938,6 +950,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     if (this.state.loadFailed()) return "Metadata.LoadFailed";
     if (this.loading()) return "Common.Loading";
     if (this.saving()) return "Common.Saving";
+    if (this.saveWaiting()) return "Metadata.Validating";
     if (this.state.reloadRequired()) return "Metadata.ReloadRequired";
     if (!this.writable()) return "Metadata.ReadOnly";
     return this.dirty()
@@ -946,13 +959,17 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         ? "Metadata.SavedStatus"
         : "Metadata.UnmodifiedStatus";
   }
-  /** Save is refused because the page lists errors, rather than while it loads or saves. */
+  /**
+   * Save is refused because the page lists errors, rather than while it loads or saves. While CEE
+   * is still validating, its report cannot say whether the instance can be saved, and Save waits
+   * for the answer instead.
+   */
   get saveRefused() {
+    const quality = this.quality();
     return (
       !this.loading() &&
       !this.saving() &&
-      (this.quality()?.pendingValidation === true ||
-        this.quality()?.canSave === false ||
+      ((quality?.canSave === false && !quality.pendingValidation) ||
         this.validationErrors.length > 0 ||
         this.state.reloadRequired())
     );
@@ -1076,8 +1093,10 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
     )
       return;
     this.refreshQuality();
+    // A save requested while CEE is still validating waits, and `resumeSave` runs it afterwards.
+    this.saveWaiting.set(this.quality()?.pendingValidation === true);
     if (
-      this.quality()?.pendingValidation ||
+      this.saveWaiting() ||
       this.quality()?.canSave === false ||
       this.validationErrors.length
     )
@@ -1589,6 +1608,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   }
   ngOnDestroy() {
     this.alive = false;
+    this.saveWaiting.set(false);
     this.state.dispose();
     this.editor?.nativeElement.removeEventListener("change", this.changed);
     this.editor?.nativeElement.removeEventListener(
