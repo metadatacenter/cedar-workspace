@@ -186,7 +186,8 @@ test('folder pagination retains sorting and resets its offset when sorting chang
   expect(reads.at(-1).offset).toBe('50');
   await dialog.getByRole('columnheader', {name:'Name'}).getByRole('button').click();
   await expect(dialog.getByRole('button', {name:'Previous', exact:true})).toBeDisabled();
-  expect(reads.at(-1)).toEqual({id:'home', sort:'-name', offset:'0'});
+  // Previous is disabled as soon as the offset resets, before the route has recorded the read.
+  await expect.poll(() => reads.at(-1)).toEqual({id:'home', sort:'-name', offset:'0'});
 });
 
 test('folder list fits a narrow dialog and remains accessible', async ({page, api}) => {
