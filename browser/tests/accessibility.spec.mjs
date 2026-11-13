@@ -1,6 +1,8 @@
 import AxeBuilder from "@axe-core/playwright";
 import { test, expect, dashboard, action } from "./fixtures.mjs";
 
+const LABEL_IN_NAME = "label-content-name-mismatch";
+
 /**
  * axe's verdict on the page: the rules that fail, and the results it could not decide.
  *
@@ -10,29 +12,25 @@ import { test, expect, dashboard, action } from "./fixtures.mjs";
  * rules out, so it runs by name, as in the designer's, the term picker's and CEE's gates.
  */
 async function audit(page, exclude = [], within = null) {
-  const builders = [
-    new AxeBuilder({ page }).withTags([
+  // Enable the experimental rule explicitly in the tagged scan, avoiding a second page analysis.
+  const builder = new AxeBuilder({ page })
+    .options({ rules: { [LABEL_IN_NAME]: { enabled: true } } })
+    .withTags([
       "wcag2a",
       "wcag2aa",
       "wcag21a",
       "wcag21aa",
       "wcag22aa",
-    ]),
-    new AxeBuilder({ page }).withRules(["label-content-name-mismatch"]),
-  ];
-  const verdicts = [];
-  // axe runs one analysis at a time in a page.
-  for (const builder of builders) {
-    for (const selector of exclude) builder.exclude(selector);
-    if (within) builder.include(within);
-    verdicts.push(await builder.analyze());
-  }
+    ]);
+  for (const selector of exclude) builder.exclude(selector);
+  if (within) builder.include(within);
+  const verdict = await builder.analyze();
+  const evaluated = [verdict.passes, verdict.violations, verdict.incomplete, verdict.inapplicable].flat();
+  expect(evaluated.some(result => result.id === LABEL_IN_NAME), `${LABEL_IN_NAME} did not run`).toBe(true);
   return {
-    violations: verdicts.flatMap((verdict) => verdict.violations),
-    undecided: verdicts.flatMap((verdict) =>
-      verdict.incomplete.flatMap((result) =>
-        result.nodes.map((node) => ({ rule: result.id, node })),
-      ),
+    violations: verdict.violations,
+    undecided: verdict.incomplete.flatMap((result) =>
+      result.nodes.map((node) => ({ rule: result.id, node })),
     ),
   };
 }
