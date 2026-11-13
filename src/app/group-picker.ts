@@ -5,8 +5,9 @@ import {
   EventEmitter,
   OnChanges,
   SimpleChanges,
+  viewChild,
 } from "@angular/core";
-import { FormsModule } from "@angular/forms";
+import { FormsModule, NgModel } from "@angular/forms";
 import { TranslatePipe } from "@ngx-translate/core";
 import { StatusRegion } from "./status-region";
 
@@ -15,7 +16,11 @@ import { StatusRegion } from "./status-region";
   imports: [FormsModule, TranslatePipe, StatusRegion],
   template: `
     <cedar-status
-      [text]="open && query.trim() && !matches.length ? ('GroupPicker.NoMatches' | translate) : ''"
+      [text]="
+        open && query.trim() && !matches.length
+          ? ('GroupPicker.NoMatches' | translate)
+          : ''
+      "
     />
     @if (!labelledBy) {
       <label [for]="id + '-input'">{{ label }}</label>
@@ -104,18 +109,17 @@ import { StatusRegion } from "./status-region";
         display: block;
         width: 100%;
         min-height: var(--cedar-control-height-default);
-        padding: var(--cedar-space-2)
-          var(--cedar-space-3);
+        padding: var(--cedar-space-2) var(--cedar-space-3);
         border-radius: 0;
         text-align: left;
         color: var(--cedar-text-primary);
       }
-      button:hover:not(:disabled):not([aria-disabled='true']) {
+      button:hover:not(:disabled):not([aria-disabled="true"]) {
         color: var(--cedar-text-primary);
         background: transparent;
       }
       button.active,
-      button.active:hover:not(:disabled):not([aria-disabled='true']) {
+      button.active:hover:not(:disabled):not([aria-disabled="true"]) {
         color: var(--cedar-text-primary);
         background: var(--cedar-surface-selected);
       }
@@ -134,6 +138,7 @@ export class GroupPicker implements OnChanges {
   @Output() valueChange = new EventEmitter<string>();
   @Output() picked = new EventEmitter<string>();
   query = "";
+  private readonly inputModel = viewChild(NgModel);
   open = false;
   active = 0;
   ngOnChanges(changes: SimpleChanges) {
@@ -159,7 +164,16 @@ export class GroupPicker implements OnChanges {
     this.open = false;
     this.valueChange.emit(option.id);
     this.picked.emit(option.id);
-    if (this.clearOnPick) this.query = "";
+    if (this.clearOnPick) {
+      this.query = "";
+      // Input and Enter can precede the same render. In that case the bound query is
+      // still its previous empty value, so Angular has no binding change to paint.
+      // Clear the form control too, without emitting a second selection or search.
+      this.inputModel()?.control.setValue("", {
+        emitEvent: false,
+        emitViewToModelChange: false,
+      });
+    }
   }
   key(event: KeyboardEvent) {
     if (event.key === "Escape" && this.open) {

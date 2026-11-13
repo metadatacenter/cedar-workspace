@@ -1,3 +1,4 @@
+import { comparePixels } from "./browser-tags.mjs";
 import { test, expect, dashboard, action } from "./fixtures.mjs";
 for (const width of [1440, 375]) {
   for (const route of [
@@ -27,7 +28,7 @@ for (const width of [1440, 375]) {
           () => document.documentElement.scrollWidth <= innerWidth,
         ),
       ).toBe(true);
-      if (process.env.WORKSPACE_VISUAL)
+      if (comparePixels())
         await expect(page).toHaveScreenshot(`${route}-${width}.png`, {
           fullPage: true,
         });
@@ -53,7 +54,7 @@ for (const width of [1440, 375]) {
           .locator(".access-list")
           .evaluate((e) => e.scrollWidth <= e.clientWidth),
       ).toBe(true);
-      if (process.env.WORKSPACE_VISUAL)
+      if (comparePixels())
         await expect(dialog).toHaveScreenshot(
           `permissions-${readonly}-${width}.png`,
         );
@@ -65,7 +66,7 @@ test("artifact menu and resource dialog", async ({ page, api }) => {
   await page
     .getByRole("button", { name: "Actions for Study metadata" })
     .click();
-  if (process.env.WORKSPACE_VISUAL)
+  if (comparePixels())
     await expect(page.locator(".resource-menu")).toHaveScreenshot(
       "artifact-menu.png",
     );
@@ -83,7 +84,7 @@ test("artifact menu and resource dialog", async ({ page, api }) => {
     "resize",
     "none",
   );
-  if (process.env.WORKSPACE_VISUAL)
+  if (comparePixels())
     await expect(page.locator("dialog[open]")).toHaveScreenshot(
       "rename-dialog.png",
     );
@@ -98,7 +99,7 @@ test("artifact menu and resource dialog", async ({ page, api }) => {
       '.resource-dialog-resource svg[data-cedar-icon="artifact-template"]',
     ),
   ).toBeVisible();
-  if (process.env.WORKSPACE_VISUAL)
+  if (comparePixels())
     await expect(openDialog).toHaveScreenshot("make-open-dialog.png");
 });
 
@@ -115,7 +116,7 @@ for (const readonly of [false, true]) {
     );
     // The editor names itself beside the way back, as the Template Designer does.
     await expect(page.locator(".metadata-title")).toHaveText("Metadata Editor");
-    if (process.env.WORKSPACE_VISUAL)
+    if (comparePixels())
       await expect(page.locator(".metadata-toolbar")).toHaveScreenshot(
         `metadata-toolbar-${readonly}.png`,
       );
@@ -124,7 +125,7 @@ for (const readonly of [false, true]) {
       await expect(page.locator(".metadata-save-status")).toHaveText(
         "Modified",
       );
-      if (process.env.WORKSPACE_VISUAL)
+      if (comparePixels())
         await expect(page.locator(".metadata-toolbar")).toHaveScreenshot(
           "metadata-toolbar-modified.png",
         );
@@ -216,7 +217,7 @@ for (const width of [1440, 375]) {
       for (const row of await page.locator(".groups-member-row").all())
         expect((await row.boundingBox()).height).toBeLessThanOrEqual(45);
     }
-    if (process.env.WORKSPACE_VISUAL)
+    if (comparePixels())
       await expect(page).toHaveScreenshot(`groups-created-${width}.png`, {
         fullPage: true,
       });
@@ -305,7 +306,7 @@ for (const route of ["dashboard", "groups"]) {
         return color;
       });
       expect(placement.every((item) => item.color === primary)).toBe(true);
-      if (process.env.WORKSPACE_VISUAL)
+      if (comparePixels())
         await expect(menu.locator("nav")).toHaveScreenshot(
           `${route}-${menuName.replace(" ", "-")}.png`,
         );

@@ -1,3 +1,4 @@
+import { comparePixels } from "./browser-tags.mjs";
 import { test, expect, dashboard } from "./fixtures.mjs";
 import AxeBuilder from "@axe-core/playwright";
 
@@ -150,7 +151,7 @@ for (const width of [1440, 375]) {
     await expect(
       popup.getByRole("button", { name: "Apply", exact: true }),
     ).toBeInViewport();
-    if (process.env.WORKSPACE_VISUAL)
+    if (comparePixels())
       await expect(page).toHaveScreenshot(`date-filter-${width}.png`, {
         fullPage: true,
       });
@@ -158,7 +159,7 @@ for (const width of [1440, 375]) {
     await page.getByRole("button", { name: "Type", exact: true }).click();
     await page.getByRole("checkbox", { name: "Folder", exact: true }).check();
     await page.getByRole("checkbox", { name: "Instance", exact: true }).check();
-    if (process.env.WORKSPACE_VISUAL)
+    if (comparePixels())
       await expect(page).toHaveScreenshot(`type-filter-${width}.png`, {
         fullPage: true,
       });

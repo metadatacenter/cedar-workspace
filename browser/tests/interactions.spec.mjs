@@ -1,3 +1,4 @@
+import { comparePixels } from "./browser-tags.mjs";
 import { test, expect, dashboard, action, resource } from "./fixtures.mjs";
 import { tokenStyles, feedbackSpacing } from './overlay-spacing.mjs';
 
@@ -311,7 +312,7 @@ test("group members are removed only once confirmed and show a success notice", 
   await expect(page.locator(".groups-announcement")).toHaveText("Sam Curator removed from the group.");
   await tokenStyles(page.locator('.toast'), feedbackSpacing);
   expect(api.requests.filter((r) => r.method === "PUT")).toHaveLength(1);
-  if (process.env.WORKSPACE_VISUAL)
+  if (comparePixels())
     await expect(page.locator(".toast")).toHaveScreenshot(
       "group-success-toast.png",
     );
@@ -635,8 +636,8 @@ for (const width of [1440, 390])
       };
       cee.dispatchEvent(new CustomEvent("change"));
     });
-    await page.mouse.move(width / 2, 650);
-    await page.mouse.wheel(0, 1500);
+    // This checks sticky geometry at a known scroll offset; wheel acceleration varies by engine.
+    await page.evaluate(() => scrollTo({ top: 1500, behavior: 'instant' }));
     await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(1000);
     const toolbar = await page.locator(".metadata-toolbar").boundingBox();
     const issues = await page.locator(".metadata-issues").boundingBox();

@@ -44,6 +44,17 @@ jobs:
       - name: Build the Angular workspace
         run: npm run build
 
+      - name: Share the production build with all browser engines
+        uses: actions/upload-artifact@v7
+        with:
+          name: workspace-browser-build
+          path: |
+            .workspace-build
+            app/workspace-build
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 2
+
       - name: Prove the train package can be assembled
         run: npm pack --dry-run
 
@@ -65,8 +76,24 @@ jobs:
         run: npm test
 
   browser:
+    name: Browser contracts (${{ matrix.browser }})
+    env:
+      # Match the existing hosted allocation even when local CI sees more CPU cores.
+      CEDAR_TEST_WORKERS: '2'
+    needs: package
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Preserve the unnamed Chromium project's existing screenshot paths.
+          - browser: chromium
+            project: ''
+          - browser: firefox
+            project: firefox
+          - browser: webkit
+            project: webkit
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
@@ -74,11 +101,14 @@ jobs:
           node-version: 24.22.1
           cache: npm
       - run: npm ci
-      - run: npm run build
+      - uses: actions/download-artifact@v8
+        with:
+          name: workspace-browser-build
+          path: .
       - name: Visual, keyboard and accessibility contracts
-        run: npm run test:visual
+        run: npm run test:visual -- --project="${{ matrix.project }}" --retries=0
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: workspace-browser-diagnostics
+          name: workspace-${{ matrix.browser }}-diagnostics
           path: browser/test-results/

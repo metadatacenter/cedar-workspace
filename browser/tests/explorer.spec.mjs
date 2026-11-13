@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { test, expect, resource } from "./fixtures.mjs";
-import { CHROMIUM_ONLY } from "./browser-tags.mjs";
+import { CHROMIUM_ONLY, comparePixels } from "./browser-tags.mjs";
 const folder = {
   ...resource,
   "@id": "destination",
@@ -216,7 +216,7 @@ test("grid retains compact sizing, range and list selection, and moves a group w
   await expect(page.locator('body')).toHaveClass(/explorer-can-drop/);
   await expect(rows.first()).toHaveClass(/explorer-drop-target/);
   await expect(rows.first()).toContainText('Move here');
-  if (process.env.WORKSPACE_VISUAL)
+  if (comparePixels())
     await expect(page).toHaveScreenshot('drag-selection.png');
   await page.mouse.up();
   await expect.poll(() => moved.size).toBe(3);
@@ -537,7 +537,7 @@ test("the marquee spans the press and the pointer, and hides on release", async 
   expect(await marquee(page).boundingBox()).toEqual({ x: x1, y: y1, width: x0 - x1, height: y0 - y1 });
   await expect(marquee(page)).toHaveCSS("pointer-events", "none");
   await expectSelected(page, ["a", "b"]);
-  if (process.env.WORKSPACE_VISUAL)
+  if (comparePixels())
     await expect(page).toHaveScreenshot("marquee.png");
   await page.mouse.up();
   await expect(marquee(page)).toBeHidden();
@@ -564,7 +564,7 @@ for (const width of [1280, 375]) {
         .evaluate((el) => el.scrollWidth <= el.clientWidth),
     ).toBe(true);
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-    if (process.env.WORKSPACE_VISUAL)
+    if (comparePixels())
       await expect(page).toHaveScreenshot(`grid-${width}.png`, {
         fullPage: true,
       });
@@ -574,6 +574,7 @@ for (const width of [1280, 375]) {
 test("schema cards show version and release status without expanding the cards", async ({
   page,
   api,
+  browserName,
 }) => {
   await page.route("**/api/resource/folders/home/contents?**", (route) =>
     route.fulfill({
@@ -640,7 +641,13 @@ test("schema cards show version and release status without expanding the cards",
       expect(Math.abs(release.y - icon.y)).toBeLessThanOrEqual(8);
       expect(await card.locator('.explorer-release').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
     }
-    expect((await card.boundingBox()).height).toBe(106);
+    const height = (await card.boundingBox()).height;
+    // Keep the original Chromium geometry exact; native font metrics differ by one CSS pixel.
+    if (browserName === 'chromium') expect(height).toBe(106);
+    else {
+      expect(height).toBeGreaterThanOrEqual(106);
+      expect(height).toBeLessThanOrEqual(107);
+    }
     await expect(card.locator("time")).toBeVisible();
     const center = box => box.y + box.height / 2;
     const icon = await card.locator(".resource-icon svg").boundingBox();
@@ -672,7 +679,7 @@ test("card icons share colour, spacing and the right-hand column", async ({page,
   expect(boxes.map(box => box.width)).toEqual([24, 24, 24]);
   expect(boxes.map(box => box.y)).toEqual([boxes[0].y, boxes[0].y, boxes[0].y]);
   expect(boxes[1].x - boxes[0].x).toBe(boxes[2].x - boxes[1].x);
-  if (process.env.WORKSPACE_VISUAL) await expect(cards.last()).toHaveScreenshot('template-card-actions.png');
+  if (comparePixels()) await expect(cards.last()).toHaveScreenshot('template-card-actions.png');
   await cards.first().getByRole('button', {name: 'Actions for Archive'}).click();
   const entries = page.locator('.resource-menu button');
   await expect(entries).toHaveText(['Open', 'Permissions…', 'Move', 'Rename', 'Delete', 'Enable Openview', 'Disable Openview', 'Open in OpenView']);

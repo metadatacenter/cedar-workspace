@@ -1,5 +1,26 @@
+import { comparePixels } from "./browser-tags.mjs";
 import { test, expect } from "./fixtures.mjs";
 import AxeBuilder from "@axe-core/playwright";
+
+test("rapid group selection clears the search without losing the selected group", async ({ page, api }) => {
+  await page.setViewportSize({ width: 375, height: 1000 });
+  await page.goto("/groups");
+  await page.getByRole("tab", { name: "Delete group", exact: true }).click();
+  const panel = page.getByRole("tabpanel", { name: "Delete group", exact: true });
+  const search = panel.getByRole("combobox", { name: "Group name", exact: true });
+  await search.focus();
+  // Reproduce both input events before Angular paints either query value. The ordinary
+  // keyboard path below caught this intermittently when the full suite ran in parallel.
+  await search.evaluate(input => {
+    input.value = "Research";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+  });
+  await expect(panel.getByLabel("Name", { exact: true })).toHaveValue("Research team");
+  await expect(search).toBeEnabled();
+  await expect(search).toHaveValue("");
+  expect(api.requests.filter(r => r.method !== "GET")).toEqual([]);
+});
 
 for (const width of [1440, 375]) {
   test(`Delete group reviews saved details and confirms deletion at ${width}`, async ({ page, api }) => {
@@ -36,7 +57,7 @@ for (const width of [1440, 375]) {
     await search.focus();
     await expect(search).toBeFocused();
     await page.mouse.move(0, 0);
-    if (process.env.WORKSPACE_VISUAL)
+    if (comparePixels())
       await expect(page.locator(".groups-content")).toHaveScreenshot(`groups-delete-${width}.png`);
     expect((await new AxeBuilder({ page }).include("#groups-page").withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze()).violations).toEqual([]);
 
