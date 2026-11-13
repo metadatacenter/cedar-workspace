@@ -15,6 +15,8 @@ for(const outcome of ['reload','outage','expired session','permission lost','con
     const name=page.getByLabel('Instance name',{exact:true}),save=page.getByRole('button',{name:'Save',exact:true});
     await name.fill('Recover this name');
     if(outcome!=='reload'){await save.click();await expect(save).toBeDisabled();}
+    // A reload while the write is in flight restores it as unconfirmed, so let the refusal arrive first.
+    if(['expired session','permission lost'].includes(outcome))await expect(page.getByRole('button',{name:'Recheck access',exact:true})).toBeVisible();
     page.on('dialog',dialog=>dialog.accept());
     if(outcome==='conflict')revision='"changed"';
     await page.reload();
