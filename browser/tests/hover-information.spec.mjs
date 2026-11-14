@@ -131,8 +131,10 @@ test("help on a wrapper stays closed when an enabled control inside it takes foc
   await dashboard(page);
   await action(page, "Permissions…");
   const owner = page.getByRole("checkbox", { name: "Make Sam Curator the owner", exact: true });
-  await page.keyboard.press("Shift");
   await owner.focus();
+  // A modifier alone does not enter keyboard navigation mode in Firefox.
+  await tabSequence(page, 1, "Shift+Tab");
+  await tabSequence(page, 1);
   await expect.poll(() => owner.evaluate((node) => node.matches(":focus-visible"))).toBe(true);
   expect(await focusedControl(page)).toBe('checkbox "Make Sam Curator the owner"');
   await expect(page.getByRole("tooltip")).toHaveCount(0);

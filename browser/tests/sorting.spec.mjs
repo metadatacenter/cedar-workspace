@@ -1,3 +1,4 @@
+import { comparePixels } from "./browser-tags.mjs";
 import { test, expect, dashboard, resource } from "./fixtures.mjs";
 import AxeBuilder from "@axe-core/playwright";
 
@@ -149,7 +150,7 @@ for (const width of [1440, 375]) {
     const sort = await trigger.boundingBox();
     const dots = await page.getByRole("button", { name: "Actions for Study metadata" }).boundingBox();
     expect(Math.abs(sort.x + sort.width / 2 - dots.x - dots.width / 2)).toBeLessThan(2);
-    if (process.env.WORKSPACE_VISUAL && browserName === "chromium")
+    if (comparePixels() && browserName === "chromium")
       await expect(menu).toHaveScreenshot(`sort-menu-${width}.png`);
   });
 }

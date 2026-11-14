@@ -1,6 +1,8 @@
 import AxeBuilder from "@axe-core/playwright";
 import { test, expect, dashboard, action } from "./fixtures.mjs";
 
+const LABEL_IN_NAME = "label-content-name-mismatch";
+
 /**
  * axe's verdict on the page: the rules that fail, and the results it could not decide.
  *
@@ -9,29 +11,26 @@ import { test, expect, dashboard, action } from "./fixtures.mjs";
  * the text it shows. axe-core's rule for it is experimental, and a tag selection leaves experimental
  * rules out, so it runs by name, as in the designer's, the term picker's and CEE's gates.
  */
-async function audit(page, exclude = []) {
-  const builders = [
-    new AxeBuilder({ page }).withTags([
+async function audit(page, exclude = [], within = null) {
+  // Enable the experimental rule explicitly in the tagged scan, avoiding a second page analysis.
+  const builder = new AxeBuilder({ page })
+    .options({ rules: { [LABEL_IN_NAME]: { enabled: true } } })
+    .withTags([
       "wcag2a",
       "wcag2aa",
       "wcag21a",
       "wcag21aa",
       "wcag22aa",
-    ]),
-    new AxeBuilder({ page }).withRules(["label-content-name-mismatch"]),
-  ];
-  const verdicts = [];
-  // axe runs one analysis at a time in a page.
-  for (const builder of builders) {
-    for (const selector of exclude) builder.exclude(selector);
-    verdicts.push(await builder.analyze());
-  }
+    ]);
+  for (const selector of exclude) builder.exclude(selector);
+  if (within) builder.include(within);
+  const verdict = await builder.analyze();
+  const evaluated = [verdict.passes, verdict.violations, verdict.incomplete, verdict.inapplicable].flat();
+  expect(evaluated.some(result => result.id === LABEL_IN_NAME), `${LABEL_IN_NAME} did not run`).toBe(true);
   return {
-    violations: verdicts.flatMap((verdict) => verdict.violations),
-    undecided: verdicts.flatMap((verdict) =>
-      verdict.incomplete.flatMap((result) =>
-        result.nodes.map((node) => ({ rule: result.id, node })),
-      ),
+    violations: verdict.violations,
+    undecided: verdict.incomplete.flatMap((result) =>
+      result.nodes.map((node) => ({ rule: result.id, node })),
     ),
   };
 }
@@ -302,7 +301,7 @@ for (const [kind, [open, find]] of Object.entries(controls)) {
     await open(page);
     const control = find(page);
     // A key press first, so focus is drawn as it is for someone using the keyboard.
-    await page.keyboard.press("Shift");
+    await page.keyboard.press(kind === "menu item" ? "ArrowDown" : "Tab");
     await control.focus();
     await expect
       .poll(() =>
@@ -551,7 +550,7 @@ const settled = [
     target: "p",
     text: "Select an item to see its details",
     states: ["user menu", "actions menu"],
-    measured: "6.54:1",
+    measured: "at least 4.5:1",
     reason:
       "An open header menu lies over part of the Information panel's empty-state line. What shows meets 4.5:1 against the panel.",
   },
@@ -611,14 +610,14 @@ const settled = [
     target: "td:nth-child(3)",
     text: "1.0.0",
     states: ["date filter"],
-    measured: "14.45:1",
+    measured: "at least 4.5:1",
     reason:
       "The open date filter lies over part of the row's version. What shows meets 4.5:1 against the row.",
   },
   narrowListing('th[aria-sort="none"] > button', "Last modified"),
   narrowListing(".column-label", "Version"),
   narrowListing("time", "1 day ago"),
-  narrowListing("td:nth-child(3)", "1.0.0", "14.45:1"),
+  narrowListing("td:nth-child(3)", "1.0.0", "at least 4.5:1"),
   narrowListing("td:nth-child(3) > span:nth-child(2)", "·", "16.10:1"),
   // Text axe cannot see whole behind its background.
   {
@@ -635,6 +634,8 @@ const settled = [
     target: "span",
     text: "Make Sam Curator the owner",
     states: ["owner confirmation"],
+    // WebKit settles this keyboard-opened, scoped modal automatically; the other engines request review.
+    applies: (page) => page.context().browser().browserType().name() !== "webkit",
     measured: "16.10:1",
     reason:
       "The ownership confirmation can scroll, and axe cannot tell whether its surface lies under all of its question. Nothing lies over it, and it meets 4.5:1 against the confirmation.",
@@ -674,7 +675,7 @@ async function settle(page, state, undecided) {
     entry.rule === result.rule &&
     entry.target === result.target &&
     result.text.startsWith(entry.text);
-  const expected = settled.filter((entry) => entry.states.includes(state));
+  const expected = settled.filter((entry) => entry.states.includes(state) && (!entry.applies || entry.applies(page)));
   const unlisted = [];
   for (const result of found) {
     const entry = expected.find((entry) => named(entry, result));
@@ -721,9 +722,11 @@ test("nested confirmation and permission toast remain accessible and operable", 
   const owner = page.getByRole("checkbox", {
     name: "Make Sam Curator the owner",
   });
-  await owner.click();
-  await expect(page.locator(".confirmation-dialog")).toBeVisible();
-  const { violations, undecided } = await audit(page);
+  await owner.focus();
+  await owner.press("Space");
+  await expect(page.locator(".confirmation-dialog:modal")).toBeVisible();
+  // The underlying Permissions dialog is inert under the native modal; its own state is audited above.
+  const { violations, undecided } = await audit(page, [], ".confirmation-dialog");
   expect(violations).toEqual([]);
   await settle(page, "owner confirmation", undecided);
   await page.keyboard.press("Escape");

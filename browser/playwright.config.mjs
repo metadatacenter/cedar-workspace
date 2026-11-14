@@ -4,25 +4,44 @@ const port = Number(process.env.PORT || 4797);
 export default defineConfig({
   testDir: "./tests",
   fullyParallel: true,
-  workers: process.env.CEDAR_TEST_WORKERS ? Number(process.env.CEDAR_TEST_WORKERS) : undefined,
+  workers: process.env.CEDAR_TEST_WORKERS
+    ? Number(process.env.CEDAR_TEST_WORKERS)
+    : undefined,
+  // New functional/accessibility specs automatically run in every engine.
   projects: [
-    { name: "", use: {
-      browserName: "chromium",
-      // Repaint complete tiles after selection clears the information panel. Reusing
-      // partial raster tiles can leave stray pixels in otherwise empty screenshot areas.
-      launchOptions: { args: ["--disable-partial-raster"] },
-    } },
-    { name: "webkit", testMatch: ["api-key-state.spec.mjs", "state-coordination.spec.mjs", "workspace-return.spec.mjs", "folder-deletion.spec.mjs", "selection-deletion.spec.mjs", "bulk-delete-recovery.spec.mjs", "folder-list.spec.mjs", "explorer.spec.mjs", "bulk-move-recovery.spec.mjs", "sorting.spec.mjs", "permissions.spec.mjs", "group-tabs.spec.mjs", "information.spec.mjs", "refresh.spec.mjs", "tooltip.spec.mjs", "native-choices.spec.mjs", "preview.spec.mjs", "return-matrix.spec.mjs"], grepInvert: new RegExp(CHROMIUM_ONLY), use: { browserName: "webkit" } },
+    {
+      name: "",
+      use: {
+        browserName: "chromium",
+        // Complete raster tiles keep the existing zero-difference pixel baselines stable.
+        launchOptions: { args: ["--disable-partial-raster"] },
+      },
+    },
+    ...["firefox", "webkit"].map((browserName) => ({
+      name: browserName,
+      // Chromium alone exposes CDP's continuous synthetic touch input.
+      grepInvert: new RegExp(CHROMIUM_ONLY),
+      use: { browserName },
+    })),
   ],
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
-  expect: { toHaveScreenshot: { maxDiffPixels: 0, threshold: 0.02, animations: "disabled" } },
+  retries: 0,
+  // A retry must not hide an unreliable case.
+  maxFailures: process.env.CI ? 1 : 0,
+  expect: {
+    toHaveScreenshot: {
+      maxDiffPixels: 0,
+      threshold: 0.02,
+      animations: "disabled",
+    },
+  },
   use: {
     baseURL: `http://localhost:${port}`,
     viewport: { width: 1440, height: 1000 },
     timezoneId: "UTC",
     locale: "en-US",
-    trace: process.env.CEDAR_TEST_TRACE === "on" ? "retain-on-failure" : "on-first-retry",
+    trace: process.env.CEDAR_TEST_TRACE === "on" ? "retain-on-failure" : "off",
+    screenshot: process.env.CI ? "only-on-failure" : "off",
   },
   webServer: {
     command: "node serve.mjs",

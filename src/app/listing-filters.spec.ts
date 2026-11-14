@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyListingFilters,
   dateBounds,
+  EARLIEST_MODIFIED_BOUND,
   filterQuery,
   filtersFromParams,
   parseDate,
@@ -57,6 +58,32 @@ describe("Workspace filters", () => {
     );
     expect(query.has("modified_after")).toBe(false);
     expect(query.get("modified_before")).toBe(
+      String(new Date(2026, 8, 23).getTime()),
+    );
+  });
+  it("keeps dates before March 1973 within the bounds the server accepts", () => {
+    const query = new URLSearchParams();
+    applyListingFilters(
+      query,
+      new URLSearchParams({
+        modified: "custom",
+        after: "1960-01-01",
+        before: "1970-01-01",
+      }),
+    );
+    expect(query.has("modified_after")).toBe(false);
+    expect(query.get("modified_before")).toBe(String(EARLIEST_MODIFIED_BOUND));
+    const open = new URLSearchParams();
+    applyListingFilters(
+      open,
+      new URLSearchParams({
+        modified: "custom",
+        after: "1960-01-01",
+        before: "2026-09-22",
+      }),
+    );
+    expect(open.has("modified_after")).toBe(false);
+    expect(open.get("modified_before")).toBe(
       String(new Date(2026, 8, 23).getTime()),
     );
   });

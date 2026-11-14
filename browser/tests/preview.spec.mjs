@@ -1,3 +1,4 @@
+import { comparePixels } from "./browser-tags.mjs";
 import { readFile } from 'node:fs/promises';
 import { test, expect, resource } from './fixtures.mjs';
 const documents = JSON.parse(await readFile(new URL('../fixtures/preview.json', import.meta.url), 'utf8'));
@@ -85,7 +86,7 @@ for (const kind of ['template','element','field','instance']) {
     expect(page.url()).toBe(before);
     expect(requests.every(r=>r.method==='GET')).toBe(true);
     if (await page.getByRole('tooltip').count()) await page.keyboard.press('Escape');
-    if (['instance','element'].includes(kind) && process.env.WORKSPACE_VISUAL) await expect(dialog).toHaveScreenshot(`${kind}-preview.png`);
+    if (['instance','element'].includes(kind) && comparePixels()) await expect(dialog).toHaveScreenshot(`${kind}-preview.png`);
     await dialog.getByRole('button',{name:'Close preview'}).focus();
     if (await page.getByRole('tooltip').count()) {
       await page.keyboard.press('Escape');
@@ -194,7 +195,7 @@ test('preview fits a narrow screen without scaling its fonts', async ({page,api}
   await expect(dialog.getByRole('textbox',{name:'Specimen name'})).toHaveCSS('font-size','14px');
   expect((await dialog.boundingBox()).height).toBeLessThan(500);
   if (await page.getByRole('tooltip').count()) await page.keyboard.press('Escape');
-  if (process.env.WORKSPACE_VISUAL) await expect(dialog).toHaveScreenshot('instance-preview-mobile.png');
+  if (comparePixels()) await expect(dialog).toHaveScreenshot('instance-preview-mobile.png');
   await page.getByRole('button',{name:'Close preview'}).click();
   await expect(button).toBeFocused();
 });
@@ -255,7 +256,7 @@ for (const [name, type] of [['nihField', 'NIH Grant ID'], ['attributeField', 'At
     if (name === 'nihField') await expect(field.locator('.cee-spec-box')).toBeEmpty();
     expect((await dialog.boundingBox()).height).toBeLessThan(400);
     if (await page.getByRole('tooltip').count()) await page.keyboard.press('Escape');
-    if (process.env.WORKSPACE_VISUAL) await expect(dialog).toHaveScreenshot(`${name}-preview.png`);
+    if (comparePixels()) await expect(dialog).toHaveScreenshot(`${name}-preview.png`);
   });
 }
 

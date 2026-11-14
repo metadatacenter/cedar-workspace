@@ -1,4 +1,5 @@
 import { test, expect, dashboard, action } from "./fixtures.mjs";
+import { tabSequence } from "./focus.mjs";
 import { tokenStyles, feedbackSpacing } from './overlay-spacing.mjs';
 
 test("workspace icon tooltip text follows Hungarian localization", async ({page, api}) => {
@@ -47,6 +48,9 @@ test("help appears promptly, stays hoverable, and Escape preserves selection", a
   await expect(trigger).not.toHaveAttribute("aria-describedby");
   await page.mouse.move(0, 0);
   await trigger.focus();
+  // Exercise actual keyboard focus; programmatic focus after a pointer is not focus-visible in every engine.
+  await tabSequence(page, 1, "Shift+Tab");
+  await tabSequence(page, 1);
   await expect(tip).toBeVisible({ timeout: 300 });
   await trigger.click();
   await expect(tip).toHaveCount(0);

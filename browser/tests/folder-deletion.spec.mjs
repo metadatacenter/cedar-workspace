@@ -1,3 +1,4 @@
+import { comparePixels } from "./browser-tags.mjs";
 import { test, expect } from './fixtures.mjs';
 import { cedarError, deletionPlan, deletionOwnerRefusal, openFolderDeletion } from './folder-deletion-fixture.mjs';
 
@@ -102,7 +103,7 @@ for (const width of [1440, 375]) {
     expect(bounds.x).toBeGreaterThanOrEqual(0);
     expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
     await expect(dialog.getByRole('button', {name: 'Delete folder and contents', exact: true})).toBeInViewport();
-    if (process.env.WORKSPACE_VISUAL)
+    if (comparePixels())
       await expect(dialog).toHaveScreenshot(`recursive-delete-${width}.png`);
   });
 }

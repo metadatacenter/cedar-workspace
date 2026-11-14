@@ -1,3 +1,4 @@
+import { comparePixels } from "./browser-tags.mjs";
 import { test, expect, dashboard } from "./fixtures.mjs";
 
 for (const width of [1440, 375]) {
@@ -20,7 +21,7 @@ for (const width of [1440, 375]) {
     await expect(search.locator('input')).toHaveAttribute('autocomplete', 'off');
     await expect(search.locator('input')).toHaveAttribute('autocorrect', 'off');
     await expect(search.locator('input')).toHaveAttribute('spellcheck', 'false');
-    if (process.env.WORKSPACE_VISUAL)
+    if (comparePixels())
       await expect(page.locator(".topbar")).toHaveScreenshot(
         `search-focused-${width}.png`,
       );

@@ -1,3 +1,4 @@
+import { comparePixels } from "./browser-tags.mjs";
 import {
   test,
   expect,
@@ -111,7 +112,7 @@ for (const readonly of [false, true]) {
     // The row states the current user's own access, by the role's name.
     await expect(info.locator('dt:text-is("Your access") + dd')).toHaveText(readonly ? "Viewer" : "—");
     await info.locator("h1").hover();
-    if (process.env.WORKSPACE_VISUAL && !readonly && browserName === "chromium")
+    if (comparePixels() && !readonly && browserName === "chromium")
       await expect(info).toHaveScreenshot("information-details.png");
     const edit = info.getByRole("textbox", {
       name: "Description",

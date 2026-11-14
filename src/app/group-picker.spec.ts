@@ -3,6 +3,32 @@ import { describe, it, expect, vi } from "vitest";
 import { GroupPicker } from "./group-picker";
 
 describe("Group picker", () => {
+  for (const clearOnPick of [false, true]) {
+    it(`keeps the view and selection consistent when input and Enter share a render, clear=${clearOnPick}`, async () => {
+      const fixture = TestBed.createComponent(GroupPicker);
+      fixture.componentRef.setInput("clearOnPick", clearOnPick);
+      fixture.componentRef.setInput("options", [
+        { id: "team", label: "Research team" },
+      ]);
+      const selected = vi.fn();
+      const changed = vi.fn();
+      fixture.componentInstance.picked.subscribe(selected);
+      fixture.componentInstance.valueChange.subscribe(changed);
+      await fixture.whenStable();
+      const input: HTMLInputElement =
+        fixture.nativeElement.querySelector("input");
+      input.value = "Research";
+      input.dispatchEvent(new Event("input"));
+      input.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", cancelable: true }),
+      );
+      await fixture.whenStable();
+      expect(selected.mock.calls).toEqual([["team"]]);
+      expect(changed.mock.calls).toEqual([[""], ["team"]]);
+      expect(input.value).toBe(clearOnPick ? "" : "Research team");
+      expect(fixture.componentInstance.open).toBe(false);
+    });
+  }
   it("requires a selected result and supports keyboard selection and clearing after a successful add", async () => {
     const fixture = TestBed.createComponent(GroupPicker);
     fixture.componentRef.setInput("id", "member");

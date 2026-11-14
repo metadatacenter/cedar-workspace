@@ -1,3 +1,4 @@
+import { comparePixels } from "./browser-tags.mjs";
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect } from './fixtures.mjs';
 import { deletionPlan } from './folder-deletion-fixture.mjs';
@@ -63,7 +64,7 @@ for(const width of [1440,375]) test(`selection confirmation layout, central styl
     await expect(inventory.locator('tbody tr').first().locator('td').last()).toBeInViewport();
     await inventory.evaluate(el=>{el.scrollLeft=0;});
   }
-  if(process.env.WORKSPACE_VISUAL) await expect(dialog).toHaveScreenshot(`selection-delete-${width}.png`);
+  if(comparePixels()) await expect(dialog).toHaveScreenshot(`selection-delete-${width}.png`);
 });
 
 test('individual records share one confirmation and retain content revision guards',async({page,api})=>{
@@ -88,7 +89,7 @@ for(const width of [1440,375]) test(`item-only deletion is a simple confirmation
   await expect(dialog.getByRole('button',{name:'Cancel',exact:true})).toBeFocused();
   expect((await dialog.boundingBox()).height).toBeLessThan(250);
   expect((await new AxeBuilder({page}).include('cedar-folder-deletion-dialog').analyze()).violations).toEqual([]);
-  if(process.env.WORKSPACE_VISUAL) await expect(dialog).toHaveScreenshot(`simple-delete-${width}.png`);
+  if(comparePixels()) await expect(dialog).toHaveScreenshot(`simple-delete-${width}.png`);
   await page.keyboard.press('Escape');await expect(dialog).toBeHidden();
   expect(writes).toHaveLength(0);
 });
@@ -151,7 +152,7 @@ for (const grid of [true,false]) {
     if(!grid) await showList(page);
     const ids=kind==='single' ? [] : kind==='multiple' ? ['instance1','separate'] : ['folder','separate'];
     await dragToBin(page,kind==='folders' ? 'folder':'instance1',ids);
-    if(process.env.WORKSPACE_VISUAL && grid && kind==='folders') await expect(page).toHaveScreenshot('bin-drop.png');
+    if(comparePixels() && grid && kind==='folders') await expect(page).toHaveScreenshot('bin-drop.png');
     expect(writes).toHaveLength(0);
     await page.mouse.up();
     const dialog=page.getByRole('dialog');

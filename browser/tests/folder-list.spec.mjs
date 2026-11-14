@@ -1,3 +1,4 @@
+import { comparePixels } from "./browser-tags.mjs";
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect, dashboard, resource } from './fixtures.mjs';
 
@@ -69,7 +70,7 @@ for (const action of ['Copy', 'Move', 'Create Draft']) {
     expect(await padding(table.locator('tbody td').first())).toBe(
       await padding(page.locator('.workspace tbody td').first()),
     );
-    if (process.env.WORKSPACE_VISUAL) {
+    if (comparePixels()) {
       await page.mouse.move(0, 0);
       await expect(dialog).toHaveScreenshot(`folder-${action.replaceAll(' ', '-').toLowerCase()}.png`);
     }
@@ -185,7 +186,8 @@ test('folder pagination retains sorting and resets its offset when sorting chang
   expect(reads.at(-1).offset).toBe('50');
   await dialog.getByRole('columnheader', {name:'Name'}).getByRole('button').click();
   await expect(dialog.getByRole('button', {name:'Previous', exact:true})).toBeDisabled();
-  expect(reads.at(-1)).toEqual({id:'home', sort:'-name', offset:'0'});
+  // Previous is disabled as soon as the offset resets, before the route has recorded the read.
+  await expect.poll(() => reads.at(-1)).toEqual({id:'home', sort:'-name', offset:'0'});
 });
 
 test('folder list fits a narrow dialog and remains accessible', async ({page, api}) => {
@@ -197,7 +199,7 @@ test('folder list fits a narrow dialog and remains accessible', async ({page, ap
   await page.mouse.move(0, 0);
   const result = await new AxeBuilder({page}).include('cedar-resource-dialog').withTags(['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']).analyze();
   expect(result.violations).toEqual([]);
-  if (process.env.WORKSPACE_VISUAL) await expect(dialog).toHaveScreenshot('folder-copy-narrow.png');
+  if (comparePixels()) await expect(dialog).toHaveScreenshot('folder-copy-narrow.png');
 });
 
 for (const width of [1440, 375]) {
@@ -227,7 +229,7 @@ for (const width of [1440, 375]) {
     await expect(dialog).toHaveCSS('padding-bottom', '16px');
     await expect(dialog.getByRole('button', {name:'Save', exact:true})).toBeEnabled();
     await page.mouse.move(0, 0);
-    if (process.env.WORKSPACE_VISUAL) await expect(dialog).toHaveScreenshot(`folder-copy-empty-${width}.png`);
+    if (comparePixels()) await expect(dialog).toHaveScreenshot(`folder-copy-empty-${width}.png`);
     expect((await new AxeBuilder({page}).include('cedar-resource-dialog').withTags(['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']).analyze()).violations).toEqual([]);
   });
 }
