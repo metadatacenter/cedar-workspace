@@ -47,9 +47,9 @@
     "@angular/platform-browser": "22.2.4",
     "@angular/router": "22.2.4",
     "@ngx-translate/core": "~18.0.0",
-    "@org.metadatacenter/cedar-design-tokens": "0.1.0-dev.20261113.gaaacc4e7d266.t2327",
-    "cedar-embeddable-editor": "2.0.35",
-    "cedar-model-typescript-library": "npm:@org.metadatacenter/cedar-model-typescript-library@1.0.29-dev.20261113.g2ce3ffbb19e8.t2327",
+    "@org.metadatacenter/cedar-design-tokens": "0.1.0-dev.20261113.aaacc4e7",
+    "cedar-embeddable-editor": "npm:@org.metadatacenter/cedar-embeddable-editor@2.0.36-dev.20261114.aeaea0e",
+    "cedar-model-typescript-library": "npm:@org.metadatacenter/cedar-model-typescript-library@1.0.29-dev.20261114.8501ec0",
     "rxjs": "~7.8.2",
     "tslib": "^2.8.1"
   },
