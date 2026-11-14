@@ -2,6 +2,8 @@ import {
   Component,
   ElementRef,
   HostListener,
+  Injector,
+  afterNextRender,
   inject,
   input,
   output,
@@ -38,6 +40,7 @@ export class ResourceFilters {
   readonly types = resourceTypes;
   readonly draft = signal<ListingFilters>(emptyFilters());
   private host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
   private readonly i18n = inject(I18n);
   private trigger?: HTMLElement;
   get presets(): { value: DatePreset; label: string }[] {
@@ -104,14 +107,19 @@ export class ResourceFilters {
     const value = this.value();
     this.draft.set({ ...value, types: [...value.types], ...dateBounds(value) });
     this.open.set(kind);
-    setTimeout(() => {
-      this.fitPopover();
-      this.host.nativeElement
-        .querySelector<HTMLElement>(
-          '[role="dialog"] button, [role="dialog"] input',
-        )
-        ?.focus();
-    });
+    // The popover is in the page only once Angular has drawn it. A timer could fire before that,
+    // and the popover then kept its fallback height and took no focus.
+    afterNextRender(
+      () => {
+        this.fitPopover();
+        this.host.nativeElement
+          .querySelector<HTMLElement>(
+            '[role="dialog"] button, [role="dialog"] input',
+          )
+          ?.focus();
+      },
+      { injector: this.injector },
+    );
   }
   @HostListener("window:resize")
   fitPopover() {
