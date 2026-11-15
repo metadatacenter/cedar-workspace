@@ -801,6 +801,38 @@ describe("Modern metadata host", () => {
       expect(host.saveDescription).toBe("metadata-save-help metadata-errors-summary");
       expect(host.saveStatus).toBe("Metadata.UnmodifiedStatus");
     });
+    // CEE's own verdict decides, whatever Workspace makes of the problems it lists: an older CEE,
+    // or a code the local policy calls a warning, can refuse a save Workspace would allow.
+    const report = (canSave: boolean, problems: object[]) => {
+      host.name = "Changed record";
+      host.changed();
+      Object.assign(cee.dataQualityReport, {
+        // A report that lists nothing is valid as far as Workspace can tell, so its own summary
+        // adds no error, and only CEE's verdict holds Save back.
+        isValid: !problems.length,
+        canSave,
+        pendingValidation: false,
+        problems,
+      });
+      host.validated();
+    };
+    const warning = { path: ["Title"], field: "Title", code: "required", blocksSave: false, message: "A value is required." };
+    const error = { path: ["Email"], field: "Email", code: "valueType", blocksSave: true, message: "The answer must be a string." };
+    for (const [listing, problems] of [["nothing", []], ["only a warning", [warning]]] as const)
+      it(`follows CEE's refusal to save when its report lists ${listing}`, async () => {
+        report(false, [...problems]);
+        expect(host.validationErrors).toEqual([]);
+        expect(host.saveRefused).toBe(true);
+        await host.save();
+        expect(writes()).toHaveLength(0);
+      });
+    it("refuses a save CEE allows when its report lists an error", async () => {
+      report(true, [error]);
+      expect(host.validationErrors).toHaveLength(1);
+      expect(host.saveRefused).toBe(true);
+      await host.save();
+      expect(writes()).toHaveLength(0);
+    });
     it("drops a waiting save when the editor is destroyed", async () => {
       await host.save();
       host.ngOnDestroy();
