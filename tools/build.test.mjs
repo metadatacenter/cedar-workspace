@@ -328,3 +328,52 @@ test("configuration rejects missing deployment identity and safely quotes values
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test("a development start records the commit, dirty state and served tree it serves", async () => {
+  const { writeBuildInfo } = await import("./workspace.mjs");
+  const { createHash } = await import("node:crypto");
+  const dir = await mkdtemp(join(tmpdir(), "workspace-build-info-"));
+  const git = (...args) =>
+    execFileSync(
+      "git",
+      ["-c", "user.name=t", "-c", "user.email=t@t", ...args],
+      {
+        cwd: dir,
+        encoding: "utf8",
+      },
+    ).trim();
+  const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
+  try {
+    assert.equal(await writeBuildInfo(dir, {}), null);
+    await mkdir(join(dir, "app/config"), { recursive: true });
+    await writeFile(join(dir, "package.json"), '{"version":"9.9.9"}');
+    await writeFile(join(dir, "app/index.html"), "<html></html>");
+    await writeFile(join(dir, "app/a b.js"), "a");
+    await writeFile(join(dir, "app/config/build-info.json"), '{"stale":true}');
+    git("init", "-q");
+    git("add", "package.json", "app/index.html", "app/a b.js");
+    git("commit", "-q", "-m", "fixture");
+    const info = await writeBuildInfo(dir, { CEDAR_VERSION_MODIFIER: "-x" });
+    const manifest =
+      `${digest("a")}  app/a b.js\n` +
+      `${digest("<html></html>")}  app/index.html\n`;
+    assert.deepEqual(info, {
+      application: "cedar-workspace",
+      version: "9.9.9",
+      versionModifier: "-x",
+      sourceCommit: git("rev-parse", "HEAD"),
+      sourceDirty: false,
+      bundleSha256: digest(manifest),
+    });
+    assert.deepEqual(
+      JSON.parse(
+        await readFile(join(dir, "app/config/build-info.json"), "utf8"),
+      ),
+      info,
+    );
+    await writeFile(join(dir, "app/index.html"), "<html>edited</html>");
+    assert.equal((await writeBuildInfo(dir, {})).sourceDirty, true);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});

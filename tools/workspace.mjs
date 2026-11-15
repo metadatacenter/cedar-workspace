@@ -3,14 +3,16 @@ import {
   copyFile,
   mkdir,
   readFile,
+  readdir,
   writeFile,
   realpath,
   stat,
   rm,
 } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { createServer } from "node:http";
 import { execFileSync } from "node:child_process";
-import { extname, resolve, sep } from "node:path";
+import { extname, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
@@ -109,6 +111,59 @@ export async function configure(base = root, env = process.env) {
     script +
       '\nwindow.cedarCacheControl = window.cedarVersion + window.cedarVersionModifier + (window.cedarSourceCommit ? "-" + window.cedarSourceCommit.substring(0, 12) : "") + (window.cedarDevelopmentMode ? "-dev-" + Date.now() : "");\n',
   );
+}
+
+const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
+
+async function servedFiles(directory, files = []) {
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const path = resolve(directory, entry.name);
+    if (entry.isDirectory()) await servedFiles(path, files);
+    else if (entry.isFile() || entry.isSymbolicLink()) files.push(path);
+  }
+  return files;
+}
+
+/**
+ * Record the build a development start serves at /config/build-info.json, in the form a server
+ * payload records it: the commit, whether the tree held uncommitted changes, and a digest of
+ * every file app/ serves. The smoke gate compares it with develop and with the served tree. A
+ * start outside a Git checkout records nothing, and an earlier record is removed either way.
+ */
+export async function writeBuildInfo(base = root, env = process.env) {
+  const output = resolve(base, "app/config/build-info.json");
+  await rm(output, { force: true });
+  const git = (...args) =>
+    execFileSync("git", args, {
+      cwd: base,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+  let commit, dirty;
+  try {
+    commit = git("rev-parse", "--verify", "HEAD").trim();
+    dirty = git("status", "--porcelain").trim() !== "";
+  } catch {
+    return null;
+  }
+  const paths = (await servedFiles(resolve(base, "app")))
+    .filter((path) => path !== output)
+    .map((path) => relative(base, path).split(sep).join("/"))
+    .sort((left, right) => Buffer.from(left).compare(Buffer.from(right)));
+  let manifest = "";
+  for (const path of paths)
+    manifest += `${sha256(await readFile(resolve(base, path)))}  ${path}\n`;
+  const info = {
+    application: "cedar-workspace",
+    version: JSON.parse(await readFile(resolve(base, "package.json"), "utf8"))
+      .version,
+    versionModifier: env.CEDAR_VERSION_MODIFIER || "",
+    sourceCommit: commit,
+    sourceDirty: dirty,
+    bundleSha256: sha256(manifest),
+  };
+  await writeFile(output, JSON.stringify(info, null, 2) + "\n");
+  return info;
 }
 
 export async function copyCee(base = root) {
@@ -213,6 +268,7 @@ async function main(command) {
   });
   if (command === "build" || process.env.CEDAR_FRONTEND_BEHAVIOR === "server")
     return;
+  await writeBuildInfo();
   const port = Number(process.env.CEDAR_FRONTEND_PORT || 4201);
   if (!Number.isInteger(port) || port < 1 || port > 65535)
     throw new Error("Invalid CEDAR_FRONTEND_PORT");
