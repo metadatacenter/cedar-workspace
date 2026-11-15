@@ -16,9 +16,14 @@ describe("Authorized backend", () => {
   beforeEach(() => {
     api = TestBed.runInInjectionContext(() => new Backend());
     api.config = config;
-    renew = vi.fn((_s: number, ok: () => void) => ok());
+    // A forced refresh, as after a 401, issues a new token; any other leaves the current one.
+    let token = "first-token";
+    renew = vi.fn((seconds: number, ok: () => void) => {
+      if (seconds === -1) token = "refreshed-token";
+      ok();
+    });
     Object.assign(api, {
-      auth: { refreshToken: renew, getToken: () => "test-token" },
+      auth: { refreshToken: renew, getToken: () => token },
     });
     fetcher = vi.fn();
     vi.stubGlobal("fetch", fetcher);
@@ -76,6 +81,9 @@ describe("Authorized backend", () => {
       expect.any(Function),
     );
     expect(fetcher.mock.calls[1][1].headers["If-Match"]).toBe('"etag"');
+    // The retry carries the token the refresh issued, not the one the server refused.
+    expect(fetcher.mock.calls[0][1].headers.Authorization).toBe("Bearer first-token");
+    expect(fetcher.mock.calls[1][1].headers.Authorization).toBe("Bearer refreshed-token");
   });
   for (const afterRefusal of [false, true])
     it(`an expired session is a confirmed refusal, after server refusal=${afterRefusal}`, async () => {

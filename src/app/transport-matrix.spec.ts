@@ -22,7 +22,9 @@ const texts = { en, hu };
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
-type Answer = () => Response | Promise<never>;
+type Answer = (init: RequestInit) => Response | Promise<never>;
+/** The bearer token a request carries. */
+const bearer = (init: RequestInit) => (init.headers as Record<string, string>).Authorization;
 const ANSWERS: Record<string, { answers: Answer[]; status: number; text: (t: typeof en) => string }> = {
   "an explained 400": {
     answers: [() => json(400, { message: "The name is too long" })],
@@ -34,8 +36,9 @@ const ANSWERS: Record<string, { answers: Answer[]; status: number; text: (t: typ
     status: 400,
     text: (t) => t.Errors.RequestFailed.replace("{{status}}", "400"),
   },
+  // The server refuses the token it was first sent and accepts only the one a refresh issues.
   "a 401 the refreshed token cures": {
-    answers: [() => new Response("", { status: 401 }), () => json(200, { ok: true })],
+    answers: [(init) => (bearer(init) === "Bearer refreshed" ? json(200, { ok: true }) : new Response("", { status: 401 }))],
     status: 200,
     text: () => "",
   },
@@ -96,14 +99,22 @@ function backend(language: Language, answers: Answer[]) {
   TestBed.configureTestingModule({ providers: [provideWorkspaceTranslations(language)] });
   const api = TestBed.runInInjectionContext(() => new Backend());
   api.config = config;
+  // A forced refresh, as after a 401, issues a new token; any other leaves the current one.
+  let token = "first";
   Object.assign(api, {
     auth: {
-      refreshToken: (_seconds: number, ok: () => void) => ok(),
-      getToken: () => "token",
+      refreshToken: (seconds: number, ok: () => void) => {
+        if (seconds === -1) token = "refreshed";
+        ok();
+      },
+      getToken: () => token,
     },
   });
   const queue = [...answers];
-  vi.stubGlobal("fetch", vi.fn(() => (queue.shift() ?? answers[answers.length - 1])()));
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((_url: string, init: RequestInit) => (queue.shift() ?? answers[answers.length - 1])(init)),
+  );
   return api;
 }
 
