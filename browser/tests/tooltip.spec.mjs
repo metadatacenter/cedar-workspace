@@ -1,4 +1,4 @@
-import { test, expect, dashboard, action } from "./fixtures.mjs";
+import { test, expect, dashboard, action, afterHelpDelay } from "./fixtures.mjs";
 import { tabSequence } from "./focus.mjs";
 import { tokenStyles, feedbackSpacing } from './overlay-spacing.mjs';
 
@@ -81,7 +81,7 @@ test("short hovers cancel and help also works outside the grid", async ({ page, 
   const sort = page.locator("cedar-sort-menu > button");
   await sort.hover();
   await page.mouse.move(0, 0);
-  await page.waitForTimeout(350);
+  await afterHelpDelay(page);
   await expect(page.getByRole("tooltip")).toHaveCount(0);
   await sort.hover();
   await expect(page.getByRole("tooltip")).toBeVisible({ timeout: 700 });

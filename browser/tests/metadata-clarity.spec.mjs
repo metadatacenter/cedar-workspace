@@ -1,4 +1,4 @@
-import { test, expect } from "./fixtures.mjs";
+import { test, expect, afterHelpDelay } from "./fixtures.mjs";
 
 test("mixed findings explain Save, use localized copy and keep diagnostics separately accessible", async ({
   page,
@@ -167,7 +167,7 @@ test("Save acts while CEE is still validating: a click and Enter wait, then one 
   // Validation alone does not change the status, and Save has nothing to explain.
   await expect(status).toHaveText("Modified");
   await action.hover();
-  await page.waitForTimeout(400);
+  await afterHelpDelay(page);
   await expect(tip).toHaveCount(0);
 
   // A click asks for a save, which waits for the validation and says so.

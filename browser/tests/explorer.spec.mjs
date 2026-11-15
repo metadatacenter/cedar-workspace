@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import { test, expect, resource } from "./fixtures.mjs";
+import { test, expect, resource, afterHelpDelay } from "./fixtures.mjs";
 import { CHROMIUM_ONLY, comparePixels } from "./browser-tags.mjs";
 const folder = {
   ...resource,
@@ -274,12 +274,12 @@ test("dragging suppresses existing, underlying and copy-control tooltips until r
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {steps: 8});
     await expect(page.locator('body')).toHaveClass(/explorer-dragging/);
     // Wait beyond the normal tooltip delay while the pointer stays over the control.
-    await page.waitForTimeout(400);
+    await afterHelpDelay(page);
     await expect(page.getByRole('tooltip')).toHaveCount(0);
   }
   await page.mouse.up();
   await expect(page.locator('body')).not.toHaveClass(/explorer-dragging/);
-  await page.waitForTimeout(400);
+  await afterHelpDelay(page);
   await expect(page.getByRole('tooltip')).toHaveCount(0);
   expect(moved.size).toBe(0);
   await page.mouse.move(0, 0);

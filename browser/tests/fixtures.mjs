@@ -259,6 +259,15 @@ export async function dashboard(page) {
     "false",
   );
 }
+/**
+ * Waits until any help the last pointer or focus movement scheduled has had its chance to open, so
+ * that an absence checked next cannot come too early. Workspace opens help 250 ms after the pointer
+ * arrives. A page timer runs only after every timer of equal or shorter delay started before it,
+ * however loaded the page is, whereas a wait in the test process measures the test's own clock.
+ */
+export async function afterHelpDelay(page) {
+  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 300)));
+}
 export async function action(page, name) {
   await page
     .getByRole("button", { name: "Actions for Study metadata" })
