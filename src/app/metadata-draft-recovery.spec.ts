@@ -156,6 +156,29 @@ it("does not discard the journal for an uncertain creation", async () => {
   next.ngOnDestroy();
 });
 
+it("keeps an uncertain create's journal when its input is discarded on leaving", async () => {
+  const m = await metadataRig("create", true);
+  m.edit();
+  m.request.mockRejectedValueOnce(new HttpError(0, "No reply"));
+  await m.host.save();
+  const sent = m.request.mock.calls.find((call) => call[1] === "PUT")!;
+  const id = (sent[2] as { "@id": string })["@id"];
+  // The person discards the unsaved form and leaves. The create may have committed all the same,
+  // so a return to the same create page must not mint another identity and send it again.
+  expect(await m.host.mayLeave()).toBe(true);
+  expect(m.confirm).toHaveBeenCalled();
+  const next = await m.recreate();
+  expect(next.recoveryDraft()?.uncertainCreation).toBe(true);
+  expect(next.recoveryDraft()?.creation?.id).toBe(id);
+  m.request.mockClear();
+  await next.save();
+  await next.restoreRecovery();
+  expect(next.state.uncertainCreation()).toBe(true);
+  await next.save();
+  expect(m.request.mock.calls.filter((call) => call[1] === "PUT")).toEqual([]);
+  next.ngOnDestroy();
+});
+
 it("scopes recovery data by deployment, account, destination and artifact", async () => {
   const m = await metadataRig("create", true);
   m.edit();
