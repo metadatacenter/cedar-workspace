@@ -103,6 +103,26 @@ describe("Authorized backend", () => {
     );
     expect(fetcher).not.toHaveBeenCalled();
   });
+  // A destination is trusted only when its origin is one of the configured bases exactly: a host
+  // that merely begins with a trusted one, another port or a plain-HTTP scheme is not.
+  for (const base of [config.resourceRestAPI, config.userRestAPI, config.groupRestAPI]) {
+    const { host } = new URL(base);
+    for (const destination of [
+      `https://${host}.evil.test/data`,
+      `https://${host}@evil.test/data`,
+      `https://${host}:8443/data`,
+      `http://${host}/data`,
+    ])
+      it(`sends no credentials to ${destination}`, async () => {
+        await expect(api.request(destination)).rejects.toThrow("Untrusted");
+        expect(fetcher).not.toHaveBeenCalled();
+      });
+    it(`sends credentials to ${base} itself`, async () => {
+      fetcher.mockResolvedValue(new Response("{}"));
+      await api.request(base + "/data");
+      expect(fetcher.mock.calls[0][1].headers.Authorization).toBe("Bearer first-token");
+    });
+  }
   it("notes a server's own message, which it writes in English, and not a message of Workspace's", async () => {
     const serverText = TestBed.inject(ServerText);
     fetcher.mockResolvedValue(
