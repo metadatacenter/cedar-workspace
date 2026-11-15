@@ -259,7 +259,7 @@ describe("Angular Workspace", () => {
     expect(
       f.nativeElement.querySelector('[aria-label="Populate template"]'),
     ).not.toBeNull();
-    expect(api.report).toHaveBeenCalledWith(template);
+    expect(api.report).toHaveBeenCalledWith(template, expect.any(AbortSignal));
   });
   it("keeps the table while navigation and information panels collapse independently", async () => {
     const f = await render();
