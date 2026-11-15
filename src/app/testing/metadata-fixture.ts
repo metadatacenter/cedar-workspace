@@ -215,6 +215,9 @@ export async function metadataRig(mode = "edit", recovery = false) {
       host.name = "Unsaved";
       host.changed();
     },
+    /** Changes CEE's own content in the first form, as filling in one of its fields does. */
+    editContent: (value: string) =>
+      setValues.get(host.editor.nativeElement)!(value),
   };
 }
 

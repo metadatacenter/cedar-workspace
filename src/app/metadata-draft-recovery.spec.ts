@@ -16,9 +16,19 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+type Rig = Awaited<ReturnType<typeof metadataRig>>;
+/** The last write the page sent: what it wrote and the revision it named. */
+function lastWrite(m: Rig) {
+  const [, , body, etag] = m.request.mock.calls
+    .filter((call) => call[1] === "PUT")
+    .at(-1)!;
+  return { body: body as Record<string, unknown>, etag };
+}
+
 it("offers the draft after recreation and restores it only on explicit request", async () => {
   const m = await metadataRig("edit", true);
   m.edit();
+  m.editContent("Unsaved value");
   const next = await m.recreate();
   expect(next.name).toBe("Original");
   expect(next.recoveryDraft()?.name).toBe("Unsaved");
@@ -34,6 +44,9 @@ it("offers the draft after recreation and restores it only on explicit request",
   expect(m.request.mock.calls.find((call) => call[1] === "PUT")?.[3]).toBe(
     '"revision"',
   );
+  // The save writes the restored draft, its form content as well as its name.
+  expect(lastWrite(m).body["schema:name"]).toBe("Unsaved");
+  expect(lastWrite(m).body.Value).toEqual({ "@value": "Unsaved value" });
   next.ngOnDestroy();
 });
 
@@ -56,6 +69,7 @@ for (const status of [0, 401, 403, 503])
   it(`retains update outcome evidence through reload after ${status}`, async () => {
     const m = await metadataRig("edit", true);
     m.edit();
+    m.editContent("Unsaved value");
     const server = m.request.getMockImplementation()!;
     m.request.mockImplementation(async (...args) => {
       if (args[1] === "PUT") throw new HttpError(status, "refused");
@@ -74,6 +88,15 @@ for (const status of [0, 401, 403, 503])
     await next.checkSaveStatus();
     expect(next.state.reloadRequired()).toBe(false);
     expect(next.name).toBe("Unsaved");
+    m.request.mockImplementation(server);
+    await next.save();
+    expect(lastWrite(m)).toEqual({
+      body: expect.objectContaining({
+        "schema:name": "Unsaved",
+        Value: { "@value": "Unsaved value" },
+      }),
+      etag: '"revision"',
+    });
     next.ngOnDestroy();
   });
 
@@ -220,6 +243,9 @@ it("can recheck a restored draft after permission is granted again", async () =>
   expect(next.state.reloadRequired()).toBe(false);
   expect(next.editor.nativeElement.config.readOnlyMode).toBe(false);
   expect(next.name).toBe("Unsaved");
+  await next.save();
+  expect(lastWrite(m).body["schema:name"]).toBe("Unsaved");
+  expect(lastWrite(m).etag).toBe('"revision"');
   next.ngOnDestroy();
 });
 
@@ -272,6 +298,7 @@ for (const status of [401, 403])
   it(`restores a definitively refused create after fresh folder access (${status})`, async () => {
     const m = await metadataRig("create", true);
     m.edit();
+    m.editContent("Unsaved value");
     m.request.mockRejectedValueOnce(new HttpError(status, "Refused"));
     await m.host.save();
     expect(m.host.canSignInAgain).toBe(true);
@@ -284,6 +311,12 @@ for (const status of [401, 403])
     expect(
       m.request.mock.calls.filter((call) => call[1] === "PUT"),
     ).toHaveLength(1);
+    expect(lastWrite(m).body).toEqual(
+      expect.objectContaining({
+        "schema:name": "Unsaved",
+        Value: { "@value": "Unsaved value" },
+      }),
+    );
     next.ngOnDestroy();
   });
 
