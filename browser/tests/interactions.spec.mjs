@@ -598,9 +598,6 @@ test("metadata errors and nonblocking warnings share centered, expandable summar
     { path: ["Email"], code: "valueShape", message: "Enter a valid email.", severity: "error" },
     { path: ["Title"], code: "required", message: "A value is required.", severity: "warning" },
   ]);
-  await page
-    .locator(".metadata-content")
-    .screenshot({ path: "/tmp/metadata-validation-summaries.png" });
   await expect(warnings).toHaveCSS("color", "rgb(180, 83, 9)");
   await page.evaluate(() => {
     const cee = document.querySelector("cedar-embeddable-editor");
