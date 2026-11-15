@@ -155,6 +155,7 @@ export class Backend {
     body?: unknown,
     etag?: string | null,
     accept = "application/json",
+    signal?: AbortSignal,
   ): Promise<Response> {
     const url = path.startsWith("/")
       ? this.config.resourceRestAPI.replace(/\/$/, "") + path
@@ -176,11 +177,13 @@ export class Backend {
       };
       if (body !== undefined) headers["Content-Type"] = "application/json";
       if (etag) headers["If-Match"] = etag;
+      signal?.throwIfAborted();
       let response: Response;
       try {
         response = await fetch(url, {
           method,
           headers,
+          ...(signal ? { signal } : {}),
           body: body === undefined ? undefined : JsonSourcePolicy.stringify(body),
         });
       } catch {
@@ -242,8 +245,9 @@ export class Backend {
     method = "GET",
     body?: unknown,
     etag?: string | null,
+    signal?: AbortSignal,
   ): Promise<Reply<T>> {
-    const response = await this.raw(path, method, body, etag);
+    const response = await this.raw(path, method, body, etag, "application/json", signal);
     const text = await response.text();
     let data: T;
     try {
@@ -266,9 +270,10 @@ export class Backend {
       encodeURIComponent(resourcePathId(r["@id"]))
     );
   }
-  report(r: Resource) {
+  report(r: Resource, signal?: AbortSignal) {
     return this.request<Resource>(
       this.path(r) + (r.resourceType === "folder" ? "" : "/report"),
+      "GET", undefined, undefined, signal,
     );
   }
   snapshot(r: Resource, content = false) {

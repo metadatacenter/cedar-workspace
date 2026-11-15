@@ -29,6 +29,28 @@ describe("Authorized backend", () => {
     vi.stubGlobal("fetch", fetcher);
   });
   afterEach(() => vi.unstubAllGlobals());
+  it("does not start a report fetch after navigation aborts a pending token refresh", async () => {
+    let refreshed!: () => void;
+    renew.mockImplementation((_seconds: number, ok: () => void) => { refreshed = ok; });
+    const controller = new AbortController();
+    const pending = api.report({ "@id": "id", resourceType: "template" }, controller.signal);
+    controller.abort();
+    refreshed();
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+  it("cancels a report already in flight without suppressing unrelated network failures", async () => {
+    const controller = new AbortController();
+    fetcher.mockImplementation((_url, options) => new Promise((_resolve, reject) => {
+      options.signal.addEventListener("abort", () => reject(options.signal.reason), { once: true });
+    }));
+    const pending = api.report({ "@id": "id", resourceType: "template" }, controller.signal);
+    await vi.waitFor(() => expect(fetcher).toHaveBeenCalledOnce());
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({ status: 0 });
+    fetcher.mockRejectedValue(new TypeError("CORS failure"));
+    await expect(api.report({ "@id": "id", resourceType: "template" })).rejects.toMatchObject({ status: 0 });
+  });
   it("preserves source numbers from the HTTP response through the next write", async () => {
     const source = '{"N":9007199254740993,"D":0.10000000000000001}';
     fetcher.mockImplementation(() => Promise.resolve(new Response(source)));
