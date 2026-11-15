@@ -896,9 +896,14 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
             }
           : {}),
       };
+      // A draft held back only while its access is in doubt can be saved once a recheck finds the
+      // stored copy as the draft left it, and writable. One whose stored copy has changed since,
+      // as after a conflict, needs the reload itself, which rechecking access or signing in again
+      // cannot replace, so neither is offered for it.
       if (
         !this.pendingUpdate &&
         this.state.reloadRequired() &&
+        unchanged &&
         !value.uncertainCreation &&
         value.saved &&
         value.etag

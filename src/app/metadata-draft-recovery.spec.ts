@@ -59,11 +59,35 @@ for (const change of ["revision", "permission"] as const)
     const next = await m.recreate();
     await next.restoreRecovery();
     expect(next.name).toBe("Unsaved");
+    // Only lost access can be rechecked; a changed copy needs the reload.
+    expect(next.canRecheckAccess()).toBe(change === "permission");
+    expect(next.canSignInAgain).toBe(change === "permission");
     m.request.mockClear();
     await next.save();
     expect(m.request).not.toHaveBeenCalled();
     next.ngOnDestroy();
   });
+
+it("restores a save that met a conflict as one, which only a reload resolves", async () => {
+  const m = await metadataRig("edit", true);
+  m.edit();
+  const server = m.request.getMockImplementation()!;
+  m.request.mockImplementation(async (...args) => {
+    if (args[1] === "PUT") throw new HttpError(412, "Changed");
+    return server(...args);
+  });
+  await m.host.save();
+  m.revision('"newer"');
+  const next = await m.recreate();
+  await next.restoreRecovery();
+  expect(next.name).toBe("Unsaved");
+  expect(next.state.reloadRequired()).toBe(true);
+  // As before the browser reload, the conflict offers the reload alone.
+  expect(next.canCheckSave()).toBe(false);
+  expect(next.canRecheckAccess()).toBe(false);
+  expect(next.canSignInAgain).toBe(false);
+  next.ngOnDestroy();
+});
 
 for (const status of [0, 401, 403, 503])
   it(`retains update outcome evidence through reload after ${status}`, async () => {

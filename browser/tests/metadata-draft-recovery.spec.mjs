@@ -51,6 +51,9 @@ for(const outcome of ['reload','outage','expired session','permission lost','con
       // The conflict comes back as one, to be reloaded, and not as a write whose outcome is unknown.
       await expect(page.getByRole('button',{name:'Reload metadata',exact:true})).toBeVisible();
       await expect(page.getByRole('button',{name:'Check save status',exact:true})).toHaveCount(0);
+      // Neither rechecking access nor signing in again can resolve a changed copy.
+      for(const control of ['Recheck access','Sign in again'])
+        await expect(page.getByRole('button',{name:control,exact:true})).toHaveCount(0);
     }else{
       await expect(save).toBeEnabled();await save.click();await expect(page.locator('.metadata-save-status')).toHaveText('Saved');
       expect(saves).toHaveLength(1);
