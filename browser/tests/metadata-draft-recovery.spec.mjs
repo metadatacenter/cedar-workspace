@@ -26,8 +26,15 @@ for(const outcome of ['reload','outage','expired session','permission lost','con
     await name.fill('Recover this name');
     await editTitle(page);
     if(outcome!=='reload'){await save.click();await expect(save).toBeDisabled();}
-    // A reload while the write is in flight restores it as unconfirmed, so let the refusal arrive first.
-    if(['expired session','permission lost'].includes(outcome))await expect(page.getByRole('button',{name:'Recheck access',exact:true})).toBeVisible();
+    // A reload while the write is in flight restores it as unconfirmed, so let each outcome arrive
+    // first. Save is disabled as soon as the write starts, before any of them.
+    const settled={
+      outage:page.getByRole('button',{name:'Check save status',exact:true}),
+      'expired session':page.getByRole('button',{name:'Recheck access',exact:true}),
+      'permission lost':page.getByRole('button',{name:'Recheck access',exact:true}),
+      conflict:page.getByRole('alert').filter({hasText:'This item changed since you opened it.'}),
+    }[outcome];
+    if(settled)await expect(settled).toBeVisible();
     page.on('dialog',dialog=>dialog.accept());
     if(outcome==='conflict')revision='"changed"';
     await page.reload();
@@ -41,6 +48,9 @@ for(const outcome of ['reload','outage','expired session','permission lost','con
     }
     if(outcome==='conflict'){
       await expect(save).toBeDisabled();expect(writes).toBe(1);
+      // The conflict comes back as one, to be reloaded, and not as a write whose outcome is unknown.
+      await expect(page.getByRole('button',{name:'Reload metadata',exact:true})).toBeVisible();
+      await expect(page.getByRole('button',{name:'Check save status',exact:true})).toHaveCount(0);
     }else{
       await expect(save).toBeEnabled();await save.click();await expect(page.locator('.metadata-save-status')).toHaveText('Saved');
       expect(saves).toHaveLength(1);
