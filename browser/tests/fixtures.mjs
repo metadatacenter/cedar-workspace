@@ -178,8 +178,16 @@ export const test = base.extend({
       else if (path.endsWith("/permissions")) {
         if (request.method() === "PUT") {
           const submitted = request.postDataJSON();
+          // The server keeps the principals it was sent. One it does not know is refused, never
+          // answered as another, so a write naming the wrong principal cannot look like the right one.
+          const users = { [owner["@id"]]: owner, [collaborator["@id"]]: collaborator };
+          if (
+            !submitted.userPermissions.every((g) => g.user?.["@id"] in users) ||
+            !submitted.groupPermissions.every((g) => g.group?.["@id"] === group["@id"])
+          )
+            return route.fulfill({ status: 400, json: { message: "Unknown principal" } });
           state.permissions = { ...submitted,
-            userPermissions: submitted.userPermissions.map(g => ({ ...g, user: g.user["@id"] === owner["@id"] ? owner : collaborator })),
+            userPermissions: submitted.userPermissions.map(g => ({ ...g, user: users[g.user["@id"]] })),
             groupPermissions: submitted.groupPermissions.map(g => ({ ...g, group })),
           };
         }
