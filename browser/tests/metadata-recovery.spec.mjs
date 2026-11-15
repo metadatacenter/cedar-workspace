@@ -26,24 +26,35 @@ for(const outcome of ['saved','unchanged','conflict','read failed','permission l
     if(resolved){await expect(check).toHaveCount(0);await expect(save).toBeEnabled();}
     else {await expect(page.getByRole('alert')).not.toContainText('Checking save status');await expect(save).toBeDisabled();await expect(check).toBeEnabled();}
     await expect(name).toHaveValue('Newer input');expect(await component.evaluate(el=>el.isConnected)).toBe(true);expect(writes).toBe(1);
-    if(resolved){await save.click();await expect(page.locator('.metadata-save-status')).toHaveText('Saved');expect(lastTag).toBe(outcome==='saved'?'"confirmed"':'"opened"');}
+    if(resolved){await save.click();await expect(page.locator('.metadata-save-status')).toHaveText('Saved');expect(lastTag).toBe(outcome==='saved'?'"confirmed"':'"opened"');expect(submitted['schema:name']).toBe('Newer input');}
   });
 
 test('restored metadata access saves the refused draft without reload',async({page,api})=>{
   let refused=true,writes=0;
+  const saves=[];
   await page.route('**/api/resource/template-instances/instance',route=>{
     if(route.request().method()==='GET')return route.fallback();
-    writes++;
+    writes++;saves.push({body:route.request().postDataJSON(),etag:route.request().headers()['if-match']});
     return route.fulfill(refused?{status:403,json:{message:'Access refused'}}:{json:{'@id':'instance'},headers:{ETag:'"saved"'}});
   });
   await page.goto('/instances/edit/instance');
   const name=page.getByLabel('Instance name',{exact:true}),save=page.getByRole('button',{name:'Save',exact:true});
-  await name.fill('Refused name');await save.click();
+  await name.fill('Refused name');
+  await page.evaluate(()=>{
+    const cee=document.querySelector('cedar-embeddable-editor');
+    cee.currentMetadata={...cee.currentMetadata,Title:{'@value':'Refused title'}};
+    cee.dispatchEvent(new CustomEvent('change'));
+  });
+  await save.click();
   const check=page.getByRole('button',{name:'Recheck access',exact:true});await expect(check).toBeVisible();
   await expect(page.getByRole('button',{name:'Check save status',exact:true})).toHaveCount(0);
   refused=false;await name.fill('Newer name');await check.click();
   await expect(check).toHaveCount(0);await expect(save).toBeEnabled();await expect(name).toHaveValue('Newer name');
   expect(writes).toBe(1);await save.click();await expect(page.locator('.metadata-save-status')).toHaveText('Saved');expect(writes).toBe(2);
+  // The save after the recheck writes the newest name and the refused draft's content, against the revision the recheck read.
+  expect(saves[1].etag).toBe('"fixture-revision"');
+  expect(saves[1].body['schema:name']).toBe('Newer name');
+  expect(saves[1].body.Title).toEqual({'@value':'Refused title'});
 });
 
 test('confirmed metadata update without a revision recovers in place and keeps newer edits',async({page,api})=>{
