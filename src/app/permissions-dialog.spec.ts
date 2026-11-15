@@ -591,8 +591,17 @@ describe("Permissions dialog", () => {
     expect(host.canManage).toBe(true);
     expect(host.canTransfer).toBe(false);
   });
-  for (const status of [400, 401, 403, 404, 409, 412, 422, 428, 500, 503]) {
-    for (const action of ["add", "role", "remove", "transfer"]) {
+  // 0 is a request that met no answer, 200 an acknowledgement nobody could read, 408 a timeout:
+  // like a 5xx, each may have been written, so none may be reported as not saved.
+  const uncertain = [0, 200, 408, 500, 503];
+  const descriptions = {
+    add: "Add Everyone as Viewer",
+    role: "Set Other to Editor",
+    remove: "Remove direct role for Other",
+    transfer: "Transfer ownership to Other",
+  };
+  for (const status of [0, 200, 400, 401, 403, 404, 408, 409, 412, 422, 428, 500, 503]) {
+    for (const action of ["add", "role", "remove", "transfer"] as const) {
       it(`${action}: HTTP ${status} preserves state and requires the appropriate recovery`, async () => {
         const permissions = {
           ...initial,
@@ -612,6 +621,10 @@ describe("Permissions dialog", () => {
         await run();
         expect(host.permissions()).toBe(permissions);
         expect(host.busy()).toBe(false);
+        expect(host.error()).toBe("Rejected");
+        expect(host.failedChange()).toBe(
+          uncertain.includes(status) ? "" : descriptions[action],
+        );
         expect(host.stale()).toBe(![400, 422].includes(status));
         await run();
         expect(api.request).toHaveBeenCalledTimes(

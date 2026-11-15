@@ -31,6 +31,7 @@ import { Icon } from "./icon";
 import { I18n } from "./i18n";
 import { ServerLanguage } from "./server-text";
 import { StatusRegion } from "./status-region";
+import { uncertainWrite } from "./write-failure";
 
 export interface Principal {
   "@id": string;
@@ -489,7 +490,9 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
       if (saved) this.current.set(null);
       operation.fail(e);
       this.fail(e);
-      if (!saved && e instanceof HttpError && e.status < 500)
+      // Only a refusal is known not to have been written. A lost or unreadable reply, a timeout
+      // or a server error may hide a committed change, which the reload it requires will show.
+      if (!saved && e instanceof HttpError && !uncertainWrite(e))
         this.failedChange.set(description);
     } finally {
       if (operation.current()) this.busy.set(false);
