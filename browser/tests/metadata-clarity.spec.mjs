@@ -187,9 +187,21 @@ test("Save acts while CEE is still validating: a click and Enter wait, then one 
   await validation(page, false);
   await expect(page.locator(".toast")).toHaveText("Saved.");
   await expect(status).toHaveText("Saved");
-  // The two requests made one save, and a later report makes no other.
+  // The two requests made one save, and a later report makes no other. Workspace answers a report
+  // in its event listener, and a save it starts there reaches `fetch` through promise callbacks
+  // alone, so a page timer set after the report runs only once any such request has been sent.
+  await page.evaluate(() => {
+    const send = window.fetch;
+    window.__writesAfterReport = [];
+    window.fetch = (input, init) => {
+      if ((init?.method ?? "GET") !== "GET") window.__writesAfterReport.push(init.method);
+      return send(input, init);
+    };
+  });
   await validation(page, false);
-  await page.waitForTimeout(200);
+  expect(
+    await page.evaluate(() => new Promise((resolve) => setTimeout(() => resolve(window.__writesAfterReport), 0))),
+  ).toEqual([]);
   expect(writes().map((request) => request.method)).toEqual(["PUT"]);
   expect(writes()[0].body["schema:name"]).toBe("Changed record");
 });
