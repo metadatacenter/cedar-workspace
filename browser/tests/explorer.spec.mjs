@@ -15,7 +15,10 @@ const items = ["a", "b", "c"].map((id) => ({
   "schema:name": `Sample ${id}`,
 }));
 async function setup(page, extra = []) {
-  const moved = new Set();
+  // Each moved item's destination, as its move command named it. The mock places an item where the
+  // command put it, so a move into the wrong folder cannot look like the intended one.
+  const moved = new Map();
+  const here = (r) => (moved.get(r["@id"]) ?? "home") === "home";
   await page.route("**/api/resource/**", async (route) => {
     const request = route.request(),
       path = new URL(request.url()).pathname;
@@ -24,13 +27,14 @@ async function setup(page, extra = []) {
     if (path.includes("/contents"))
       return route.fulfill({
         json: {
-          resources: [folder, ...items.filter((r) => !moved.has(r["@id"])), ...extra],
-          totalCount: 4 - moved.size + extra.length,
+          resources: [folder, ...items.filter(here), ...extra],
+          totalCount: 1 + items.filter(here).length + extra.length,
           pathInfo: [],
         },
       });
     if (path.endsWith("/move-resource-to-folder")) {
-      moved.add(request.postDataJSON()["@id"]);
+      const { "@id": id, targetFolderId } = request.postDataJSON();
+      moved.set(id, targetFolderId);
       return route.fulfill({ json: {} });
     }
     const id = decodeURIComponent(path.split("/").filter(Boolean).at(-1));
@@ -39,7 +43,7 @@ async function setup(page, extra = []) {
     );
     // Anything else, the home folder included, is the shared fixture's to answer or refuse.
     if (!r) return route.fallback();
-    return route.fulfill({ json: {...r, pathInfo: r.pathInfo ?? [{"@id": moved.has(r["@id"])?"destination":"home", resourceType:"folder"}, r]}, headers: { ETag: '"' + r["@id"] + '"' } });
+    return route.fulfill({ json: {...r, pathInfo: r.pathInfo ?? [{"@id": moved.get(r["@id"]) ?? "home", resourceType:"folder"}, r]}, headers: { ETag: '"' + r["@id"] + '"' } });
   });
   await page.goto("/dashboard");
   await expect(page.getByRole("button", { name: "Grid view", exact: true })).toHaveAttribute("aria-pressed", "true");
@@ -220,6 +224,8 @@ test("grid retains compact sizing, range and list selection, and moves a group w
     await expect(page).toHaveScreenshot('drag-selection.png');
   await page.mouse.up();
   await expect.poll(() => moved.size).toBe(3);
+  // Every selected item went into the folder it was dropped on.
+  expect(Object.fromEntries(moved)).toEqual({ a: "destination", b: "destination", c: "destination" });
   await expect(rows).toHaveCount(1);
   await expect(rows.first()).toHaveClass(/explorer-move-complete/);
   await expect(page.locator('.cdk-drag-preview')).toHaveCount(0);

@@ -5,7 +5,8 @@ for (const committed of [true, false]) {
     const folder = {...resource, "@id":"destination", resourceType:"folder", "schema:name":"Archive",
       currentUserPermissions:{capabilities:["readResource","moveIntoFolder"]}};
     const items = ["a","b","c"].map(id => ({...resource,"@id":id,resourceType:"instance","schema:name":"Sample " + id}));
-    const moved = new Set(), attempts = [];
+    // Every attempt's destination, as its move command named it; an item lands only where it was sent.
+    const moved = new Set(), attempts = [], targets = [];
     let listingDown = false, reportsDown = false, refusing = true;
     await page.route("**/api/resource/**", async route => {
       const request = route.request(), path = new URL(request.url()).pathname;
@@ -17,16 +18,18 @@ for (const committed of [true, false]) {
         return route.fulfill({json:{resources,totalCount:resources.length,pathInfo:[]}});
       }
       if (path.endsWith("/move-resource-to-folder")) {
-        const id = request.postDataJSON()["@id"];
+        const { "@id": id, targetFolderId } = request.postDataJSON();
         expect(request.headers()["if-match"]).toBe('"' + id + '"');
         attempts.push(id);
+        targets.push(targetFolderId);
+        const lands = targetFolderId === "destination";
         listingDown = true;
         if (id === "c" && refusing) return route.fulfill({status:403,json:{message:"Move refused"}});
         if (id === "b" && refusing) {
-          if (committed) moved.add(id);
+          if (committed && lands) moved.add(id);
           return route.abort("connectionclosed");
         }
-        moved.add(id);
+        if (lands) moved.add(id);
         return route.fulfill({json:{}});
       }
       const r = [folder,...items].find(r => path.includes("/" + r["@id"] + "/") || path.endsWith("/" + r["@id"]));
@@ -86,5 +89,6 @@ for (const committed of [true, false]) {
     await row("destination").locator(".resource-icon").dblclick();
     for (const id of ["a","b","c"]) await expect(row(id)).toBeVisible();
     expect(attempts).toHaveLength(committed ? 4 : 5);
+    expect(targets).toEqual(attempts.map(() => "destination"));
   });
 }
