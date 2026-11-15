@@ -204,10 +204,16 @@ for (const [site, spec] of Object.entries(SITES))
         if (language === "hu")
           await page.addInitScript(() => Object.defineProperty(navigator, "languages", { get: () => ["hu-HU"] }));
         let armed = spec.arm === "before";
+        // The revision each failed request named. Every resource here is served as revision
+        // "fixture-revision", and a conditional write must name the one it read.
+        const named = [];
         await page.route("**/api/**", (route) => {
           const request = route.request();
           const path = decodeURIComponent(new URL(request.url()).pathname);
-          if (armed && spec.request(request.method(), path)) return answer.answer(route);
+          if (armed && spec.request(request.method(), path)) {
+            named.push(request.headers()["if-match"]);
+            return answer.answer(route);
+          }
           return route.fallback();
         });
         if (spec.before) await spec.before(page, t);
@@ -216,6 +222,9 @@ for (const [site, spec] of Object.entries(SITES))
         const expected = (spec.text?.[name] ?? answer.text)(t);
         await expect(page.getByRole("alert").filter({ hasText: expected }).first()).toBeVisible();
         await expect(page.getByText("Failed to fetch")).toHaveCount(0);
+        expect(named.length, "the request this case fails was sent").toBeGreaterThan(0);
+        if (spec.conditional)
+          expect(new Set(named), "a conditional write names the revision it read").toEqual(new Set(['"fixture-revision"']));
         if (site === "saving metadata" && ["an unexplained 500", "no answer"].includes(name)) {
           await expect(page.getByLabel(t("Metadata.Name"), { exact: true })).toHaveValue("Study record, edited");
           await expect(page.getByRole("button", { name: t("Common.Save"), exact: true })).toBeDisabled();
