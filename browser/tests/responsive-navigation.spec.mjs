@@ -20,6 +20,29 @@ async function listing(page, view) {
   await expect(page.locator('.table-scroll')).toHaveAttribute('aria-busy', 'false');
 }
 
+for (const width of [1440, 768, 375]) test(`grid view and sort controls wrap together at ${width}`, async ({ page, api }, info) => {
+  await page.setViewportSize({ width, height: 667 });
+  await listing(page, 'grid');
+  const toolbar = page.locator('.explorer-toolbar');
+  await toolbar.scrollIntoViewIfNeeded();
+  const controls = [
+    toolbar.getByRole('button', { name: 'List view', exact: true }),
+    toolbar.getByRole('button', { name: 'Grid view', exact: true }),
+    toolbar.locator('cedar-sort-menu > button'),
+  ];
+  const boxes = await Promise.all(controls.map(control => control.boundingBox()));
+  const centers = boxes.map(box => box.y + box.height / 2);
+  expect(Math.max(...centers) - Math.min(...centers)).toBeLessThanOrEqual(1);
+  expect(boxes[2].x - boxes[1].x - boxes[1].width).toBeLessThanOrEqual(16);
+  expect(boxes[0].x).toBeLessThan(boxes[1].x);
+  expect(boxes[2].x + boxes[2].width).toBeLessThanOrEqual(width);
+  await page.screenshot({ path: info.outputPath(`grouped-toolbar-${width}.png`) });
+  await controls[2].click();
+  await expect(page.getByRole('menuitemradio', { name: 'Name', exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(controls[2]).toBeFocused();
+});
+
 for (const view of ['list', 'grid']) test(`tablet long path retains a usable ${view} with both panels open`, async ({ page, api }, info) => {
   await page.setViewportSize({ width: 768, height: 667 });
   await listing(page, view);

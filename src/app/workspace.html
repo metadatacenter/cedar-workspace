@@ -268,36 +268,38 @@
         <cedar-icon name="delete" />
       </button>
       }
-      <div
-        class="explorer-view-switch"
-        role="group"
-        [attr.aria-label]="'Explorer.View' | translate"
-      >
-        <button
-          (click)="setView(false)"
-          [attr.aria-pressed]="!grid()"
-          [attr.aria-label]="'Explorer.List' | translate"
-          [cedarTooltip]="'Explorer.List' | translate"
+      <div class="explorer-view-controls">
+        <div
+          class="explorer-view-switch"
+          role="group"
+          [attr.aria-label]="'Explorer.View' | translate"
         >
-          <cedar-icon name="list" size="small" />
-        </button>
-        <button
-          (click)="setView(true)"
-          [attr.aria-pressed]="grid()"
-          [attr.aria-label]="'Explorer.Grid' | translate"
-          [cedarTooltip]="'Explorer.Grid' | translate"
-        >
-          <cedar-icon name="grid" size="small" />
-        </button>
+          <button
+            (click)="setView(false)"
+            [attr.aria-pressed]="!grid()"
+            [attr.aria-label]="'Explorer.List' | translate"
+            [cedarTooltip]="'Explorer.List' | translate"
+          >
+            <cedar-icon name="list" size="small" />
+          </button>
+          <button
+            (click)="setView(true)"
+            [attr.aria-pressed]="grid()"
+            [attr.aria-label]="'Explorer.Grid' | translate"
+            [cedarTooltip]="'Explorer.Grid' | translate"
+          >
+            <cedar-icon name="grid" size="small" />
+          </button>
+        </div>
+        @if(grid()){<cedar-sort-menu
+          [sort]="sort"
+          [version]="version"
+          (versionChange)="setVersion($event)"
+          [foldersFirst]="params.get('folders') === 'first'"
+          (sortChange)="setSort($event)"
+          (foldersFirstChange)="setFoldersFirst($event)"
+        />}
       </div>
-      @if(grid()){<cedar-sort-menu
-        [sort]="sort"
-        [version]="version"
-        (versionChange)="setVersion($event)"
-        [foldersFirst]="params.get('folders') === 'first'"
-        (sortChange)="setSort($event)"
-        (foldersFirstChange)="setFoldersFirst($event)"
-      />}
     </div>
     <div
       class="table-scroll"

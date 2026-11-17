@@ -15,9 +15,15 @@
   min-width: 0;
   margin: 0;
 }
+.explorer-view-controls {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--cedar-space-3);
+  margin-left: auto;
+}
 .explorer-view-switch {
   display: flex;
-  margin-left: auto;
   border: 1px solid var(--cedar-border-rule);
   border-radius: var(--cedar-radius);
   overflow: hidden;

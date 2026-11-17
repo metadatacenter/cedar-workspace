@@ -291,6 +291,7 @@ export class ArtifactPreview implements AfterViewInit, OnDestroy {
     viewer.config = {
       ...config,
       readOnlyMode: !this.trying(),
+      wrapFieldNames: !this.trying(),
       previewMode: true,
       // The preview's title gives a field's name, so the field states its type beneath it.
       showFieldType: true,

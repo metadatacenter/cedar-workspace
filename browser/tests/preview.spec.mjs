@@ -23,7 +23,7 @@ async function setup(page, kind, options = {}) {
       return route.fulfill(options.fail ? {status:403,json:{message:'Forbidden'}} : {json:artifact});
     }
     if (path.includes('/templates/') && kind === 'instance')
-      return route.fulfill(options.templateStatus ? {status:options.templateStatus,json:{message:'You do not have the required capability on the artifact'}} : {json:documents.template});
+      return route.fulfill(options.templateStatus ? {status:options.templateStatus,json:{message:'You do not have the required capability on the artifact'}} : {json:options.template ?? documents.template});
     if (path.includes('/preview-item/')) return route.fulfill({json:item});
     return route.fallback();
   });
@@ -198,6 +198,49 @@ test('preview fits a narrow screen without scaling its fonts', async ({page,api}
   if (comparePixels()) await expect(dialog).toHaveScreenshot('instance-preview-mobile.png');
   await page.getByRole('button',{name:'Close preview'}).click();
   await expect(button).toBeFocused();
+});
+
+for (const width of [1440, 768, 375]) test(`read-only Preview exposes complete field and element labels at ${width}`, async ({page,api}, info) => {
+  await page.setViewportSize({width,height:800});
+  const fieldName = 'Specimen collection and environmental observation notes from collaborating research institutions';
+  const elementName = 'Nested specimen processing measurements from collaborating international research laboratories';
+  const nestedName = 'Detailed collection location and environmental conditions recorded at the original sampling site';
+  const template = structuredClone(documents.template);
+  const element = structuredClone(documents.element);
+  template._ui.propertyLabels.name = fieldName;
+  element._ui.propertyLabels.name = nestedName;
+  element.properties['@context'] = {type:'object',properties:{name:{enum:['https://example.org/name']}},required:['name'],additionalProperties:false};
+  template.properties.element = element;
+  template.properties['@context'].properties.element = {enum:['https://example.org/element']};
+  template._ui.order.push('element');
+  template._ui.propertyLabels.element = elementName;
+  template.required.push('element');
+  const instance = {...structuredClone(documents.instance), element:{'@id':'urn:cedar:preview:nested','@context':{name:'https://example.org/name'},name:{'@value':'Nested observation'}}};
+  const {button,requests} = await setup(page,'instance',{artifact:instance,template});
+  await button.click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.locator('[aria-busy]')).toHaveAttribute('aria-busy','false',ceeStartup);
+  await expect(dialog.getByRole('alert')).toHaveCount(0);
+  const viewer = dialog.locator('cedar-embeddable-editor');
+  for (const name of [fieldName,elementName,nestedName]) {
+    const label = viewer.locator('.title-label').filter({hasText:name});
+    await expect(label).toHaveText(name);
+    await label.scrollIntoViewIfNeeded();
+    const visible = await label.evaluate(el => {
+      const range = document.createRange();range.selectNodeContents(el);
+      const box = el.getBoundingClientRect();
+      return {whiteSpace:getComputedStyle(el).whiteSpace,
+        complete:[...range.getClientRects()].every(r=>r.left>=box.left-1&&r.right<=box.right+1&&r.top>=box.top-1&&r.bottom<=box.bottom+1)};
+    });
+    expect(visible.whiteSpace).not.toBe('nowrap');
+    expect(visible.complete).toBe(true);
+  }
+  await expect(viewer.getByRole('textbox',{name:fieldName,exact:true})).toHaveValue('Collected specimen');
+  await expect(viewer.getByRole('textbox',{name:nestedName,exact:true})).toHaveValue('Nested observation');
+  await expect(viewer.locator('input:not([type=hidden]):not([readonly]):not(:disabled),textarea:not([readonly]):not(:disabled)')).toHaveCount(0);
+  await dialog.locator('section').evaluate(el=>{el.scrollTop=0;});
+  await page.screenshot({path:info.outputPath(`wrapped-preview-${width}.png`)});
+  expect(requests.every(r=>r.method==='GET')).toBe(true);
 });
 
 test('list rows offer the same preview without selecting or opening the artifact', async ({page,api}) => {
