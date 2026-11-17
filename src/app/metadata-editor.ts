@@ -344,6 +344,12 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
   private chosenName() {
     return this.name.trim() || this.defaultName();
   }
+  private acknowledgeName(typedName: string, savedName: string) {
+    // A generated or normalized name belongs in the saved form, but a newer edit
+    // made while the request was pending must remain untouched and dirty.
+    if (this.name.trim() === typedName) this.name = savedName;
+    this.baselineName = savedName;
+  }
   private defaultName() {
     return this.i18n.t("Metadata.DefaultName", { template: this.templateName });
   }
@@ -419,7 +425,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       );
       if (!configResponse.ok)
         throw new Error(this.i18n.t("Metadata.ConfigurationUnavailable"));
-      const config: CeeConfig = await configResponse.json();
+      const config: CeeConfig = { ...(await configResponse.json()), wrapFieldNames: true, showTemplateDescription: true };
       this.editorConfig = config;
       if (!operation.current()) return;
       let saved: CeeJsonObject | undefined,
@@ -1242,7 +1248,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
       }
       this.state.clearServer();
       this.baseline = baseline;
-      this.baselineName = typedName;
+      this.acknowledgeName(typedName, String(this.saved["schema:name"] ?? name));
       if (!(await this.moveToEditAddress(operation, !confirmedUpdate))) return;
       operation.finish();
       this.changed();
@@ -1431,7 +1437,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
         }
       if (result === "saved" && attempt) {
         this.baseline = metadataKey(acknowledged ?? attempt.metadata);
-        this.baselineName = attempt.typedName;
+        this.acknowledgeName(attempt.typedName, String(latest.data["schema:name"] ?? attempt.submitted["schema:name"] ?? attempt.typedName));
       } else {
         this.baseline = metadataKey(latest.data);
         this.baselineName = String(latest.data["schema:name"] ?? "");
@@ -1525,7 +1531,7 @@ export class MetadataEditor implements AfterViewInit, OnDestroy {
             ? pending.snapshot.acknowledge(latest.data)
             : pending.snapshot.metadata,
         );
-        this.baselineName = pending.typedName;
+        this.acknowledgeName(pending.typedName, String(latest.data["schema:name"] ?? pending.submitted["schema:name"] ?? pending.typedName));
         this.saved = latest.data;
         this.etag = latest.etag;
         this.savedHere = true;

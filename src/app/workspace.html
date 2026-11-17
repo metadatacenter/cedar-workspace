@@ -107,7 +107,7 @@
   <button
     type="button"
     class="panel-toggle"
-    (click)="right.set(!right())"
+    (click)="toggleInformation()"
     [disabled]="!ready()"
     [attr.aria-expanded]="right()"
     aria-controls="workspace-information"
@@ -262,7 +262,7 @@
         [value]="filters"
         [version]="version"
         (versionChange)="setVersion($event)"
-        (change)="changeFilters($event)"
+        (filtersChange)="changeFilters($event)"
       />
       @if(selection().length) {
       <button class="selection-delete" [class.explorer-drop-eligible]="dragging().length > 0 && !deleteDrop()" [class.explorer-delete-target]="deleteDrop()" [attr.aria-label]="'SelectionDeletion.Action' | translate: {count: selection().length}" type="button" (click)="openSelectionDeletion($event)" [disabled]="loading() || moving()">
@@ -316,6 +316,7 @@
     >
       <!-- A grid, so that its rows take aria-selected. It is one Tab stop: the arrow keys move
            between rows, and Tab reaches one row and the controls inside it. -->
+      <div class="explorer-scroll-content">
       <table role="grid" aria-multiselectable="true">
         <caption class="sr-only">
           {{'Dashboard.TableCaption' | translate}}
@@ -570,6 +571,7 @@
       } @else if(!rows().length){
       <p class="empty">{{'Dashboard.NoItems' | translate}}</p>
       }
+      </div>
     </div>
     <footer class="paging">
       <button (click)="page(-1)" [disabled]="offset()===0||loading()">

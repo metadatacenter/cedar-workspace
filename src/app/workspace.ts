@@ -372,7 +372,14 @@ export class Workspace {
   readonly total = signal(0);
   readonly offset = signal(0);
   readonly left = signal(true);
-  readonly right = signal(true);
+  private readonly viewportWidth = signal(window.innerWidth);
+  private readonly informationPreference = signal<boolean | null>(null);
+  readonly right = computed(() => this.informationPreference() ??
+    (!!this.selected() || this.viewportWidth() <= 760 || this.viewportWidth() > 1100));
+
+  toggleInformation(): void {
+    this.informationPreference.set(!this.right());
+  }
   readonly dialog = signal<{ action: string; resource?: Resource } | null>(
     null,
   );
@@ -777,6 +784,7 @@ export class Workspace {
   @HostListener("window:resize")
   @HostListener("document:keydown.escape")
   escapeMenu() {
+    this.viewportWidth.set(window.innerWidth);
     if (this.menu()) this.menuTrigger?.focus();
     this.menu.set(null);
     this.host.nativeElement

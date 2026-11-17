@@ -288,6 +288,7 @@ main {
 }
 .table-toolbar {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
   min-height: var(--cedar-control-height-default);
@@ -740,22 +741,22 @@ th:nth-child(2) {
 }
 /* The list view sizes Last modified and Version to their content and gives the name the
    rest. */
-.table-scroll:not(.explorer-grid) > table {
+.table-scroll:not(.explorer-grid) > .explorer-scroll-content > table {
   table-layout: auto;
 }
-.table-scroll:not(.explorer-grid) > table th {
+.table-scroll:not(.explorer-grid) > .explorer-scroll-content > table th {
   white-space: nowrap;
 }
 /* The column headings, which also sort, stay in view while the rows scroll beneath them. A
    collapsed border stays with the table rather than with a sticky heading, so each heading
    paints its own copy of the rule over the border's position. */
-.table-scroll:not(.explorer-grid) > table thead th {
+.table-scroll:not(.explorer-grid) > .explorer-scroll-content > table thead th {
   position: sticky;
   top: 0;
   z-index: var(--cedar-layer-sticky);
   background: var(--cedar-surface-raised);
 }
-.table-scroll:not(.explorer-grid) > table thead th::after {
+.table-scroll:not(.explorer-grid) > .explorer-scroll-content > table thead th::after {
   content: "";
   position: absolute;
   inset-inline: 0;
@@ -764,10 +765,10 @@ th:nth-child(2) {
   border-bottom: 2px solid var(--cedar-border-rule);
   pointer-events: none;
 }
-.table-scroll:not(.explorer-grid) > table th:nth-child(2) {
+.table-scroll:not(.explorer-grid) > .explorer-scroll-content > table th:nth-child(2) {
   width: auto;
 }
-.table-scroll:not(.explorer-grid) > table td:first-child {
+.table-scroll:not(.explorer-grid) > .explorer-scroll-content > table td:first-child {
   width: 100%;
   max-width: 0;
 }

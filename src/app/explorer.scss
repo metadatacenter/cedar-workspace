@@ -66,6 +66,12 @@ body.explorer-dragging.explorer-can-drop * {
   cursor: grabbing !important;
 }
 .explorer-grid {
+  min-height: 0;
+  padding: 0;
+}
+.explorer-grid > .explorer-scroll-content {
+  // Keep the normal empty/card canvas, but let its viewport shrink when wrapped
+  // location and filter rows need more room above it.
   min-height: spacing.$resource-grid-min-height;
   @include spacing.apply(padding, resource-list-inset);
 }

@@ -298,6 +298,8 @@ describe("Modern metadata host", () => {
   });
   it("passes the active language to CEE with English as its fallback", async () => {
     await host.ngAfterViewInit();
+    expect(cee.config.wrapFieldNames).toBe(true);
+    expect(cee.config.showTemplateDescription).toBe(true);
     expect(cee.config.defaultLanguage).toBe("en");
     expect(cee.config.fallbackLanguage).toBe("en");
   });
@@ -725,6 +727,38 @@ describe("Modern metadata host", () => {
     expect(host.dirty()).toBe(true);
     expect(host.notice()).toContain("further unsaved");
   });
+  for (const mode of ["create", "edit"])
+    for (const lostReply of [false, true])
+      it.each([false, true])(
+        `reflects a generated saved name after ${mode} (lost reply: ${lostReply}, newer name: %s)`,
+        async newerName => {
+          if (mode === "edit") await edit();
+          else await host.ngAfterViewInit();
+          let stored: Record<string, unknown> = {};
+          let settle!: () => void;
+          api.request.mockImplementation((path, method = "GET", body) => {
+            if (method === "PUT" || method === "POST") {
+              stored = structuredClone(body);
+              return new Promise((resolve, reject) => {
+                settle = () => lostReply
+                  ? reject(new HttpError(503, "Lost reply"))
+                  : resolve({data: {"@id": stored["@id"]}, etag: '"saved"'});
+              });
+            }
+            if (path.endsWith("/report"))
+              return Promise.resolve({data: {currentUserPermissions: {capabilities: ["updateResource"]}}});
+            return Promise.resolve({data: stored, etag: '"saved"'});
+          });
+          host.name = "   "; host.changed();
+          const saving = host.save();
+          if (newerName) { host.name = "Typed while saving"; host.changed(); }
+          settle(); await saving;
+          if (lostReply) await host.checkSaveStatus();
+          expect(String(stored["schema:name"])).not.toBe("");
+          expect(host.name).toBe(newerName ? "Typed while saving" : stored["schema:name"]);
+          expect(host.dirty()).toBe(newerName);
+        },
+      );
   it("reports validation issues without preventing incomplete metadata saves", async () => {
     await edit();
     Object.assign(cee.dataQualityReport, {

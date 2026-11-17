@@ -185,6 +185,7 @@ describe("Angular Workspace", () => {
     expect(table.querySelector("tbody tr")!.querySelectorAll("td").length).toBe(3);
   });
   it("renders the table and destinations with empty information until selection", async () => {
+    vi.stubGlobal("innerWidth", 1440);
     const f = await render();
     const el = f.nativeElement as HTMLElement;
     expect(el.querySelectorAll("table").length).toBe(1);
@@ -262,6 +263,7 @@ describe("Angular Workspace", () => {
     expect(api.report).toHaveBeenCalledWith(template, expect.any(AbortSignal));
   });
   it("keeps the table while navigation and information panels collapse independently", async () => {
+    vi.stubGlobal("innerWidth", 1440);
     const f = await render();
     (
       f.nativeElement.querySelector(
