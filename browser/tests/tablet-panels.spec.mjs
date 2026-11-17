@@ -39,8 +39,11 @@ for (const view of ["list", "grid"])
       .map((name, i) => ({...resource, "@id": `folder-${i}`, resourceType: "folder", "schema:name": name}));
     const resources = Array.from({length: 12}, (_, i) => ({...resource, "@id": `template-${i}`}));
     await page.route("**/api/resource/**", route => {
-      if (new URL(route.request().url()).pathname.endsWith("/contents"))
+      const path = new URL(route.request().url()).pathname;
+      if (path.endsWith("/contents"))
         return route.fulfill({json: {resources, totalCount: resources.length, pathInfo}});
+      const selected = path.match(/\/templates\/(template-\d+)(?:\/report)?$/)?.[1];
+      if (selected) return route.fulfill({json: resources.find(item => item["@id"] === selected)});
       return route.fallback();
     });
     await page.goto(`/dashboard?view=${view}`);

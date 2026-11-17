@@ -109,6 +109,14 @@ footer span {
   }
 }
 
+// A tablet with both sidebars can leave less room than the popover's usual
+// minimum. Its existing single-column body and scrolling retain every control.
+@container (max-width: 280px) {
+  .popover {
+    min-width: 0;
+  }
+}
+
 .version-filter {
   display: flex;
   flex-direction: row;

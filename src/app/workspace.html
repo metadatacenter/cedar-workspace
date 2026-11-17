@@ -218,7 +218,7 @@
     }
   </aside>
   <!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus -- The listing's cut and paste shortcuts reach main from the controls inside it, and main itself takes no input. -->
-  <main (keydown)="explorerKeys($event)">
+  <main tabindex="-1" (keydown)="explorerKeys($event)">
     @if(grid()){
     <h1 class="sr-only">{{'Common.Workspace' | translate}}</h1>
     }
@@ -235,7 +235,8 @@
           | translate}}</span
         >} @else if(params.has('viewMode')){<span
           >{{'Dashboard.CommunityFolders' | translate}}</span
-        >} @else { @for(p of path();track p['@id'];let last=$last){<a
+        >} @else { @for(p of path();track p['@id'];let first=$first;let last=$last){<span class="breadcrumb-segment"
+          >@if(!first){<span class="breadcrumb-separator" aria-hidden="true">/</span>}<a
           routerLink="/dashboard"
           [queryParams]="navigationQuery({folderId:p['@id']})"
           [attr.aria-current]="last?'page':null"
@@ -244,9 +245,7 @@
           [class.explorer-drop-eligible]="validDropIds().has(p['@id'])"
           [class.explorer-move-complete]="movedTarget()===p['@id']"
           >{{title(p)==='/'?('Common.All' | translate):title(p)}}</a
-        >@if(!last){<span class="breadcrumb-separator" aria-hidden="true"
-          >/</span
-        >}} }
+        ></span>} }
       </nav>
       <button
         (click)="load(true)"
@@ -591,6 +590,7 @@
   <aside
     class="information"
     id="workspace-information"
+    tabindex="-1"
     [attr.aria-label]="'Dashboard.Information' | translate"
   >
     @if(right()){ @if(selected();as r){

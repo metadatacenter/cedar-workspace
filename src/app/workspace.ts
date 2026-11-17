@@ -378,7 +378,21 @@ export class Workspace {
     (!!this.selected() || this.viewportWidth() <= 760 || this.viewportWidth() > 1100));
 
   toggleInformation(): void {
-    this.informationPreference.set(!this.right());
+    const opening = !this.right();
+    const selectedId = this.selected()?.["@id"] ?? this.selectionIds()[0];
+    this.informationPreference.set(opening);
+    if (this.viewportWidth() > 760) return;
+    afterNextRender(() => {
+      if (this.viewportWidth() > 760 || this.right() !== opening) return;
+      const host = this.host.nativeElement;
+      const target = opening
+        ? host.querySelector<HTMLElement>("#workspace-information")
+        : (selectedId
+            ? host.querySelector<HTMLElement>(`[data-resource-id="${CSS.escape(selectedId)}"]`)
+            : null) ?? host.querySelector<HTMLElement>("main");
+      target?.focus({ preventScroll: true });
+      target?.scrollIntoView({ block: "start" });
+    }, { injector: this.injector });
   }
   readonly dialog = signal<{ action: string; resource?: Resource } | null>(
     null,
