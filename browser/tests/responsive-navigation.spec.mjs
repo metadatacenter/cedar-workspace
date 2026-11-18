@@ -39,6 +39,9 @@ for (const width of [1440, 768, 375]) test(`grid view and sort controls wrap tog
   await page.screenshot({ path: info.outputPath(`grouped-toolbar-${width}.png`) });
   await controls[2].click();
   await expect(page.getByRole('menuitemradio', { name: 'Name', exact: true })).toBeVisible();
+  // The menu moves focus to its checked item on the next frame, and the panel holds the Escape
+  // handler. An Escape pressed before focus arrives reaches the page and leaves the menu open.
+  await expect(toolbar.locator('cedar-sort-menu [role="menuitemradio"][aria-checked="true"]').first()).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(controls[2]).toBeFocused();
 });
