@@ -62,7 +62,6 @@ export async function configure(base = root, env = process.env) {
     cedarSourceCommit: commit,
     cedarDevelopmentMode: behavior === "develop",
     cedarAuthUrl: env.CEDAR_AUTH_URL || `https://auth.${ui}`,
-    versioningEnabled: true,
     makeOpenEnabled: true,
     dataciteEnabled: required("CEDAR_DATACITE_ENABLED") === "true",
     cedarGA4TrackingId: required("CEDAR_GA4_TRACKING_ID"),

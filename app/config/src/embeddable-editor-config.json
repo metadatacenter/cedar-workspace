@@ -1,9 +1,5 @@
 {
-  "showTemplateDescription": false,
   "terminologyBaseUrl": "terminologyBaseUrlValue",
-  "defaultLanguage": "en",
-  "fallbackLanguage": "en",
   "bridgeBaseUrl": "bridgeBaseUrlValue",
-  "readOnlyMode": false,
   "showDownloadMenu": true
 }
