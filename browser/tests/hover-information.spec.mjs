@@ -1,4 +1,4 @@
-import { test, expect, dashboard, action, resource } from "./fixtures.mjs";
+import { test, expect, dashboard, action, resource, afterHelpDelay } from "./fixtures.mjs";
 import { focusedControl, tabSequence } from "./focus.mjs";
 
 const items = [
@@ -238,7 +238,7 @@ test("a refused Save explains itself to focus and to a screen reader", async ({ 
   await expect(save).not.toHaveAttribute("aria-describedby");
   await page.getByRole("button", { name: "Back to Workspace", exact: true }).focus();
   expect(await tabSequence(page, 1)).toEqual(['button "Save"']);
-  await page.waitForTimeout(400);
+  await afterHelpDelay(page);
   await expect(tip).toHaveCount(0);
 
   // A Save held back for a reload stays disabled, since the alert beside it says why.

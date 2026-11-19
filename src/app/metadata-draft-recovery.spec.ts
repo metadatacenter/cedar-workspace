@@ -16,9 +16,19 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+type Rig = Awaited<ReturnType<typeof metadataRig>>;
+/** The last write the page sent: what it wrote and the revision it named. */
+function lastWrite(m: Rig) {
+  const [, , body, etag] = m.request.mock.calls
+    .filter((call) => call[1] === "PUT")
+    .at(-1)!;
+  return { body: body as Record<string, unknown>, etag };
+}
+
 it("offers the draft after recreation and restores it only on explicit request", async () => {
   const m = await metadataRig("edit", true);
   m.edit();
+  m.editContent("Unsaved value");
   const next = await m.recreate();
   expect(next.name).toBe("Original");
   expect(next.recoveryDraft()?.name).toBe("Unsaved");
@@ -34,6 +44,9 @@ it("offers the draft after recreation and restores it only on explicit request",
   expect(m.request.mock.calls.find((call) => call[1] === "PUT")?.[3]).toBe(
     '"revision"',
   );
+  // The save writes the restored draft, its form content as well as its name.
+  expect(lastWrite(m).body["schema:name"]).toBe("Unsaved");
+  expect(lastWrite(m).body.Value).toEqual({ "@value": "Unsaved value" });
   next.ngOnDestroy();
 });
 
@@ -46,16 +59,41 @@ for (const change of ["revision", "permission"] as const)
     const next = await m.recreate();
     await next.restoreRecovery();
     expect(next.name).toBe("Unsaved");
+    // Only lost access can be rechecked; a changed copy needs the reload.
+    expect(next.canRecheckAccess()).toBe(change === "permission");
+    expect(next.canSignInAgain).toBe(change === "permission");
     m.request.mockClear();
     await next.save();
     expect(m.request).not.toHaveBeenCalled();
     next.ngOnDestroy();
   });
 
+it("restores a save that met a conflict as one, which only a reload resolves", async () => {
+  const m = await metadataRig("edit", true);
+  m.edit();
+  const server = m.request.getMockImplementation()!;
+  m.request.mockImplementation(async (...args) => {
+    if (args[1] === "PUT") throw new HttpError(412, "Changed");
+    return server(...args);
+  });
+  await m.host.save();
+  m.revision('"newer"');
+  const next = await m.recreate();
+  await next.restoreRecovery();
+  expect(next.name).toBe("Unsaved");
+  expect(next.state.reloadRequired()).toBe(true);
+  // As before the browser reload, the conflict offers the reload alone.
+  expect(next.canCheckSave()).toBe(false);
+  expect(next.canRecheckAccess()).toBe(false);
+  expect(next.canSignInAgain).toBe(false);
+  next.ngOnDestroy();
+});
+
 for (const status of [0, 401, 403, 503])
   it(`retains update outcome evidence through reload after ${status}`, async () => {
     const m = await metadataRig("edit", true);
     m.edit();
+    m.editContent("Unsaved value");
     const server = m.request.getMockImplementation()!;
     m.request.mockImplementation(async (...args) => {
       if (args[1] === "PUT") throw new HttpError(status, "refused");
@@ -74,6 +112,15 @@ for (const status of [0, 401, 403, 503])
     await next.checkSaveStatus();
     expect(next.state.reloadRequired()).toBe(false);
     expect(next.name).toBe("Unsaved");
+    m.request.mockImplementation(server);
+    await next.save();
+    expect(lastWrite(m)).toEqual({
+      body: expect.objectContaining({
+        "schema:name": "Unsaved",
+        Value: { "@value": "Unsaved value" },
+      }),
+      etag: '"revision"',
+    });
     next.ngOnDestroy();
   });
 
@@ -130,6 +177,29 @@ it("does not discard the journal for an uncertain creation", async () => {
   await next.discardRecovery();
   expect(next.recoveryDraft()).toBe(draft);
   expect(m.confirm).not.toHaveBeenCalled();
+  next.ngOnDestroy();
+});
+
+it("keeps an uncertain create's journal when its input is discarded on leaving", async () => {
+  const m = await metadataRig("create", true);
+  m.edit();
+  m.request.mockRejectedValueOnce(new HttpError(0, "No reply"));
+  await m.host.save();
+  const sent = m.request.mock.calls.find((call) => call[1] === "PUT")!;
+  const id = (sent[2] as { "@id": string })["@id"];
+  // The person discards the unsaved form and leaves. The create may have committed all the same,
+  // so a return to the same create page must not mint another identity and send it again.
+  expect(await m.host.mayLeave()).toBe(true);
+  expect(m.confirm).toHaveBeenCalled();
+  const next = await m.recreate();
+  expect(next.recoveryDraft()?.uncertainCreation).toBe(true);
+  expect(next.recoveryDraft()?.creation?.id).toBe(id);
+  m.request.mockClear();
+  await next.save();
+  await next.restoreRecovery();
+  expect(next.state.uncertainCreation()).toBe(true);
+  await next.save();
+  expect(m.request.mock.calls.filter((call) => call[1] === "PUT")).toEqual([]);
   next.ngOnDestroy();
 });
 
@@ -220,6 +290,9 @@ it("can recheck a restored draft after permission is granted again", async () =>
   expect(next.state.reloadRequired()).toBe(false);
   expect(next.editor.nativeElement.config.readOnlyMode).toBe(false);
   expect(next.name).toBe("Unsaved");
+  await next.save();
+  expect(lastWrite(m).body["schema:name"]).toBe("Unsaved");
+  expect(lastWrite(m).etag).toBe('"revision"');
   next.ngOnDestroy();
 });
 
@@ -272,6 +345,7 @@ for (const status of [401, 403])
   it(`restores a definitively refused create after fresh folder access (${status})`, async () => {
     const m = await metadataRig("create", true);
     m.edit();
+    m.editContent("Unsaved value");
     m.request.mockRejectedValueOnce(new HttpError(status, "Refused"));
     await m.host.save();
     expect(m.host.canSignInAgain).toBe(true);
@@ -284,6 +358,12 @@ for (const status of [401, 403])
     expect(
       m.request.mock.calls.filter((call) => call[1] === "PUT"),
     ).toHaveLength(1);
+    expect(lastWrite(m).body).toEqual(
+      expect.objectContaining({
+        "schema:name": "Unsaved",
+        Value: { "@value": "Unsaved value" },
+      }),
+    );
     next.ngOnDestroy();
   });
 

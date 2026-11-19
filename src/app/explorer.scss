@@ -15,9 +15,15 @@
   min-width: 0;
   margin: 0;
 }
+.explorer-view-controls {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--cedar-space-3);
+  margin-left: auto;
+}
 .explorer-view-switch {
   display: flex;
-  margin-left: auto;
   border: 1px solid var(--cedar-border-rule);
   border-radius: var(--cedar-radius);
   overflow: hidden;
@@ -66,6 +72,12 @@ body.explorer-dragging.explorer-can-drop * {
   cursor: grabbing !important;
 }
 .explorer-grid {
+  min-height: 0;
+  padding: 0;
+}
+.explorer-grid > .explorer-scroll-content {
+  // Keep the normal empty/card canvas, but let its viewport shrink when wrapped
+  // location and filter rows need more room above it.
   min-height: spacing.$resource-grid-min-height;
   @include spacing.apply(padding, resource-list-inset);
 }

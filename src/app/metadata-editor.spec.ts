@@ -298,6 +298,8 @@ describe("Modern metadata host", () => {
   });
   it("passes the active language to CEE with English as its fallback", async () => {
     await host.ngAfterViewInit();
+    expect(cee.config.wrapFieldNames).toBe(true);
+    expect(cee.config.showTemplateDescription).toBe(true);
     expect(cee.config.defaultLanguage).toBe("en");
     expect(cee.config.fallbackLanguage).toBe("en");
   });
@@ -725,6 +727,38 @@ describe("Modern metadata host", () => {
     expect(host.dirty()).toBe(true);
     expect(host.notice()).toContain("further unsaved");
   });
+  for (const mode of ["create", "edit"])
+    for (const lostReply of [false, true])
+      it.each([false, true])(
+        `reflects a generated saved name after ${mode} (lost reply: ${lostReply}, newer name: %s)`,
+        async newerName => {
+          if (mode === "edit") await edit();
+          else await host.ngAfterViewInit();
+          let stored: Record<string, unknown> = {};
+          let settle!: () => void;
+          api.request.mockImplementation((path, method = "GET", body) => {
+            if (method === "PUT" || method === "POST") {
+              stored = structuredClone(body);
+              return new Promise((resolve, reject) => {
+                settle = () => lostReply
+                  ? reject(new HttpError(503, "Lost reply"))
+                  : resolve({data: {"@id": stored["@id"]}, etag: '"saved"'});
+              });
+            }
+            if (path.endsWith("/report"))
+              return Promise.resolve({data: {currentUserPermissions: {capabilities: ["updateResource"]}}});
+            return Promise.resolve({data: stored, etag: '"saved"'});
+          });
+          host.name = "   "; host.changed();
+          const saving = host.save();
+          if (newerName) { host.name = "Typed while saving"; host.changed(); }
+          settle(); await saving;
+          if (lostReply) await host.checkSaveStatus();
+          expect(String(stored["schema:name"])).not.toBe("");
+          expect(host.name).toBe(newerName ? "Typed while saving" : stored["schema:name"]);
+          expect(host.dirty()).toBe(newerName);
+        },
+      );
   it("reports validation issues without preventing incomplete metadata saves", async () => {
     await edit();
     Object.assign(cee.dataQualityReport, {
@@ -800,6 +834,38 @@ describe("Modern metadata host", () => {
       expect(host.saveRefusedByErrors).toBe(true);
       expect(host.saveDescription).toBe("metadata-save-help metadata-errors-summary");
       expect(host.saveStatus).toBe("Metadata.UnmodifiedStatus");
+    });
+    // CEE's own verdict decides, whatever Workspace makes of the problems it lists: an older CEE,
+    // or a code the local policy calls a warning, can refuse a save Workspace would allow.
+    const report = (canSave: boolean, problems: object[]) => {
+      host.name = "Changed record";
+      host.changed();
+      Object.assign(cee.dataQualityReport, {
+        // A report that lists nothing is valid as far as Workspace can tell, so its own summary
+        // adds no error, and only CEE's verdict holds Save back.
+        isValid: !problems.length,
+        canSave,
+        pendingValidation: false,
+        problems,
+      });
+      host.validated();
+    };
+    const warning = { path: ["Title"], field: "Title", code: "required", blocksSave: false, message: "A value is required." };
+    const error = { path: ["Email"], field: "Email", code: "valueType", blocksSave: true, message: "The answer must be a string." };
+    for (const [listing, problems] of [["nothing", []], ["only a warning", [warning]]] as const)
+      it(`follows CEE's refusal to save when its report lists ${listing}`, async () => {
+        report(false, [...problems]);
+        expect(host.validationErrors).toEqual([]);
+        expect(host.saveRefused).toBe(true);
+        await host.save();
+        expect(writes()).toHaveLength(0);
+      });
+    it("refuses a save CEE allows when its report lists an error", async () => {
+      report(true, [error]);
+      expect(host.validationErrors).toHaveLength(1);
+      expect(host.saveRefused).toBe(true);
+      await host.save();
+      expect(writes()).toHaveLength(0);
     });
     it("drops a waiting save when the editor is destroyed", async () => {
       await host.save();

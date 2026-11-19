@@ -1,12 +1,22 @@
 import {test,expect} from './fixtures.mjs';
 
+// A draft holds CEE's own content as well as the name. The page shows a restored draft whatever a
+// later save sends, so each save after a restore is checked for what it writes.
+const editTitle=page=>page.evaluate(()=>{
+  const cee=document.querySelector('cedar-embeddable-editor');
+  cee.currentMetadata={...cee.currentMetadata,Title:{'@value':'Recovered title'}};
+  cee.dispatchEvent(new CustomEvent('change'));
+});
+
 for(const outcome of ['reload','outage','expired session','permission lost','conflict'])
   test(`restore metadata draft after ${outcome}`,async({page,api})=>{
     let writes=0,fail=outcome!=='reload',revision='"original"';
+    const saves=[];
     await page.route('**/api/resource/template-instances/instance',route=>{
       if(route.request().method()==='PUT'){
         writes++;
         if(fail)return outcome==='outage'?route.abort('failed'):route.fulfill({status:outcome==='expired session'?401:outcome==='permission lost'?403:412,json:{message:'Refused'}});
+        saves.push({body:route.request().postDataJSON(),etag:route.request().headers()['if-match']});
         return route.fulfill({json:{'@id':'instance'},headers:{ETag:'"saved"'}});
       }
       return route.fulfill({json:{'@id':'instance','schema:name':'Study record','schema:isBasedOn':'template'},headers:{ETag:revision}});
@@ -14,9 +24,17 @@ for(const outcome of ['reload','outage','expired session','permission lost','con
     await page.goto('/instances/edit/instance');
     const name=page.getByLabel('Instance name',{exact:true}),save=page.getByRole('button',{name:'Save',exact:true});
     await name.fill('Recover this name');
+    await editTitle(page);
     if(outcome!=='reload'){await save.click();await expect(save).toBeDisabled();}
-    // A reload while the write is in flight restores it as unconfirmed, so let the refusal arrive first.
-    if(['expired session','permission lost'].includes(outcome))await expect(page.getByRole('button',{name:'Recheck access',exact:true})).toBeVisible();
+    // A reload while the write is in flight restores it as unconfirmed, so let each outcome arrive
+    // first. Save is disabled as soon as the write starts, before any of them.
+    const settled={
+      outage:page.getByRole('button',{name:'Check save status',exact:true}),
+      'expired session':page.getByRole('button',{name:'Recheck access',exact:true}),
+      'permission lost':page.getByRole('button',{name:'Recheck access',exact:true}),
+      conflict:page.getByRole('alert').filter({hasText:'This item changed since you opened it.'}),
+    }[outcome];
+    if(settled)await expect(settled).toBeVisible();
     page.on('dialog',dialog=>dialog.accept());
     if(outcome==='conflict')revision='"changed"';
     await page.reload();
@@ -30,8 +48,18 @@ for(const outcome of ['reload','outage','expired session','permission lost','con
     }
     if(outcome==='conflict'){
       await expect(save).toBeDisabled();expect(writes).toBe(1);
+      // The conflict comes back as one, to be reloaded, and not as a write whose outcome is unknown.
+      await expect(page.getByRole('button',{name:'Reload metadata',exact:true})).toBeVisible();
+      await expect(page.getByRole('button',{name:'Check save status',exact:true})).toHaveCount(0);
+      // Neither rechecking access nor signing in again can resolve a changed copy.
+      for(const control of ['Recheck access','Sign in again'])
+        await expect(page.getByRole('button',{name:control,exact:true})).toHaveCount(0);
     }else{
       await expect(save).toBeEnabled();await save.click();await expect(page.locator('.metadata-save-status')).toHaveText('Saved');
+      expect(saves).toHaveLength(1);
+      expect(saves[0].etag).toBe('"original"');
+      expect(saves[0].body['schema:name']).toBe('Recover this name');
+      expect(saves[0].body.Title).toEqual({'@value':'Recovered title'});
     }
   });
 

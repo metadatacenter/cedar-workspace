@@ -42,6 +42,18 @@ async function openPicker(page, action = 'Copy', many = false, options = {}) {
 // Create Draft confirms with Ok; Copy and Move save.
 const submitLabel = action => action === 'Create Draft' ? 'Ok' : 'Save';
 
+// The one command each action sends into the chosen folder, with the fields its endpoint reads.
+// Only a move names the revision it read.
+const commands = {
+  Copy: {method: 'POST', path: '/api/resource/command/copy-artifact-to-folder',
+    body: {'@id': 'template', targetFolderId: 'archive', nameTemplate: expect.any(String)}, revision: undefined},
+  Move: {method: 'POST', path: '/api/resource/command/move-resource-to-folder',
+    body: {'@id': 'template', targetFolderId: 'archive'}, revision: '"fixture-revision"'},
+  'Create Draft': {method: 'POST', path: '/api/resource/command/create-draft-artifact',
+    body: {'@id': 'template', newVersion: expect.any(String), folderId: 'archive', propagateSharing: true, newFolderName: null},
+    revision: undefined},
+};
+
 for (const action of ['Copy', 'Move', 'Create Draft']) {
   test(`${action} uses the shared folder list, sorts and navigates with permissions`, async ({page, api}) => {
     const reads = await openPicker(page, action);
@@ -94,8 +106,7 @@ for (const action of ['Copy', 'Move', 'Create Draft']) {
     expect(reads.at(-1)).toEqual({id:'archive', sort:'lastUpdatedOnTS', offset:'0'});
     await dialog.getByRole('button', {name:submitLabel(action), exact:true}).click();
     await expect(dialog).toHaveCount(0);
-    const command = api.requests.find(r => r.path.includes('/command/'));
-    expect(command.body.targetFolderId ?? command.body.folderId).toBe('archive');
+    expect(api.requests.filter(r => r.path.includes('/command/'))).toEqual([commands[action]]);
   });
 }
 

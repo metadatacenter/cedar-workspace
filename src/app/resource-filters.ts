@@ -2,6 +2,8 @@ import {
   Component,
   ElementRef,
   HostListener,
+  Injector,
+  afterNextRender,
   inject,
   input,
   output,
@@ -31,13 +33,14 @@ export class ResourceFilters {
   private static nextId = 0;
   readonly id = `resource-filters-${ResourceFilters.nextId++}`;
   readonly value = input.required<ListingFilters>();
-  readonly change = output<ListingFilters>();
+  readonly filtersChange = output<ListingFilters>();
   readonly version = input("all");
   readonly versionChange = output<string>();
   readonly open = signal<"type" | "date" | null>(null);
   readonly types = resourceTypes;
   readonly draft = signal<ListingFilters>(emptyFilters());
   private host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
   private readonly i18n = inject(I18n);
   private trigger?: HTMLElement;
   get presets(): { value: DatePreset; label: string }[] {
@@ -100,18 +103,26 @@ export class ResourceFilters {
       this.close();
       return;
     }
-    this.trigger = document.activeElement as HTMLElement;
+    // Safari pointer activation need not focus the trigger. Restore to the actual chip.
+    this.trigger = this.host.nativeElement
+      .querySelectorAll("cedar-filter-chip")[kind === "type" ? 0 : 1]
+      ?.querySelector<HTMLButtonElement>("button") ?? undefined;
     const value = this.value();
     this.draft.set({ ...value, types: [...value.types], ...dateBounds(value) });
     this.open.set(kind);
-    setTimeout(() => {
-      this.fitPopover();
-      this.host.nativeElement
-        .querySelector<HTMLElement>(
-          '[role="dialog"] button, [role="dialog"] input',
-        )
-        ?.focus();
-    });
+    // The popover is in the page only once Angular has drawn it. A timer could fire before that,
+    // and the popover then kept its fallback height and took no focus.
+    afterNextRender(
+      () => {
+        this.fitPopover();
+        this.host.nativeElement
+          .querySelector<HTMLElement>(
+            '[role="dialog"] button, [role="dialog"] input',
+          )
+          ?.focus();
+      },
+      { injector: this.injector },
+    );
   }
   @HostListener("window:resize")
   fitPopover() {
@@ -160,7 +171,7 @@ export class ResourceFilters {
   apply() {
     if (this.open() === "date" && this.rangeError) return;
     const draft = this.draft();
-    this.change.emit(
+    this.filtersChange.emit(
       this.open() === "type"
         ? { ...this.value(), types: draft.types }
         : {
@@ -187,7 +198,7 @@ export class ResourceFilters {
       host
         .querySelectorAll<HTMLElement>("cedar-filter-chip button:not(.clear)")
         [kind === "date" ? 1 : 0]?.focus();
-    this.change.emit(
+    this.filtersChange.emit(
       kind === "type"
         ? { ...this.value(), types: [] }
         : kind === "date"

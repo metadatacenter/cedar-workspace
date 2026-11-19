@@ -17,6 +17,11 @@ test("Type applies multiple selections, cancels drafts, clears independently and
   page,
   api,
 }) => {
+  const errors = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+  page.on("pageerror", (error) => errors.push(error.message));
   await dashboard(page);
   const type = chip(page, "type");
   await expect(type).toHaveAccessibleName("Type");
@@ -35,13 +40,17 @@ test("Type applies multiple selections, cancels drafts, clears independently and
     );
   }
   await popup.getByLabel("Folder", { exact: true }).check();
-  await popup.getByLabel("Template", { exact: true }).check();
+  await popup.getByLabel("Template", { exact: true }).focus();
+  await page.keyboard.press("Space");
   await popup.getByRole("button", { name: "Apply", exact: true }).click();
   await expect(page).toHaveURL(/resource_types=folder(?:%2C|,)template/);
   await expect(type).toHaveText("Folder, Template");
   await expect(type).toHaveAccessibleName("Folder, Template (type filter)");
   await expect(
-    page.getByRole("button", { name: "Folder, Template (type filter)", exact: true }),
+    page.getByRole("button", {
+      name: "Folder, Template (type filter)",
+      exact: true,
+    }),
   ).toHaveAttribute("aria-expanded", "false");
   await type.click();
   await popup.getByLabel("Field", { exact: true }).check();
@@ -62,15 +71,21 @@ test("Type applies multiple selections, cancels drafts, clears independently and
   await expect(page).not.toHaveURL(/resource_types/);
   await expect(type).toHaveText("Type");
   await expect(type).toHaveAccessibleName("Type");
+  expect(errors).toEqual([]);
 });
 
-test("an active chip's name begins with its choice in Hungarian too", async ({ page, api }) => {
+test("an active chip's name begins with its choice in Hungarian too", async ({
+  page,
+  api,
+}) => {
   await page.addInitScript(() =>
     Object.defineProperty(navigator, "languages", { get: () => ["hu-HU"] }),
   );
   await page.goto("/dashboard?resource_types=folder,template");
   await expect(chip(page, "type")).toHaveText("Mappa, Sablon");
-  await expect(chip(page, "type")).toHaveAccessibleName("Mappa, Sablon (szűrő: típus)");
+  await expect(chip(page, "type")).toHaveAccessibleName(
+    "Mappa, Sablon (szűrő: típus)",
+  );
   await expect(chip(page, "date")).toHaveAccessibleName("Utolsó módosítás");
 });
 
@@ -122,7 +137,9 @@ test("date presets and inclusive custom ranges are sent to the listing API, incl
     .toBe(String(Date.parse("2026-01-11T00:00:00Z")));
   await page.reload();
   await expect(date).toHaveText(/10 Jan 2026/);
-  await expect(date).toHaveAccessibleName("10 Jan 2026 – 10 Jan 2026 (last modified filter)");
+  await expect(date).toHaveAccessibleName(
+    "10 Jan 2026 – 10 Jan 2026 (last modified filter)",
+  );
   await page
     .getByRole("button", { name: "Clear filters", exact: true })
     .click();
@@ -165,7 +182,10 @@ for (const width of [1440, 375]) {
       });
     await page.getByRole("button", { name: "Apply", exact: true }).click();
     await expect(
-      page.getByRole("button", { name: "Folder, Instance (type filter)", exact: true }),
+      page.getByRole("button", {
+        name: "Folder, Instance (type filter)",
+        exact: true,
+      }),
     ).toHaveText("Folder, Instance");
     expect(
       await page.evaluate(

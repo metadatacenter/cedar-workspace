@@ -37,10 +37,16 @@ for (const kind of ["user", "group"]) {
     let permissions = { owner, userPermissions: [], groupPermissions: [] };
     let finishWrite;
     let finishReport;
+    const writes = [];
     await page.route("**/templates/template/permissions", async route => {
       if (route.request().method() === "PUT") {
-        await new Promise(resolve => { finishWrite = resolve; });
         const submitted = route.request().postDataJSON();
+        writes.push(submitted);
+        await new Promise(resolve => { finishWrite = resolve; });
+        // Answer as the server would: it keeps what it was sent and knows no other principal.
+        if (!submitted.userPermissions.every(g => g.user["@id"] === user["@id"]) ||
+          !submitted.groupPermissions.every(g => g.group["@id"] === group["@id"]))
+          return route.fulfill({ status: 400, json: { message: "Unknown principal" } });
         permissions = {
           owner,
           userPermissions: submitted.userPermissions.map(g => ({ ...g, user })),
@@ -71,6 +77,13 @@ for (const kind of ["user", "group"]) {
       if (operation === "remove")
         await page.locator("dialog.confirmation-dialog").getByRole("button", { name: "Yes", exact: true }).click();
       await expect.poll(() => !!finishWrite).toBe(true);
+      // The write grants the chosen principal the role a new grant starts with, or removes it.
+      const granted = operation === "add" ? [{ [kind]: { "@id": (kind === "user" ? user : group)["@id"] }, role: "viewer" }] : [];
+      expect(writes.at(-1)).toEqual({
+        owner: { "@id": owner["@id"] },
+        userPermissions: kind === "user" ? granted : [],
+        groupPermissions: kind === "group" ? granted : [],
+      });
       await expect(input).toBeDisabled();
       expect((await table.boundingBox()).y).toBe(initialTop);
       finishWrite();

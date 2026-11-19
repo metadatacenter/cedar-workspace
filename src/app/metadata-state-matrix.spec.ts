@@ -51,6 +51,30 @@ function nested(depth: number, repeated: boolean, fieldType: string) {
 }
 
 describe("metadata validation ownership matrix", () => {
+  // The server's report lists every verification it made, those that passed included. A passed
+  // one is no problem with the instance, so only the failed one is listed.
+  it("lists a refused instance's failed verification and none that passed", () => {
+    const { template, pointer } = nested(1, true, "repeated");
+    const verification = (verificationStatus: string, code: string, message: string) => ({
+      code,
+      category: "verification",
+      verificationStatus,
+      path: pointer,
+      message,
+    });
+    const passed = verification("passed", "controlledTermVerified", "The term is in its ontology");
+    const failed = verification("failed", "controlledTermMembership", "The term is not in its ontology");
+    const state = new MetadataState();
+    state.observe(good, "current");
+    state.reject({ findings: [passed, failed] }, "current", template);
+    expect(state.quality()!.problems.map((p) => [p.code, p.message])).toEqual([
+      ["controlledTermMembership", "The term is not in its ontology"],
+    ]);
+    const verified = new MetadataState();
+    verified.observe(good, "current");
+    verified.reject({ findings: [passed] }, "current", template);
+    expect(verified.quality()!.problems).toEqual([]);
+  });
   it("consumes categorized server facts once and separates quality from saveability", () => {
     const { template, pointer } = nested(1, true, "repeated");
     const state = new MetadataState();

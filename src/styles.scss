@@ -216,6 +216,7 @@ cedar-workspace-page {
   grid-column: 2;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 .workspace > .information {
   grid-column: 3;
@@ -285,9 +286,24 @@ main {
 }
 .table-toolbar .breadcrumbs {
   @include patterns.breadcrumbs($size: heading);
+  min-width: 0;
+}
+.breadcrumb-segment {
+  display: inline-flex;
+  align-items: baseline;
+  min-width: 0;
+  max-width: 100%;
+}
+.breadcrumb-segment > a {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.breadcrumb-segment > .breadcrumb-separator {
+  flex-shrink: 0;
 }
 .table-toolbar {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
   min-height: var(--cedar-control-height-default);
@@ -650,6 +666,23 @@ label {
   .workspace.right-collapsed {
     grid-template-columns: 200px minmax(0, 1fr) 0;
   }
+  // Long paths and both panels can leave less than a row for the listing. Keep
+  // its existing canvas usable; the central pane scrolls when the whole stack
+  // of breadcrumbs, filters, listing and paging cannot fit vertically.
+  @media (min-width: 761px) {
+    .workspace:not(.left-collapsed):not(.right-collapsed) > main {
+      overflow-y: auto;
+    }
+    .workspace:not(.left-collapsed):not(.right-collapsed) .table-scroll {
+      min-height: spacing.$resource-grid-min-height;
+    }
+    .workspace:not(.left-collapsed):not(.right-collapsed) .paging {
+      position: sticky;
+      bottom: 0;
+      z-index: var(--cedar-layer-sticky);
+      background: var(--cedar-surface-raised);
+    }
+  }
   main {
     padding: var(--cedar-space-3);
   }
@@ -740,22 +773,22 @@ th:nth-child(2) {
 }
 /* The list view sizes Last modified and Version to their content and gives the name the
    rest. */
-.table-scroll:not(.explorer-grid) > table {
+.table-scroll:not(.explorer-grid) > .explorer-scroll-content > table {
   table-layout: auto;
 }
-.table-scroll:not(.explorer-grid) > table th {
+.table-scroll:not(.explorer-grid) > .explorer-scroll-content > table th {
   white-space: nowrap;
 }
 /* The column headings, which also sort, stay in view while the rows scroll beneath them. A
    collapsed border stays with the table rather than with a sticky heading, so each heading
    paints its own copy of the rule over the border's position. */
-.table-scroll:not(.explorer-grid) > table thead th {
+.table-scroll:not(.explorer-grid) > .explorer-scroll-content > table thead th {
   position: sticky;
   top: 0;
   z-index: var(--cedar-layer-sticky);
   background: var(--cedar-surface-raised);
 }
-.table-scroll:not(.explorer-grid) > table thead th::after {
+.table-scroll:not(.explorer-grid) > .explorer-scroll-content > table thead th::after {
   content: "";
   position: absolute;
   inset-inline: 0;
@@ -764,10 +797,10 @@ th:nth-child(2) {
   border-bottom: 2px solid var(--cedar-border-rule);
   pointer-events: none;
 }
-.table-scroll:not(.explorer-grid) > table th:nth-child(2) {
+.table-scroll:not(.explorer-grid) > .explorer-scroll-content > table th:nth-child(2) {
   width: auto;
 }
-.table-scroll:not(.explorer-grid) > table td:first-child {
+.table-scroll:not(.explorer-grid) > .explorer-scroll-content > table td:first-child {
   width: 100%;
   max-width: 0;
 }

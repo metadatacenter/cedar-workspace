@@ -10,6 +10,7 @@ import {
 } from "./app/i18n";
 import { metadataRoute, leaveMetadata } from "./app/metadata-route";
 import { PageTitles } from "./app/page-title";
+import { loadAnalytics } from "./app/analytics";
 @Component({
   selector: "cedar-workspace",
   imports: [RouterOutlet, ConfirmationOutlet],
@@ -18,6 +19,7 @@ import { PageTitles } from "./app/page-title";
 class App {}
 const language = detectLanguage();
 document.documentElement.lang = language;
+loadAnalytics();
 bootstrapApplication(App, {
   providers: [
     provideWorkspaceTranslations(language),

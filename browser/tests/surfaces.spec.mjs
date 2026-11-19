@@ -148,6 +148,10 @@ for (const [key, label] of Object.entries({
       .getByRole("button", { name: label, exact: true })
       .click();
     await expect(page.locator("dialog[open]")).toBeVisible();
+    if (key === "permissions")
+      // Opening the shell precedes the report/permissions requests. Measure the
+      // loaded sections only after their content has rendered.
+      await expect(page.getByRole("table", { name: "Direct resource permissions" })).toBeVisible();
   };
 }
 for (const kind of ["errors", "warnings"])

@@ -16,14 +16,41 @@ describe("Authorized backend", () => {
   beforeEach(() => {
     api = TestBed.runInInjectionContext(() => new Backend());
     api.config = config;
-    renew = vi.fn((_s: number, ok: () => void) => ok());
+    // A forced refresh, as after a 401, issues a new token; any other leaves the current one.
+    let token = "first-token";
+    renew = vi.fn((seconds: number, ok: () => void) => {
+      if (seconds === -1) token = "refreshed-token";
+      ok();
+    });
     Object.assign(api, {
-      auth: { refreshToken: renew, getToken: () => "test-token" },
+      auth: { refreshToken: renew, getToken: () => token },
     });
     fetcher = vi.fn();
     vi.stubGlobal("fetch", fetcher);
   });
   afterEach(() => vi.unstubAllGlobals());
+  it("does not start a report fetch after navigation aborts a pending token refresh", async () => {
+    let refreshed!: () => void;
+    renew.mockImplementation((_seconds: number, ok: () => void) => { refreshed = ok; });
+    const controller = new AbortController();
+    const pending = api.report({ "@id": "id", resourceType: "template" }, controller.signal);
+    controller.abort();
+    refreshed();
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+  it("cancels a report already in flight without suppressing unrelated network failures", async () => {
+    const controller = new AbortController();
+    fetcher.mockImplementation((_url, options) => new Promise((_resolve, reject) => {
+      options.signal.addEventListener("abort", () => reject(options.signal.reason), { once: true });
+    }));
+    const pending = api.report({ "@id": "id", resourceType: "template" }, controller.signal);
+    await vi.waitFor(() => expect(fetcher).toHaveBeenCalledOnce());
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({ status: 0 });
+    fetcher.mockRejectedValue(new TypeError("CORS failure"));
+    await expect(api.report({ "@id": "id", resourceType: "template" })).rejects.toMatchObject({ status: 0 });
+  });
   it("preserves source numbers from the HTTP response through the next write", async () => {
     const source = '{"N":9007199254740993,"D":0.10000000000000001}';
     fetcher.mockImplementation(() => Promise.resolve(new Response(source)));
@@ -76,6 +103,9 @@ describe("Authorized backend", () => {
       expect.any(Function),
     );
     expect(fetcher.mock.calls[1][1].headers["If-Match"]).toBe('"etag"');
+    // The retry carries the token the refresh issued, not the one the server refused.
+    expect(fetcher.mock.calls[0][1].headers.Authorization).toBe("Bearer first-token");
+    expect(fetcher.mock.calls[1][1].headers.Authorization).toBe("Bearer refreshed-token");
   });
   for (const afterRefusal of [false, true])
     it(`an expired session is a confirmed refusal, after server refusal=${afterRefusal}`, async () => {
@@ -95,6 +125,26 @@ describe("Authorized backend", () => {
     );
     expect(fetcher).not.toHaveBeenCalled();
   });
+  // A destination is trusted only when its origin is one of the configured bases exactly: a host
+  // that merely begins with a trusted one, another port or a plain-HTTP scheme is not.
+  for (const base of [config.resourceRestAPI, config.userRestAPI, config.groupRestAPI]) {
+    const { host } = new URL(base);
+    for (const destination of [
+      `https://${host}.evil.test/data`,
+      `https://${host}@evil.test/data`,
+      `https://${host}:8443/data`,
+      `http://${host}/data`,
+    ])
+      it(`sends no credentials to ${destination}`, async () => {
+        await expect(api.request(destination)).rejects.toThrow("Untrusted");
+        expect(fetcher).not.toHaveBeenCalled();
+      });
+    it(`sends credentials to ${base} itself`, async () => {
+      fetcher.mockResolvedValue(new Response("{}"));
+      await api.request(base + "/data");
+      expect(fetcher.mock.calls[0][1].headers.Authorization).toBe("Bearer first-token");
+    });
+  }
   it("notes a server's own message, which it writes in English, and not a message of Workspace's", async () => {
     const serverText = TestBed.inject(ServerText);
     fetcher.mockResolvedValue(

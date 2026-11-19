@@ -56,7 +56,7 @@ import { FormsModule } from "@angular/forms";
 import { TranslatePipe } from "@ngx-translate/core";
 import { ActivatedRoute, NavigationStart, Router, RouterLink } from "@angular/router";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
-import { Backend } from "./backend.service";
+import { Backend, HttpError } from "./backend.service";
 import {
   Resource,
   Listing,
@@ -372,7 +372,28 @@ export class Workspace {
   readonly total = signal(0);
   readonly offset = signal(0);
   readonly left = signal(true);
-  readonly right = signal(true);
+  private readonly viewportWidth = signal(window.innerWidth);
+  private readonly informationPreference = signal<boolean | null>(null);
+  readonly right = computed(() => this.informationPreference() ??
+    (!!this.selected() || this.viewportWidth() <= 760 || this.viewportWidth() > 1100));
+
+  toggleInformation(): void {
+    const opening = !this.right();
+    const selectedId = this.selected()?.["@id"] ?? this.selectionIds()[0];
+    this.informationPreference.set(opening);
+    if (this.viewportWidth() > 760) return;
+    afterNextRender(() => {
+      if (this.viewportWidth() > 760 || this.right() !== opening) return;
+      const host = this.host.nativeElement;
+      const target = opening
+        ? host.querySelector<HTMLElement>("#workspace-information")
+        : (selectedId
+            ? host.querySelector<HTMLElement>(`[data-resource-id="${CSS.escape(selectedId)}"]`)
+            : null) ?? host.querySelector<HTMLElement>("main");
+      target?.focus({ preventScroll: true });
+      target?.scrollIntoView({ block: "start" });
+    }, { injector: this.injector });
+  }
   readonly dialog = signal<{ action: string; resource?: Resource } | null>(
     null,
   );
@@ -394,6 +415,8 @@ export class Workspace {
   private reselectTab: InfoTab = "info";
   readonly state = new OperationCoordinator<"listing" | "folder" | "detail" | "instances" | "menu" | "enrichment" | "move">();
   private listingGeneration = 0;
+  private documentActive = true;
+  private enrichmentAbort?: AbortController;
   // Detail, menus and background enrichment publish into the same resource state.
   private reports = new OperationCoordinator<string>();
   constructor() {
@@ -414,6 +437,7 @@ export class Workspace {
       this.notices.cancel();
       this.tooltips.resume();
       document.body.classList.remove("explorer-dragging", "explorer-can-drop");
+      this.stopTemplateActions();
       this.state.dispose();
       this.reports.dispose();
       this.titles.name(null);
@@ -484,6 +508,7 @@ export class Workspace {
     if (!this.state.active) return;
     if (!refresh) this.pendingMoveSelection = [];
     this.listingGeneration++;
+    this.stopTemplateActions();
     this.reports.dispose();
     this.reports = new OperationCoordinator<string>();
     clearTimeout(this.movedTimer);
@@ -688,7 +713,26 @@ export class Workspace {
       if (operation.current()) this.fail(e);
     }
   }
+  @HostListener("window:pagehide") suspendTemplateActions() {
+    this.documentActive = false;
+    this.stopTemplateActions();
+  }
+  @HostListener("window:pageshow", ["$event"]) resumeTemplateActions(event: PageTransitionEvent) {
+    this.documentActive = true;
+    // A bfcache return preserves the listing, selection and focus. Only its interrupted
+    // background enrichment needs to restart; a new document follows normal startup.
+    if (event.persisted) void this.loadTemplateActions(this.rows());
+  }
+  private stopTemplateActions() {
+    this.state.cancel("enrichment");
+    this.enrichmentAbort?.abort();
+    this.enrichmentAbort = undefined;
+  }
   private async loadTemplateActions(resources: Resource[]) {
+    this.stopTemplateActions();
+    if (!this.documentActive || !this.state.active) return;
+    const controller = new AbortController();
+    this.enrichmentAbort = controller;
     const operation = this.state.begin("enrichment");
     const templates = resources.filter((r) => r.resourceType === "template");
     // Claim the whole background batch now, before a user requests fresher details.
@@ -697,7 +741,7 @@ export class Workspace {
       if (!operation.current()) return;
       const reports = await Promise.allSettled(
         templates.slice(i, i + 4).map((r, index) =>
-          owners[i + index].current() ? this.api.report(r) : Promise.resolve(null)),
+          owners[i + index].current() ? this.api.report(r, controller.signal) : Promise.resolve(null)),
       );
       if (!operation.current()) return;
       for (const [index, report] of reports.entries()) {
@@ -711,6 +755,16 @@ export class Workspace {
             return;
           }
         }
+      }
+      // WebKit can reject in-flight fetches before pagehide arrives. A transport failure
+      // ends this background batch: starting another in the departing document produces
+      // spurious CORS errors. An ordinary HTTP refusal concerns one item, so it does not
+      // stop the other reports. Refresh or a bfcache return starts fresh enrichment.
+      const interrupted = reports.find((report) =>
+        report.status === "rejected" && report.reason instanceof HttpError && report.reason.status === 0);
+      if (interrupted?.status === "rejected") {
+        operation.fail(interrupted.reason);
+        return;
       }
     }
     operation.finish();
@@ -744,6 +798,7 @@ export class Workspace {
   @HostListener("window:resize")
   @HostListener("document:keydown.escape")
   escapeMenu() {
+    this.viewportWidth.set(window.innerWidth);
     if (this.menu()) this.menuTrigger?.focus();
     this.menu.set(null);
     this.host.nativeElement

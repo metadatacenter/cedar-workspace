@@ -747,7 +747,7 @@
       "source": [
         {
           "file": "src/app/workspace.html",
-          "anchor": "<main (keydown)=\"explorerKeys($event)\">"
+          "anchor": "<main tabindex=\"-1\" (keydown)=\"explorerKeys($event)\">"
         }
       ],
       "test": "browser/tests/surfaces.spec.mjs"

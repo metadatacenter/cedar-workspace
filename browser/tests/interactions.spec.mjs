@@ -1,5 +1,5 @@
 import { comparePixels } from "./browser-tags.mjs";
-import { test, expect, dashboard, action, resource } from "./fixtures.mjs";
+import { test, expect, dashboard, action, resource, afterHelpDelay } from "./fixtures.mjs";
 import { tokenStyles, feedbackSpacing } from './overlay-spacing.mjs';
 
 test("artifact commands support keyboard navigation, Escape, and return focus", async ({
@@ -598,9 +598,6 @@ test("metadata errors and nonblocking warnings share centered, expandable summar
     { path: ["Email"], code: "valueShape", message: "Enter a valid email.", severity: "error" },
     { path: ["Title"], code: "required", message: "A value is required.", severity: "warning" },
   ]);
-  await page
-    .locator(".metadata-content")
-    .screenshot({ path: "/tmp/metadata-validation-summaries.png" });
   await expect(warnings).toHaveCSS("color", "rgb(180, 83, 9)");
   await page.evaluate(() => {
     const cee = document.querySelector("cedar-embeddable-editor");
@@ -613,7 +610,7 @@ test("metadata errors and nonblocking warnings share centered, expandable summar
   ).toBeEnabled();
   // An enabled Save needs no explanation.
   await page.locator(".metadata-save-action").hover();
-  await page.waitForTimeout(400);
+  await afterHelpDelay(page);
   await expect(page.getByRole("tooltip")).toHaveCount(0);
 });
 
