@@ -50,6 +50,8 @@ export const test = base.extend({
       permissions: { owner, userPermissions: [{ user: collaborator, role: "viewer" }], groupPermissions: [] },
       readonly: false,
       monitoring: false,
+      // Every folder listing and search comes back empty.
+      emptyFolder: false,
       members: [
         { user: owner, administrator: true, member: true },
         { user: collaborator, administrator: false, member: true },
@@ -217,10 +219,10 @@ export const test = base.extend({
       else if (path.endsWith("/users")) body = { users: [owner, collaborator] };
       else if (path.endsWith("/contents") || path.endsWith("/search"))
         body = {
-          resources: url.searchParams.has("is_based_on")
+          resources: url.searchParams.has("is_based_on") || state.emptyFolder
             ? []
             : [{ ...item, pathInfo: state.pathInfo }],
-          totalCount: 1,
+          totalCount: state.emptyFolder ? 0 : 1,
           pathInfo: state.pathInfo ?? [home],
         };
       else if (path.includes("/folders/home")) body = home;

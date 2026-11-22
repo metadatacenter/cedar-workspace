@@ -154,6 +154,12 @@ const controls = {
 const states = {
   dashboard: (page) => route(page, "/dashboard"),
   "dashboard list": (page) => dashboard(page),
+  // Grid view hides the header row, so an empty grid view must not leave a grid without rows.
+  "empty grid": async (page, api) => {
+    api.emptyFolder = true;
+    await route(page, "/dashboard?view=grid");
+    await expect(page.locator(".table-scroll.explorer-grid .empty")).toBeVisible();
+  },
   groups: (page) => route(page, "/groups"),
   "selected group": async (page) => {
     await route(page, "/groups");
@@ -707,7 +713,7 @@ async function settle(page, state, undecided) {
 
 for (const [name, state] of Object.entries(states))
   test(`accessible ${name}`, async ({ page, api }) => {
-    const exclude = (await state(page)) ?? [];
+    const exclude = (await state(page, api)) ?? [];
     const { violations, undecided } = await audit(page, exclude);
     expect(violations).toEqual([]);
     await settle(page, name, undecided);

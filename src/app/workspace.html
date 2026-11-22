@@ -318,7 +318,9 @@
       <!-- A grid, so that its rows take aria-selected. It is one Tab stop: the arrow keys move
            between rows, and Tab reaches one row and the controls inside it. -->
       <div class="explorer-scroll-content">
-      <table role="grid" aria-multiselectable="true">
+      <!-- An empty grid view hides the header row, which leaves a grid with no rows at all; the
+           empty-state line below says what the folder holds. -->
+      <table role="grid" aria-multiselectable="true" [attr.aria-hidden]="grid() && !rows().length ? 'true' : null">
         <caption class="sr-only">
           {{'Dashboard.TableCaption' | translate}}
         </caption>
