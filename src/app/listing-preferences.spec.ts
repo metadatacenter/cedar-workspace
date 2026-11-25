@@ -105,7 +105,7 @@ describe("Saved listing", () => {
       { "uiPreferences.workspace": { ...defaultPreferences(), viewMode: "list" } },
       { "uiPreferences.workspace": { ...defaultPreferences(), version: "latest" } },
     ]);
-    expect(api.request.mock.calls[1].slice(0, 2)).toEqual(["/users/me", "PUT"]);
+    expect(api.request.mock.calls[1].slice(0, 2)).toEqual(["/users/me", "PATCH"]);
   });
   it("writes nothing for a choice the profile already holds", () => {
     api.profile.uiPreferences = { workspace: chosen };
@@ -214,7 +214,7 @@ describe("Workspace listing preferences", () => {
     });
     host.setFoldersFirst(true);
     await vi.waitFor(() =>
-      expect(api.request).toHaveBeenCalledWith("/users/me", "PUT", {
+      expect(api.request).toHaveBeenCalledWith("/users/me", "PATCH", {
         "uiPreferences.workspace": {
           ...defaultPreferences(),
           resourceTypes: ["template"],

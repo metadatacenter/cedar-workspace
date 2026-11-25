@@ -160,7 +160,7 @@ export class SavedListing {
         const workspace = this.next;
         this.next = undefined;
         try {
-          await this.api.request(this.api.userPath, "PUT", { "uiPreferences.workspace": workspace });
+          await this.api.request(this.api.userPath, "PATCH", { "uiPreferences.workspace": workspace });
         } catch {
           // The choice holds for this visit; the profile keeps the one before it.
         }

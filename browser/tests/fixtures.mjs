@@ -147,7 +147,7 @@ export const test = base.extend({
       };
       // Choosing a listing preference writes the profile in the background. It is recorded apart
       // from the other requests, so a spec asserting what a dialog wrote need not discount it.
-      if (record.method === "PUT" && path === "/api/user/users/owner") state.profileWrites.push(record);
+      if (record.method === "PATCH" && path === "/api/user/users/owner") state.profileWrites.push(record);
       else state.requests.push(record);
       if (state.pending && request.method() !== "GET")
         await new Promise((resolve) => setTimeout(resolve, 250));
@@ -167,7 +167,7 @@ export const test = base.extend({
       if (path.endsWith("/summary")) body = { createdTimestamp: 1767268800000 };
       else if (path.endsWith("/apiKeys")) body = { apiKeys: [] };
       else if (path === "/api/user/users/owner") {
-        const submitted = request.method() === "PUT" ? request.postDataJSON() : {};
+        const submitted = request.method() === "PATCH" ? request.postDataJSON() : {};
         if ("uiPreferences.workspace" in submitted) state.listing = submitted["uiPreferences.workspace"];
         body = {
           ...owner,

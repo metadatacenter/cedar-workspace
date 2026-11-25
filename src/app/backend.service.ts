@@ -281,22 +281,4 @@ export class Backend {
       this.path(r) + (r.resourceType === "folder" || content ? "" : "/details"),
     );
   }
-  async download(r: Resource, format: string) {
-    const response = await this.raw(
-      this.path(r) + "/download?compact=" + (format === "yamlc"),
-      "POST",
-      {},
-      undefined,
-      format === "json" ? "application/json" : "application/x-yaml",
-    );
-    const url = URL.createObjectURL(await response.blob());
-    const a = document.createElement("a");
-    a.href = url;
-    a.download =
-      (r["schema:name"] || "artifact") +
-      "." +
-      (format === "json" ? "json" : "yaml");
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }
 }
