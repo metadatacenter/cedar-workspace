@@ -506,11 +506,9 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
         case "make-open":
         case "make-not-open":
           await this.api.request(
-            "/command/make-" +
-              (r!.resourceType === "folder" ? "folder" : "artifact") +
-              (this.action === "make-open" ? "-open" : "-not-open"),
-            "POST",
-            { "@id": resourceSelector(id!) },
+            this.api.path(r!),
+            "PATCH",
+            { isOpen: this.action === "make-open" },
             this.etag,
           );
           break;

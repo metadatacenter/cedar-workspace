@@ -138,7 +138,7 @@ const SITES = {
   },
   "enabling OpenView": {
     conditional: true,
-    request: (method, path) => method === "POST" && path.endsWith("/command/make-artifact-open"),
+    request: (method, path) => method === "PATCH" && path.includes("/templates/template"),
     before: (page, t) => resourceAction(page, t, "ResourceActions.MakeOpen"),
     act: submitDialog,
   },
