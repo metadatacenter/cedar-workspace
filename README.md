@@ -37,13 +37,10 @@ today and the preceding six days). Custom After and Before dates are inclusive;
 either may be blank. The range controls use native date inputs and do not load CEE.
 
 `listing-filters.ts` translates dates to `modified_after` (inclusive) and
-`modified_before` (exclusive) epoch-millisecond bounds. The Resource Server applies
-them together with `resource_types` before counting and paginating folder, shared,
-community and indexed search results. It requires the matching server/library changes;
-an older Resource Server does not implement these date parameters. The Resource Server
-refuses a bound before March 1973 as most likely a time in seconds. CEDAR holds nothing
-that old, so the Workspace leaves out an earlier After date and raises an earlier Before
-date to that bound, which gives the same listing.
+`modified_before` (exclusive) bounds. Each bound is the ISO-8601 instant of a local
+midnight, such as `2026-03-08T08:00:00.000Z`. The Resource Server applies them together
+with `resource_types` before counting and paginating folder, shared, community and
+indexed search results. It refuses a bound in epoch milliseconds.
 
 The sort menu above the row actions offers Name, Last modified and Date created,
 with ascending/descending order and optional folders on top. Its state is shared

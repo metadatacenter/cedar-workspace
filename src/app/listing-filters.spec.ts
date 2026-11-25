@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   applyListingFilters,
   dateBounds,
-  EARLIEST_MODIFIED_BOUND,
   filterQuery,
   filtersFromParams,
   parseDate,
@@ -41,10 +40,10 @@ describe("Workspace filters", () => {
     applyListingFilters(query, params);
     expect(query.get("resource_types")).toBe("template,field");
     expect(query.get("modified_after")).toBe(
-      String(new Date(2026, 2, 8).getTime()),
+      new Date(2026, 2, 8).toISOString(),
     );
     expect(query.get("modified_before")).toBe(
-      String(new Date(2026, 2, 9).getTime()),
+      new Date(2026, 2, 9).toISOString(),
     );
     expect(query.get("offset")).toBe("50");
   });
@@ -58,10 +57,10 @@ describe("Workspace filters", () => {
     );
     expect(query.has("modified_after")).toBe(false);
     expect(query.get("modified_before")).toBe(
-      String(new Date(2026, 8, 23).getTime()),
+      new Date(2026, 8, 23).toISOString(),
     );
   });
-  it("keeps dates before March 1973 within the bounds the server accepts", () => {
+  it("sends dates before 1970 as instants", () => {
     const query = new URLSearchParams();
     applyListingFilters(
       query,
@@ -71,8 +70,12 @@ describe("Workspace filters", () => {
         before: "1970-01-01",
       }),
     );
-    expect(query.has("modified_after")).toBe(false);
-    expect(query.get("modified_before")).toBe(String(EARLIEST_MODIFIED_BOUND));
+    expect(query.get("modified_after")).toBe(
+      new Date(1960, 0, 1).toISOString(),
+    );
+    expect(query.get("modified_before")).toBe(
+      new Date(1970, 0, 2).toISOString(),
+    );
     const open = new URLSearchParams();
     applyListingFilters(
       open,
@@ -82,9 +85,11 @@ describe("Workspace filters", () => {
         before: "2026-09-22",
       }),
     );
-    expect(open.has("modified_after")).toBe(false);
+    expect(open.get("modified_after")).toBe(
+      new Date(1960, 0, 1).toISOString(),
+    );
     expect(open.get("modified_before")).toBe(
-      String(new Date(2026, 8, 23).getTime()),
+      new Date(2026, 8, 23).toISOString(),
     );
   });
   it("clears stale custom dates and resets pagination when changing a filter", () => {

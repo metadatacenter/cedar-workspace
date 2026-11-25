@@ -114,7 +114,7 @@ test("date presets and inclusive custom ranges are sent to the listing API, incl
   await expect(date).toHaveAccessibleName("Last 7 days (last modified filter)");
   await expect
     .poll(() => requests.at(-1)?.searchParams.get("modified_before"))
-    .toBe(String(Date.parse("2026-01-04T00:00:00Z")));
+    .toBe("2026-01-04T00:00:00.000Z");
   await date.click();
   await popup.getByLabel("After", { exact: true }).fill("2026-01-10");
   await expect(popup.getByRole("alert")).toHaveText(
@@ -131,10 +131,10 @@ test("date presets and inclusive custom ranges are sent to the listing API, incl
   await popup.getByRole("button", { name: "Apply", exact: true }).click();
   await expect
     .poll(() => requests.at(-1)?.searchParams.get("modified_after"))
-    .toBe(String(Date.parse("2026-01-10T00:00:00Z")));
+    .toBe("2026-01-10T00:00:00.000Z");
   await expect
     .poll(() => requests.at(-1)?.searchParams.get("modified_before"))
-    .toBe(String(Date.parse("2026-01-11T00:00:00Z")));
+    .toBe("2026-01-11T00:00:00.000Z");
   await page.reload();
   await expect(date).toHaveText(/10 Jan 2026/);
   await expect(date).toHaveAccessibleName(

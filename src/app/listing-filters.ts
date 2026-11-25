@@ -94,14 +94,6 @@ export function filterQuery(
     offset: null,
   };
 }
-/**
- * The earliest modification bound the resource server accepts, in epoch
- * milliseconds: a moment in March 1973. It refuses an earlier one as most
- * likely a time in seconds. CEDAR holds nothing that old, so an earlier
- * "after" date is left out and an earlier "before" date is raised to this
- * bound, and the listing is the one the date describes.
- */
-export const EARLIEST_MODIFIED_BOUND = 100_000_000_000;
 export function applyListingFilters(
   query: URLSearchParams,
   params: URLSearchParams,
@@ -112,13 +104,9 @@ export function applyListingFilters(
   const bounds = dateBounds(filter, now);
   const after = parseDate(bounds.after),
     before = parseDate(bounds.before);
-  if (after && after.getTime() >= EARLIEST_MODIFIED_BOUND)
-    query.set("modified_after", String(after.getTime()));
+  if (after) query.set("modified_after", after.toISOString());
   if (before) {
     before.setDate(before.getDate() + 1);
-    query.set(
-      "modified_before",
-      String(Math.max(before.getTime(), EARLIEST_MODIFIED_BOUND)),
-    );
+    query.set("modified_before", before.toISOString());
   }
 }
