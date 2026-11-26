@@ -431,9 +431,9 @@ export class PermissionsDialog implements OnInit, AfterViewInit, OnDestroy {
       }),
       () =>
         this.api.request<Permissions>(
-          "/command/transfer-resource-ownership",
-          "POST",
-          { "@id": this.resource["@id"], newOwnerId: grant.node["@id"] },
+          this.api.path(this.resource) + "/permissions",
+          "PATCH",
+          { newOwnerId: grant.node["@id"] },
           this.revision(),
         ),
       (actual) => actual.owner["@id"] === grant.node["@id"],

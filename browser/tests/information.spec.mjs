@@ -128,13 +128,12 @@ for (const readonly of [false, true]) {
       await page.getByRole("button", { name: "Save", exact: true }).click();
       await expect
         .poll(() =>
-          api.requests.find((r) => r.path.endsWith("/command/rename-resource")),
+          api.requests.find((r) => r.method === "PATCH" && r.path.endsWith("/templates/template")),
         )
         .toMatchObject({
-          method: "POST",
+          method: "PATCH",
           revision: '"fixture-revision"',
           body: {
-            "@id": "template",
             "schema:name": "Study metadata",
             "schema:description": "Updated description",
           },
@@ -185,7 +184,7 @@ test("inline description keeps edits on conflict and cancel reloads the current 
   const description = info.getByRole('textbox', {name: 'Description', exact: true});
   await expect(description).toBeEnabled();
   await description.fill('Unsaved description');
-  await page.route('**/command/rename-resource', route => route.fulfill({status: 412, json: {message: 'Changed'}}));
+  await page.route('**/templates/template', route => route.request().method() === 'PATCH' ? route.fulfill({status: 412, json: {message: 'Changed'}}) : route.fallback());
   await info.getByRole('button', {name:'Save', exact:true}).click();
   await expect(info.getByRole('alert')).toContainText('changed since you opened');
   await expect(description).toHaveValue('Unsaved description');

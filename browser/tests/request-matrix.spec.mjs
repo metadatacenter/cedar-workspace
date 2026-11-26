@@ -90,7 +90,7 @@ const SITES = {
   },
   "renaming": {
     conditional: true,
-    request: (method, path) => method === "POST" && path.endsWith("/command/rename-resource"),
+    request: (method, path) => method === "PATCH" && path.endsWith("/templates/template"),
     before: (page, t) => resourceAction(page, t, "ResourceActions.Rename"),
     act: async (page) => {
       await page.locator("dialog[open] input").first().fill("Study metadata, renamed");
@@ -101,7 +101,7 @@ const SITES = {
   },
   "saving a description": {
     conditional: true,
-    request: (method, path) => method === "POST" && path.endsWith("/command/rename-resource"),
+    request: (method, path) => method === "PATCH" && path.endsWith("/templates/template"),
     before: async (page, t) => {
       await openDashboard(page, t);
       await page.locator("tbody tr").first().press("Enter");
@@ -126,7 +126,7 @@ const SITES = {
     act: submitDialog,
   },
   "publishing": {
-    request: (method, path) => method === "POST" && path.endsWith("/command/publish-artifact"),
+    request: (method, path) => method === "PATCH" && path.endsWith("/publication"),
     before: (page, t) => resourceAction(page, t, "ResourceActions.Publish"),
     act: submitDialog,
   },

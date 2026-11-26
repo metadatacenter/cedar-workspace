@@ -65,8 +65,8 @@ describe("Authorized backend", () => {
       new Response("{}", { headers: { ETag: '"next"' } }),
     );
     const result = await api.request(
-      "/command/rename-resource",
-      "POST",
+      "/templates/id",
+      "PATCH",
       { "@id": "id" },
       '"original"',
     );

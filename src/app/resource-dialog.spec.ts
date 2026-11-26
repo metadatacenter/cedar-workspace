@@ -70,10 +70,9 @@ describe("Conditional action dialogs", () => {
     const saved = vi.spyOn(d.saved, "emit");
     await d.submit();
     expect(api.request).toHaveBeenCalledWith(
-      "/command/rename-resource",
-      "POST",
+      "/templates/id",
+      "PATCH",
       {
-        "@id": "id",
         "schema:name": "My edited title",
         "schema:description": "",
       },
@@ -230,9 +229,9 @@ describe("Conditional action dialogs", () => {
     d.version = [1, 0, 0];
     await d.submit();
     expect(api.request).toHaveBeenCalledWith(
-      "/command/publish-artifact",
-      "POST",
-      { "@id": "id", newVersion: "1.0.0" },
+      "/templates/id/publication",
+      "PATCH",
+      { newVersion: "1.0.0" },
     );
   });
   for (const [title, stored] of [
@@ -337,6 +336,7 @@ describe("the Retry control of an action whose outcome is unknown", () => {
         {
           provide: Backend,
           useValue: {
+            path: Backend.prototype.path,
             request,
             config: { resourceRestAPI: "https://resource.example" },
             userId: "owner",
@@ -389,7 +389,7 @@ describe("the Retry control of an action whose outcome is unknown", () => {
       data: { resources: [], totalCount: 0, pathInfo: [] },
     });
     TestBed.configureTestingModule({
-      providers: [{ provide: Backend, useValue: { request } }],
+      providers: [{ provide: Backend, useValue: { request, path: Backend.prototype.path } }],
     });
     const d = TestBed.runInInjectionContext(() => new ResourceDialog());
     d.action = "copy";
@@ -444,6 +444,7 @@ describe("a dialog action while the deployment's base is unknown", () => {
         {
           provide: Backend,
           useValue: {
+            path: Backend.prototype.path,
             request,
             config: { resourceRestAPI: "https://resource.example" },
             userId: "owner",
@@ -485,7 +486,7 @@ describe("a dialog action while the deployment's base is unknown", () => {
       data: { resources: [], totalCount: 0, pathInfo: [] },
     });
     TestBed.configureTestingModule({
-      providers: [{ provide: Backend, useValue: { request } }],
+      providers: [{ provide: Backend, useValue: { request, path: Backend.prototype.path } }],
     });
     const d = TestBed.runInInjectionContext(() => new ResourceDialog());
     d.action = action;
@@ -550,6 +551,7 @@ describe("Publish and Create Draft refused by the server", () => {
         {
           provide: Backend,
           useValue: {
+            path: Backend.prototype.path,
             request,
             config: { resourceRestAPI: "https://resource.example" },
             userId: "owner",

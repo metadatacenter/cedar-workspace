@@ -263,7 +263,8 @@ for (const writable of [true, false]) {
 test('a description conflict requires Retry and keeps the draft on the new revision', async ({page, api}) => {
   let revision = '"old"', written;
   await page.route('**/api/resource/templates/template', route => route.fulfill({json: {...resource, 'schema:description': revision === '"old"' ? 'Original' : 'Changed elsewhere'}, headers: {ETag: revision}}));
-  await page.route('**/api/resource/command/rename-resource', route => {
+  await page.route('**/api/resource/templates/template', route => {
+    if (route.request().method() !== 'PATCH') return route.fallback();
     written = route.request().headers()['if-match'];
     return revision === '"old"' ? route.fulfill({status: 412, json: {message: 'Changed'}}) : route.fulfill({json: resource, headers: {ETag: '"saved"'}});
   });

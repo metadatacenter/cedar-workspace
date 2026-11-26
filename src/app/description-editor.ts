@@ -216,10 +216,9 @@ export class DescriptionEditor {
     const updated = { ...snapshot.data, "schema:description": this.draft() };
     try {
       const reply = await this.api.request<Resource>(
-        "/command/rename-resource",
-        "POST",
+        this.api.path(updated),
+        "PATCH",
         {
-          "@id": updated["@id"],
           "schema:name": title(updated),
           "schema:description": this.draft(),
         },

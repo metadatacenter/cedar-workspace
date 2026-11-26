@@ -53,6 +53,7 @@ for (const refresh of [false, true]) {
         pathInfo: [home],
       };
       const api = {
+        path: Backend.prototype.path,
         init: vi.fn().mockResolvedValue(true),
         profile: { homeFolderId: "home" },
         config: {
@@ -100,6 +101,7 @@ for (const query of [
       it(`accepts search without a folder breadcrumb: ${query}, path=${JSON.stringify(pathInfo)}, empty=${empty}`, async () => {
         const rows = empty ? [] : [resource("shared")];
         const api = {
+          path: Backend.prototype.path,
           init: vi.fn().mockResolvedValue(true),
           profile: { homeFolderId: "home" },
           config: {
@@ -148,6 +150,7 @@ for (const oldFails of [false, true]) {
           const old = deferred<void>(),
             current = deferred<void>();
           const api = {
+            path: Backend.prototype.path,
             request: vi.fn(async (path: string) => {
               const id = path.split("/")[2].split("?")[0];
               if (id === "old") await old.promise;
@@ -209,6 +212,7 @@ for (const oldFails of [false, true]) {
           const old = deferred<ReturnType<typeof reply>>(),
             current = deferred<ReturnType<typeof reply>>();
           const api = {
+            path: Backend.prototype.path,
             snapshot: vi.fn((r: Resource) =>
               r["@id"] === "old" ? old.promise : current.promise,
             ),
@@ -268,6 +272,7 @@ describe("listing, menu and selection ownership", () => {
       it(`${transition} excludes the old menu's ${outcome}`, async () => {
         const pending = deferred<{ data: Resource }>();
         const api = {
+          path: Backend.prototype.path,
           init: vi.fn().mockResolvedValue(true),
           profile: { homeFolderId: "home" },
           config: {
@@ -322,6 +327,7 @@ for (const outcome of ["success", "failure"] as const) {
     it(`description ${outcome} after ${transition} cannot publish against the wrong resource`, async () => {
       const write = deferred<{ data: Resource; etag: string }>();
       const api = {
+        path: Backend.prototype.path,
         snapshot: vi.fn(async (r: Resource) => reply(r["@id"])),
         request: vi.fn(() => write.promise),
       };

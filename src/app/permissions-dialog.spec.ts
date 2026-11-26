@@ -243,9 +243,9 @@ describe("Permissions dialog", () => {
     });
     await host.transfer(host.grants[0]);
     expect(api.request).toHaveBeenCalledWith(
-      "/command/transfer-resource-ownership",
-      "POST",
-      { "@id": "artifact", newOwnerId: "user" },
+      "/templates/artifact/permissions",
+      "PATCH",
+      { newOwnerId: "user" },
       '"revision-1"',
     );
     expect(host.permissions()?.owner).toEqual(user);
@@ -494,7 +494,7 @@ describe("Permissions dialog", () => {
     await host.changeRole(u, "editor");
     expect(api.request).toHaveBeenCalledTimes(1);
     expect(api.request.mock.calls[0][0]).toBe(
-      "/command/transfer-resource-ownership",
+      "/templates/artifact/permissions",
     );
     expect(host.grants).toHaveLength(2);
   });
@@ -696,7 +696,7 @@ describe("Permissions dialog", () => {
       await transfer;
       expect(
         api.request.mock.calls.some(
-          (call) => call[0] === "/command/transfer-resource-ownership",
+          (call) => call[0] === "/templates/artifact/permissions" && call[1] === "PATCH",
         ),
       ).toBe(false);
     });

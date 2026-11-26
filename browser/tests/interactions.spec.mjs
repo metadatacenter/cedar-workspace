@@ -81,8 +81,8 @@ test("failed save retains input, sends its revision, and blocks duplicate submis
     "Your edits have been kept",
   );
   await expect(input).toHaveValue("Unsaved study");
-  expect(api.requests.filter((r) => r.method === "POST")).toHaveLength(1);
-  expect(api.requests.find((r) => r.method === "POST").revision).toBe(
+  expect(api.requests.filter((r) => r.method === "PATCH")).toHaveLength(1);
+  expect(api.requests.find((r) => r.method === "PATCH").revision).toBe(
     '"fixture-revision"',
   );
   await page.keyboard.press("Escape");

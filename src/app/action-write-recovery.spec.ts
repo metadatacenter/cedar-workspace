@@ -16,7 +16,7 @@ for (const action of ["rename", "new-folder", "copy", "draft", "publish"])
       const request = vi.fn().mockResolvedValue({data: {resources: [], totalCount: 0}});
       const snapshot = vi.fn().mockResolvedValue({data: r, etag: '"old"'});
       const report = vi.fn().mockResolvedValue({data: r});
-      TestBed.configureTestingModule({providers: [{provide: Backend, useValue: {request, snapshot, report}}]});
+      TestBed.configureTestingModule({providers: [{provide: Backend, useValue: {request, snapshot, report, path: Backend.prototype.path}}]});
       const host = TestBed.runInInjectionContext(() => new ResourceDialog());
       host.action = action; host.resource = r; host.folder = "home";
       await host.load();
@@ -88,7 +88,7 @@ function actionRig(action: string) {
       return write({ "@id": body!["copyId"], "pav:derivedFrom": body!["@id"] });
     if (path === "/command/create-draft-artifact")
       return write({ "@id": body!["draftId"], "pav:previousVersion": body!["@id"] });
-    if (path === "/command/publish-artifact") {
+    if (method === "PATCH" && path.endsWith("/publication")) {
       if (world.published) throw new HttpError(400, "Already published");
       if (world.commit) world.published = true;
       if (world.lost) throw new HttpError(0, "No reply");
@@ -115,6 +115,7 @@ function actionRig(action: string) {
       {
         provide: Backend,
         useValue: {
+          path: Backend.prototype.path,
           request,
           snapshot: vi.fn(),
           report: vi.fn(),
@@ -136,7 +137,7 @@ function actionRig(action: string) {
   // The identity each create was sent under: the folder's URL, or the copy's or draft's own key.
   const sent = () =>
     request.mock.calls
-      .filter(([path, method]) => method === "PUT" || String(path).startsWith("/command/"))
+      .filter(([path, method]) => method === "PUT" || method === "PATCH" && String(path).endsWith("/publication") || String(path).startsWith("/command/"))
       .map(([, , body]) =>
         String(body?.["copyId"] ?? body?.["draftId"] ?? body?.["@id"] ?? ""),
       );
@@ -310,7 +311,7 @@ describe("dialog actions settled by a lookup", () => {
       m.world.commit = false;
       const server = m.request.getMockImplementation()!;
       m.request.mockImplementation((path, method, body) =>
-        method === "PUT" || String(path).startsWith("/command/")
+        method === "PUT" || method === "PATCH" && String(path).endsWith("/publication") || String(path).startsWith("/command/")
           ? new Promise(() => {})
           : server(path, method, body),
       );

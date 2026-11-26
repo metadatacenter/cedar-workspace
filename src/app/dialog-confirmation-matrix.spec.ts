@@ -25,6 +25,7 @@ for (const action of ["rename", "new-folder"])
         const answer = deferred<boolean>();
         const write = deferred<unknown>();
         const api = {
+          path: Backend.prototype.path,
           snapshot: vi.fn().mockResolvedValue({ data: r, etag: '"revision"' }),
           request: vi.fn().mockReturnValue(write.promise),
         };

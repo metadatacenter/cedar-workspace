@@ -452,10 +452,9 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
         }
         case "rename":
           await this.api.request(
-            "/command/rename-resource",
-            "POST",
+            this.api.path(this.resource!),
+            "PATCH",
             {
-              "@id": resourceSelector(id!),
               "schema:name": this.name.trim(),
               "schema:description": this.description,
             },
@@ -479,8 +478,7 @@ export class ResourceDialog implements OnInit, AfterViewInit, OnDestroy {
           );
           break;
         case "publish":
-          await this.api.request("/command/publish-artifact", "POST", {
-            "@id": resourceSelector(id!),
+          await this.api.request(this.api.path(this.resource!) + "/publication", "PATCH", {
             newVersion: formatVersion(this.version),
           });
           break;

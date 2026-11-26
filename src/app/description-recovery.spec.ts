@@ -14,6 +14,7 @@ for (const status of [0, 200, 403, 409, 412, 428, 500]) {
       currentUserPermissions: { capabilities: ["updateResource"] },
     };
     const api = {
+      path: Backend.prototype.path,
       snapshot: vi.fn().mockResolvedValue({ data: resource, etag: '"old"' }),
       request: vi.fn().mockRejectedValue(new HttpError(status, "Refused")),
     };
