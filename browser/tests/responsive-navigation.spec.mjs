@@ -221,3 +221,40 @@ test('with both tablet panels open, paging has a strip of its own beneath the sc
     expect(await reachable(control)).toBe(true);
   }
 });
+
+for (const panels of ['information', 'both']) test(`with the information panel open on a tablet (${panels}), the row actions stay at the listing's right edge`, async ({ page, api }) => {
+  await page.setViewportSize({ width: 768, height: 667 });
+  await wideListing(page);
+  await page.locator('[aria-controls="workspace-information"]').click();
+  if (panels === 'information') await page.locator('[aria-controls="workspace-navigation"]').click();
+  await expect(page.locator('.workspace')).not.toHaveClass(/right-collapsed/);
+  const region = page.locator('.table-scroll');
+  // The table is still wider than the listing and scrolls sideways beneath the pinned column.
+  expect(await region.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+  const reachable = (locator) => locator.evaluate((el) => {
+    const box = el.getBoundingClientRect();
+    const top = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+    return top === el || el.contains(top);
+  });
+  const name = (n) => `Record ${n} - Long resource title for the international research collection`;
+  const controls = [page.locator('thead cedar-sort-menu button').first(),
+    ...[1, 2].map((n) => page.getByRole('button', { name: `Actions for ${name(n)}`, exact: true }))];
+  // With both panels open the path fills the pane above the table, so bring the table into view, as a user scrolls to it.
+  await region.evaluate((el) => el.scrollIntoView({ block: 'start' }));
+  for (const position of ['start', 'end']) {
+    await region.evaluate((el, position) => { el.scrollLeft = position === 'end' ? el.scrollWidth : 0; }, position);
+    const edge = await region.evaluate((el) => { const box = el.getBoundingClientRect(); return { left: box.left, right: box.left + el.clientWidth }; });
+    for (const control of controls) {
+      const box = await control.boundingBox();
+      expect(box.x).toBeGreaterThanOrEqual(edge.left);
+      expect(box.x + box.width).toBeLessThanOrEqual(edge.right + 0.5);
+      expect(await reachable(control)).toBe(true);
+    }
+  }
+  // A row's open menu stays above the pinned cells of the rows beneath it.
+  await region.evaluate((el) => { el.scrollLeft = 0; });
+  await controls[1].click();
+  const menu = page.locator('#resource-menu');
+  await expect(menu).toBeVisible();
+  for (const item of await menu.getByRole('button').all()) expect(await reachable(item)).toBe(true);
+});

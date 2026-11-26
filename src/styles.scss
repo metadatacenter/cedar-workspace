@@ -820,6 +820,68 @@ th:nth-child(2) {
     min-width: 160px;
   }
 }
+/* With the panel open, the table still scrolls sideways, and its last column, each row's actions
+   and the heading's Sort options, stays at the listing's right edge while the other columns scroll
+   beneath it. A pinned cell paints its row's background so that the columns beneath stay hidden,
+   and the cell of a row whose menu is open rises to the menu's layer, so the rows below leave the
+   menu uncovered. Where the table fits, the column already sits at the edge and nothing moves. */
+@media (min-width: 761px) {
+  .workspace:not(.right-collapsed) .table-scroll:not(.explorer-grid) > .explorer-scroll-content > table {
+    th:last-child,
+    td:last-child {
+      position: sticky;
+      right: 0;
+    }
+    thead th:last-child {
+      z-index: calc(var(--cedar-layer-sticky) + 1);
+    }
+    // The cell paints its row's colour short of its top and bottom by the widest row outline, so
+    // the row's own outline, drawn there, stays in view in every engine. Those strips hold only
+    // the row's colour and border beneath, as a row's content sits in its middle. The colour is a
+    // background image rather than a layer of its own: axe cannot judge the contrast of text,
+    // such as the open menu's, beneath a positioned pseudo-element with a background.
+    td:last-child {
+      --pinned-row: var(--cedar-surface-raised);
+    }
+    tbody tr:hover > td:last-child {
+      --pinned-row: var(--cedar-surface-subtle);
+    }
+    tr:is(.selected, .explorer-drop-target) > td:last-child {
+      --pinned-row: var(--cedar-surface-selected);
+    }
+    tr.explorer-move-complete > td:last-child {
+      --pinned-row: var(--cedar-status-success-surface);
+    }
+    td:last-child {
+      background: linear-gradient(var(--pinned-row), var(--pinned-row)) center /
+        100% calc(100% - 2 * var(--cedar-focus-ring-width)) no-repeat;
+    }
+    td:last-child:has(.resource-menu) {
+      z-index: var(--cedar-layer-menu);
+    }
+    // While the table scrolls, the row's right end, and the right edge of its outline, lie beyond
+    // the cell, so the cell draws that edge itself. A focus or move outline wins over the
+    // selection's, as on the row.
+    td:last-child::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    tr.selected > td:last-child::after {
+      border-right: 1px solid var(--cedar-color-primary);
+    }
+    tr.explorer-drop-eligible:not(.explorer-drop-target) > td:last-child::after {
+      border-right: 1px dashed var(--cedar-color-primary);
+    }
+    tr.explorer-move-complete > td:last-child::after {
+      border-right: var(--cedar-focus-ring-width) solid var(--cedar-status-success-text);
+    }
+    tr.explorer-item:focus-visible > td:last-child::after {
+      border-right: var(--cedar-focus-ring-width) solid var(--cedar-color-primary);
+    }
+  }
+}
 th:last-child {
   width: 130px;
 }
