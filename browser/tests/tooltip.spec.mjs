@@ -115,3 +115,23 @@ test("permission help is visible above the modal and Escape only dismisses help"
   await expect(tip).toHaveCount(0);
   await expect(dialog).toBeVisible();
 });
+
+for (const input of ["click", "tap"])
+  test.describe(`a dialog opened by ${input === "tap" ? "a tap" : "a click"}`, () => {
+    test.use({ hasTouch: input === "tap" });
+    test("shows no help on its close button until the keyboard moves focus there", async ({ page, api }) => {
+      await dashboard(page);
+      const press = (locator) => (input === "tap" ? locator.tap() : locator.click());
+      await press(page.getByRole("button", { name: "Actions for Study metadata" }));
+      await press(page.locator(".resource-menu").getByRole("button", { name: "Publish", exact: true }));
+      const close = page.locator("dialog[open]").getByRole("button", { name: "Close dialog", exact: true });
+      await expect(close).toBeFocused();
+      const tip = page.getByRole("tooltip");
+      await afterHelpDelay(page);
+      await expect(tip).toHaveCount(0);
+      await tabSequence(page, 1);
+      await tabSequence(page, 1, "Shift+Tab");
+      await expect(close).toBeFocused();
+      await expect(tip).toHaveText("Close dialog", { timeout: 300 });
+    });
+  });
