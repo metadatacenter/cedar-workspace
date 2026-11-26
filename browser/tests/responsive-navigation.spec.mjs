@@ -54,12 +54,12 @@ for (const view of ['list', 'grid']) test(`tablet long path retains a usable ${v
   const region = page.locator('.table-scroll');
   expect((await region.boundingBox()).height).toBeGreaterThanOrEqual(240);
   if (view === 'list') {
-    // Inspect the overlap while the outer pane scrolls: a visible, in-viewport
-    // footer can still be painted over by the table's sticky heading.
-    await page.locator('.workspace > main').evaluate((main) => {
-      const heading = main.querySelector('thead').getBoundingClientRect();
-      const paging = main.querySelector('.paging').getBoundingClientRect();
-      main.scrollTop += heading.top - paging.top;
+    // Scroll the listing until its heading reaches paging. The heading stops at the edge of the
+    // region the listing scrolls in, above paging's own strip, so neither covers the other.
+    await page.locator('.listing-pane').evaluate((pane) => {
+      const heading = pane.querySelector('thead').getBoundingClientRect();
+      const paging = document.querySelector('.paging').getBoundingClientRect();
+      pane.scrollTop += heading.top - paging.top;
     });
     for (const name of ['Previous', 'Next']) {
       const action = page.getByRole('button', { name, exact: true });
@@ -159,4 +159,31 @@ test('tablet central scrolling keeps filter actions reachable with both panels o
   expect(await page.locator('.workspace > main').evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
   await apply.click();
   await expect(popup).toHaveCount(0);
+});
+
+test('with both tablet panels open, paging has a strip of its own beneath the scrolling listing', async ({ page, api }) => {
+  await page.setViewportSize({ width: 768, height: 667 });
+  await listing(page, 'list');
+  await page.locator('[aria-controls="workspace-information"]').click();
+  await expect(page.locator('.workspace')).not.toHaveClass(/right-collapsed|left-collapsed/);
+  const geometry = await page.evaluate(() => {
+    let scroller = document.querySelector('.explorer-toolbar').parentElement;
+    while (scroller && !/auto|scroll/.test(getComputedStyle(scroller).overflowY)) scroller = scroller.parentElement;
+    const paging = document.querySelector('.paging');
+    return { holdsPaging: scroller.contains(paging), bottom: scroller.getBoundingClientRect().bottom,
+      paging: paging.getBoundingClientRect().top };
+  });
+  expect(geometry.holdsPaging).toBe(false);
+  expect(geometry.bottom).toBeLessThanOrEqual(geometry.paging + 0.5);
+  await expect(page.locator('.paging')).toBeInViewport({ ratio: 1 });
+  const reachable = (locator) => locator.evaluate((el) => {
+    const box = el.getBoundingClientRect();
+    const top = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+    return top === el || el.contains(top);
+  });
+  for (const control of [page.getByRole('button', { name: 'List view', exact: true }),
+    page.getByRole('button', { name: 'Grid view', exact: true }), page.locator('thead th button').first()]) {
+    await control.scrollIntoViewIfNeeded();
+    expect(await reachable(control)).toBe(true);
+  }
 });

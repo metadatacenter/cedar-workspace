@@ -327,6 +327,11 @@ main {
 .breadcrumb-separator {
   @include patterns.breadcrumb-separator;
 }
+// Holds the toolbars and the listing without a box of its own, except where the
+// central column scrolls them above paging.
+.listing-pane {
+  display: contents;
+}
 .table-scroll {
   position: relative;
   overflow: auto;
@@ -667,20 +672,19 @@ label {
     grid-template-columns: 200px minmax(0, 1fr) 0;
   }
   // Long paths and both panels can leave less than a row for the listing. Keep
-  // its existing canvas usable; the central pane scrolls when the whole stack
-  // of breadcrumbs, filters, listing and paging cannot fit vertically.
+  // its existing canvas usable. When breadcrumbs, filters and listing cannot fit
+  // vertically, they scroll together in a region of their own, and paging keeps
+  // a strip beneath it, so nothing passes under paging.
   @media (min-width: 761px) {
-    .workspace:not(.left-collapsed):not(.right-collapsed) > main {
+    .workspace:not(.left-collapsed):not(.right-collapsed) .listing-pane {
+      display: flex;
+      flex-direction: column;
+      flex: 0 1 auto;
+      min-height: 0;
       overflow-y: auto;
     }
     .workspace:not(.left-collapsed):not(.right-collapsed) .table-scroll {
       min-height: spacing.$resource-grid-min-height;
-    }
-    .workspace:not(.left-collapsed):not(.right-collapsed) .paging {
-      position: sticky;
-      bottom: 0;
-      z-index: var(--cedar-layer-sticky);
-      background: var(--cedar-surface-raised);
     }
   }
   main {

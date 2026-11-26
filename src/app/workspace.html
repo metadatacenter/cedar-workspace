@@ -222,6 +222,9 @@
     @if(grid()){
     <h1 class="sr-only">{{'Common.Workspace' | translate}}</h1>
     }
+    <!-- The toolbars and the listing, which scroll together above paging when the central
+         column cannot hold them. -->
+    <div class="listing-pane">
     <div class="table-toolbar">
       <nav
         [attr.aria-label]="'Dashboard.Breadcrumb' | translate"
@@ -575,6 +578,7 @@
       <p class="empty">{{'Dashboard.NoItems' | translate}}</p>
       }
       </div>
+    </div>
     </div>
     <footer class="paging">
       <button (click)="page(-1)" [disabled]="offset()===0||loading()">
