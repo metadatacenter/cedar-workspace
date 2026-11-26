@@ -808,6 +808,18 @@ th:nth-child(2) {
   width: 100%;
   max-width: 0;
 }
+/* The shared 570-pixel table floor makes a narrower listing scroll sideways, which hides the row
+   actions and Sort options at its far end. With the information panel closed, a tablet listing has
+   room for every column once the name gives way, so there the name shortens first, down to 160
+   pixels. With the panel open there is no such room, and the floor stays. */
+@media (min-width: 761px) {
+  .workspace.right-collapsed .table-scroll:not(.explorer-grid) > .explorer-scroll-content > table {
+    min-width: 0;
+  }
+  .workspace.right-collapsed .table-scroll:not(.explorer-grid) > .explorer-scroll-content > table td:first-child {
+    min-width: 160px;
+  }
+}
 th:last-child {
   width: 130px;
 }

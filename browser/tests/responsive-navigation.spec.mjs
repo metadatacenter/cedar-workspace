@@ -101,7 +101,8 @@ for (const width of [1440, 768, 375]) for (const view of ['list', 'grid']) {
     const action = page.getByRole('button', { name: 'Actions for Record 1', exact: true });
     if (view === 'list') {
       await region.evaluate((el) => { el.scrollLeft = el.scrollWidth; });
-      if (width <= 768) expect(await region.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
+      // A phone listing still scrolls sideways to reach the row actions; a tablet one holds them.
+      if (width < 768) expect(await region.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
     }
     await action.scrollIntoViewIfNeeded();
     await expect(action).toBeInViewport();
@@ -159,6 +160,39 @@ test('tablet central scrolling keeps filter actions reachable with both panels o
   expect(await page.locator('.workspace > main').evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
   await apply.click();
   await expect(popup).toHaveCount(0);
+});
+
+// Names and versions as long as stored resources carry, so the columns take their full width.
+const wide = Array.from({ length: 54 }, (_, i) => ({ ...resource, '@id': `record-${i + 1}`, 'pav:version': '12.10.3',
+  'bibo:status': 'bibo:published', 'schema:name': `Record ${i + 1} - Long resource title for the international research collection` }));
+async function wideListing(page) {
+  await page.route(/\/api\/resource\/templates\/record-\d+(\/report)?$/, async (route) => {
+    const id = new URL(route.request().url()).pathname.match(/record-\d+/)[0];
+    await route.fulfill({ json: wide.find((item) => item['@id'] === id) });
+  });
+  await page.route('**/api/resource/folders/home/contents?**', (route) =>
+    route.fulfill({ json: { resources: wide.slice(0, 50), totalCount: 54, pathInfo } }));
+  await page.goto('/dashboard?view=list');
+  await expect(page.locator('[data-resource-id="record-1"]')).toBeVisible();
+  await expect(page.locator('.table-scroll')).toHaveAttribute('aria-busy', 'false');
+}
+
+test('a tablet list with the information panel closed keeps every column and row action in view', async ({ page, api }) => {
+  await page.setViewportSize({ width: 768, height: 667 });
+  await wideListing(page);
+  await expect(page.locator('.workspace')).toHaveClass(/right-collapsed/);
+  await expect(page.locator('.workspace')).not.toHaveClass(/left-collapsed/);
+  const region = page.locator('.table-scroll');
+  expect(await region.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+  const edge = await region.boundingBox();
+  for (const control of [page.locator('thead cedar-sort-menu button').first(),
+    ...[1, 2, 3].map((n) => page.getByRole('button', { name: `Actions for Record ${n} - Long resource title for the international research collection`, exact: true }))]) {
+    const box = await control.boundingBox();
+    expect(box.x).toBeGreaterThanOrEqual(edge.x);
+    expect(box.x + box.width).toBeLessThanOrEqual(edge.x + edge.width + 0.5);
+  }
+  for (const heading of await page.locator('thead th').all())
+    expect(await heading.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
 });
 
 test('with both tablet panels open, paging has a strip of its own beneath the scrolling listing', async ({ page, api }) => {
