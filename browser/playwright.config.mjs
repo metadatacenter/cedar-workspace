@@ -1,6 +1,7 @@
 import { defineConfig } from "@playwright/test";
 import { CHROMIUM_ONLY } from "./tests/browser-tags.mjs";
 const port = Number(process.env.PORT || 4797);
+const fullTrace = process.env.CEDAR_TEST_TRACE === "on";
 export default defineConfig({
   testDir: "./tests",
   fullyParallel: true,
@@ -21,7 +22,18 @@ export default defineConfig({
       name: browserName,
       // Chromium alone exposes CDP's continuous synthetic touch input.
       grepInvert: new RegExp(CHROMIUM_ONLY),
-      use: { browserName },
+      use: {
+        browserName,
+        // An intermittent Firefox stall needs the original action/network timeline.
+        // DOM snapshots also enable Playwright's network recording. Skip the
+        // screenshot filmstrip by default; CEDAR_TEST_TRACE=on keeps it too.
+        trace: fullTrace ? "retain-on-failure" : browserName === "firefox" ? {
+          mode: "retain-on-failure",
+          snapshots: true,
+          screenshots: false,
+          sources: false,
+        } : "off",
+      },
     })),
   ],
   forbidOnly: !!process.env.CI,
@@ -40,7 +52,7 @@ export default defineConfig({
     viewport: { width: 1440, height: 1000 },
     timezoneId: "UTC",
     locale: "en-US",
-    trace: process.env.CEDAR_TEST_TRACE === "on" ? "retain-on-failure" : "off",
+    trace: fullTrace ? "retain-on-failure" : "off",
     screenshot: process.env.CI ? "only-on-failure" : "off",
   },
   webServer: {
