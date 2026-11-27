@@ -11,6 +11,7 @@ import {
   CdkDragPreview,
   CdkDragMove,
   CdkDragEnd,
+  CdkDragStart,
 } from "@angular/cdk/drag-drop";
 import { ExplorerSelection } from "./explorer-selection";
 import { ResourceMoves, validMoveShape } from "./resource-moves";
@@ -371,6 +372,13 @@ export class Workspace {
   readonly instancesLoaded = signal(false);
   readonly total = signal(0);
   readonly offset = signal(0);
+  /**
+   * Where the rows on screen begin. The offset moves to the page asked for as soon as it is asked
+   * for, so the footer would state that page's range over the previous page's rows while it loads.
+   */
+  readonly shownOffset = signal(0);
+  /** Whether the listing on screen failed to load, so nothing is known of what the folder holds. */
+  readonly listingFailed = signal(false);
   readonly left = signal(true);
   private readonly viewportWidth = signal(window.innerWidth);
   private readonly informationPreference = signal<boolean | null>(null);
@@ -543,6 +551,8 @@ export class Workspace {
       if (!validListing(data)) throw new Error(this.i18n.t("Errors.InvalidListing"));
       this.rows.set(data.resources);
       this.total.set(data.totalCount);
+      this.shownOffset.set(this.offset());
+      this.listingFailed.set(false);
       if (announce)
         this.announcement.set(data.resources.length ? this.displaying() : this.i18n.t("Dashboard.NoItems"));
       this.path.set(data.pathInfo || []);
@@ -562,6 +572,7 @@ export class Workspace {
         if (!refresh) {
           this.rows.set([]);
           this.total.set(0);
+          this.listingFailed.set(true);
         }
         else if (this.pendingMoveSelection.length) {
           this.selectionIds.set(this.pendingMoveSelection.filter(id => this.rows().some(r => r["@id"] === id)));
@@ -881,7 +892,11 @@ export class Workspace {
     const r = this.rows().find((r) => r["@id"] === id);
     if (r) void this.act("open", r);
   }
-  startDrag(r: Resource) {
+  startDrag(r: Resource, event?: CdkDragStart) {
+    // CDK keeps the dragged row in the document, transparent and off screen, and moves it out of its
+    // table while a placeholder holds its place. Out of the table it is a row with no table, so it
+    // leaves the accessibility tree until the drag ends.
+    if (event) event.source.element.nativeElement.inert = true;
     this.deleteDrop.set(false);
     this.dropTarget.set("");
     this.tooltips.suspend();
@@ -908,6 +923,7 @@ export class Workspace {
     this.deleteDrop.set(false);
     this.dropTarget.set("");
     this.dragging.set([]);
+    event.source.element.nativeElement.inert = false;
     event.source.reset();
     explorer.ignoreClick();
     this.tooltips.resume();
@@ -1200,10 +1216,12 @@ export class Workspace {
   }
   /** Which rows the page shows, as "Displaying 1–50 of 120". */
   displaying() {
+    // A listing that failed to load has no range to state; the alert says why.
+    if (this.listingFailed()) return "";
     const shown = this.rows().length;
     return this.i18n.t("Dashboard.Displaying", {
-      first: shown ? this.offset() + 1 : 0,
-      last: shown ? this.offset() + shown : 0,
+      first: shown ? this.shownOffset() + 1 : 0,
+      last: shown ? this.shownOffset() + shown : 0,
       total: this.total(),
     });
   }

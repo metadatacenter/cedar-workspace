@@ -711,3 +711,30 @@ test("the metadata editor says its save status and notices from regions already 
   await expect(page.getByRole("status").filter({ hasText: "You have read-only access to this metadata." })).toHaveCount(1);
   expect(await regions.entered()).toEqual([""]);
 });
+
+test("the footer states the page on screen while the next loads, and a page that fails states no range", async ({
+  page,
+  api,
+}) => {
+  await listing(page);
+  // Page two's response waits for the test, and page three's request gets no answer.
+  let release;
+  const held = new Promise((resolve) => (release = resolve));
+  await page.route(/\/folders\/home\/contents\?.*offset=(50|100)\b/, async (route) => {
+    if (new URL(route.request().url()).searchParams.get("offset") === "100") return route.abort("failed");
+    await held;
+    return route.fallback();
+  });
+  await page.goto("/dashboard?view=list");
+  const paging = page.locator(".paging");
+  await expect(paging).toContainText("Displaying 1–50 of 120");
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page.locator(".table-scroll")).toHaveAttribute("aria-busy", "true");
+  await expect(paging).toContainText("Displaying 1–50 of 120");
+  release();
+  await expect(paging).toContainText("Displaying 51–100 of 120");
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page.getByRole("alert")).toBeVisible();
+  await expect(paging).not.toContainText("Displaying");
+  await expect(page.getByText("No items found.", { exact: true })).toHaveCount(0);
+});

@@ -750,3 +750,24 @@ test("nested confirmation and permission toast remain accessible and operable", 
     page.getByRole("button", { name: "Done", exact: true }),
   ).toBeEnabled();
 });
+
+test("a row being dragged leaves the accessibility tree until the drag ends", async ({ page, api }) => {
+  await dashboard(page);
+  const row = page.locator("tr.explorer-item:not(.cdk-drag-disabled)").first();
+  const id = await row.getAttribute("data-resource-id");
+  const icon = row.locator(".resource-icon");
+  await icon.hover();
+  const start = await icon.boundingBox();
+  await page.mouse.down();
+  await page.mouse.move(start.x + start.width / 2 + 10, start.y + start.height / 2 + 40, { steps: 6 });
+  await expect(page.locator("body")).toHaveClass(/explorer-dragging/);
+  // CDK keeps the dragged row in the document, outside its table, while the drag lasts.
+  const moved = page.locator(`body > [data-resource-id="${id}"]`);
+  await expect(moved).toHaveJSProperty("inert", true);
+  const { violations } = await audit(page);
+  expect(violations.filter((violation) => violation.id === "aria-required-parent")).toEqual([]);
+  await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2, { steps: 6 });
+  await page.mouse.up();
+  await expect(page.locator("body")).not.toHaveClass(/explorer-dragging/);
+  await expect(page.locator(`tbody [data-resource-id="${id}"]`)).toHaveJSProperty("inert", false);
+});

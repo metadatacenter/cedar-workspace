@@ -392,7 +392,7 @@
             cdkDrag
             [cdkDragDisabled]="loading() || moving() || !canDrag(r)"
             [cdkDragStartDelay]="{mouse:0,touch:180}"
-            (cdkDragStarted)="startDrag(r)"
+            (cdkDragStarted)="startDrag(r,$event)"
             (cdkDragMoved)="dragMove($event)"
             (cdkDragEnded)="endDrag($event,explorer)"
             (dblclick)="doubleClickItem(r, $event)"
@@ -574,7 +574,7 @@
       </table>
       @if(loading()&&!refreshing()){
       <p class="empty">{{'Common.Loading' | translate}}</p>
-      } @else if(!rows().length){
+      } @else if(!rows().length && !listingFailed()){
       <p class="empty">{{'Dashboard.NoItems' | translate}}</p>
       }
       </div>
